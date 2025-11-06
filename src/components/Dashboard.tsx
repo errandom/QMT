@@ -228,12 +228,20 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
+                            {event.eventType}
+                          </Badge>
+                          <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
+                            {event.status}
+                          </Badge>
+                        </div>
                       <div className={`h-1.5 bg-gradient-to-r ${
                         firstTeam?.sportType === 'tackle' 
                           ? 'from-primary to-secondary' 
                           : 'from-secondary to-accent'
-                      }`} />
-                      <CardContent className="p-6">
+                      } mb-4`} />
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
@@ -254,14 +262,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               </div>
                             )}
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
-                                  {event.eventType}
-                                </Badge>
-                                <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
-                                  {event.status}
-                                </Badge>
-                              </div>
                               <h3 className="text-xl font-bold">
                                 {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
                               </h3>
