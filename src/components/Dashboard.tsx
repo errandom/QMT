@@ -281,40 +281,42 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/30 border-border shadow-lg hover:shadow-xl transition-all duration-300">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-3">
-                              {event.eventType === 'practice' ? (
-                                <Barbell size={24} weight="duotone" className="text-secondary" />
-                              ) : event.eventType === 'game' ? (
-                                <Trophy size={24} weight="duotone" className="text-primary" />
-                              ) : event.eventType === 'meeting' ? (
-                                <Chalkboard size={24} weight="duotone" className="text-accent" />
-                              ) : (
-                                <Calendar size={24} weight="duotone" className="text-muted-foreground" />
+                          <div className="flex-1 flex items-center gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-3">
+                                {event.eventType === 'practice' ? (
+                                  <Barbell size={24} weight="duotone" className="text-secondary" />
+                                ) : event.eventType === 'game' ? (
+                                  <Trophy size={24} weight="duotone" className="text-primary" />
+                                ) : event.eventType === 'meeting' ? (
+                                  <Chalkboard size={24} weight="duotone" className="text-accent" />
+                                ) : (
+                                  <Calendar size={24} weight="duotone" className="text-muted-foreground" />
+                                )}
+                                <Badge variant="outline" className="lowercase font-semibold">
+                                  {event.eventType}
+                                </Badge>
+                                <Badge 
+                                  variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'}
+                                  className="font-semibold"
+                                >
+                                  {event.status}
+                                </Badge>
+                              </div>
+                              <h3 className="text-2xl font-bold">
+                                {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                              </h3>
+                              {event.opponent && (
+                                <p className="text-muted-foreground">vs {event.opponent}</p>
                               )}
-                              <Badge variant="outline" className="uppercase font-semibold">
-                                {event.eventType}
-                              </Badge>
-                              <Badge 
-                                variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'}
-                                className="font-semibold"
-                              >
-                                {event.status}
-                              </Badge>
                             </div>
-                            <h3 className="text-2xl font-bold mb-1">
-                              {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
-                            </h3>
-                            {event.opponent && (
-                              <p className="text-muted-foreground">vs {event.opponent}</p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm text-muted-foreground mb-1">
-                              {format(new Date(event.startTime), 'EEEE, MMMM d, yyyy')}
-                            </div>
-                            <div className="text-lg font-bold">
-                              {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                            <div className="text-right flex flex-col justify-start h-full">
+                              <div className="text-sm text-muted-foreground mb-1">
+                                {format(new Date(event.startTime), 'EEEE, MMMM d, yyyy')}
+                              </div>
+                              <div className="text-2xl font-bold">
+                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -342,32 +344,32 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           </div>
 
                           {field && (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
                               {field.hasLights && (
-                                <Badge variant="outline" className="gap-1">
-                                  <Lightbulb size={14} weight="fill" />
+                                <Badge variant="outline" className="gap-1.5 bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  <Lightbulb size={14} weight="duotone" />
                                   Lights
                                 </Badge>
                               )}
-                              <Badge variant="outline" className="gap-1">
+                              <Badge variant="outline" className="gap-1.5 bg-green-50 text-green-700 border-green-200">
                                 {field.turfType === 'artificial' ? (
                                   <>
-                                    <Circle size={14} weight="fill" />
+                                    <Circle size={14} weight="duotone" />
                                     Artificial Turf
                                   </>
                                 ) : field.turfType === 'natural' ? (
                                   <>
-                                    <Plant size={14} weight="fill" />
+                                    <Plant size={14} weight="duotone" />
                                     Natural Grass
                                   </>
                                 ) : (
                                   <>
-                                    <Circle size={14} weight="fill" />
+                                    <Circle size={14} weight="duotone" />
                                     Indoor Gym
                                   </>
                                 )}
                               </Badge>
-                              <Badge variant="outline">
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                 {field.isFullField ? 'Full Field' : 'Half Field'}
                               </Badge>
                             </div>
@@ -376,33 +378,33 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           {site && (site.hasToilets || site.hasLockerRooms || site.hasEquipmentStash || site.hasRestaurant || site.hasParking) && (
                             <div>
                               <div className="text-xs font-semibold text-muted-foreground mb-2">Amenities</div>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-2 items-center">
                                 {site.hasToilets && (
-                                  <Badge variant="secondary" className="gap-1">
+                                  <Badge variant="outline" className="gap-1.5">
                                     <Toilet size={14} weight="duotone" />
                                     Toilets
                                   </Badge>
                                 )}
                                 {site.hasLockerRooms && (
-                                  <Badge variant="secondary" className="gap-1">
+                                  <Badge variant="outline" className="gap-1.5">
                                     <Lockers size={14} weight="duotone" />
                                     Locker Rooms
                                   </Badge>
                                 )}
                                 {site.hasEquipmentStash && (
-                                  <Badge variant="secondary" className="gap-1">
+                                  <Badge variant="outline" className="gap-1.5">
                                     <Backpack size={14} weight="duotone" />
                                     Equipment Storage
                                   </Badge>
                                 )}
                                 {site.hasRestaurant && (
-                                  <Badge variant="secondary" className="gap-1">
+                                  <Badge variant="outline" className="gap-1.5">
                                     <ForkKnife size={14} weight="duotone" />
                                     Restaurant
                                   </Badge>
                                 )}
                                 {site.hasParking && (
-                                  <Badge variant="secondary" className="gap-1">
+                                  <Badge variant="outline" className="gap-1.5">
                                     <Car size={14} weight="duotone" />
                                     Parking
                                   </Badge>
@@ -453,7 +455,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                         {canCancel && event.status !== 'cancelled' && (
                           <div className="border-t pt-3 mt-3">
                             <Button
-                              variant="outline"
+                              variant="destructive"
                               className="w-full gap-2"
                               onClick={() => setCancellationEvent(event)}
                             >
