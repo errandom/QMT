@@ -36,6 +36,7 @@ function App() {
           onRequestFacility={() => setShowFacilityRequest(true)}
           onRequestEquipment={() => setShowEquipmentRequest(true)}
           onManagement={handleManagementClick}
+          onLogout={handleLogout}
         />
       ) : (
         <Management onLogout={handleLogout} />

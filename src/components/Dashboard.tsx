@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { HelmetIcon } from '@/components/icons/HelmetIcon';
 import { FootballIcon } from '@/components/icons/FootballIcon';
@@ -17,17 +17,25 @@ interface DashboardProps {
   onRequestFacility: () => void;
   onRequestEquipment: () => void;
   onManagement: () => void;
+  onLogout?: () => void;
 }
 
-export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement }: DashboardProps) {
+export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement, onLogout }: DashboardProps) {
   const [teams] = useTeams();
   const [fields] = useFields();
   const [sites] = useSites();
   const [schedule] = useSchedule();
-  const { authState } = useAuth();
+  const { authState, logout } = useAuth();
   
   const [sportFilter, setSportFilter] = useState<'all' | 'tackle' | 'flag'>('all');
   const [teamFilter, setTeamFilter] = useState<string>('all');
+
+  const handleLogout = () => {
+    logout();
+    if (onLogout) {
+      onLogout();
+    }
+  };
 
   const upcomingEvents = useMemo(() => {
     let events = getUpcomingEvents(schedule || []);
@@ -61,15 +69,25 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
               </p>
             </div>
             {authState?.isAuthenticated && (
-              <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
-                  {authState.role === 'QMTadmin' ? (
-                    <ShieldStar size={20} weight="fill" />
-                  ) : (
-                    <UserCircleGear size={20} weight="fill" />
-                  )}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
+                    {authState.role === 'QMTadmin' ? (
+                      <ShieldStar size={20} weight="fill" />
+                    ) : (
+                      <UserCircleGear size={20} weight="fill" />
+                    )}
+                  </div>
+                  <span className="text-primary-foreground font-medium">{authState.username}</span>
                 </div>
-                <span className="text-primary-foreground font-medium">{authState.username}</span>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleLogout} 
+                  className="gap-2 text-primary-foreground hover:bg-white/10"
+                >
+                  <SignOut size={18} />
+                  Logout
+                </Button>
               </div>
             )}
           </div>
