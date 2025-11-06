@@ -68,17 +68,6 @@ export function Management({ onLogout }: ManagementProps) {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-6">
-          <Button 
-            onClick={handleBackToDashboard}
-            variant="outline"
-            className="gap-2"
-          >
-            <ArrowLeft size={18} weight="bold" />
-            Back to Dashboard
-          </Button>
-        </div>
-
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-4xl font-bold mb-2">Operations Office</h2>
@@ -86,17 +75,27 @@ export function Management({ onLogout }: ManagementProps) {
               Quick - Mean - Tough | On and Off the Field
             </p>
           </div>
-          <Button 
-            onClick={() => setActiveTab('settings')}
-            variant="outline"
-            className="gap-2"
-          >
-            <Gear size={18} weight="fill" />
-            Settings
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={handleBackToDashboard}
+              variant="outline"
+              className="gap-2"
+            >
+              <ArrowLeft size={20} weight="bold" />
+              Back to Dashboard
+            </Button>
+            <Button 
+              onClick={() => setActiveTab('settings')}
+              variant="outline"
+              className="gap-2"
+            >
+              <Gear size={20} weight="fill" />
+              Settings
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Card 
             className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
               activeTab === 'schedule' ? 'ring-2 ring-primary shadow-lg' : ''
@@ -108,7 +107,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'schedule' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <CalendarBlank size={28} weight="fill" />
+                  <CalendarBlank size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Schedule</CardTitle>
@@ -126,7 +125,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'requests' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <ListChecks size={28} weight="fill" />
+                  <ListChecks size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Requests</CardTitle>
@@ -144,7 +143,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Users size={28} weight="fill" />
+                  <Users size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
@@ -162,7 +161,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Barbell size={28} weight="fill" />
+                  <Barbell size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
@@ -180,7 +179,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'fields' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <GridironIcon size={28} />
+                  <GridironIcon size={30} />
                 </div>
               </div>
               <CardTitle className="text-base">Fields</CardTitle>
@@ -198,32 +197,12 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Buildings size={28} weight="fill" />
+                  <Buildings size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>
             </CardHeader>
           </Card>
-
-          {isAdmin && (
-            <Card 
-              className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                activeTab === 'users' ? 'ring-2 ring-primary shadow-lg' : ''
-              }`}
-              onClick={() => setActiveTab('users')}
-            >
-              <CardHeader className="text-center pb-4">
-                <div className="flex justify-center mb-3">
-                  <div className={`p-3 rounded-xl ${
-                    activeTab === 'users' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                  }`}>
-                    <Users size={28} weight="duotone" />
-                  </div>
-                </div>
-                <CardTitle className="text-base">Users</CardTitle>
-              </CardHeader>
-            </Card>
-          )}
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -252,12 +231,6 @@ export function Management({ onLogout }: ManagementProps) {
           <TabsContent value="requests">
             <RequestsTable />
           </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="users">
-              <UsersTable />
-            </TabsContent>
-          )}
 
           <TabsContent value="settings">
             <SettingsView />

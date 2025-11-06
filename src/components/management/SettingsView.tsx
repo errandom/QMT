@@ -2,13 +2,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Gear, UserCircle, ShieldStar, UserCircleGear } from '@phosphor-icons/react';
+import { Gear, UserCircle, ShieldStar, UserCircleGear, Users } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
+import { UsersTable } from './UsersTable';
 
 export function SettingsView() {
-  const { authState } = useAuth();
+  const { authState, isAdmin } = useAuth();
 
   const handleSave = () => {
     toast.success('Settings saved successfully');
@@ -20,7 +21,7 @@ export function SettingsView() {
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10">
-              <UserCircle size={28} weight="fill" className="text-primary" />
+              <UserCircle size={30} weight="fill" className="text-primary" />
             </div>
             <div>
               <CardTitle>User Profile</CardTitle>
@@ -32,9 +33,9 @@ export function SettingsView() {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground">
               {authState?.role === 'QMTadmin' ? (
-                <ShieldStar size={32} weight="fill" />
+                <ShieldStar size={34} weight="fill" />
               ) : (
-                <UserCircleGear size={32} weight="fill" />
+                <UserCircleGear size={34} weight="fill" />
               )}
             </div>
             <div className="flex-1">
@@ -68,11 +69,30 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-primary/10">
+                <Users size={30} weight="fill" className="text-primary" />
+              </div>
+              <div>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>Manage system users and permissions</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <UsersTable />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10">
-              <Gear size={28} weight="fill" className="text-primary" />
+              <Gear size={30} weight="fill" className="text-primary" />
             </div>
             <div>
               <CardTitle>Application Settings</CardTitle>
@@ -123,7 +143,7 @@ export function SettingsView() {
 
           <div className="flex justify-end pt-4">
             <Button onClick={handleSave} className="gap-2">
-              <Gear size={18} weight="fill" />
+              <Gear size={20} weight="fill" />
               Save Settings
             </Button>
           </div>

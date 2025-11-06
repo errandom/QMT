@@ -124,7 +124,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="bg-card shadow-sm border-border min-h-14 h-14 w-full">
+                <SelectTrigger className="bg-card shadow-sm border-border min-h-11 h-11 w-full">
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
                 <SelectContent className="w-[280px]">
@@ -150,25 +150,25 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
 
               <Button 
                 onClick={onRequestFacility}
-                className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+                className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <PlusCircle size={20} weight="bold" />
+                <PlusCircle size={22} weight="bold" />
                 Facility
               </Button>
 
               <Button 
                 onClick={onRequestEquipment}
-                className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+                className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <PlusCircle size={20} weight="bold" />
+                <PlusCircle size={22} weight="bold" />
                 Equipment
               </Button>
 
               <Button 
                 onClick={onManagement}
-                className="h-14 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
+                className="h-11 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
               >
-                <UserCircleGear size={20} weight="fill" />
+                <UserCircleGear size={22} weight="fill" />
                 Management
               </Button>
             </div>
