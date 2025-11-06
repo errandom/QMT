@@ -47,6 +47,7 @@ export interface Field {
 export interface ScheduleEvent {
   id: string;
   fieldId: string;
+  siteId?: string;
   teamIds: string[];
   startTime: string;
   endTime: string;

@@ -146,18 +146,18 @@ export function FieldsTable() {
                               <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Features</div>
                               <div className="flex flex-wrap gap-2">
                                 {field.hasLights && (
-                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     <Check size={12} weight="duotone" />
                                     Lights
                                   </div>
                                 )}
                                 {field.isFullField ? (
-                                  <div className="flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     <Check size={12} weight="duotone" />
                                     Full Field
                                   </div>
                                 ) : (
-                                  <div className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     Shared Field
                                   </div>
                                 )}

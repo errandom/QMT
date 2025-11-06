@@ -147,6 +147,7 @@ export function ScheduleTable() {
             ? {
                 ...ev,
                 fieldId: formData.fieldId,
+                siteId: requiresSite ? formData.siteId : undefined,
                 teamIds: formData.teamIds,
                 startTime: new Date(formData.startTime).toISOString(),
                 endTime: new Date(formData.endTime).toISOString(),
@@ -168,6 +169,7 @@ export function ScheduleTable() {
       const newEvent: ScheduleEvent = {
         id: `event-${Date.now()}`,
         fieldId: formData.fieldId,
+        siteId: requiresSite ? formData.siteId : undefined,
         teamIds: formData.teamIds,
         startTime: new Date(formData.startTime).toISOString(),
         endTime: new Date(formData.endTime).toISOString(),
@@ -254,8 +256,12 @@ export function ScheduleTable() {
                 .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
                 .map(event => {
                   const eventTeams = (event.teamIds || []).map(id => getTeamById(teams || [], id)).filter(Boolean);
-                  const field = getFieldById(fields || [], event.fieldId);
-                  const site = field ? getSiteById(sites || [], field.siteId) : undefined;
+                  const field = event.fieldId ? getFieldById(fields || [], event.fieldId) : undefined;
+                  const site = field 
+                    ? getSiteById(sites || [], field.siteId) 
+                    : event.siteId 
+                      ? getSiteById(sites || [], event.siteId)
+                      : undefined;
                   const EventIcon = EVENT_ICONS[event.eventType];
                   
                   return (
@@ -316,7 +322,11 @@ export function ScheduleTable() {
                               <div>
                                 <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Location</div>
                                 <div>{site?.name || 'Unknown Site'}</div>
-                                <div className="text-muted-foreground">{field?.name || 'Unknown Field'}</div>
+                                {field ? (
+                                  <div className="text-muted-foreground">{field.name}</div>
+                                ) : (
+                                  <div className="text-muted-foreground">{site?.address}, {site?.city}</div>
+                                )}
                               </div>
                               
                               {event.estimatedAttendance && (

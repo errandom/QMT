@@ -264,8 +264,12 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
               upcomingEvents.map((event, index) => {
                 const eventTeams = (event.teamIds || []).map(id => getTeamById(teams || [], id)).filter(Boolean);
                 const firstTeam = eventTeams[0];
-                const field = getFieldById(fields || [], event.fieldId);
-                const site = field ? getSiteById(sites || [], field.siteId) : undefined;
+                const field = event.fieldId ? getFieldById(fields || [], event.fieldId) : undefined;
+                const site = field 
+                  ? getSiteById(sites || [], field.siteId) 
+                  : event.siteId 
+                    ? getSiteById(sites || [], event.siteId)
+                    : undefined;
                 const canCancel = canRequestCancellation(event);
 
                 return (
@@ -341,7 +345,16 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                         <div className="border-t border-border pt-4 space-y-3">
                           <div className="flex items-center gap-2 text-sm">
                             <MapPin size={16} weight="duotone" className="text-secondary flex-shrink-0" />
-                            <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
+                            {field ? (
+                              <span className="font-medium">{site?.name || 'Unknown Site'} - {field.name}</span>
+                            ) : (
+                              <div className="flex flex-col">
+                                <span className="font-medium">{site?.name || 'Unknown Site'}</span>
+                                {site && (
+                                  <span className="text-xs text-muted-foreground">{site.address}, {site.city}, {site.state} {site.zipCode}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {field && site && (
@@ -365,6 +378,41 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                   </>
                                 )}
                               </Badge>
+                              {site.hasToilets && (
+                                <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
+                                  <Toilet size={14} weight="duotone" className="text-primary" />
+                                  Toilets
+                                </Badge>
+                              )}
+                              {site.hasLockerRooms && (
+                                <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
+                                  <Lockers size={14} weight="duotone" className="text-primary" />
+                                  Locker Rooms
+                                </Badge>
+                              )}
+                              {site.hasEquipmentStash && (
+                                <Badge variant="outline" className="text-xs gap-1 border-secondary/30 text-secondary-foreground">
+                                  <Backpack size={14} weight="duotone" className="text-secondary" />
+                                  Equipment Storage
+                                </Badge>
+                              )}
+                              {site.hasRestaurant && (
+                                <Badge variant="outline" className="text-xs gap-1 border-accent/30 text-accent-foreground">
+                                  <ForkKnife size={14} weight="duotone" className="text-accent" />
+                                  Restaurant
+                                </Badge>
+                              )}
+                              {site.hasParking && (
+                                <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
+                                  <Car size={14} weight="duotone" className="text-primary" />
+                                  Parking
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {!field && site && (
+                            <div className="flex flex-wrap gap-2">
                               {site.hasToilets && (
                                 <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
                                   <Toilet size={14} weight="duotone" className="text-primary" />
