@@ -187,7 +187,7 @@ export function ScheduleTable() {
               schedule
                 .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
                 .map(event => {
-                  const eventTeams = event.teamIds.map(id => getTeamById(teams || [], id)).filter(Boolean);
+                  const eventTeams = (event.teamIds || []).map(id => getTeamById(teams || [], id)).filter(Boolean);
                   const field = getFieldById(fields || [], event.fieldId);
                   const site = field ? getSiteById(sites || [], field.siteId) : undefined;
                   const EventIcon = EVENT_ICONS[event.eventType];

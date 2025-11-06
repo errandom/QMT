@@ -24,7 +24,7 @@ export function getUpcomingEvents(schedule: ScheduleEvent[]): ScheduleEvent[] {
 }
 
 export function getEventsByTeam(schedule: ScheduleEvent[], teamId: string): ScheduleEvent[] {
-  return schedule.filter(event => event.teamIds.includes(teamId));
+  return schedule.filter(event => event.teamIds?.includes(teamId));
 }
 
 export function getEventsBySportType(
@@ -36,7 +36,7 @@ export function getEventsBySportType(
   if (sportType === 'all') return schedule;
   
   return schedule.filter(event => {
-    return event.teamIds.some(teamId => {
+    return event.teamIds?.some(teamId => {
       const team = getTeamById(teams, teamId);
       return team?.sportType === sportType;
     });

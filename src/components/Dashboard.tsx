@@ -187,7 +187,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
               </Card>
             ) : (
               upcomingEvents.map((event, index) => {
-                const eventTeams = event.teamIds.map(id => getTeamById(teams || [], id)).filter(Boolean);
+                const eventTeams = (event.teamIds || []).map(id => getTeamById(teams || [], id)).filter(Boolean);
                 const firstTeam = eventTeams[0];
                 const field = getFieldById(fields || [], event.fieldId);
                 const site = field ? getSiteById(sites || [], field.siteId) : undefined;
