@@ -12,7 +12,6 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { CancellationRequestDialog } from '@/components/CancellationRequestDialog';
 import { ScheduleEvent } from '@/lib/types';
-import { StadiumLogo } from '@/components/icons/StadiumLogo';
 
 interface DashboardProps {
   onRequestFacility: () => void;
@@ -86,7 +85,9 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <StadiumLogo className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0" />
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm flex-shrink-0">
+                <Football size={40} weight="fill" className="text-primary-foreground" />
+              </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
                 <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">ZURICH RENEGADES FOOTBALL</p>

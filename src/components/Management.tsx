@@ -11,7 +11,6 @@ import { ScheduleTable } from './management/ScheduleTable';
 import { RequestsTable } from './management/RequestsTable';
 import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
-import { StadiumLogo } from '@/components/icons/StadiumLogo';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -36,7 +35,9 @@ export function Management({ onLogout }: ManagementProps) {
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <StadiumLogo className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0" />
+              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm flex-shrink-0">
+                <Football size={40} weight="fill" className="text-primary-foreground" />
+              </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">
                   QMT | Operations
