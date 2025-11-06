@@ -9,6 +9,11 @@
   body {
     font-family: 'Inter', sans-serif;
   }
+  
+  h1, h2, h3, .title-font {
+    font-family: 'Bebas Neue', 'Inter', sans-serif;
+    letter-spacing: 0.02em;
+  }
 }
 
 :root {

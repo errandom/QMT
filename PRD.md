@@ -1,11 +1,11 @@
 # Planning Guide
 
-A modern, glossy facility management system for the Zurich Renegades Football club, managing both tackle and flag football operations with a sleek navy blue aesthetic reflecting the city of Zurich.
+A modern, glossy facility management system for the Zurich Renegades Football club, managing both tackle and flag football operations with a sleek navy blue aesthetic reflecting the city of Zurich. The interface uses a powerful athletic font (Bebas Neue) for headers and maintains a professional, sports-focused design.
 
 **Experience Qualities**: 
 1. **Modern & Glossy** - Contemporary design with smooth shapes, subtle gradients, and premium feel
-2. **Intuitive** - Clear visual hierarchy with sport-specific iconography and easy navigation
-3. **Professional** - Polished interface that reflects the quality of Zurich Renegades organization
+2. **Intuitive** - Clear visual hierarchy with sport-specific iconography (gridiron for facilities, helmet for tackle football) and easy navigation
+3. **Professional** - Polished interface that reflects the quality of Zurich Renegades organization with strong, powerful typography
 
 **Complexity Level**: Light Application (multiple features with basic state)
   - Dashboard with sport type toggle and team filtering
@@ -59,11 +59,11 @@ A modern, glossy facility management system for the Zurich Renegades Football cl
 - **Success criteria**: Credentials validate correctly, appropriate permissions applied, session persists
 
 ### Management Dashboard
-- **Functionality**: Full CRUD interface for all database tables
-- **Purpose**: Enable staff to manage all system data
+- **Functionality**: Full CRUD interface for all database tables with card-based navigation
+- **Purpose**: Enable staff to manage all system data with clear visual organization
 - **Trigger**: Successful authentication and navigation to management section
-- **Progression**: User authenticates → Management view loads → Selects table via toggle → Views records in table → Creates/edits/deletes records as needed
-- **Success criteria**: All tables accessible, CRUD operations work, data validates properly, QMTmgmt cannot access user management
+- **Progression**: User authenticates → Operations Office loads with card-based menu → Selects section via card click → Views records in table → Creates/edits/deletes records as needed
+- **Success criteria**: All sections accessible via cards (Schedule with calendar icon, Requests with action icon, Teams with player icon, Fields with gridiron icon, Sites with arena icon), CRUD operations work, data validates properly, QMTmgmt cannot access user management, no horizontal scrolling required
 
 ### Data Tables Management
 - **Functionality**: Individual views for Teams, Sites, Fields, Schedule, Requests, Users
@@ -101,12 +101,12 @@ Analogous (adjacent colors on the color wheel) - Using navy blue as the foundati
   - Muted (Blue Gray oklch(0.92 0.02 240)): Medium text (oklch(0.45 0.08 240)) - Ratio 5.2:1 ✓
 
 ## Font Selection
-The typeface should convey modern athleticism with clean geometric forms for the dashboard while maintaining readability for dense data tables in management - Inter provides this versatility with its excellent legibility at all sizes.
+The typeface should convey modern athleticism and power with strong, bold headers using Bebas Neue for impact, while maintaining readability for data with Inter for body content - creating a commanding presence appropriate for sports operations.
 
 - **Typographic Hierarchy**: 
-  - H1 (Page Titles): Inter Bold/32px/tight letter spacing (-0.02em)
-  - H2 (Section Headers): Inter SemiBold/24px/normal letter spacing
-  - H3 (Card Titles): Inter Medium/18px/normal letter spacing
+  - H1 (Page Titles): Bebas Neue Bold/48px/tight letter spacing (0.02em)
+  - H2 (Section Headers): Bebas Neue Regular/32px/tight letter spacing (0.02em)
+  - H3 (Card Titles): Inter Bold/18px/normal letter spacing
   - Body (General Text): Inter Regular/16px/relaxed line height (1.6)
   - Small (Metadata): Inter Regular/14px/normal line height (1.5)
   - Caption (Table Headers): Inter Medium/12px/uppercase/wide letter spacing (0.05em)
@@ -128,22 +128,24 @@ Animations should emphasize transitions between filtered states and provide sati
 
 ## Component Selection
 - **Components**: 
-  - Toggle Group (sport type filter with custom helmet icons)
-  - Select (team dropdown with search functionality)
-  - Button (CTAs with size variants: default for requests, sm for table actions)
+  - Toggle Group (sport type filter with custom gridiron and helmet icons)
+  - Select (team dropdown with consistent h-14 height)
+  - Button (CTAs with h-14 height for all action buttons - requests and management)
   - Dialog (request forms and login modal)
-  - Card (schedule events display with shadcn Card component)
+  - Card (schedule events display and management section navigation cards)
   - Table (management view using shadcn Table with sortable headers)
   - Form (all input handling via react-hook-form integration)
-  - Tabs (management section table navigation)
+  - Tabs (management section content switching)
   - Input, Textarea, Select (form fields with consistent styling)
   - Alert (success/error notifications using sonner toast)
   - Badge (sport type indicators and status labels)
 
 - **Customizations**: 
-  - Custom helmet icon components for tackle/flag football indicators
+  - Custom GridironIcon component for facility and field indicators
+  - Custom HelmetIcon component for tackle football indicators
   - Schedule event cards with color-coded sport type borders
-  - Management table with inline editing capabilities
+  - Management section with card-based navigation (prevents horizontal scrolling)
+  - Card-based menu for Operations Office with icons
   - Custom authentication dialog with role indicator
 
 - **States**: 
@@ -153,17 +155,19 @@ Animations should emphasize transitions between filtered states and provide sati
   - Cards: Default flat → Hover with subtle shadow elevation
 
 - **Icon Selection**: 
+  - CalendarBlank (schedule/date fields)
+  - ListChecks (requests and action items)
+  - Users (teams and user management)
+  - GridironIcon (custom - fields and facility requests, all sports toggle)
+  - HelmetIcon (custom - tackle football indicator)
+  - Buildings (sites/arena locations)
+  - MapPin (site/field location on event cards)
+  - Clipboard (equipment requests)
+  - ShieldCheck (management section access)
   - Plus (add new records)
   - PencilSimple (edit records)
   - Trash (delete records)
-  - CalendarBlank (schedule/date fields)
-  - MapPin (site/field location)
-  - Users (teams)
-  - FootballHelmet (tackle football - custom or from available set)
-  - Flag (flag football indicator)
-  - MagnifyingGlass (search/filter)
   - SignOut (logout from management)
-  - Check (form submission success)
 
 - **Spacing**: 
   - Container padding: p-6 (24px)
@@ -174,8 +178,8 @@ Animations should emphasize transitions between filtered states and provide sati
   - Table cell padding: px-4 py-3
 
 - **Mobile**: 
-  - Dashboard: Sport toggles stack vertically, cards take full width, team dropdown expands to full width
-  - Management: Tables become scrollable horizontally, action buttons group in dropdown menu
+  - Dashboard: Sport toggles remain in 3-column grid, action buttons (All Teams dropdown, Request Facility, Request Equipment, Management Section) stack vertically with full width and consistent h-14 height
+  - Management: Card-based navigation wraps to 2 columns on mobile, tables become scrollable horizontally within their containers
+  - Operations Office: Cards stack in 2-column grid on mobile, 3 columns on tablet, 6 columns on desktop
   - Dialogs: Form fields stack vertically at full width
-  - Navigation: Hamburger menu for management table selection
   - Responsive breakpoint: 768px (md in Tailwind)

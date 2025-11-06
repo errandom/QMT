@@ -2,7 +2,9 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, BuildingOffice, Clipboard, ShieldCheck, FootballHelmet } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, ShieldCheck } from '@phosphor-icons/react';
+import { GridironIcon } from '@/components/icons/GridironIcon';
+import { HelmetIcon } from '@/components/icons/HelmetIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
 import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
@@ -93,7 +95,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted'
               }`}
             >
-              <CalendarBlank size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} />
+              <GridironIcon size={24} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
               <span className="hidden sm:inline">All Sports</span>
             </button>
             <button
@@ -104,7 +106,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted'
               }`}
             >
-              <FootballHelmet size={24} weight={sportFilter === 'tackle' ? 'fill' : 'regular'} />
+              <HelmetIcon size={24} filled={sportFilter === 'tackle'} className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
               <span className="hidden sm:inline">Tackle Football</span>
             </button>
             <button
@@ -122,46 +124,43 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="lg:col-span-1">
-              <label className="text-sm font-semibold mb-2 block text-foreground">Select Team</label>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="bg-card shadow-sm border-border h-12">
-                  <SelectValue placeholder="Select team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {tackleTeams.length > 0 && (
-                    <>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
-                      {tackleTeams.map(team => (
-                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                      ))}
-                    </>
-                  )}
-                  {flagTeams.length > 0 && (
-                    <>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
-                      {flagTeams.map(team => (
-                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                      ))}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="bg-card shadow-sm border-border h-14">
+                <SelectValue placeholder="All Teams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {tackleTeams.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
+                    {tackleTeams.map(team => (
+                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                    ))}
+                  </>
+                )}
+                {flagTeams.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
+                    {flagTeams.map(team => (
+                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
 
             <Button 
               onClick={onRequestFacility}
-              className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+              className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
             >
-              <BuildingOffice size={20} weight="fill" />
+              <GridironIcon size={20} />
               Request Facility
             </Button>
 
             <Button 
               onClick={onRequestEquipment}
-              className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+              className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
             >
               <Clipboard size={20} weight="fill" />
               Request Equipment
@@ -169,7 +168,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
 
             <Button 
               onClick={onManagement}
-              className="h-12 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
+              className="h-14 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
             >
               <ShieldCheck size={20} weight="fill" />
               Management Section
@@ -212,7 +211,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                             <div className="flex items-center gap-3 mb-2">
                               {team?.sportType === 'tackle' ? (
                                 <div className="p-2 rounded-lg bg-primary/10">
-                                  <FootballHelmet size={24} weight="fill" className="text-primary" />
+                                  <HelmetIcon size={24} filled className="text-primary" />
                                 </div>
                               ) : (
                                 <div className="p-2 rounded-lg bg-accent/10">
