@@ -6,6 +6,10 @@ import { SignOut, CalendarBlank, ListChecks, Football, Gear, ArrowLeft, ShieldSt
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { JerseyIcon } from '@/components/icons/JerseyIcon';
 import { ArenaIcon } from '@/components/icons/ArenaIcon';
+import { BleachersIcon } from '@/components/icons/BleachersIcon';
+import { PlayboardIcon } from '@/components/icons/PlayboardIcon';
+import { PantsIcon } from '@/components/icons/PantsIcon';
+import { ManagementIcon } from '@/components/icons/ManagementIcon';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -111,7 +115,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'schedule' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <CalendarBlank size={30} weight="regular" />
+                  <PlayboardIcon size={30} />
                 </div>
               </div>
               <CardTitle className="text-base">Schedule</CardTitle>
@@ -129,7 +133,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'requests' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <ListChecks size={30} weight="fill" />
+                  <ManagementIcon size={30} />
                 </div>
               </div>
               <CardTitle className="text-base">Requests</CardTitle>
@@ -165,7 +169,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Barbell size={30} weight="fill" />
+                  <PantsIcon size={30} />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
@@ -183,7 +187,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'fields' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <GridironIcon size={30} />
+                  <BleachersIcon size={30} />
                 </div>
               </div>
               <CardTitle className="text-base">Fields</CardTitle>

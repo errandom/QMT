@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
+import { FlagIcon } from '@/components/icons/FlagIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
 import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
@@ -164,7 +165,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <Circle size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
+                <FlagIcon size={24} filled={sportFilter === 'flag'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Flag Football</span>
               </button>
             </div>
