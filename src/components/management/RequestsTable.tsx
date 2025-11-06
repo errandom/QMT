@@ -3,16 +3,26 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Trash, Check, X } from '@phosphor-icons/react';
-import { useRequests, useTeams, useSites, useFields } from '@/hooks/use-data';
+import { useRequests, useTeams, useSites, useFields, useSchedule } from '@/hooks/use-data';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { getTeamById, getSiteById, getFieldById } from '@/lib/data-helpers';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useState } from 'react';
 
 export function RequestsTable() {
   const [requests, setRequests] = useRequests();
   const [teams] = useTeams();
   const [sites] = useSites();
   const [fields] = useFields();
+  const [schedule] = useSchedule();
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   const handleApprove = (id: string) => {
     setRequests((current) =>
@@ -45,7 +55,7 @@ export function RequestsTable() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Requests</CardTitle>
-            <CardDescription>Manage facility and equipment requests</CardDescription>
+            <CardDescription>Manage facility, equipment, and cancellation requests</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -71,11 +81,20 @@ export function RequestsTable() {
                   const team = request.teamId ? getTeamById(teams || [], request.teamId) : undefined;
                   const site = request.siteId ? getSiteById(sites || [], request.siteId) : undefined;
                   const field = request.fieldId ? getFieldById(fields || [], request.fieldId) : undefined;
+                  const event = request.eventId ? (schedule || []).find(e => e.id === request.eventId) : undefined;
                   
                   return (
                     <TableRow key={request.id}>
                       <TableCell>
-                        <Badge variant={request.type === 'facility' ? 'default' : 'secondary'}>
+                        <Badge 
+                          variant={
+                            request.type === 'facility' 
+                              ? 'default' 
+                              : request.type === 'cancellation' 
+                              ? 'destructive' 
+                              : 'secondary'
+                          }
+                        >
                           {request.type}
                         </Badge>
                       </TableCell>
@@ -84,6 +103,8 @@ export function RequestsTable() {
                       <TableCell>
                         {request.type === 'facility' && site && field 
                           ? `${site.name} - ${field.name}`
+                          : request.type === 'cancellation' && event
+                          ? 'Event Cancellation'
                           : '-'
                         }
                       </TableCell>
@@ -101,7 +122,14 @@ export function RequestsTable() {
                           {request.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">{request.description}</TableCell>
+                      <TableCell className="max-w-xs">
+                        <button
+                          onClick={() => setSelectedRequest(request)}
+                          className="text-left truncate hover:text-primary underline cursor-pointer"
+                        >
+                          {request.description}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           {request.status === 'pending' && (
@@ -150,6 +178,67 @@ export function RequestsTable() {
           </TableBody>
         </Table>
       </CardContent>
+
+      <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Request Details</DialogTitle>
+            <DialogDescription>
+              Full details of the request
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                <Badge 
+                  variant={
+                    selectedRequest.type === 'facility' 
+                      ? 'default' 
+                      : selectedRequest.type === 'cancellation' 
+                      ? 'destructive' 
+                      : 'secondary'
+                  }
+                >
+                  {selectedRequest.type}
+                </Badge>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Requested By</div>
+                <div className="text-sm">{selectedRequest.requestedBy}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Date</div>
+                <div className="text-sm">{format(new Date(selectedRequest.requestedDate), 'MMMM d, yyyy')}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Description</div>
+                <div className="text-sm">{selectedRequest.description}</div>
+              </div>
+              {selectedRequest.reason && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Reason</div>
+                  <div className="text-sm bg-muted p-3 rounded-lg">{selectedRequest.reason}</div>
+                </div>
+              )}
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Status</div>
+                <Badge
+                  variant={
+                    selectedRequest.status === 'approved' 
+                      ? 'default'
+                      : selectedRequest.status === 'rejected'
+                      ? 'destructive'
+                      : 'secondary'
+                  }
+                >
+                  {selectedRequest.status}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

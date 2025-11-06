@@ -17,11 +17,11 @@ A modern, glossy facility management system for the Zurich Renegades Football cl
 ## Essential Features
 
 ### Public Dashboard
-- **Functionality**: Display upcoming events from schedule with team/site/field information
-- **Purpose**: Provide transparent, public access to facility schedules
+- **Functionality**: Display upcoming events from schedule with team/site/field information and facility amenities
+- **Purpose**: Provide transparent, public access to facility schedules with complete venue information
 - **Trigger**: Landing page load
-- **Progression**: User lands → Views upcoming events → Filters by sport type (all/tackle/flag) → Optionally filters by team → Views filtered schedule
-- **Success criteria**: Events display correctly with proper filtering, sport type icons visible, data updates in real-time
+- **Progression**: User lands → Views upcoming events with facility properties (lights, turf type, toilets, locker rooms, equipment storage, restaurant) → Filters by sport type (all/tackle/flag) → Optionally filters by team → Views filtered schedule → Can request cancellation for events >36 hours away
+- **Success criteria**: Events display correctly with proper filtering, sport type icons visible, facility amenities shown with icons, practice/status badges positioned in top right, cancellation button appears when eligible, data updates in real-time
 
 ### Sport Type Filtering
 - **Functionality**: Toggle between all sports, tackle football only, or flag football only
@@ -51,6 +51,13 @@ A modern, glossy facility management system for the Zurich Renegades Football cl
 - **Progression**: User clicks button → Form dialog opens → Fills in equipment details → Submits → Confirmation message → Request saved
 - **Success criteria**: Form validates inputs, saves to requests table, provides feedback
 
+### Cancellation Request
+- **Functionality**: Form to submit event cancellation requests with name and justification
+- **Purpose**: Allow users to request cancellation of scheduled events with proper notice
+- **Trigger**: User clicks "Request Cancellation" button on event card (only visible for events >36 hours away)
+- **Progression**: User clicks button → Cancellation dialog opens → Enters their name → Provides detailed reason/justification → Submits → Confirmation message → Request appears in operations office requests table
+- **Success criteria**: Button only appears when event is >36 hours away, form validates name and reason fields, saves to requests with type 'cancellation', displays in management view with event details and reason
+
 ### Authentication
 - **Functionality**: Role-based login system with two roles (QMTadmin, QMTmgmt)
 - **Purpose**: Protect management features and restrict user management to admins
@@ -60,10 +67,10 @@ A modern, glossy facility management system for the Zurich Renegades Football cl
 
 ### Management Dashboard
 - **Functionality**: Full CRUD interface for all database tables with card-based navigation
-- **Purpose**: Enable staff to manage all system data with clear visual organization
+- **Purpose**: Enable staff to manage all system data with clear visual organization, including cancellation requests
 - **Trigger**: Successful authentication and navigation to management section
-- **Progression**: User authenticates → Operations Office loads with card-based menu → Selects section via card click → Views records in table → Creates/edits/deletes records as needed
-- **Success criteria**: All sections accessible via cards (Schedule with calendar icon, Requests with action icon, Teams with player icon, Fields with gridiron icon, Sites with arena icon), CRUD operations work, data validates properly, QMTmgmt cannot access user management, no horizontal scrolling required
+- **Progression**: User authenticates → Operations Office loads with card-based menu → Selects section via card click → Views records in table (including cancellation requests in Requests table) → Creates/edits/deletes records as needed → Can view full request details including reason for cancellations
+- **Success criteria**: All sections accessible via cards (Schedule with calendar icon, Requests with action icon showing facility/equipment/cancellation types, Teams with player icon, Fields with gridiron icon, Sites with arena icon), CRUD operations work, data validates properly, QMTmgmt cannot access user management, no horizontal scrolling required, cancellation requests display with destructive badge
 
 ### Data Tables Management
 - **Functionality**: Individual views for Teams, Sites, Fields, Schedule, Requests, Users
@@ -80,6 +87,9 @@ A modern, glossy facility management system for the Zurich Renegades Football cl
 - **Unauthorized Access**: Redirect to login if attempting to access management without authentication
 - **Session Expiry**: Prompt re-authentication after reasonable timeout period
 - **Network Errors**: Display user-friendly messages when operations fail
+- **Cancellation Time Limit**: Only display "Request Cancellation" button for events that start more than 36 hours in the future
+- **Cancelled Events**: Do not show cancellation button on events that are already cancelled
+- **Missing Facility Data**: Gracefully handle missing site or field information when displaying amenities
 
 ## Design Direction
 The design should evoke a premium, modern Swiss aesthetic with glossy surfaces, smooth rounded shapes, and a sophisticated navy blue color palette representing Zurich's professionalism and class - think sleek, contemporary sports facility with subtle depth and dimensionality.
@@ -168,6 +178,14 @@ Animations should emphasize transitions between filtered states and provide sati
   - PencilSimple (edit records)
   - Trash (delete records)
   - SignOut (logout from management)
+  - XCircle (cancellation requests and cancel action)
+  - Lightning (lights amenity indicator)
+  - TreeEvergreen (natural grass indicator)
+  - Circle (artificial turf indicator)
+  - Toilet (toilets amenity indicator)
+  - Lockers (locker rooms amenity indicator)
+  - Backpack (equipment storage amenity indicator)
+  - ForkKnife (restaurant amenity indicator)
 
 - **Spacing**: 
   - Container padding: p-4 (16px)

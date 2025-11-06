@@ -58,7 +58,7 @@ export interface ScheduleEvent {
 
 export interface Request {
   id: string;
-  type: 'facility' | 'equipment';
+  type: 'facility' | 'equipment' | 'cancellation';
   teamId?: string;
   requestedBy: string;
   requestedDate: string;
@@ -67,6 +67,8 @@ export interface Request {
   createdAt: string;
   fieldId?: string;
   siteId?: string;
+  eventId?: string;
+  reason?: string;
 }
 
 export interface User {

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
@@ -11,6 +11,8 @@ import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, 
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
+import { CancellationRequestDialog } from '@/components/CancellationRequestDialog';
+import { ScheduleEvent } from '@/lib/types';
 
 interface DashboardProps {
   onRequestFacility: () => void;
@@ -28,12 +30,20 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
   
   const [sportFilter, setSportFilter] = useState<'all' | 'tackle' | 'flag'>('all');
   const [teamFilter, setTeamFilter] = useState<string>('all');
+  const [cancellationEvent, setCancellationEvent] = useState<ScheduleEvent | null>(null);
 
   const handleLogout = () => {
     logout();
     if (onLogout) {
       onLogout();
     }
+  };
+
+  const canRequestCancellation = (event: ScheduleEvent): boolean => {
+    const eventStartTime = new Date(event.startTime);
+    const now = new Date();
+    const hoursDifference = (eventStartTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return hoursDifference > 36;
   };
 
   const upcomingEvents = useMemo(() => {
@@ -208,6 +218,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 const firstTeam = eventTeams[0];
                 const field = getFieldById(fields || [], event.fieldId);
                 const site = field ? getSiteById(sites || [], field.siteId) : undefined;
+                const canCancel = canRequestCancellation(event);
 
                 return (
                   <motion.div
@@ -223,9 +234,9 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           : 'from-secondary to-accent'
                       }`} />
                       <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3">
                               {event.eventType === 'practice' ? (
                                 <div className="p-2 rounded-lg bg-secondary/10">
                                   <Barbell size={24} weight="fill" className="text-secondary" />
@@ -252,29 +263,97 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
-                                {event.eventType}
-                              </Badge>
-                              <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
-                                {event.status}
-                              </Badge>
-                            </div>
                           </div>
-                          <div className="text-right bg-muted/50 px-4 py-2 rounded-xl">
-                            <div className="text-sm font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
-                            </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
+                              {event.eventType}
+                            </Badge>
+                            <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
+                              {event.status}
+                            </Badge>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin size={16} weight="fill" className="text-secondary" />
-                          <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
+
+                        <div className="border-t border-border pt-4 space-y-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-2 text-sm flex-1">
+                              <MapPin size={16} weight="fill" className="text-secondary flex-shrink-0" />
+                              <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
+                            </div>
+                            <div className="text-right bg-muted/50 px-3 py-1.5 rounded-lg flex-shrink-0">
+                              <div className="text-sm font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                              </div>
+                            </div>
+                          </div>
+
+                          {field && site && (
+                            <div className="flex flex-wrap gap-2">
+                              {field.hasLights && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Lightning size={14} weight="fill" className="text-yellow-600" />
+                                  Lights
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="text-xs gap-1">
+                                {field.turfType === 'artificial' ? (
+                                  <>
+                                    <Circle size={14} weight="fill" className="text-green-600" />
+                                    Artificial Turf
+                                  </>
+                                ) : (
+                                  <>
+                                    <TreeEvergreen size={14} weight="fill" className="text-green-700" />
+                                    Natural Grass
+                                  </>
+                                )}
+                              </Badge>
+                              {site.hasToilets && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Toilet size={14} weight="fill" className="text-blue-600" />
+                                  Toilets
+                                </Badge>
+                              )}
+                              {site.hasLockerRooms && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Lockers size={14} weight="fill" className="text-purple-600" />
+                                  Locker Rooms
+                                </Badge>
+                              )}
+                              {site.hasEquipmentStash && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Backpack size={14} weight="fill" className="text-orange-600" />
+                                  Equipment Storage
+                                </Badge>
+                              )}
+                              {site.hasRestaurant && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <ForkKnife size={14} weight="fill" className="text-red-600" />
+                                  Restaurant
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {event.notes && (
+                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">{event.notes}</p>
+                          )}
+
+                          {canCancel && event.status !== 'cancelled' && (
+                            <div className="pt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCancellationEvent(event)}
+                                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                              >
+                                <XCircle size={16} weight="fill" />
+                                Request Cancellation
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        {event.notes && (
-                          <p className="mt-3 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">{event.notes}</p>
-                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -284,6 +363,14 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
           </div>
         </motion.div>
       </div>
+
+      {cancellationEvent && (
+        <CancellationRequestDialog
+          open={!!cancellationEvent}
+          onOpenChange={(open) => !open && setCancellationEvent(null)}
+          event={cancellationEvent}
+        />
+      )}
     </div>
   );
 }
