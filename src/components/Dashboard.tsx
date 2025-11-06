@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, Plus } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { HelmetIcon } from '@/components/icons/HelmetIcon';
+import { FootballIcon } from '@/components/icons/FootballIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
 import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
@@ -116,19 +117,17 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor">
-                  <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56h64V200H40ZM216,200H120V56h96V200Z"/>
-                </svg>
+                <FootballIcon size={24} filled={sportFilter === 'flag'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Flag Football</span>
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="bg-card shadow-sm border-border h-12">
+                <SelectTrigger className="bg-card shadow-sm border-border h-12 w-full">
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-[280px]">
                   <SelectItem value="all">All Teams</SelectItem>
                   {tackleTeams.length > 0 && (
                     <>
@@ -153,16 +152,16 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                 onClick={onRequestFacility}
                 className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <GridironIcon size={20} />
-                Request Facility
+                <Plus size={20} weight="bold" />
+                Facility
               </Button>
 
               <Button 
                 onClick={onRequestEquipment}
                 className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <Clipboard size={20} weight="fill" />
-                Request Equipment
+                <Plus size={20} weight="bold" />
+                Equipment
               </Button>
 
               <Button 

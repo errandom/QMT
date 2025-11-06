@@ -7,12 +7,14 @@
   }
   
   body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.02em;
   }
   
   h1, h2, h3, .title-font {
-    font-family: 'Bebas Neue', 'Inter', sans-serif;
-    letter-spacing: 0.02em;
+    font-family: 'Teko', 'Rajdhani', sans-serif;
+    letter-spacing: 0.05em;
+    font-weight: 600;
   }
 }
 
