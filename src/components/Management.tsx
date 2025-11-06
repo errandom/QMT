@@ -149,7 +149,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <TeamJerseyIcon size={30} filled={activeTab === 'teams'} />
+                  <TeamJerseyIcon size={48} filled={activeTab === 'teams'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
