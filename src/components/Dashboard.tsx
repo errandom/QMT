@@ -280,7 +280,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
-                        <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center justify-between gap-4 mb-4">
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
                               <div className="p-2 rounded-lg bg-secondary/10">
@@ -299,26 +299,28 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 <Calendar size={24} weight="duotone" className="text-[oklch(0.25_0.08_240)]" />
                               </div>
                             )}
-                            <div className="flex-1">
-                              <h3 className="text-xl font-bold">
-                                {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
-                                  {event.eventType}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
-                                  {event.status}
-                                </Badge>
+                            <div className="flex-1 flex items-center gap-3">
+                              <div className="flex-1">
+                                <h3 className="text-xl font-bold">
+                                  {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
+                                    {event.eventType}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
+                                    {event.status}
+                                  </Badge>
+                                </div>
+                                {event.opponent && (
+                                  <p className="text-sm text-muted-foreground mt-1">vs {event.opponent}</p>
+                                )}
                               </div>
-                              {event.opponent && (
-                                <p className="text-sm text-muted-foreground mt-1">vs {event.opponent}</p>
-                              )}
-                            </div>
-                            <div className="bg-muted/50 px-4 py-2.5 rounded-lg flex-shrink-0">
-                              <div className="text-lg font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                              <div className="bg-muted/50 px-4 py-2.5 rounded-lg flex-shrink-0">
+                                <div className="text-xl font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
+                                <div className="text-xl text-muted-foreground">
+                                  {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                                </div>
                               </div>
                             </div>
                           </div>
