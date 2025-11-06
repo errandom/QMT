@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { FootballIcon } from '@/components/icons/FootballIcon';
@@ -170,7 +170,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestFacility}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <PlusCircle size={22} weight="bold" />
+                <PlusCircle size={20} weight="bold" />
                 Facility
               </Button>
 
@@ -178,7 +178,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestEquipment}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <PlusCircle size={22} weight="bold" />
+                <PlusCircle size={20} weight="bold" />
                 Equipment
               </Button>
 
@@ -186,7 +186,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onManagement}
                 className="h-11 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
               >
-                <UserCircleGear size={22} weight="fill" />
+                <FadersHorizontal size={24} weight="fill" />
                 Management
               </Button>
             </div>
