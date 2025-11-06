@@ -14,19 +14,17 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
         fill="currentColor"
         className={className}
       >
-        <path d="M3 16 L3 14 L6 13 L6 15 Z" opacity="0.9"/>
-        <path d="M3 14 L3 12 L7 10.5 L7 12.5 Z" opacity="0.85"/>
-        <path d="M3 12 L3 10 L8 8 L8 10 Z" opacity="0.8"/>
-        <path d="M3 10 L3 8 L9 5.5 L9 7.5 Z" opacity="0.75"/>
-        <path d="M3 8 L3 6 L10 3 L10 5 Z" opacity="0.7"/>
+        <path d="M3 18 L3 16 L6 15 L6 17 Z" opacity="0.95"/>
+        <path d="M3 16 L3 14 L7 12.5 L7 14.5 Z" opacity="0.85"/>
+        <path d="M3 14 L3 12 L8 10 L8 12 Z" opacity="0.75"/>
+        <path d="M3 12 L3 10 L9 7.5 L9 9.5 Z" opacity="0.65"/>
         
-        <path d="M21 16 L21 14 L18 13 L18 15 Z" opacity="0.9"/>
-        <path d="M21 14 L21 12 L17 10.5 L17 12.5 Z" opacity="0.85"/>
-        <path d="M21 12 L21 10 L16 8 L16 10 Z" opacity="0.8"/>
-        <path d="M21 10 L21 8 L15 5.5 L15 7.5 Z" opacity="0.75"/>
-        <path d="M21 8 L21 6 L14 3 L14 5 Z" opacity="0.7"/>
+        <path d="M21 18 L21 16 L18 15 L18 17 Z" opacity="0.95"/>
+        <path d="M21 16 L21 14 L17 12.5 L17 14.5 Z" opacity="0.85"/>
+        <path d="M21 14 L21 12 L16 10 L16 12 Z" opacity="0.75"/>
+        <path d="M21 12 L21 10 L15 7.5 L15 9.5 Z" opacity="0.65"/>
         
-        <path d="M10 3 L14 3 L14 21 L10 21 Z" opacity="0.3"/>
+        <path d="M9 7.5 L9 20 L15 20 L15 7.5 Z" opacity="0.3"/>
       </svg>
     );
   }
@@ -43,21 +41,19 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M3 16 L3 14 L6 13 L6 15 Z"/>
-      <path d="M3 14 L3 12 L7 10.5 L7 12.5 Z"/>
-      <path d="M3 12 L3 10 L8 8 L8 10 Z"/>
-      <path d="M3 10 L3 8 L9 5.5 L9 7.5 Z"/>
-      <path d="M3 8 L3 6 L10 3 L10 5 Z"/>
+      <path d="M3 18 L3 16 L6 15 L6 17 Z"/>
+      <path d="M3 16 L3 14 L7 12.5 L7 14.5 Z"/>
+      <path d="M3 14 L3 12 L8 10 L8 12 Z"/>
+      <path d="M3 12 L3 10 L9 7.5 L9 9.5 Z"/>
       
-      <path d="M21 16 L21 14 L18 13 L18 15 Z"/>
-      <path d="M21 14 L21 12 L17 10.5 L17 12.5 Z"/>
-      <path d="M21 12 L21 10 L16 8 L16 10 Z"/>
-      <path d="M21 10 L21 8 L15 5.5 L15 7.5 Z"/>
-      <path d="M21 8 L21 6 L14 3 L14 5 Z"/>
+      <path d="M21 18 L21 16 L18 15 L18 17 Z"/>
+      <path d="M21 16 L21 14 L17 12.5 L17 14.5 Z"/>
+      <path d="M21 14 L21 12 L16 10 L16 12 Z"/>
+      <path d="M21 12 L21 10 L15 7.5 L15 9.5 Z"/>
       
-      <line x1="10" y1="3" x2="10" y2="21"/>
-      <line x1="14" y1="3" x2="14" y2="21"/>
-      <line x1="10" y1="21" x2="14" y2="21"/>
+      <line x1="9" y1="7.5" x2="9" y2="20"/>
+      <line x1="15" y1="7.5" x2="15" y2="20"/>
+      <line x1="9" y1="20" x2="15" y2="20"/>
     </svg>
   );
 }

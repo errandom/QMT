@@ -13,7 +13,7 @@ import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
 import { ChecklistIcon } from './icons/ChecklistIcon';
 import { TeamJerseyIcon } from './icons/TeamJerseyIcon';
-import { TacklePadsIcon } from './icons/TacklePadsIcon';
+import { SportsEquipmentIcon } from './icons/SportsEquipmentIcon';
 import { FieldIcon } from './icons/FieldIcon';
 import { ArenaIcon } from './icons/ArenaIcon';
 
@@ -169,7 +169,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <TacklePadsIcon size={30} filled={activeTab === 'equipment'} />
+                  <SportsEquipmentIcon size={30} weight={activeTab === 'equipment' ? 'bold' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
