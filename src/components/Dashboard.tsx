@@ -280,20 +280,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
-                        <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
-                          {canCancel && event.status !== 'cancelled' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCancellationEvent(event)}
-                              className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 h-7 text-xs px-2"
-                            >
-                              <XCircle size={14} weight="duotone" />
-                              <span className="hidden md:inline">Request Cancellation</span>
-                              <span className="md:hidden">Cancel</span>
-                            </Button>
-                          )}
-                        </div>
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
