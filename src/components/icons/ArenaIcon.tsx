@@ -14,18 +14,20 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
         fill="currentColor"
         className={className}
       >
-        <ellipse cx="12" cy="18" rx="10" ry="4" opacity="0.9"/>
-        <path d="M2 18V10C2 9 2.5 8 3.5 7L12 3L20.5 7C21.5 8 22 9 22 10V18" opacity="0.85"/>
-        <path d="M3 10V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M5.5 9V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M8 8.5V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M10.5 8V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M13.5 8V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M16 8.5V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M18.5 9V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <path d="M21 10V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
-        <ellipse cx="12" cy="13" rx="5" ry="3" opacity="0.3"/>
-        <path d="M12 3L8 5.5L12 7.5L16 5.5L12 3Z" opacity="0.7"/>
+        <ellipse cx="12" cy="12" rx="10" ry="10" opacity="0.2"/>
+        <ellipse cx="12" cy="12" rx="8.5" ry="8.5" opacity="0.3"/>
+        <ellipse cx="12" cy="12" rx="7" ry="7" opacity="0.4"/>
+        <ellipse cx="12" cy="12" rx="5.5" ry="5.5" opacity="0.5"/>
+        <ellipse cx="12" cy="12" rx="4" ry="4" opacity="0.6"/>
+        <path d="M12 2C12 2 10 4 10 6" opacity="0.7"/>
+        <path d="M12 2C12 2 14 4 14 6" opacity="0.7"/>
+        <path d="M2 12C2 12 4 10 6 10" opacity="0.7"/>
+        <path d="M2 12C2 12 4 14 6 14" opacity="0.7"/>
+        <path d="M22 12C22 12 20 10 18 10" opacity="0.7"/>
+        <path d="M22 12C22 12 20 14 18 14" opacity="0.7"/>
+        <path d="M12 22C12 22 10 20 10 18" opacity="0.7"/>
+        <path d="M12 22C12 22 14 20 14 18" opacity="0.7"/>
+        <circle cx="12" cy="12" r="2.5" opacity="0.8"/>
       </svg>
     );
   }
@@ -42,17 +44,19 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
       strokeLinejoin="round"
       className={className}
     >
-      <ellipse cx="12" cy="18" rx="10" ry="4"/>
-      <path d="M2 18V10C2 9 2.5 8 3.5 7L12 3L20.5 7C21.5 8 22 9 22 10V18"/>
-      <line x1="3" y1="10" x2="3" y2="18"/>
-      <line x1="5.5" y1="9" x2="5.5" y2="18"/>
-      <line x1="8" y1="8.5" x2="8" y2="18"/>
-      <line x1="10.5" y1="8" x2="10.5" y2="18"/>
-      <line x1="13.5" y1="8" x2="13.5" y2="18"/>
-      <line x1="16" y1="8.5" x2="16" y2="18"/>
-      <line x1="18.5" y1="9" x2="18.5" y2="18"/>
-      <line x1="21" y1="10" x2="21" y2="18"/>
-      <ellipse cx="12" cy="13" rx="5" ry="3"/>
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="8"/>
+      <circle cx="12" cy="12" r="6"/>
+      <circle cx="12" cy="12" r="4"/>
+      <circle cx="12" cy="12" r="2"/>
+      <line x1="12" y1="2" x2="12" y2="6"/>
+      <line x1="12" y1="18" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="6" y2="12"/>
+      <line x1="18" y1="12" x2="22" y2="12"/>
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
     </svg>
   );
 }
