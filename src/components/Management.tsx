@@ -40,9 +40,6 @@ export function Management({ onLogout }: ManagementProps) {
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm flex-shrink-0">
-                <Football size={40} weight="fill" className="text-primary-foreground" />
-              </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">
                   QMT | Operations
