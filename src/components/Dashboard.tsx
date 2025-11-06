@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { CancellationRequestDialog } from '@/components/CancellationRequestDialog';
 import { ScheduleEvent } from '@/lib/types';
+import { SportsEquipmentIcon } from '@/components/icons';
 
 interface DashboardProps {
   onRequestFacility: () => void;
@@ -219,7 +220,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestEquipment}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <Backpack size={20} weight="bold" />
+                <SportsEquipmentIcon size={20} weight="bold" />
                 Equipment
               </Button>
 
