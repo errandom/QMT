@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Plus, PencilSimple, Trash, Trophy, Users as UsersIcon, Chalkboard, Calendar } from '@phosphor-icons/react';
+import { Plus, PencilSimple, Trash, Trophy, Barbell, Chalkboard, Calendar } from '@phosphor-icons/react';
 import { useSchedule, useTeams, useFields, useSites } from '@/hooks/use-data';
 import { ScheduleEvent, EventType, EventStatus } from '@/lib/types';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ import { getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
 import { format } from 'date-fns';
 
 const EVENT_ICONS = {
-  practice: UsersIcon,
+  practice: Barbell,
   game: Trophy,
   meeting: Chalkboard,
   other: Calendar

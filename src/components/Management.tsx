@@ -68,6 +68,17 @@ export function Management({ onLogout }: ManagementProps) {
       </div>
 
       <div className="container mx-auto px-6 py-8">
+        <div className="mb-6">
+          <Button 
+            onClick={handleBackToDashboard}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft size={18} weight="bold" />
+            Back to Dashboard
+          </Button>
+        </div>
+
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-4xl font-bold mb-2">Operations Office</h2>
@@ -75,23 +86,14 @@ export function Management({ onLogout }: ManagementProps) {
               Quick - Mean - Tough | On and Off the Field
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setActiveTab('settings')}
-              variant="outline"
-              className="gap-2"
-            >
-              <Gear size={18} weight="fill" />
-              Settings
-            </Button>
-            <Button 
-              onClick={handleBackToDashboard}
-              className="gap-2"
-            >
-              <ArrowLeft size={18} weight="bold" />
-              Back to Dashboard
-            </Button>
-          </div>
+          <Button 
+            onClick={() => setActiveTab('settings')}
+            variant="outline"
+            className="gap-2"
+          >
+            <Gear size={18} weight="fill" />
+            Settings
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">

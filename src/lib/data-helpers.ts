@@ -19,7 +19,7 @@ export function getFieldsBySite(fields: Field[], siteId: string): Field[] {
 export function getUpcomingEvents(schedule: ScheduleEvent[]): ScheduleEvent[] {
   const now = new Date();
   return schedule
-    .filter(event => new Date(event.startTime) >= now)
+    .filter(event => new Date(event.endTime) >= now)
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 }
 

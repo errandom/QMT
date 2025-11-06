@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { HelmetIcon } from '@/components/icons/HelmetIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
@@ -59,7 +59,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                 Quick Mean Tough | Operations
               </p>
             </div>
-            {authState?.isAuthenticated ? (
+            {authState?.isAuthenticated && (
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                 <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
                   {authState.role === 'QMTadmin' ? (
@@ -70,13 +70,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                 </div>
                 <span className="text-primary-foreground font-medium">{authState.username}</span>
               </div>
-            ) : (
-              <Button 
-                onClick={onManagement}
-                className="bg-white/10 hover:bg-white/20 text-primary-foreground border border-white/30 backdrop-blur-sm"
-              >
-                Management Login
-              </Button>
             )}
           </div>
         </div>
@@ -91,93 +84,95 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
           <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
           <p className="text-muted-foreground mb-8">Upcoming Events - {getSportLabel()}</p>
 
-          <div className="grid grid-cols-3 gap-3 mb-8 p-2 bg-card rounded-2xl shadow-lg border border-border">
-            <button
-              onClick={() => setSportFilter('all')}
-              className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
-                sportFilter === 'all'
-                  ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <GridironIcon size={24} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
-              <span className="hidden sm:inline">All Sports</span>
-            </button>
-            <button
-              onClick={() => setSportFilter('tackle')}
-              className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
-                sportFilter === 'tackle'
-                  ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <HelmetIcon size={24} filled={sportFilter === 'tackle'} className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
-              <span className="hidden sm:inline">Tackle Football</span>
-            </button>
-            <button
-              onClick={() => setSportFilter('flag')}
-              className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
-                sportFilter === 'flag'
-                  ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor">
-                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56h64V200H40ZM216,200H120V56h96V200Z"/>
-              </svg>
-              <span className="hidden sm:inline">Flag Football</span>
-            </button>
-          </div>
+          <div className="flex flex-col gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-3 p-2 bg-card rounded-2xl shadow-lg border border-border">
+              <button
+                onClick={() => setSportFilter('all')}
+                className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                  sportFilter === 'all'
+                    ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <GridironIcon size={24} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
+                <span className="hidden sm:inline">All Sports</span>
+              </button>
+              <button
+                onClick={() => setSportFilter('tackle')}
+                className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                  sportFilter === 'tackle'
+                    ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <HelmetIcon size={24} filled={sportFilter === 'tackle'} className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
+                <span className="hidden sm:inline">Tackle Football</span>
+              </button>
+              <button
+                onClick={() => setSportFilter('flag')}
+                className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                  sportFilter === 'flag'
+                    ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor">
+                  <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56h64V200H40ZM216,200H120V56h96V200Z"/>
+                </svg>
+                <span className="hidden sm:inline">Flag Football</span>
+              </button>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="bg-card shadow-sm border-border h-14">
-                <SelectValue placeholder="All Teams" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teams</SelectItem>
-                {tackleTeams.length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
-                    {tackleTeams.map(team => (
-                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                    ))}
-                  </>
-                )}
-                {flagTeams.length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
-                    {flagTeams.map(team => (
-                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                    ))}
-                  </>
-                )}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger className="bg-card shadow-sm border-border h-12">
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {tackleTeams.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
+                      {tackleTeams.map(team => (
+                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {flagTeams.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
+                      {flagTeams.map(team => (
+                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
 
-            <Button 
-              onClick={onRequestFacility}
-              className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
-            >
-              <GridironIcon size={20} />
-              Request Facility
-            </Button>
+              <Button 
+                onClick={onRequestFacility}
+                className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+              >
+                <GridironIcon size={20} />
+                Request Facility
+              </Button>
 
-            <Button 
-              onClick={onRequestEquipment}
-              className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
-            >
-              <Clipboard size={20} weight="fill" />
-              Request Equipment
-            </Button>
+              <Button 
+                onClick={onRequestEquipment}
+                className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+              >
+                <Clipboard size={20} weight="fill" />
+                Request Equipment
+              </Button>
 
-            <Button 
-              onClick={onManagement}
-              className="h-14 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
-            >
-              <UserCircleGear size={20} weight="fill" />
-              Management
-            </Button>
+              <Button 
+                onClick={onManagement}
+                className="h-12 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
+              >
+                <UserCircleGear size={20} weight="fill" />
+                Management
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -215,15 +210,21 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              {firstTeam?.sportType === 'tackle' ? (
+                              {event.eventType === 'practice' ? (
+                                <div className="p-2 rounded-lg bg-secondary/10">
+                                  <Barbell size={24} weight="fill" className="text-secondary" />
+                                </div>
+                              ) : event.eventType === 'game' ? (
                                 <div className="p-2 rounded-lg bg-primary/10">
-                                  <HelmetIcon size={24} filled className="text-primary" />
+                                  <Trophy size={24} weight="fill" className="text-primary" />
+                                </div>
+                              ) : event.eventType === 'meeting' ? (
+                                <div className="p-2 rounded-lg bg-accent/10">
+                                  <Chalkboard size={24} weight="fill" className="text-accent" />
                                 </div>
                               ) : (
-                                <div className="p-2 rounded-lg bg-accent/10">
-                                  <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor" className="text-accent">
-                                    <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56h64V200H40ZM216,200H120V56h96V200Z"/>
-                                  </svg>
+                                <div className="p-2 rounded-lg bg-muted">
+                                  <Calendar size={24} weight="fill" className="text-muted-foreground" />
                                 </div>
                               )}
                               <div>
