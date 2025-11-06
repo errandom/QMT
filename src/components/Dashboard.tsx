@@ -303,26 +303,26 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
                               <div className="p-2 rounded-lg bg-secondary/10">
-                                <Barbell size={24} weight="duotone" className="text-secondary" />
+                                <Barbell size={24} weight="duotone" className="text-secondary/80" />
                               </div>
                             ) : event.eventType === 'game' ? (
                               <div className="p-2 rounded-lg bg-primary/10">
-                                <Trophy size={24} weight="duotone" className="text-primary" />
+                                <Trophy size={24} weight="duotone" className="text-primary/80" />
                               </div>
                             ) : event.eventType === 'meeting' ? (
                               <div className="p-2 rounded-lg bg-accent/10">
-                                <Chalkboard size={24} weight="duotone" className="text-accent" />
+                                <Chalkboard size={24} weight="duotone" className="text-accent/80" />
                               </div>
                             ) : (
                               <div className="p-2 rounded-lg bg-muted">
-                                <Calendar size={24} weight="duotone" className="text-muted-foreground" />
+                                <Calendar size={24} weight="duotone" className="text-muted-foreground/80" />
                               </div>
                             )}
                             <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-xl font-bold">
-                                  {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
-                                </h3>
+                              <h3 className="text-xl font-bold">
+                                {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1">
                                 <Badge variant="outline" className="text-xs lowercase font-semibold text-muted-foreground border-muted-foreground/30 h-6 items-center">
                                   {event.eventType}
                                 </Badge>
@@ -331,7 +331,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 </Badge>
                               </div>
                               {event.opponent && (
-                                <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
+                                <p className="text-sm text-muted-foreground mt-1">vs {event.opponent}</p>
                               )}
                             </div>
                             <div className="bg-muted/50 px-3 py-1.5 rounded-lg flex-shrink-0">
