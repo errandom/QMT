@@ -235,32 +235,36 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                       }`} />
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between gap-4 mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                              {event.eventType === 'practice' ? (
-                                <div className="p-2 rounded-lg bg-secondary/10">
-                                  <Barbell size={24} weight="fill" className="text-secondary" />
-                                </div>
-                              ) : event.eventType === 'game' ? (
-                                <div className="p-2 rounded-lg bg-primary/10">
-                                  <Trophy size={24} weight="fill" className="text-primary" />
-                                </div>
-                              ) : event.eventType === 'meeting' ? (
-                                <div className="p-2 rounded-lg bg-accent/10">
-                                  <Chalkboard size={24} weight="fill" className="text-accent" />
-                                </div>
-                              ) : (
-                                <div className="p-2 rounded-lg bg-muted">
-                                  <Calendar size={24} weight="fill" className="text-muted-foreground" />
-                                </div>
+                          <div className="flex items-center gap-3 flex-1">
+                            {event.eventType === 'practice' ? (
+                              <div className="p-2 rounded-lg bg-secondary/10">
+                                <Barbell size={24} weight="fill" className="text-secondary" />
+                              </div>
+                            ) : event.eventType === 'game' ? (
+                              <div className="p-2 rounded-lg bg-primary/10">
+                                <Trophy size={24} weight="fill" className="text-primary" />
+                              </div>
+                            ) : event.eventType === 'meeting' ? (
+                              <div className="p-2 rounded-lg bg-accent/10">
+                                <Chalkboard size={24} weight="fill" className="text-accent" />
+                              </div>
+                            ) : (
+                              <div className="p-2 rounded-lg bg-muted">
+                                <Calendar size={24} weight="fill" className="text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <h3 className="text-xl font-bold">
+                                {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                              </h3>
+                              {event.opponent && (
+                                <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
                               )}
-                              <div>
-                                <h3 className="text-xl font-bold">
-                                  {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
-                                </h3>
-                                {event.opponent && (
-                                  <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
-                                )}
+                            </div>
+                            <div className="bg-muted/50 px-3 py-1.5 rounded-lg flex-shrink-0">
+                              <div className="text-sm font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
                               </div>
                             </div>
                           </div>
@@ -275,17 +279,9 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                         </div>
 
                         <div className="border-t border-border pt-4 space-y-3">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-2 text-sm flex-1">
-                              <MapPin size={16} weight="fill" className="text-secondary flex-shrink-0" />
-                              <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
-                            </div>
-                            <div className="text-right bg-muted/50 px-3 py-1.5 rounded-lg flex-shrink-0">
-                              <div className="text-sm font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
-                              </div>
-                            </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin size={16} weight="fill" className="text-secondary flex-shrink-0" />
+                            <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
                           </div>
 
                           {field && site && (
