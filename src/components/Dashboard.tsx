@@ -306,21 +306,12 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 </h3>
                                 <div className="flex items-center gap-2 mt-1">
                                   <Badge 
-                                    className={`text-xs font-semibold text-white h-6 flex items-center uppercase ${
-                                      event.eventType === 'game' ? 'bg-emerald-600' :
-                                      event.eventType === 'practice' ? 'bg-blue-600' :
-                                      event.eventType === 'meeting' ? 'bg-purple-600' :
-                                      'bg-amber-600'
-                                    }`}
+                                    className="text-xs font-semibold h-6 flex items-center uppercase bg-transparent border-2 border-foreground text-foreground"
                                   >
                                     {event.eventType}
                                   </Badge>
                                   <Badge 
-                                    className={`text-xs font-semibold text-white h-6 flex items-center ${
-                                      event.status === 'confirmed' ? 'bg-green-600' : 
-                                      event.status === 'cancelled' ? 'bg-red-600' : 
-                                      'bg-slate-500'
-                                    }`}
+                                    className="text-xs font-semibold h-6 flex items-center bg-transparent border-2 border-foreground text-foreground"
                                   >
                                     {event.status}
                                   </Badge>
