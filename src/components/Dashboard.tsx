@@ -187,8 +187,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
               </Card>
             ) : (
               upcomingEvents.map((event, index) => {
-                const teams = event.teamIds.map(id => getTeamById(teams || [], id)).filter(Boolean) as typeof teams extends (infer U)[] ? U[] : never;
-                const firstTeam = teams[0];
+                const eventTeams = event.teamIds.map(id => getTeamById(teams || [], id)).filter(Boolean);
+                const firstTeam = eventTeams[0];
                 const field = getFieldById(fields || [], event.fieldId);
                 const site = field ? getSiteById(sites || [], field.siteId) : undefined;
 
@@ -228,7 +228,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                               )}
                               <div>
                                 <h3 className="text-xl font-bold">
-                                  {teams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                                  {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
                                 </h3>
                                 {event.opponent && (
                                   <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
