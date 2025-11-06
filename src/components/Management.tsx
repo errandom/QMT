@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, MapPin, Toolbox } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, Crown, MegaphoneSimple, MapPin, Toolbox } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -51,9 +51,9 @@ export function Management({ onLogout }: ManagementProps) {
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                 <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
                   {authState?.role === 'QMTadmin' ? (
-                    <ShieldStar size={20} weight="duotone" />
+                    <Crown size={20} weight="duotone" />
                   ) : (
-                    <UserCircleGear size={20} weight="duotone" />
+                    <MegaphoneSimple size={20} weight="duotone" />
                   )}
                 </div>
                 <span className="text-primary-foreground font-medium hidden md:inline">{authState?.username}</span>
