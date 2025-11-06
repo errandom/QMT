@@ -318,7 +318,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               </div>
                               <div className="bg-muted/50 px-4 py-2.5 rounded-lg flex-shrink-0">
                                 <div className="text-xl font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
-                                <div className="text-xl text-muted-foreground">
+                                <div className="text-sm text-muted-foreground">
                                   {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
                                 </div>
                               </div>
