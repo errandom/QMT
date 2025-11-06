@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SignOut, CalendarBlank, ListChecks, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
-import { HelmetIcon } from '@/components/icons/HelmetIcon';
+import { FootballIcon } from '@/components/icons/FootballIcon';
 import { ArenaIcon } from '@/components/icons/ArenaIcon';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
@@ -147,7 +147,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <HelmetIcon size={30} filled={activeTab === 'teams'} />
+                  <FootballIcon size={30} filled={activeTab === 'teams'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
