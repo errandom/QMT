@@ -14,17 +14,25 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
         fill="currentColor"
         className={className}
       >
-        <path d="M3 18 L3 16 L6 15 L6 17 Z" opacity="0.95"/>
-        <path d="M3 16 L3 14 L7 12.5 L7 14.5 Z" opacity="0.85"/>
-        <path d="M3 14 L3 12 L8 10 L8 12 Z" opacity="0.75"/>
-        <path d="M3 12 L3 10 L9 7.5 L9 9.5 Z" opacity="0.65"/>
+        <ellipse cx="12" cy="12" rx="10" ry="8" opacity="0.2"/>
         
-        <path d="M21 18 L21 16 L18 15 L18 17 Z" opacity="0.95"/>
-        <path d="M21 16 L21 14 L17 12.5 L17 14.5 Z" opacity="0.85"/>
-        <path d="M21 14 L21 12 L16 10 L16 12 Z" opacity="0.75"/>
-        <path d="M21 12 L21 10 L15 7.5 L15 9.5 Z" opacity="0.65"/>
+        <ellipse cx="12" cy="12" rx="10" ry="8" fill="none" stroke="currentColor" strokeWidth="1.5"/>
         
-        <path d="M9 7.5 L9 20 L15 20 L15 7.5 Z" opacity="0.3"/>
+        <ellipse cx="12" cy="12" rx="7.5" ry="6" opacity="0.15"/>
+        <ellipse cx="12" cy="12" rx="7.5" ry="6" fill="none" stroke="currentColor" strokeWidth="1"/>
+        
+        <ellipse cx="12" cy="12" rx="5" ry="4" opacity="0.3"/>
+        
+        <line x1="2.5" y1="12" x2="7" y2="12" stroke="currentColor" strokeWidth="1" opacity="0.6"/>
+        <line x1="17" y1="12" x2="21.5" y2="12" stroke="currentColor" strokeWidth="1" opacity="0.6"/>
+        
+        <line x1="12" y1="4.5" x2="12" y2="8" stroke="currentColor" strokeWidth="1" opacity="0.6"/>
+        <line x1="12" y1="16" x2="12" y2="19.5" stroke="currentColor" strokeWidth="1" opacity="0.6"/>
+        
+        <circle cx="5" cy="8" r="0.8" opacity="0.7"/>
+        <circle cx="19" cy="8" r="0.8" opacity="0.7"/>
+        <circle cx="5" cy="16" r="0.8" opacity="0.7"/>
+        <circle cx="19" cy="16" r="0.8" opacity="0.7"/>
       </svg>
     );
   }
@@ -41,19 +49,22 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M3 18 L3 16 L6 15 L6 17 Z"/>
-      <path d="M3 16 L3 14 L7 12.5 L7 14.5 Z"/>
-      <path d="M3 14 L3 12 L8 10 L8 12 Z"/>
-      <path d="M3 12 L3 10 L9 7.5 L9 9.5 Z"/>
+      <ellipse cx="12" cy="12" rx="10" ry="8"/>
       
-      <path d="M21 18 L21 16 L18 15 L18 17 Z"/>
-      <path d="M21 16 L21 14 L17 12.5 L17 14.5 Z"/>
-      <path d="M21 14 L21 12 L16 10 L16 12 Z"/>
-      <path d="M21 12 L21 10 L15 7.5 L15 9.5 Z"/>
+      <ellipse cx="12" cy="12" rx="7.5" ry="6"/>
       
-      <line x1="9" y1="7.5" x2="9" y2="20"/>
-      <line x1="15" y1="7.5" x2="15" y2="20"/>
-      <line x1="9" y1="20" x2="15" y2="20"/>
+      <ellipse cx="12" cy="12" rx="5" ry="4"/>
+      
+      <line x1="2.5" y1="12" x2="7" y2="12"/>
+      <line x1="17" y1="12" x2="21.5" y2="12"/>
+      
+      <line x1="12" y1="4.5" x2="12" y2="8"/>
+      <line x1="12" y1="16" x2="12" y2="19.5"/>
+      
+      <circle cx="5" cy="8" r="0.8"/>
+      <circle cx="19" cy="8" r="0.8"/>
+      <circle cx="5" cy="16" r="0.8"/>
+      <circle cx="19" cy="16" r="0.8"/>
     </svg>
   );
 }
