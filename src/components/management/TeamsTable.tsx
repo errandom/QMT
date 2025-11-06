@@ -111,7 +111,7 @@ export function TeamsTable() {
               <CardDescription>Manage football teams</CardDescription>
             </div>
             <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus size={18} />
+              <Plus size={18} weight="duotone" />
               Add Team
             </Button>
           </div>
@@ -171,7 +171,7 @@ export function TeamsTable() {
                             onClick={() => handleOpenDialog(team)}
                             className="gap-1"
                           >
-                            <PencilSimple size={16} />
+                            <PencilSimple size={16} weight="duotone" />
                             Edit
                           </Button>
                           <Button
@@ -180,7 +180,7 @@ export function TeamsTable() {
                             onClick={() => handleDelete(team.id)}
                             className="gap-1"
                           >
-                            <Trash size={16} />
+                            <Trash size={16} weight="duotone" />
                           </Button>
                         </div>
                       </div>

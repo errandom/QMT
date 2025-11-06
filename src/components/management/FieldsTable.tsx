@@ -113,7 +113,7 @@ export function FieldsTable() {
               <CardDescription>Manage playing fields</CardDescription>
             </div>
             <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus size={18} />
+              <Plus size={18} weight="duotone" />
               Add Field
             </Button>
           </div>
@@ -147,13 +147,13 @@ export function FieldsTable() {
                               <div className="flex flex-wrap gap-2">
                                 {field.hasLights && (
                                   <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                    <Check size={12} weight="bold" />
+                                    <Check size={12} weight="duotone" />
                                     Lights
                                   </div>
                                 )}
                                 {field.isFullField ? (
                                   <div className="flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
-                                    <Check size={12} weight="bold" />
+                                    <Check size={12} weight="duotone" />
                                     Full Field
                                   </div>
                                 ) : (
@@ -173,7 +173,7 @@ export function FieldsTable() {
                             onClick={() => handleOpenDialog(field)}
                             className="gap-1"
                           >
-                            <PencilSimple size={16} />
+                            <PencilSimple size={16} weight="duotone" />
                             Edit
                           </Button>
                           <Button
@@ -182,7 +182,7 @@ export function FieldsTable() {
                             onClick={() => handleDelete(field.id)}
                             className="gap-1"
                           >
-                            <Trash size={16} />
+                            <Trash size={16} weight="duotone" />
                           </Button>
                         </div>
                       </div>

@@ -64,7 +64,7 @@ export function CancellationRequestDialog({ open, onOpenChange, event }: Cancell
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg bg-destructive/10">
-              <XCircle size={24} weight="fill" className="text-destructive" />
+              <XCircle size={24} weight="duotone" className="text-destructive" />
             </div>
             <DialogTitle className="text-2xl">Request Cancellation</DialogTitle>
           </div>

@@ -140,7 +140,7 @@ export function RequestsTable() {
                                 onClick={() => handleApprove(request.id)}
                                 className="gap-1 text-green-600 hover:text-green-700"
                               >
-                                <Check size={16} />
+                                <Check size={16} weight="duotone" />
                                 Approve
                               </Button>
                               <Button
@@ -149,7 +149,7 @@ export function RequestsTable() {
                                 onClick={() => handleReject(request.id)}
                                 className="gap-1 text-red-600 hover:text-red-700"
                               >
-                                <X size={16} />
+                                <X size={16} weight="duotone" />
                                 Reject
                               </Button>
                             </>
@@ -160,7 +160,7 @@ export function RequestsTable() {
                             onClick={() => handleDelete(request.id)}
                             className="gap-1"
                           >
-                            <Trash size={16} />
+                            <Trash size={16} weight="duotone" />
                             Delete
                           </Button>
                         </div>

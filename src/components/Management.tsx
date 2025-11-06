@@ -51,9 +51,9 @@ export function Management({ onLogout }: ManagementProps) {
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                 <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
                   {authState?.role === 'QMTadmin' ? (
-                    <ShieldStar size={20} weight="fill" />
+                    <ShieldStar size={20} weight="duotone" />
                   ) : (
-                    <UserCircleGear size={20} weight="fill" />
+                    <UserCircleGear size={20} weight="duotone" />
                   )}
                 </div>
                 <span className="text-primary-foreground font-medium hidden md:inline">{authState?.username}</span>
@@ -63,7 +63,7 @@ export function Management({ onLogout }: ManagementProps) {
                 onClick={handleLogout} 
                 className="gap-2 text-primary-foreground hover:bg-white/10"
               >
-                <SignOut size={18} />
+                <SignOut size={18} weight="duotone" />
                 <span className="hidden md:inline">Logout</span>
               </Button>
             </div>
@@ -80,7 +80,7 @@ export function Management({ onLogout }: ManagementProps) {
               variant="outline"
               className="gap-2"
             >
-              <ArrowLeft size={20} weight="bold" />
+              <ArrowLeft size={20} weight="duotone" />
               Back to Dashboard
             </Button>
             <Button 
@@ -88,7 +88,7 @@ export function Management({ onLogout }: ManagementProps) {
               variant="outline"
               className="gap-2"
             >
-              <Gear size={20} weight="fill" />
+              <Gear size={20} weight="duotone" />
               Settings
             </Button>
           </div>
@@ -113,7 +113,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'schedule' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <CalendarBlank size={30} weight={activeTab === 'schedule' ? 'fill' : 'regular'} />
+                  <CalendarBlank size={30} weight="duotone" />
                 </div>
               </div>
               <CardTitle className="text-base">Schedule</CardTitle>
@@ -167,7 +167,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Toolbox size={30} weight={activeTab === 'equipment' ? 'fill' : 'regular'} />
+                  <Toolbox size={30} weight="duotone" />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
@@ -203,7 +203,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <MapPin size={30} weight={activeTab === 'sites' ? 'fill' : 'regular'} />
+                  <MapPin size={30} weight="duotone" />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>

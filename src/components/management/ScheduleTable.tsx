@@ -220,7 +220,7 @@ export function ScheduleTable() {
               <CardDescription>Manage scheduled events</CardDescription>
             </div>
             <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus size={18} />
+              <Plus size={18} weight="duotone" />
               Add Event
             </Button>
           </div>
@@ -248,7 +248,7 @@ export function ScheduleTable() {
                                 event.eventType === 'meeting' ? 'bg-accent/10' :
                                 'bg-muted'
                               }`}>
-                                <EventIcon size={20} weight="fill" className={
+                                <EventIcon size={20} weight="duotone" className={
                                   event.eventType === 'game' ? 'text-primary' :
                                   event.eventType === 'practice' ? 'text-secondary' :
                                   event.eventType === 'meeting' ? 'text-accent' :
@@ -317,7 +317,7 @@ export function ScheduleTable() {
                               onClick={() => handleOpenDialog(event)}
                               className="gap-1"
                             >
-                              <PencilSimple size={16} />
+                              <PencilSimple size={16} weight="duotone" />
                               Edit
                             </Button>
                             <Button
@@ -326,7 +326,7 @@ export function ScheduleTable() {
                               onClick={() => handleDelete(event.id)}
                               className="gap-1"
                             >
-                              <Trash size={16} />
+                              <Trash size={16} weight="duotone" />
                             </Button>
                           </div>
                         </div>

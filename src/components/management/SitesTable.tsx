@@ -126,7 +126,7 @@ export function SitesTable() {
               <CardDescription>Manage facility locations</CardDescription>
             </div>
             <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus size={18} />
+              <Plus size={18} weight="duotone" />
               Add Site
             </Button>
           </div>
@@ -168,7 +168,7 @@ export function SitesTable() {
                                 asChild
                               >
                                 <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
-                                  <MapPin size={14} weight="fill" />
+                                  <MapPin size={14} weight="duotone" />
                                   View on Google Maps
                                 </a>
                               </Button>
@@ -179,25 +179,25 @@ export function SitesTable() {
                               <div className="flex flex-wrap gap-2">
                                 {site.hasToilets && (
                                   <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                    <Check size={12} weight="bold" />
+                                    <Check size={12} weight="duotone" />
                                     Toilets
                                   </div>
                                 )}
                                 {site.hasLockerRooms && (
                                   <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                    <Check size={12} weight="bold" />
+                                    <Check size={12} weight="duotone" />
                                     Locker Rooms
                                   </div>
                                 )}
                                 {site.hasEquipmentStash && (
                                   <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                    <Check size={12} weight="bold" />
+                                    <Check size={12} weight="duotone" />
                                     Equipment Stash
                                   </div>
                                 )}
                                 {site.hasRestaurant && (
                                   <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                    <Check size={12} weight="bold" />
+                                    <Check size={12} weight="duotone" />
                                     Restaurant
                                   </div>
                                 )}
@@ -216,7 +216,7 @@ export function SitesTable() {
                             onClick={() => handleOpenDialog(site)}
                             className="gap-1"
                           >
-                            <PencilSimple size={16} />
+                            <PencilSimple size={16} weight="duotone" />
                             Edit
                           </Button>
                           <Button
@@ -225,7 +225,7 @@ export function SitesTable() {
                             onClick={() => handleDelete(site.id)}
                             className="gap-1"
                           >
-                            <Trash size={16} />
+                            <Trash size={16} weight="duotone" />
                           </Button>
                         </div>
                       </div>

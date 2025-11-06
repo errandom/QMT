@@ -95,9 +95,9 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                   <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
                     {authState.role === 'QMTadmin' ? (
-                      <ShieldStar size={20} weight="fill" />
+                      <ShieldStar size={20} weight="duotone" />
                     ) : (
-                      <UserCircleGear size={20} weight="fill" />
+                      <UserCircleGear size={20} weight="duotone" />
                     )}
                   </div>
                   <span className="text-primary-foreground font-medium hidden md:inline">{authState.username}</span>
@@ -107,7 +107,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                   onClick={handleLogout} 
                   className="gap-2 text-primary-foreground hover:bg-white/10 md:h-auto h-8 md:px-4 px-2"
                 >
-                  <SignOut size={18} />
+                  <SignOut size={18} weight="duotone" />
                   <span className="hidden md:inline">Logout</span>
                 </Button>
               </div>
@@ -117,7 +117,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onLogin} 
                 className="gap-2 text-primary-foreground hover:bg-white/10 border border-white/20 font-semibold"
               >
-                <UserCircleGear size={20} weight="fill" />
+                <UserCircleGear size={20} weight="duotone" />
                 <span className="hidden md:inline">Login</span>
               </Button>
             )}
@@ -144,8 +144,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 }`}
               >
                 <div className="flex items-center gap-1">
-                  <Football size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
-                  <FootballHelmet size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
+                  <Football size={24} weight="duotone" className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
+                  <FootballHelmet size={24} weight="duotone" className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
                 </div>
                 <span className="hidden sm:inline">All Sports</span>
               </button>
@@ -157,7 +157,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <FootballHelmet size={24} weight={sportFilter === 'tackle' ? 'fill' : 'regular'} className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
+                <FootballHelmet size={24} weight="duotone" className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Tackle Football</span>
               </button>
               <button
@@ -168,7 +168,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <Football size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
+                <Football size={24} weight="duotone" className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Flag Football</span>
               </button>
             </div>
@@ -184,17 +184,33 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <>
                       {tackleTeams.length > 0 && (
                         <>
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
+                          <div className="px-2 py-2 text-xs font-bold text-primary bg-primary/5 flex items-center gap-2 border-b border-border">
+                            <FootballHelmet size={16} weight="duotone" />
+                            TACKLE FOOTBALL
+                          </div>
                           {tackleTeams.map(team => (
-                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                            <SelectItem key={team.id} value={team.id} className="pl-8">
+                              <div className="flex items-center gap-2">
+                                <FootballHelmet size={14} weight="duotone" className="text-primary/60" />
+                                {team.name}
+                              </div>
+                            </SelectItem>
                           ))}
                         </>
                       )}
                       {flagTeams.length > 0 && (
                         <>
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
+                          <div className="px-2 py-2 text-xs font-bold text-secondary bg-secondary/5 flex items-center gap-2 border-b border-border mt-1">
+                            <Football size={16} weight="duotone" />
+                            FLAG FOOTBALL
+                          </div>
                           {flagTeams.map(team => (
-                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                            <SelectItem key={team.id} value={team.id} className="pl-8">
+                              <div className="flex items-center gap-2">
+                                <Football size={14} weight="duotone" className="text-secondary/60" />
+                                {team.name}
+                              </div>
+                            </SelectItem>
                           ))}
                         </>
                       )}
@@ -211,7 +227,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestFacility}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <PlusCircle size={20} weight="bold" />
+                <PlusCircle size={20} weight="duotone" />
                 Facility
               </Button>
 
@@ -219,7 +235,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestEquipment}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <PlusCircle size={20} weight="bold" />
+                <PlusCircle size={20} weight="duotone" />
                 Equipment
               </Button>
 
@@ -227,7 +243,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onManagement}
                 className="h-11 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
               >
-                <Clipboard size={24} weight="fill" />
+                <Clipboard size={20} weight="duotone" />
                 Management
               </Button>
             </div>
@@ -275,7 +291,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               onClick={() => setCancellationEvent(event)}
                               className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 h-7 text-xs px-2"
                             >
-                              <XCircle size={14} weight="fill" />
+                              <XCircle size={14} weight="duotone" />
                               <span className="hidden md:inline">Request Cancellation</span>
                               <span className="md:hidden">Cancel</span>
                             </Button>
@@ -290,19 +306,19 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
                               <div className="p-2 rounded-lg bg-secondary/10">
-                                <Barbell size={24} weight="fill" className="text-secondary" />
+                                <Barbell size={24} weight="duotone" className="text-secondary" />
                               </div>
                             ) : event.eventType === 'game' ? (
                               <div className="p-2 rounded-lg bg-primary/10">
-                                <Trophy size={24} weight="fill" className="text-primary" />
+                                <Trophy size={24} weight="duotone" className="text-primary" />
                               </div>
                             ) : event.eventType === 'meeting' ? (
                               <div className="p-2 rounded-lg bg-accent/10">
-                                <Chalkboard size={24} weight="fill" className="text-accent" />
+                                <Chalkboard size={24} weight="duotone" className="text-accent" />
                               </div>
                             ) : (
                               <div className="p-2 rounded-lg bg-muted">
-                                <Calendar size={24} weight="fill" className="text-muted-foreground" />
+                                <Calendar size={24} weight="duotone" className="text-muted-foreground" />
                               </div>
                             )}
                             <div className="flex-1">
@@ -324,7 +340,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
 
                         <div className="border-t border-border pt-4 space-y-3">
                           <div className="flex items-center gap-2 text-sm">
-                            <MapPin size={16} weight="fill" className="text-secondary flex-shrink-0" />
+                            <MapPin size={16} weight="duotone" className="text-secondary flex-shrink-0" />
                             <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
                           </div>
 
@@ -332,44 +348,44 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                             <div className="flex flex-wrap gap-2">
                               {field.hasLights && (
                                 <Badge variant="outline" className="text-xs gap-1">
-                                  <Lightning size={14} weight="fill" className="text-yellow-600" />
+                                  <Lightning size={14} weight="duotone" className="text-yellow-600" />
                                   Lights
                                 </Badge>
                               )}
                               <Badge variant="outline" className="text-xs gap-1">
                                 {field.turfType === 'artificial' ? (
                                   <>
-                                    <Circle size={14} weight="fill" className="text-green-600" />
+                                    <Circle size={14} weight="duotone" className="text-green-600" />
                                     Artificial Turf
                                   </>
                                 ) : (
                                   <>
-                                    <TreeEvergreen size={14} weight="fill" className="text-green-700" />
+                                    <TreeEvergreen size={14} weight="duotone" className="text-green-700" />
                                     Natural Grass
                                   </>
                                 )}
                               </Badge>
                               {site.hasToilets && (
                                 <Badge variant="outline" className="text-xs gap-1">
-                                  <Toilet size={14} weight="fill" className="text-blue-600" />
+                                  <Toilet size={14} weight="duotone" className="text-blue-600" />
                                   Toilets
                                 </Badge>
                               )}
                               {site.hasLockerRooms && (
                                 <Badge variant="outline" className="text-xs gap-1">
-                                  <Lockers size={14} weight="fill" className="text-purple-600" />
+                                  <Lockers size={14} weight="duotone" className="text-purple-600" />
                                   Locker Rooms
                                 </Badge>
                               )}
                               {site.hasEquipmentStash && (
                                 <Badge variant="outline" className="text-xs gap-1">
-                                  <Backpack size={14} weight="fill" className="text-orange-600" />
+                                  <Backpack size={14} weight="duotone" className="text-orange-600" />
                                   Equipment Storage
                                 </Badge>
                               )}
                               {site.hasRestaurant && (
                                 <Badge variant="outline" className="text-xs gap-1">
-                                  <ForkKnife size={14} weight="fill" className="text-red-600" />
+                                  <ForkKnife size={14} weight="duotone" className="text-red-600" />
                                   Restaurant
                                 </Badge>
                               )}
@@ -380,7 +396,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                             <div className="space-y-2">
                               {eventTeams[0]?.headCoachName && (
                                 <div className="flex items-center gap-2 text-sm">
-                                  <UserCircleGear size={16} weight="fill" className="text-primary flex-shrink-0" />
+                                  <UserCircleGear size={16} weight="duotone" className="text-primary flex-shrink-0" />
                                   <div>
                                     <span className="font-semibold">Head Coach:</span> {eventTeams[0].headCoachName}
                                     {eventTeams[0].headCoachEmail && (
@@ -393,7 +409,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               )}
                               {eventTeams[0]?.teamManagerName && (
                                 <div className="flex items-center gap-2 text-sm">
-                                  <UserCircleGear size={16} weight="fill" className="text-accent flex-shrink-0" />
+                                  <UserCircleGear size={16} weight="duotone" className="text-accent flex-shrink-0" />
                                   <div>
                                     <span className="font-semibold">Team Manager:</span> {eventTeams[0].teamManagerName}
                                     {eventTeams[0].teamManagerEmail && (
