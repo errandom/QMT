@@ -228,8 +228,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-end gap-2 mb-3">
+                      <CardContent className="p-6 pt-3">
+                        <div className="flex items-center justify-end gap-2 mb-2">
                           <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
                             {event.eventType}
                           </Badge>
