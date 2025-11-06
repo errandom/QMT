@@ -85,8 +85,38 @@ export function ScheduleTable() {
     setIsDialogOpen(true);
   };
 
+  const handleStartTimeChange = (value: string) => {
+    setFormData(prev => {
+      const newFormData = { ...prev, startTime: value };
+      if (value && !prev.endTime) {
+        const startDate = new Date(value);
+        startDate.setMinutes(startDate.getMinutes() + 90);
+        newFormData.endTime = startDate.toISOString().slice(0, 16);
+      }
+      return newFormData;
+    });
+  };
+
+  const validateTimeRange = (): boolean => {
+    if (!formData.startTime || !formData.endTime) return true;
+    
+    const start = new Date(formData.startTime);
+    const end = new Date(formData.endTime);
+    const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    
+    if (diffMinutes < 30) {
+      toast.error('End time must be at least 30 minutes after start time');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateTimeRange()) {
+      return;
+    }
     
     if (editingEvent) {
       setSchedule((current) =>
@@ -367,7 +397,7 @@ export function ScheduleTable() {
                   id="startTime"
                   type="datetime-local"
                   value={formData.startTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   required
                 />
               </div>

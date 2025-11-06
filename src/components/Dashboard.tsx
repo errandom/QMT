@@ -228,14 +228,27 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                      <CardContent className="p-6 pt-3">
-                        <div className="flex items-center justify-end gap-2 mb-2">
-                          <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
-                            {event.eventType}
-                          </Badge>
-                          <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
-                            {event.status}
-                          </Badge>
+                      <CardContent className="p-6 pt-2 pb-4">
+                        <div className="flex items-center justify-between gap-2 mb-2 pt-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs uppercase font-medium text-muted-foreground border-muted-foreground/30">
+                              {event.eventType}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30">
+                              {event.status}
+                            </Badge>
+                          </div>
+                          {canCancel && event.status !== 'cancelled' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCancellationEvent(event)}
+                              className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 h-7 text-xs px-2"
+                            >
+                              <XCircle size={14} weight="fill" />
+                              Request Cancellation
+                            </Button>
+                          )}
                         </div>
                       <div className={`h-1.5 bg-gradient-to-r ${
                         firstTeam?.sportType === 'tackle' 
@@ -334,20 +347,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
 
                           {event.notes && (
                             <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">{event.notes}</p>
-                          )}
-
-                          {canCancel && event.status !== 'cancelled' && (
-                            <div className="pt-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCancellationEvent(event)}
-                                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                              >
-                                <XCircle size={16} weight="fill" />
-                                Request Cancellation
-                              </Button>
-                            </div>
                           )}
                         </div>
                       </CardContent>
