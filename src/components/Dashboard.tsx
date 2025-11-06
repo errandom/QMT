@@ -89,7 +89,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
               <p className="text-primary-foreground/90 text-sm font-medium mt-1">ZURICH RENEGADES FOOTBALL</p>
             </div>
             {authState?.isAuthenticated && (
-              <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3">
+              <div className="flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-3">
                 <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                   <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
                     {authState.role === 'QMTadmin' ? (
