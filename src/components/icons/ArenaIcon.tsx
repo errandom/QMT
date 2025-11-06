@@ -14,29 +14,18 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
         fill="currentColor"
         className={className}
       >
-        <rect x="2" y="8" width="7" height="12" opacity="0.7"/>
-        <rect x="10" y="5" width="12" height="15" opacity="0.8"/>
-        <path d="M10 5L16 2L22 5V20H10V5Z" opacity="0.9"/>
-        <rect x="3" y="10" width="1.5" height="2" opacity="0.4"/>
-        <rect x="3" y="13" width="1.5" height="2" opacity="0.4"/>
-        <rect x="3" y="16" width="1.5" height="2" opacity="0.4"/>
-        <rect x="6" y="10" width="1.5" height="2" opacity="0.4"/>
-        <rect x="6" y="13" width="1.5" height="2" opacity="0.4"/>
-        <rect x="6" y="16" width="1.5" height="2" opacity="0.4"/>
-        <rect x="12" y="7" width="1.5" height="2" opacity="0.4"/>
-        <rect x="12" y="10" width="1.5" height="2" opacity="0.4"/>
-        <rect x="12" y="13" width="1.5" height="2" opacity="0.4"/>
-        <rect x="12" y="16" width="1.5" height="2" opacity="0.4"/>
-        <rect x="15" y="7" width="1.5" height="2" opacity="0.4"/>
-        <rect x="15" y="10" width="1.5" height="2" opacity="0.4"/>
-        <rect x="15" y="13" width="1.5" height="2" opacity="0.4"/>
-        <rect x="15" y="16" width="1.5" height="2" opacity="0.4"/>
-        <rect x="18.5" y="7" width="1.5" height="2" opacity="0.4"/>
-        <rect x="18.5" y="10" width="1.5" height="2" opacity="0.4"/>
-        <rect x="18.5" y="13" width="1.5" height="2" opacity="0.4"/>
-        <rect x="18.5" y="16" width="1.5" height="2" opacity="0.4"/>
-        <path d="M2 20H22" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-        <ellipse cx="16" cy="12" rx="3" ry="2" opacity="0.3"/>
+        <ellipse cx="12" cy="18" rx="10" ry="4" opacity="0.9"/>
+        <path d="M2 18V10C2 9 2.5 8 3.5 7L12 3L20.5 7C21.5 8 22 9 22 10V18" opacity="0.85"/>
+        <path d="M3 10V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M5.5 9V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M8 8.5V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M10.5 8V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M13.5 8V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M16 8.5V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M18.5 9V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <path d="M21 10V18" strokeWidth="1.5" stroke="currentColor" opacity="0.6"/>
+        <ellipse cx="12" cy="13" rx="5" ry="3" opacity="0.3"/>
+        <path d="M12 3L8 5.5L12 7.5L16 5.5L12 3Z" opacity="0.7"/>
       </svg>
     );
   }
@@ -53,29 +42,17 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
       strokeLinejoin="round"
       className={className}
     >
-      <rect x="2" y="8" width="7" height="12"/>
-      <rect x="10" y="5" width="12" height="15"/>
-      <path d="M10 5L16 2L22 5"/>
-      <line x1="2" y1="20" x2="22" y2="20" strokeWidth="2"/>
-      <rect x="3" y="10" width="1.5" height="2"/>
-      <rect x="3" y="13" width="1.5" height="2"/>
-      <rect x="3" y="16" width="1.5" height="2"/>
-      <rect x="6" y="10" width="1.5" height="2"/>
-      <rect x="6" y="13" width="1.5" height="2"/>
-      <rect x="6" y="16" width="1.5" height="2"/>
-      <rect x="12" y="7" width="1.5" height="2"/>
-      <rect x="12" y="10" width="1.5" height="2"/>
-      <rect x="12" y="13" width="1.5" height="2"/>
-      <rect x="12" y="16" width="1.5" height="2"/>
-      <rect x="15" y="7" width="1.5" height="2"/>
-      <rect x="15" y="10" width="1.5" height="2"/>
-      <rect x="15" y="13" width="1.5" height="2"/>
-      <rect x="15" y="16" width="1.5" height="2"/>
-      <rect x="18.5" y="7" width="1.5" height="2"/>
-      <rect x="18.5" y="10" width="1.5" height="2"/>
-      <rect x="18.5" y="13" width="1.5" height="2"/>
-      <rect x="18.5" y="16" width="1.5" height="2"/>
-      <ellipse cx="16" cy="12" rx="3" ry="2"/>
+      <ellipse cx="12" cy="18" rx="10" ry="4"/>
+      <path d="M2 18V10C2 9 2.5 8 3.5 7L12 3L20.5 7C21.5 8 22 9 22 10V18"/>
+      <line x1="3" y1="10" x2="3" y2="18"/>
+      <line x1="5.5" y1="9" x2="5.5" y2="18"/>
+      <line x1="8" y1="8.5" x2="8" y2="18"/>
+      <line x1="10.5" y1="8" x2="10.5" y2="18"/>
+      <line x1="13.5" y1="8" x2="13.5" y2="18"/>
+      <line x1="16" y1="8.5" x2="16" y2="18"/>
+      <line x1="18.5" y1="9" x2="18.5" y2="18"/>
+      <line x1="21" y1="10" x2="21" y2="18"/>
+      <ellipse cx="12" cy="13" rx="5" ry="3"/>
     </svg>
   );
 }
