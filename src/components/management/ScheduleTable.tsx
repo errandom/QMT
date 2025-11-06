@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Plus, PencilSimple, Trash, Trophy, Barbell, Chalkboard, Calendar } from '@phosphor-icons/react';
+import { Plus, PencilSimple, Trash, Trophy, Barbell, Chalkboard, Calendar, FileXls } from '@phosphor-icons/react';
 import { useSchedule, useTeams, useFields, useSites } from '@/hooks/use-data';
 import { ScheduleEvent, EventType, EventStatus } from '@/lib/types';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 const EVENT_ICONS = {
   practice: Barbell,
@@ -224,6 +225,81 @@ export function ScheduleTable() {
     }));
   };
 
+  const handleExportToExcel = () => {
+    if (!schedule || schedule.length === 0) {
+      toast.error('No schedule data to export');
+      return;
+    }
+
+    const exportData = schedule.map(event => {
+      const eventTeams = (event.teamIds || []).map(id => getTeamById(teams || [], id)).filter(Boolean);
+      const field = event.fieldId ? getFieldById(fields || [], event.fieldId) : undefined;
+      const site = field 
+        ? getSiteById(sites || [], field.siteId) 
+        : event.siteId 
+          ? getSiteById(sites || [], event.siteId)
+          : undefined;
+
+      return {
+        'Event ID': event.id,
+        'Event Type': event.eventType,
+        'Status': event.status,
+        'Team(s)': eventTeams.map(t => t?.name).join(' & ') || 'Unknown',
+        'Opponent': event.opponent || '',
+        'Start Date': format(new Date(event.startTime), 'MMM d, yyyy'),
+        'Start Time': format(new Date(event.startTime), 'h:mm a'),
+        'End Time': format(new Date(event.endTime), 'h:mm a'),
+        'Duration (minutes)': Math.round((new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60)),
+        'Site Name': site?.name || 'Unknown',
+        'Site Address': site ? `${site.address}, ${site.city}, ${site.state} ${site.zipCode}` : '',
+        'Field Name': field?.name || '',
+        'Turf Type': field?.turfType || '',
+        'Full Field': field?.isFullField ? 'Yes' : field ? 'No' : '',
+        'Has Lights': field?.hasLights ? 'Yes' : field ? 'No' : '',
+        'Site Has Toilets': site?.hasToilets ? 'Yes' : 'No',
+        'Site Has Locker Rooms': site?.hasLockerRooms ? 'Yes' : 'No',
+        'Site Has Equipment Storage': site?.hasEquipmentStash ? 'Yes' : 'No',
+        'Site Has Restaurant': site?.hasRestaurant ? 'Yes' : 'No',
+        'Site Has Parking': site?.hasParking ? 'Yes' : 'No',
+        'Estimated Attendance': event.estimatedAttendance || '',
+        'Is Recurring': event.isRecurring ? 'Yes' : 'No',
+        'Recurring Days': event.recurringDays ? event.recurringDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ') : '',
+        'Recurring Start Date': event.recurringStartDate ? format(new Date(event.recurringStartDate), 'MMM d, yyyy') : '',
+        'Recurring End Date': event.recurringEndDate ? format(new Date(event.recurringEndDate), 'MMM d, yyyy') : '',
+        'Notes': event.notes || '',
+        'Head Coach Name': eventTeams[0]?.headCoachName || '',
+        'Head Coach Email': eventTeams[0]?.headCoachEmail || '',
+        'Head Coach Phone': eventTeams[0]?.headCoachPhone || '',
+        'Team Manager Name': eventTeams[0]?.teamManagerName || '',
+        'Team Manager Email': eventTeams[0]?.teamManagerEmail || '',
+        'Team Manager Phone': eventTeams[0]?.teamManagerPhone || '',
+        'Site Contact Phone': site?.contactPhone || '',
+        'Site Contact Email': site?.contactEmail || '',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    
+    const columnWidths = [
+      { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 },
+      { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 25 },
+      { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 18 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+      { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 20 },
+      { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 25 }
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedule');
+
+    const fileName = `QMT_Schedule_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    
+    toast.success('Schedule exported successfully');
+  };
+
   const selectedField = fields?.find(f => f.id === formData.fieldId);
   const selectedSite = selectedField 
     ? sites?.find(s => s.id === selectedField.siteId) 
@@ -243,10 +319,16 @@ export function ScheduleTable() {
               <CardTitle>Schedule</CardTitle>
               <CardDescription>Manage scheduled events</CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus size={18} weight="duotone" />
-              Add Event
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleExportToExcel} variant="outline" className="gap-2">
+                <FileXls size={18} weight="duotone" />
+                Export to Excel
+              </Button>
+              <Button onClick={() => handleOpenDialog()} className="gap-2">
+                <Plus size={18} weight="duotone" />
+                Add Event
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

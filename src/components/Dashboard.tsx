@@ -12,8 +12,6 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { CancellationRequestDialog } from '@/components/CancellationRequestDialog';
 import { ScheduleEvent } from '@/lib/types';
-import { ZurichRenegadesLogo } from '@/components/icons';
-
 interface DashboardProps {
   onRequestFacility: () => void;
   onRequestEquipment: () => void;
@@ -86,7 +84,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <ZurichRenegadesLogo size={60} className="text-primary-foreground hidden sm:block flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
                 <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">ZURICH RENEGADES FOOTBALL</p>
