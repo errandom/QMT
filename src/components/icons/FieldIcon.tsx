@@ -20,7 +20,7 @@ export function FieldIcon({ className, size = 24 }: FieldIconProps) {
       <line x1="8.6" y1="15" x2="8.6" y2="21" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.7" />
       <line x1="11.4" y1="15" x2="11.4" y2="21" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.7" />
       
-      <line x1="12" y1="6" x2="12" y2="21" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.7" />
+      <line x1="12" y1="4" x2="12" y2="21" stroke="currentColor" strokeWidth="2" strokeOpacity="0.7" />
       
       <line x1="12.6" y1="15" x2="12.6" y2="21" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.7" />
       <line x1="15.4" y1="15" x2="15.4" y2="21" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.7" />
@@ -29,8 +29,8 @@ export function FieldIcon({ className, size = 24 }: FieldIconProps) {
       
       <text
         x="7.7"
-        y="11.5"
-        fontSize="10"
+        y="10"
+        fontSize="12"
         fontWeight="700"
         textAnchor="middle"
         fill="currentColor"
@@ -42,8 +42,8 @@ export function FieldIcon({ className, size = 24 }: FieldIconProps) {
       
       <text
         x="16.3"
-        y="11.5"
-        fontSize="10"
+        y="10"
+        fontSize="12"
         fontWeight="700"
         textAnchor="middle"
         fill="currentColor"
