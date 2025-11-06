@@ -284,19 +284,19 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
                               <div className="p-2 rounded-lg bg-secondary/10">
-                                <Barbell size={24} weight="duotone" className="text-secondary" />
+                                <Barbell size={24} weight="duotone" className="text-[oklch(0.25_0.08_240)]" />
                               </div>
                             ) : event.eventType === 'game' ? (
                               <div className="p-2 rounded-lg bg-primary/10">
-                                <Trophy size={24} weight="duotone" className="text-primary" />
+                                <Trophy size={24} weight="duotone" className="text-[oklch(0.25_0.08_240)]" />
                               </div>
                             ) : event.eventType === 'meeting' ? (
                               <div className="p-2 rounded-lg bg-accent/10">
-                                <Chalkboard size={24} weight="duotone" className="text-accent" />
+                                <Chalkboard size={24} weight="duotone" className="text-[oklch(0.25_0.08_240)]" />
                               </div>
                             ) : (
                               <div className="p-2 rounded-lg bg-muted">
-                                <Calendar size={24} weight="duotone" className="text-muted-foreground/80" />
+                                <Calendar size={24} weight="duotone" className="text-[oklch(0.25_0.08_240)]" />
                               </div>
                             )}
                             <div className="flex-1">
