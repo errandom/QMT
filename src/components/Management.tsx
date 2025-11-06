@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Backpack, MapPin } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, MapPin, Toolbox } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -167,7 +167,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Backpack size={30} weight={activeTab === 'equipment' ? 'fill' : 'regular'} />
+                  <Toolbox size={30} weight={activeTab === 'equipment' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>

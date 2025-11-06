@@ -219,7 +219,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestEquipment}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <Toolbox size={20} weight="bold" />
+                <PlusCircle size={20} weight="bold" />
                 Equipment
               </Button>
 
