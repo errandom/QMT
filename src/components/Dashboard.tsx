@@ -294,11 +294,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                             </Button>
                           )}
                         </div>
-                      <div className={`h-1.5 bg-gradient-to-r ${
-                        firstTeam?.sportType === 'tackle' 
-                          ? 'from-primary to-secondary' 
-                          : 'from-secondary to-accent'
-                      } mb-4 w-full`} />
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
