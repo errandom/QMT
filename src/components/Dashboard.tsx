@@ -254,6 +254,14 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               </div>
                             )}
                             <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
+                                  {event.eventType}
+                                </Badge>
+                                <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
+                                  {event.status}
+                                </Badge>
+                              </div>
                               <h3 className="text-xl font-bold">
                                 {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
                               </h3>
@@ -267,14 +275,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
                               </div>
                             </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
-                              {event.eventType}
-                            </Badge>
-                            <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
-                              {event.status}
-                            </Badge>
                           </div>
                         </div>
 
