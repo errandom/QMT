@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { CancellationRequestDialog } from '@/components/CancellationRequestDialog';
 import { ScheduleEvent } from '@/lib/types';
+import { ZurichRenegadesLogo } from '@/components/icons';
 
 interface DashboardProps {
   onRequestFacility: () => void;
@@ -85,6 +86,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
+              <ZurichRenegadesLogo size={60} className="text-primary-foreground hidden sm:block flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
                 <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">ZURICH RENEGADES FOOTBALL</p>
@@ -282,7 +284,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
                         <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
-                          <Badge variant="outline" className="text-xs lowercase font-medium text-muted-foreground border-muted-foreground/30 h-7 items-center hidden md:flex">
+                          <Badge variant="outline" className="text-xs lowercase font-semibold text-foreground border-foreground/30 h-7 items-center hidden md:flex">
                             {event.eventType}
                           </Badge>
                           <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">

@@ -14,6 +14,7 @@ import { SettingsView } from './management/SettingsView';
 import { ChecklistIcon } from './icons/ChecklistIcon';
 import { FieldIcon } from './icons/FieldIcon';
 import { JerseyIcon } from './icons/JerseyIcon';
+import { ZurichRenegadesLogo } from './icons';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -38,6 +39,7 @@ export function Management({ onLogout }: ManagementProps) {
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <ZurichRenegadesLogo size={60} className="text-primary-foreground hidden sm:block flex-shrink-0" />
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">
                   QMT | Operations
