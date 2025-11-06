@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, ShieldCheck } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { HelmetIcon } from '@/components/icons/HelmetIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
 
 interface DashboardProps {
   onRequestFacility: () => void;
@@ -36,8 +37,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
     return events;
   }, [schedule, fields, teams, sportFilter, teamFilter]);
 
-  const tackleTeams = useMemo(() => teams?.filter(t => t.sportType === 'tackle') || [], [teams]);
-  const flagTeams = useMemo(() => teams?.filter(t => t.sportType === 'flag') || [], [teams]);
+  const tackleTeams = useMemo(() => teams?.filter(t => t.sportType === 'tackle' && t.isActive) || [], [teams]);
+  const flagTeams = useMemo(() => teams?.filter(t => t.sportType === 'flag' && t.isActive) || [], [teams]);
 
   const getSportLabel = () => {
     if (sportFilter === 'all') return 'All';
@@ -60,8 +61,12 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
             </div>
             {authState?.isAuthenticated ? (
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground font-semibold text-sm">
-                  {authState.username?.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
+                  {authState.role === 'QMTadmin' ? (
+                    <ShieldStar size={20} weight="fill" />
+                  ) : (
+                    <UserCircleGear size={20} weight="fill" />
+                  )}
                 </div>
                 <span className="text-primary-foreground font-medium">{authState.username}</span>
               </div>
@@ -170,8 +175,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
               onClick={onManagement}
               className="h-14 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
             >
-              <ShieldCheck size={20} weight="fill" />
-              Management Section
+              <UserCircleGear size={20} weight="fill" />
+              Management
             </Button>
           </div>
 
@@ -188,7 +193,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
               </Card>
             ) : (
               upcomingEvents.map((event, index) => {
-                const team = getTeamById(teams || [], event.teamId);
+                const teams = event.teamIds.map(id => getTeamById(teams || [], id)).filter(Boolean) as typeof teams extends (infer U)[] ? U[] : never;
+                const firstTeam = teams[0];
                 const field = getFieldById(fields || [], event.fieldId);
                 const site = field ? getSiteById(sites || [], field.siteId) : undefined;
 
@@ -201,7 +207,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <div className={`h-1.5 bg-gradient-to-r ${
-                        team?.sportType === 'tackle' 
+                        firstTeam?.sportType === 'tackle' 
                           ? 'from-primary to-secondary' 
                           : 'from-secondary to-accent'
                       }`} />
@@ -209,7 +215,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              {team?.sportType === 'tackle' ? (
+                              {firstTeam?.sportType === 'tackle' ? (
                                 <div className="p-2 rounded-lg bg-primary/10">
                                   <HelmetIcon size={24} filled className="text-primary" />
                                 </div>
@@ -221,14 +227,21 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                                 </div>
                               )}
                               <div>
-                                <h3 className="text-xl font-bold">{team?.name || 'Unknown Team'}</h3>
+                                <h3 className="text-xl font-bold">
+                                  {teams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                                </h3>
                                 {event.opponent && (
                                   <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
                                 )}
                               </div>
                             </div>
-                            <div className="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wide">
-                              {event.eventType}
+                            <div className="flex items-center gap-2">
+                              <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
+                                {event.eventType}
+                              </Badge>
+                              <Badge variant={event.status === 'confirmed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
+                                {event.status}
+                              </Badge>
                             </div>
                           </div>
                           <div className="text-right bg-muted/50 px-4 py-2 rounded-xl">

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, PencilSimple, Trash } from '@phosphor-icons/react';
+import { Switch } from '@/components/ui/switch';
+import { Plus, PencilSimple, Trash, Check } from '@phosphor-icons/react';
 import { useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { Field, SportType } from '@/lib/types';
 import { toast } from 'sonner';
@@ -23,6 +23,9 @@ export function FieldsTable() {
     name: '',
     siteId: '',
     sportType: 'tackle' as SportType,
+    turfType: 'natural' as 'artificial' | 'natural',
+    hasLights: false,
+    isFullField: true,
     capacity: ''
   });
 
@@ -33,6 +36,9 @@ export function FieldsTable() {
         name: field.name,
         siteId: field.siteId,
         sportType: field.sportType,
+        turfType: field.turfType,
+        hasLights: field.hasLights,
+        isFullField: field.isFullField,
         capacity: field.capacity?.toString() || ''
       });
     } else {
@@ -41,6 +47,9 @@ export function FieldsTable() {
         name: '',
         siteId: '',
         sportType: 'tackle',
+        turfType: 'natural',
+        hasLights: false,
+        isFullField: true,
         capacity: ''
       });
     }
@@ -54,7 +63,16 @@ export function FieldsTable() {
       setFields((current) =>
         (current || []).map(f =>
           f.id === editingField.id
-            ? { ...f, ...formData, capacity: formData.capacity ? parseInt(formData.capacity) : undefined }
+            ? { 
+                ...f, 
+                name: formData.name,
+                siteId: formData.siteId,
+                sportType: formData.sportType,
+                turfType: formData.turfType,
+                hasLights: formData.hasLights,
+                isFullField: formData.isFullField,
+                capacity: formData.capacity ? parseInt(formData.capacity) : undefined
+              }
             : f
         )
       );
@@ -65,6 +83,9 @@ export function FieldsTable() {
         name: formData.name,
         siteId: formData.siteId,
         sportType: formData.sportType,
+        turfType: formData.turfType,
+        hasLights: formData.hasLights,
+        isFullField: formData.isFullField,
         capacity: formData.capacity ? parseInt(formData.capacity) : undefined
       };
       setFields((current) => [...(current || []), newField]);
@@ -103,32 +124,57 @@ export function FieldsTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Site</TableHead>
-                <TableHead>Sport Type</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fields && fields.length > 0 ? (
-                fields.map(field => {
-                  const site = getSiteById(sites || [], field.siteId);
-                  return (
-                    <TableRow key={field.id}>
-                      <TableCell className="font-medium">{field.name}</TableCell>
-                      <TableCell>{site?.name || 'Unknown Site'}</TableCell>
-                      <TableCell>
-                        <Badge variant={field.sportType === 'tackle' ? 'default' : 'secondary'}>
-                          {field.sportType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{field.capacity || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+          <div className="space-y-3">
+            {fields && fields.length > 0 ? (
+              fields.map(field => {
+                const site = getSiteById(sites || [], field.siteId);
+                return (
+                  <Card key={field.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="text-lg font-bold">{field.name}</h3>
+                            <Badge variant={field.sportType === 'tackle' ? 'default' : 'secondary'}>
+                              {field.sportType}
+                            </Badge>
+                            <Badge variant="outline">
+                              {field.turfType === 'artificial' ? 'Artificial Turf' : 'Natural Turf'}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Location</div>
+                              <div>{site?.name || 'Unknown Site'}</div>
+                              {field.capacity && <div className="text-muted-foreground">Capacity: {field.capacity}</div>}
+                            </div>
+                            
+                            <div>
+                              <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Features</div>
+                              <div className="flex flex-wrap gap-2">
+                                {field.hasLights && (
+                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                    <Check size={12} weight="bold" />
+                                    Lights
+                                  </div>
+                                )}
+                                {field.isFullField ? (
+                                  <div className="flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                    <Check size={12} weight="bold" />
+                                    Full Field
+                                  </div>
+                                ) : (
+                                  <div className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                    Shared Field
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 lg:flex-col">
                           <Button
                             variant="outline"
                             size="sm"
@@ -145,27 +191,24 @@ export function FieldsTable() {
                             className="gap-1"
                           >
                             <Trash size={16} />
-                            Delete
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No fields found. Click "Add Field" to create one.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No fields found. Click "Add Field" to create one.
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingField ? 'Edit Field' : 'Add New Field'}</DialogTitle>
             <DialogDescription>
@@ -173,41 +216,58 @@ export function FieldsTable() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Field Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Field Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="siteId">Site *</Label>
+                <Select value={formData.siteId} onValueChange={(value) => setFormData(prev => ({ ...prev, siteId: value }))} required>
+                  <SelectTrigger id="siteId">
+                    <SelectValue placeholder="Select site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sites?.map(site => (
+                      <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="siteId">Site *</Label>
-              <Select value={formData.siteId} onValueChange={(value) => setFormData(prev => ({ ...prev, siteId: value }))} required>
-                <SelectTrigger id="siteId">
-                  <SelectValue placeholder="Select site" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites?.map(site => (
-                    <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sportType">Sport Type *</Label>
+                <Select value={formData.sportType} onValueChange={(value: SportType) => setFormData(prev => ({ ...prev, sportType: value }))}>
+                  <SelectTrigger id="sportType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tackle">Tackle</SelectItem>
+                    <SelectItem value="flag">Flag</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="sportType">Sport Type *</Label>
-              <Select value={formData.sportType} onValueChange={(value: SportType) => setFormData(prev => ({ ...prev, sportType: value }))}>
-                <SelectTrigger id="sportType">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tackle">Tackle</SelectItem>
-                  <SelectItem value="flag">Flag</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label htmlFor="turfType">Turf Type *</Label>
+                <Select value={formData.turfType} onValueChange={(value: 'artificial' | 'natural') => setFormData(prev => ({ ...prev, turfType: value }))}>
+                  <SelectTrigger id="turfType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="natural">Natural Turf</SelectItem>
+                    <SelectItem value="artificial">Artificial Turf</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -219,6 +279,29 @@ export function FieldsTable() {
                 onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value }))}
                 placeholder="Optional"
               />
+            </div>
+
+            <div className="space-y-4 p-4 rounded-lg bg-muted/50">
+              <h3 className="font-semibold text-sm uppercase tracking-wide">Features</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hasLights"
+                    checked={formData.hasLights}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasLights: checked }))}
+                  />
+                  <Label htmlFor="hasLights">Lights Available</Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="isFullField"
+                    checked={formData.isFullField}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isFullField: checked }))}
+                  />
+                  <Label htmlFor="isFullField">Full Field</Label>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3">

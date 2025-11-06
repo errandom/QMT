@@ -1,12 +1,18 @@
 export type SportType = 'tackle' | 'flag';
+export type EventType = 'practice' | 'game' | 'meeting' | 'other';
+export type EventStatus = 'planned' | 'confirmed' | 'cancelled';
 
 export interface Team {
   id: string;
   name: string;
   sportType: SportType;
-  contactName?: string;
-  contactEmail?: string;
-  contactPhone?: string;
+  isActive: boolean;
+  headCoachName?: string;
+  headCoachEmail?: string;
+  headCoachPhone?: string;
+  teamManagerName?: string;
+  teamManagerEmail?: string;
+  teamManagerPhone?: string;
 }
 
 export interface Site {
@@ -16,6 +22,10 @@ export interface Site {
   city: string;
   state: string;
   zipCode: string;
+  hasToilets: boolean;
+  hasLockerRooms: boolean;
+  hasEquipmentStash: boolean;
+  hasRestaurant: boolean;
 }
 
 export interface Field {
@@ -23,18 +33,27 @@ export interface Field {
   name: string;
   siteId: string;
   sportType: SportType;
+  turfType: 'artificial' | 'natural';
+  hasLights: boolean;
+  isFullField: boolean;
   capacity?: number;
 }
 
 export interface ScheduleEvent {
   id: string;
   fieldId: string;
-  teamId: string;
+  teamIds: string[];
   startTime: string;
   endTime: string;
-  eventType: 'practice' | 'game' | 'tournament';
+  eventType: EventType;
+  status: EventStatus;
+  estimatedAttendance?: number;
   opponent?: string;
   notes?: string;
+  isRecurring: boolean;
+  recurringDays?: number[];
+  recurringStartDate?: string;
+  recurringEndDate?: string;
 }
 
 export interface Request {

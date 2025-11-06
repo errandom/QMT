@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, PencilSimple, Trash } from '@phosphor-icons/react';
+import { Switch } from '@/components/ui/switch';
+import { Plus, PencilSimple, Trash, Check, X } from '@phosphor-icons/react';
 import { useSites, useFields } from '@/hooks/use-data';
 import { Site } from '@/lib/types';
 import { toast } from 'sonner';
@@ -20,7 +20,11 @@ export function SitesTable() {
     address: '',
     city: '',
     state: '',
-    zipCode: ''
+    zipCode: '',
+    hasToilets: false,
+    hasLockerRooms: false,
+    hasEquipmentStash: false,
+    hasRestaurant: false
   });
 
   const handleOpenDialog = (site?: Site) => {
@@ -31,7 +35,11 @@ export function SitesTable() {
         address: site.address,
         city: site.city,
         state: site.state,
-        zipCode: site.zipCode
+        zipCode: site.zipCode,
+        hasToilets: site.hasToilets,
+        hasLockerRooms: site.hasLockerRooms,
+        hasEquipmentStash: site.hasEquipmentStash,
+        hasRestaurant: site.hasRestaurant
       });
     } else {
       setEditingSite(null);
@@ -40,7 +48,11 @@ export function SitesTable() {
         address: '',
         city: '',
         state: '',
-        zipCode: ''
+        zipCode: '',
+        hasToilets: false,
+        hasLockerRooms: false,
+        hasEquipmentStash: false,
+        hasRestaurant: false
       });
     }
     setIsDialogOpen(true);
@@ -99,28 +111,58 @@ export function SitesTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>State</TableHead>
-                <TableHead>Zip Code</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sites && sites.length > 0 ? (
-                sites.map(site => (
-                  <TableRow key={site.id}>
-                    <TableCell className="font-medium">{site.name}</TableCell>
-                    <TableCell>{site.address}</TableCell>
-                    <TableCell>{site.city}</TableCell>
-                    <TableCell>{site.state}</TableCell>
-                    <TableCell>{site.zipCode}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+          <div className="space-y-3">
+            {sites && sites.length > 0 ? (
+              sites.map(site => (
+                <Card key={site.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                      <div className="flex-1 space-y-3">
+                        <h3 className="text-lg font-bold">{site.name}</h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Address</div>
+                            <div>{site.address}</div>
+                            <div className="text-muted-foreground">{site.city}, {site.state} {site.zipCode}</div>
+                          </div>
+                          
+                          <div>
+                            <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Amenities</div>
+                            <div className="flex flex-wrap gap-2">
+                              {site.hasToilets && (
+                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <Check size={12} weight="bold" />
+                                  Toilets
+                                </div>
+                              )}
+                              {site.hasLockerRooms && (
+                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <Check size={12} weight="bold" />
+                                  Locker Rooms
+                                </div>
+                              )}
+                              {site.hasEquipmentStash && (
+                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <Check size={12} weight="bold" />
+                                  Equipment Stash
+                                </div>
+                              )}
+                              {site.hasRestaurant && (
+                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <Check size={12} weight="bold" />
+                                  Restaurant
+                                </div>
+                              )}
+                              {!site.hasToilets && !site.hasLockerRooms && !site.hasEquipmentStash && !site.hasRestaurant && (
+                                <div className="text-muted-foreground text-xs">No amenities</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 lg:flex-col">
                         <Button
                           variant="outline"
                           size="sm"
@@ -137,26 +179,23 @@ export function SitesTable() {
                           className="gap-1"
                         >
                           <Trash size={16} />
-                          Delete
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No sites found. Click "Add Site" to create one.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No sites found. Click "Add Site" to create one.
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingSite ? 'Edit Site' : 'Add New Site'}</DialogTitle>
             <DialogDescription>
@@ -184,8 +223,8 @@ export function SitesTable() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2 col-span-1">
                 <Label htmlFor="city">City *</Label>
                 <Input
                   id="city"
@@ -206,17 +245,58 @@ export function SitesTable() {
                   placeholder="CA"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zipCode">Zip Code *</Label>
+                <Input
+                  id="zipCode"
+                  value={formData.zipCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
+                  required
+                  maxLength={10}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">Zip Code *</Label>
-              <Input
-                id="zipCode"
-                value={formData.zipCode}
-                onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
-                required
-                maxLength={10}
-              />
+            <div className="space-y-4 p-4 rounded-lg bg-muted/50">
+              <h3 className="font-semibold text-sm uppercase tracking-wide">Amenities</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hasToilets"
+                    checked={formData.hasToilets}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasToilets: checked }))}
+                  />
+                  <Label htmlFor="hasToilets">Toilets</Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hasLockerRooms"
+                    checked={formData.hasLockerRooms}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasLockerRooms: checked }))}
+                  />
+                  <Label htmlFor="hasLockerRooms">Locker Rooms</Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hasEquipmentStash"
+                    checked={formData.hasEquipmentStash}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasEquipmentStash: checked }))}
+                  />
+                  <Label htmlFor="hasEquipmentStash">Equipment Stash</Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hasRestaurant"
+                    checked={formData.hasRestaurant}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasRestaurant: checked }))}
+                  />
+                  <Label htmlFor="hasRestaurant">Restaurant</Label>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3">

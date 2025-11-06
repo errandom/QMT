@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, ListChecks, Users, Buildings } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, ListChecks, Users, Buildings, Gear, ArrowLeft, ShieldStar, UserCircleGear } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
@@ -11,6 +11,7 @@ import { FieldsTable } from './management/FieldsTable';
 import { ScheduleTable } from './management/ScheduleTable';
 import { RequestsTable } from './management/RequestsTable';
 import { UsersTable } from './management/UsersTable';
+import { SettingsView } from './management/SettingsView';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -22,6 +23,10 @@ export function Management({ onLogout }: ManagementProps) {
 
   const handleLogout = () => {
     logout();
+    onLogout();
+  };
+
+  const handleBackToDashboard = () => {
     onLogout();
   };
 
@@ -40,8 +45,12 @@ export function Management({ onLogout }: ManagementProps) {
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground font-semibold text-sm">
-                  {authState?.username?.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
+                  {authState?.role === 'QMTadmin' ? (
+                    <ShieldStar size={20} weight="fill" />
+                  ) : (
+                    <UserCircleGear size={20} weight="fill" />
+                  )}
                 </div>
                 <span className="text-primary-foreground font-medium">{authState?.username}</span>
               </div>
@@ -59,14 +68,33 @@ export function Management({ onLogout }: ManagementProps) {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold mb-2">Operations Office</h2>
-          <p className="text-muted-foreground text-lg">
-            Quick - Mean - Tough | On and Off the Field
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-4xl font-bold mb-2">Operations Office</h2>
+            <p className="text-muted-foreground text-lg">
+              Quick - Mean - Tough | On and Off the Field
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => setActiveTab('settings')}
+              variant="outline"
+              className="gap-2"
+            >
+              <Gear size={18} weight="fill" />
+              Settings
+            </Button>
+            <Button 
+              onClick={handleBackToDashboard}
+              className="gap-2"
+            >
+              <ArrowLeft size={18} weight="bold" />
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
           <Card 
             className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
               activeTab === 'schedule' ? 'ring-2 ring-primary shadow-lg' : ''
@@ -176,6 +204,24 @@ export function Management({ onLogout }: ManagementProps) {
               </CardHeader>
             </Card>
           )}
+
+          <Card 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
+              activeTab === 'settings' ? 'ring-2 ring-primary shadow-lg' : ''
+            }`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <CardHeader className="text-center pb-4">
+              <div className="flex justify-center mb-3">
+                <div className={`p-3 rounded-xl ${
+                  activeTab === 'settings' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}>
+                  <Gear size={28} weight="fill" />
+                </div>
+              </div>
+              <CardTitle className="text-base">Settings</CardTitle>
+            </CardHeader>
+          </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -204,6 +250,10 @@ export function Management({ onLogout }: ManagementProps) {
               <UsersTable />
             </TabsContent>
           )}
+
+          <TabsContent value="settings">
+            <SettingsView />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
