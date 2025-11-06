@@ -14,13 +14,12 @@ export function FootballIcon({ size = 24, className = '', filled = false }: Foot
         fill="currentColor"
         className={className}
       >
-        <ellipse cx="12" cy="12" rx="9" ry="6" transform="rotate(45 12 12)"/>
-        <line x1="8" y1="8" x2="16" y2="16" stroke="white" strokeWidth="1.5" opacity="0.9"/>
-        <line x1="10" y1="6.5" x2="17.5" y2="14" stroke="white" strokeWidth="1" opacity="0.7"/>
-        <line x1="6.5" y1="10" x2="14" y2="17.5" stroke="white" strokeWidth="1" opacity="0.7"/>
-        <line x1="10" y1="12" x2="10.5" y2="12" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9"/>
-        <line x1="12" y1="12" x2="12.5" y2="12" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9"/>
-        <line x1="14" y1="12" x2="14.5" y2="12" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9"/>
+        <ellipse cx="12" cy="12" rx="10" ry="6.5"/>
+        <line x1="3" y1="12" x2="21" y2="12" stroke="white" strokeWidth="1.8" opacity="0.95"/>
+        <line x1="9.5" y1="12" x2="10" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.95"/>
+        <line x1="11" y1="12" x2="11.5" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.95"/>
+        <line x1="12.5" y1="12" x2="13" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.95"/>
+        <line x1="14" y1="12" x2="14.5" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.95"/>
       </svg>
     );
   }
@@ -37,13 +36,12 @@ export function FootballIcon({ size = 24, className = '', filled = false }: Foot
       strokeLinejoin="round"
       className={className}
     >
-      <ellipse cx="12" cy="12" rx="9" ry="6" transform="rotate(45 12 12)"/>
-      <line x1="8" y1="8" x2="16" y2="16"/>
-      <line x1="10" y1="6.5" x2="17.5" y2="14" strokeWidth="1.5"/>
-      <line x1="6.5" y1="10" x2="14" y2="17.5" strokeWidth="1.5"/>
-      <line x1="10" y1="12" x2="10.5" y2="12" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="12" y1="12" x2="12.5" y2="12" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="14" y1="12" x2="14.5" y2="12" strokeWidth="2" strokeLinecap="round"/>
+      <ellipse cx="12" cy="12" rx="10" ry="6.5"/>
+      <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1.8"/>
+      <line x1="9.5" y1="12" x2="10" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="11" y1="12" x2="11.5" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="12.5" y1="12" x2="13" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="14" y1="12" x2="14.5" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   );
 }
