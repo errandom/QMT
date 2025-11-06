@@ -281,7 +281,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/30 border-border shadow-lg hover:shadow-xl transition-all duration-300">
                       <CardContent className="p-6">
                         <div className="flex flex-col gap-4 mb-4">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div className="flex items-center gap-2 order-2 md:order-1">
                               {event.eventType === 'practice' ? (
                                 <Barbell size={24} weight="duotone" className="text-secondary" />
@@ -303,16 +303,13 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               </Badge>
                             </div>
                             <div className="text-left md:text-right order-1 md:order-2">
-                              <div className="text-sm md:text-sm text-muted-foreground md:mb-1">
+                              <div className="text-sm md:text-sm text-muted-foreground">
                                 <span className="md:hidden">{format(new Date(event.startTime), 'EEE, MMM d, yyyy')}</span>
                                 <span className="hidden md:inline">{format(new Date(event.startTime), 'EEEE, MMMM d, yyyy')}</span>
                               </div>
-                              <div className="text-xl md:text-2xl font-bold">
-                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
-                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center justify-between gap-4">
                             <div className="flex-1">
                               <h3 className="text-2xl font-bold">
                                 {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
@@ -320,6 +317,9 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               {event.opponent && (
                                 <p className="text-muted-foreground">vs {event.opponent}</p>
                               )}
+                            </div>
+                            <div className="text-xl md:text-2xl font-bold text-right flex-shrink-0">
+                              {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
                             </div>
                           </div>
                         </div>
@@ -349,12 +349,12 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           {field && (
                             <div className="flex flex-wrap gap-2 items-center">
                               {field.hasLights && (
-                                <Badge variant="outline" className="gap-1.5 bg-yellow-100 text-yellow-800 border-yellow-300">
+                                <Badge variant="outline" className="gap-1.5 bg-yellow-200 text-yellow-900 border-yellow-400">
                                   <Lightbulb size={14} weight="duotone" />
                                   Lights
                                 </Badge>
                               )}
-                              <Badge variant="outline" className="gap-1.5 bg-green-100 text-green-800 border-green-300">
+                              <Badge variant="outline" className="gap-1.5 bg-green-200 text-green-900 border-green-400">
                                 {field.turfType === 'artificial' ? (
                                   <>
                                     <Circle size={14} weight="duotone" />
@@ -372,7 +372,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                   </>
                                 )}
                               </Badge>
-                              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                              <Badge variant="outline" className="bg-green-200 text-green-900 border-green-400">
                                 {field.isFullField ? 'Full Field' : 'Half Field'}
                               </Badge>
                             </div>
