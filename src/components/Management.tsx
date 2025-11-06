@@ -11,6 +11,7 @@ import { ScheduleTable } from './management/ScheduleTable';
 import { RequestsTable } from './management/RequestsTable';
 import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
+import { StadiumLogo } from '@/components/icons/StadiumLogo';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -34,13 +35,16 @@ export function Management({ onLogout }: ManagementProps) {
       <div className="bg-gradient-to-r from-primary via-primary/95 to-secondary shadow-lg">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">
-                QMT | Operations
-              </h1>
-              <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">
-                ZURICH RENEGADES FOOTBALL
-              </p>
+            <div className="flex items-center gap-4">
+              <StadiumLogo className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0" />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">
+                  QMT | Operations
+                </h1>
+                <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">
+                  ZURICH RENEGADES FOOTBALL
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
