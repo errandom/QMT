@@ -14,13 +14,10 @@ export function TacklePadsIcon({ size = 24, className = '', filled = false }: Ta
         fill="currentColor"
         className={className}
       >
-        <path d="M7 4C6 4 5 5 5 6V9L7 10L9 9V6C9 5 8 4 7 4Z" opacity="0.9"/>
-        <path d="M17 4C16 4 15 5 15 6V9L17 10L19 9V6C19 5 18 4 17 4Z" opacity="0.9"/>
-        <path d="M9 10L7 10L5 11V18C5 19 6 20 7 20H9V10Z" opacity="0.8"/>
-        <path d="M15 10L17 10L19 11V18C19 19 18 20 17 20H15V10Z" opacity="0.8"/>
-        <rect x="9" y="10" width="6" height="10" rx="1" opacity="0.7"/>
-        <line x1="9" y1="13" x2="15" y2="13" stroke="white" strokeWidth="1" opacity="0.5"/>
-        <line x1="9" y1="16" x2="15" y2="16" stroke="white" strokeWidth="1" opacity="0.5"/>
+        <path d="M12 4C8 4 5 6 4 9V16C4 18 5 20 7 20H9V18H8C7 18 6 17 6 16V10C6 8 8 6 12 6C16 6 18 8 18 10V16C18 17 17 18 16 18H15V20H17C19 20 20 18 20 16V9C20 6 16 4 12 4Z" />
+        <rect x="3" y="12" width="4" height="4" rx="1" opacity="0.8"/>
+        <rect x="17" y="12" width="4" height="4" rx="1" opacity="0.8"/>
+        <path d="M9 16C9 16.5 9.5 17 10 17H14C14.5 17 15 16.5 15 16V14H9V16Z" opacity="0.6"/>
       </svg>
     );
   }
@@ -37,13 +34,10 @@ export function TacklePadsIcon({ size = 24, className = '', filled = false }: Ta
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M7 4C6 4 5 5 5 6V9L7 10L9 9V6C9 5 8 4 7 4Z"/>
-      <path d="M17 4C16 4 15 5 15 6V9L17 10L19 9V6C19 5 18 4 17 4Z"/>
-      <path d="M9 10L7 10L5 11V18C5 19 6 20 7 20H9V10Z"/>
-      <path d="M15 10L17 10L19 11V18C19 19 18 20 17 20H15V10Z"/>
-      <rect x="9" y="10" width="6" height="10" rx="1"/>
-      <line x1="9" y1="13" x2="15" y2="13"/>
-      <line x1="9" y1="16" x2="15" y2="16"/>
+      <path d="M12 4C8 4 5 6 4 9V16C4 18 5 20 7 20H9V18H8C7 18 6 17 6 16V10C6 8 8 6 12 6C16 6 18 8 18 10V16C18 17 17 18 16 18H15V20H17C19 20 20 18 20 16V9C20 6 16 4 12 4Z"/>
+      <rect x="3" y="12" width="4" height="4" rx="1"/>
+      <rect x="17" y="12" width="4" height="4" rx="1"/>
+      <path d="M9 14H15V16C15 16.5 14.5 17 14 17H10C9.5 17 9 16.5 9 16V14Z"/>
     </svg>
   );
 }

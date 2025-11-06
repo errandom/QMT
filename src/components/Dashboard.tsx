@@ -262,7 +262,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
                         <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
-                          <Badge variant="outline" className="text-xs uppercase font-medium text-muted-foreground border-muted-foreground/30 h-7 items-center hidden md:flex">
+                          <Badge variant="outline" className="text-xs lowercase font-medium text-muted-foreground border-muted-foreground/30 h-7 items-center hidden md:flex">
                             {event.eventType}
                           </Badge>
                           <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">

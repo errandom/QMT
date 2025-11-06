@@ -14,12 +14,14 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
         fill="currentColor"
         className={className}
       >
-        <ellipse cx="12" cy="12" rx="10" ry="7" opacity="0.3"/>
-        <ellipse cx="12" cy="12" rx="9" ry="6" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="6" y="7" width="12" height="10" rx="1" opacity="0.2"/>
-        <rect x="6" y="7" width="12" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-        <line x1="12" y1="7" x2="12" y2="17" stroke="currentColor" strokeWidth="1"/>
-        <circle cx="12" cy="12" r="1.5" fill="none" stroke="currentColor" strokeWidth="1"/>
+        <path d="M3 20V12L12 6L21 12V20H3Z" opacity="0.8"/>
+        <rect x="4" y="12" width="2.5" height="8" opacity="0.4"/>
+        <rect x="7.5" y="12" width="2.5" height="8" opacity="0.4"/>
+        <rect x="11" y="12" width="2" height="8" opacity="0.4"/>
+        <rect x="14" y="12" width="2.5" height="8" opacity="0.4"/>
+        <rect x="17.5" y="12" width="2.5" height="8" opacity="0.4"/>
+        <path d="M2 20H22" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        <path d="M12 6L21 12H3L12 6Z" fill="currentColor" opacity="0.6"/>
       </svg>
     );
   }
@@ -36,11 +38,14 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
       strokeLinejoin="round"
       className={className}
     >
-      <ellipse cx="12" cy="12" rx="10" ry="7"/>
-      <ellipse cx="12" cy="12" rx="9" ry="6"/>
-      <rect x="6" y="7" width="12" height="10" rx="1"/>
-      <line x1="12" y1="7" x2="12" y2="17"/>
-      <circle cx="12" cy="12" r="1.5"/>
+      <path d="M12 6L3 12V20H21V12L12 6Z"/>
+      <line x1="2" y1="20" x2="22" y2="20" strokeWidth="2"/>
+      <rect x="4" y="12" width="2.5" height="8"/>
+      <rect x="7.5" y="12" width="2.5" height="8"/>
+      <rect x="11" y="12" width="2" height="8"/>
+      <rect x="14" y="12" width="2.5" height="8"/>
+      <rect x="17.5" y="12" width="2.5" height="8"/>
+      <path d="M3 12L12 6L21 12"/>
     </svg>
   );
 }
