@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Backpack, MapPin, Users } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Backpack, MapPin } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -13,6 +13,7 @@ import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
 import { ChecklistIcon } from './icons/ChecklistIcon';
 import { FieldIcon } from './icons/FieldIcon';
+import { JerseyIcon } from './icons/JerseyIcon';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -148,7 +149,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Users size={30} weight={activeTab === 'teams' ? 'fill' : 'regular'} />
+                  <JerseyIcon size={30} filled={activeTab === 'teams'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
