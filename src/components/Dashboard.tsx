@@ -71,10 +71,10 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-primary-foreground tracking-tight">
-                ZURICH RENEGADES FOOTBALL
+                Quick Mean Tough | Operations
               </h1>
               <p className="text-primary-foreground/90 text-sm font-medium mt-1">
-                Quick Mean Tough | Operations
+                ZURICH RENEGADES FOOTBALL
               </p>
             </div>
             {authState?.isAuthenticated && (
