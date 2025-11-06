@@ -126,7 +126,7 @@ export function TeamsTable() {
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="text-lg font-bold">{team.name}</h3>
-                          <Badge variant={team.sportType === 'tackle' ? 'default' : 'secondary'}>
+                          <Badge variant={team.sportType === 'tackle' ? 'default' : team.sportType === 'all sports' ? 'outline' : 'secondary'}>
                             {team.sportType}
                           </Badge>
                           <Badge variant={team.isActive ? 'default' : 'secondary'}>
@@ -226,6 +226,7 @@ export function TeamsTable() {
                   <SelectContent>
                     <SelectItem value="tackle">Tackle</SelectItem>
                     <SelectItem value="flag">Flag</SelectItem>
+                    <SelectItem value="all sports">All Sports</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

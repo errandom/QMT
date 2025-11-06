@@ -1,4 +1,4 @@
-export type SportType = 'tackle' | 'flag';
+export type SportType = 'tackle' | 'flag' | 'all sports';
 export type EventType = 'practice' | 'game' | 'meeting' | 'other';
 export type EventStatus = 'planned' | 'confirmed' | 'cancelled';
 
