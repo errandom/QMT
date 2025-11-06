@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, ListChecks, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell, ClipboardText, Users, MapPin, Tray, Strategy } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -11,6 +11,11 @@ import { ScheduleTable } from './management/ScheduleTable';
 import { RequestsTable } from './management/RequestsTable';
 import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
+import { ChecklistIcon } from './icons/ChecklistIcon';
+import { JerseyIcon } from './icons/JerseyIcon';
+import { TacklePadsIcon } from './icons/TacklePadsIcon';
+import { FieldIcon } from './icons/FieldIcon';
+import { ArenaIcon } from './icons/ArenaIcon';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -131,7 +136,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'requests' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <ClipboardText size={30} weight={activeTab === 'requests' ? 'fill' : 'regular'} />
+                  <ChecklistIcon size={30} filled={activeTab === 'requests'} />
                 </div>
               </div>
               <CardTitle className="text-base">Requests</CardTitle>
@@ -149,7 +154,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Users size={30} weight={activeTab === 'teams' ? 'fill' : 'regular'} />
+                  <JerseyIcon size={30} filled={activeTab === 'teams'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
@@ -167,7 +172,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Tray size={30} weight={activeTab === 'equipment' ? 'fill' : 'regular'} />
+                  <TacklePadsIcon size={30} filled={activeTab === 'equipment'} />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
@@ -185,7 +190,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'fields' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Strategy size={30} weight={activeTab === 'fields' ? 'fill' : 'regular'} />
+                  <FieldIcon size={30} />
                 </div>
               </div>
               <CardTitle className="text-base">Fields</CardTitle>
@@ -203,7 +208,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <MapPin size={30} weight={activeTab === 'sites' ? 'fill' : 'regular'} />
+                  <ArenaIcon size={30} filled={activeTab === 'sites'} />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>
