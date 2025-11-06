@@ -229,7 +229,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="p-6">
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 mb-1.5">
                           <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
                             {event.eventType}
                           </Badge>
@@ -241,7 +241,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                         firstTeam?.sportType === 'tackle' 
                           ? 'from-primary to-secondary' 
                           : 'from-secondary to-accent'
-                      } mb-4`} />
+                      } mb-4 ml-auto w-32`} />
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
