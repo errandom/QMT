@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, ListChecks, UsersThree, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, ListChecks, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
+import { HelmetIcon } from '@/components/icons/HelmetIcon';
+import { ArenaIcon } from '@/components/icons/ArenaIcon';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -19,7 +21,7 @@ interface ManagementProps {
 
 export function Management({ onLogout }: ManagementProps) {
   const { authState, logout, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('teams');
+  const [activeTab, setActiveTab] = useState('schedule');
 
   const handleLogout = () => {
     logout();
@@ -68,31 +70,30 @@ export function Management({ onLogout }: ManagementProps) {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h2 className="text-4xl font-bold mb-2">Operations Office</h2>
-            <p className="text-muted-foreground text-lg">
-              Quick - Mean - Tough | On and Off the Field
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={handleBackToDashboard}
-              variant="outline"
-              className="gap-2"
-            >
-              <ArrowLeft size={20} weight="bold" />
-              Back to Dashboard
-            </Button>
-            <Button 
-              onClick={() => setActiveTab('settings')}
-              variant="outline"
-              className="gap-2"
-            >
-              <Gear size={20} weight="fill" />
-              Settings
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-3 mb-6">
+          <Button 
+            onClick={handleBackToDashboard}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft size={20} weight="bold" />
+            Back to Dashboard
+          </Button>
+          <Button 
+            onClick={() => setActiveTab('settings')}
+            variant="outline"
+            className="gap-2"
+          >
+            <Gear size={20} weight="fill" />
+            Settings
+          </Button>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-4xl font-bold mb-2">Operations Office</h2>
+          <p className="text-muted-foreground text-lg">
+            Quick - Mean - Tough | On and Off the Field
+          </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
@@ -143,7 +144,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <UsersThree size={30} weight="fill" />
+                  <HelmetIcon size={30} filled={activeTab === 'teams'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
@@ -197,7 +198,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Football size={30} weight="fill" />
+                  <ArenaIcon size={30} filled={activeTab === 'sites'} />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>
