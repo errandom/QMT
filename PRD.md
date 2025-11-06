@@ -1,11 +1,11 @@
 # Planning Guide
 
-A modern, glossy facility management system for the Zurich Renegades Football club, managing both tackle and flag football operations with a sleek navy blue aesthetic reflecting the city of Zurich. The interface uses a powerful athletic font (Bebas Neue) for headers and maintains a professional, sports-focused design.
+A modern, glossy facility management system for the Zurich Renegades Football club, managing both tackle and flag football operations with a sleek navy blue aesthetic reflecting the city of Zurich.
 
 **Experience Qualities**: 
 1. **Modern & Glossy** - Contemporary design with smooth shapes, subtle gradients, and premium feel
-2. **Intuitive** - Clear visual hierarchy with sport-specific iconography (gridiron for facilities, helmet for tackle football) and easy navigation
-3. **Professional** - Polished interface that reflects the quality of Zurich Renegades organization with strong, powerful typography
+2. **Intuitive** - Clear visual hierarchy with sport-specific iconography and easy navigation
+3. **Professional** - Polished interface that reflects the quality of Zurich Renegades organization
 
 **Complexity Level**: Light Application (multiple features with basic state)
   - Dashboard with sport type toggle and team filtering
@@ -101,15 +101,15 @@ Analogous (adjacent colors on the color wheel) - Using navy blue as the foundati
   - Muted (Blue Gray oklch(0.92 0.02 240)): Medium text (oklch(0.45 0.08 240)) - Ratio 5.2:1 ✓
 
 ## Font Selection
-The typeface should convey modern athleticism and power with strong, bold headers using Bebas Neue for impact, while maintaining readability for data with Inter for body content - creating a commanding presence appropriate for sports operations.
+The typeface should convey modern professionalism and clarity with Roboto, providing excellent readability across all content types.
 
 - **Typographic Hierarchy**: 
-  - H1 (Page Titles): Bebas Neue Bold/48px/tight letter spacing (0.02em)
-  - H2 (Section Headers): Bebas Neue Regular/32px/tight letter spacing (0.02em)
-  - H3 (Card Titles): Inter Bold/18px/normal letter spacing
-  - Body (General Text): Inter Regular/16px/relaxed line height (1.6)
-  - Small (Metadata): Inter Regular/14px/normal line height (1.5)
-  - Caption (Table Headers): Inter Medium/12px/uppercase/wide letter spacing (0.05em)
+  - H1 (Page Titles): Roboto Bold/32px/normal letter spacing
+  - H2 (Section Headers): Roboto Semibold/24px/normal letter spacing
+  - H3 (Card Titles): Roboto Medium/18px/normal letter spacing
+  - Body (General Text): Roboto Regular/16px/normal line height (1.5)
+  - Small (Metadata): Roboto Regular/14px/normal line height (1.5)
+  - Caption (Table Headers): Roboto Medium/12px/normal letter spacing
 
 ## Animations
 Animations should emphasize transitions between filtered states and provide satisfying feedback for user actions while remaining subtle enough not to distract from the data-focused management interface.
@@ -170,12 +170,12 @@ Animations should emphasize transitions between filtered states and provide sati
   - SignOut (logout from management)
 
 - **Spacing**: 
-  - Container padding: p-6 (24px)
+  - Container padding: p-4 (16px)
   - Card padding: p-4 (16px)
-  - Section gaps: gap-8 (32px) for major sections, gap-4 (16px) for related elements
-  - Button spacing: px-6 py-3 for primary, px-4 py-2 for secondary
-  - Form field spacing: space-y-4 between fields
-  - Table cell padding: px-4 py-3
+  - Section gaps: gap-4 (16px) for major sections, gap-3 (12px) for related elements
+  - Button spacing: px-4 py-2 for all buttons
+  - Form field spacing: space-y-3 between fields
+  - Table cell padding: px-3 py-2
 
 - **Mobile**: 
   - Dashboard: Sport toggles remain in 3-column grid, action buttons (All Teams dropdown, Request Facility, Request Equipment, Management Section) stack vertically with full width and consistent h-14 height
