@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, Crown, MegaphoneSimple, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightbulb, Plant, Toilet, Lockers, Backpack, ForkKnife, Football, Toolbox, Car } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, Crown, Star, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightbulb, Plant, Toilet, Lockers, Backpack, ForkKnife, Football, Toolbox, Car } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
@@ -97,7 +97,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     {authState.role === 'QMTadmin' ? (
                       <Crown size={20} weight="duotone" />
                     ) : (
-                      <MegaphoneSimple size={20} weight="duotone" />
+                      <Star size={20} weight="duotone" />
                     )}
                   </div>
                   <span className="text-primary-foreground font-medium hidden md:inline">{authState.username}</span>
@@ -385,8 +385,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               </Badge>
                               <Badge className={`text-xs gap-1.5 font-semibold relative overflow-hidden ${
                                 field.isFullField 
-                                  ? 'bg-blue-500/20 text-blue-900 border-blue-500/40'
-                                  : 'bg-gradient-to-r from-blue-500/20 to-transparent text-blue-900 border-blue-500/40'
+                                  ? 'bg-emerald-500/20 text-emerald-900 border-emerald-500/40'
+                                  : 'bg-gradient-to-r from-emerald-500/20 to-transparent text-emerald-900 border-emerald-500/40'
                               }`}>
                                 {field.isFullField ? (
                                   <>Full Field</>

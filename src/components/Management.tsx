@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, Crown, MegaphoneSimple, MapPin, Toolbox } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, Crown, Star, MapPin, Toolbox } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -53,7 +53,7 @@ export function Management({ onLogout }: ManagementProps) {
                   {authState?.role === 'QMTadmin' ? (
                     <Crown size={20} weight="duotone" />
                   ) : (
-                    <MegaphoneSimple size={20} weight="duotone" />
+                    <Star size={20} weight="duotone" />
                   )}
                 </div>
                 <span className="text-primary-foreground font-medium hidden md:inline">{authState?.username}</span>
