@@ -5,23 +5,38 @@ interface HelmetIconProps {
 }
 
 export function HelmetIcon({ size = 24, className = '', filled = false }: HelmetIconProps) {
+  if (filled) {
+    return (
+      <svg 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        className={className}
+      >
+        <path d="M12 3C7.03 3 3 7.03 3 12v4c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-4c0-2.76 2.24-5 5-5s5 2.24 5 5v4c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-4c0-4.97-4.03-9-9-9z"/>
+        <rect x="8" y="11" width="8" height="4" rx="1" fill="currentColor" opacity="0.7"/>
+        <path d="M5 16h2v2c0 1.1-.9 2-2 2s-2-.9-2-2c0-1.1.9-2 2-2zm14 0h2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2v-2z"/>
+      </svg>
+    );
+  }
+  
   return (
     <svg 
       width={size} 
       height={size} 
       viewBox="0 0 24 24" 
-      fill={filled ? 'currentColor' : 'none'}
+      fill="none"
       stroke="currentColor" 
-      strokeWidth={filled ? '0' : '2'}
+      strokeWidth="2"
       strokeLinecap="round" 
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M3 16c0-2.8 1.2-5.3 3.1-7.1C7.9 7 10.4 6 13 6c2.6 0 5.1 1 6.9 2.9C21.8 10.7 23 13.2 23 16v2H3v-2z" />
-      <path d="M3 18h20v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-1z" />
-      <rect x="9" y="12" width="6" height="3" rx="0.5" />
-      <line x1="6" y1="14" x2="8" y2="14" strokeWidth="2.5" />
-      <line x1="16" y1="14" x2="18" y2="14" strokeWidth="2.5" />
+      <path d="M12 3C7.03 3 3 7.03 3 12v4c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-4c0-2.76 2.24-5 5-5s5 2.24 5 5v4c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-4c0-4.97-4.03-9-9-9z"/>
+      <rect x="8.5" y="11.5" width="7" height="3" rx="0.5"/>
+      <path d="M5 16h2v2c0 1.1-.9 2-2 2s-2-.9-2-2c0-1.1.9-2 2-2z"/>
+      <path d="M19 16h2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2v-2z"/>
     </svg>
   );
 }

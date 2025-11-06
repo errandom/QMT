@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, ListChecks, Users, Buildings, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, ListChecks, UsersThree, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
@@ -107,7 +107,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'schedule' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <CalendarBlank size={30} weight="fill" />
+                  <CalendarBlank size={30} weight="regular" />
                 </div>
               </div>
               <CardTitle className="text-base">Schedule</CardTitle>
@@ -143,7 +143,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Users size={30} weight="fill" />
+                  <UsersThree size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
@@ -197,7 +197,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <Buildings size={30} weight="fill" />
+                  <Football size={30} weight="fill" />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>
