@@ -24,7 +24,10 @@ export function getUpcomingEvents(schedule: ScheduleEvent[]): ScheduleEvent[] {
 }
 
 export function getEventsByTeam(schedule: ScheduleEvent[], teamId: string): ScheduleEvent[] {
-  return schedule.filter(event => event.teamIds && Array.isArray(event.teamIds) && event.teamIds.includes(teamId));
+  return schedule.filter(event => {
+    if (!event.teamIds || !Array.isArray(event.teamIds)) return false;
+    return event.teamIds.includes(teamId);
+  });
 }
 
 export function getEventsBySportType(
