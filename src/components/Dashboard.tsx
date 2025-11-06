@@ -304,7 +304,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
                               </h3>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs lowercase font-semibold text-muted-foreground border-muted-foreground/30 h-6 items-center">
+                                <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
                                   {event.eventType}
                                 </Badge>
                                 <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
