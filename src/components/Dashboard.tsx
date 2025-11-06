@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, Plus } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { HelmetIcon } from '@/components/icons/HelmetIcon';
 import { FootballIcon } from '@/components/icons/FootballIcon';
@@ -124,7 +124,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="bg-card shadow-sm border-border h-12 w-full">
+                <SelectTrigger className="bg-card shadow-sm border-border min-h-14 h-14 w-full">
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
                 <SelectContent className="w-[280px]">
@@ -150,23 +150,23 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
 
               <Button 
                 onClick={onRequestFacility}
-                className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+                className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <Plus size={20} weight="bold" />
+                <PlusCircle size={20} weight="bold" />
                 Facility
               </Button>
 
               <Button 
                 onClick={onRequestEquipment}
-                className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+                className="h-14 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <Plus size={20} weight="bold" />
+                <PlusCircle size={20} weight="bold" />
                 Equipment
               </Button>
 
               <Button 
                 onClick={onManagement}
-                className="h-12 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
+                className="h-14 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
               >
                 <UserCircleGear size={20} weight="fill" />
                 Management

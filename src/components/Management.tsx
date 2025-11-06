@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, ListChecks, Users, Buildings, Gear, ArrowLeft, ShieldStar, UserCircleGear } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, ListChecks, Users, Buildings, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
@@ -153,6 +153,24 @@ export function Management({ onLogout }: ManagementProps) {
 
           <Card 
             className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
+              activeTab === 'equipment' ? 'ring-2 ring-primary shadow-lg' : ''
+            }`}
+            onClick={() => setActiveTab('equipment')}
+          >
+            <CardHeader className="text-center pb-4">
+              <div className="flex justify-center mb-3">
+                <div className={`p-3 rounded-xl ${
+                  activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}>
+                  <Barbell size={28} weight="fill" />
+                </div>
+              </div>
+              <CardTitle className="text-base">Equipment</CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
               activeTab === 'fields' ? 'ring-2 ring-primary shadow-lg' : ''
             }`}
             onClick={() => setActiveTab('fields')}
@@ -206,29 +224,17 @@ export function Management({ onLogout }: ManagementProps) {
               </CardHeader>
             </Card>
           )}
-
-          <Card 
-            className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
-              activeTab === 'settings' ? 'ring-2 ring-primary shadow-lg' : ''
-            }`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-3">
-                <div className={`p-3 rounded-xl ${
-                  activeTab === 'settings' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}>
-                  <Gear size={28} weight="fill" />
-                </div>
-              </div>
-              <CardTitle className="text-base">Settings</CardTitle>
-            </CardHeader>
-          </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="teams">
             <TeamsTable />
+          </TabsContent>
+
+          <TabsContent value="equipment">
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Equipment management coming soon...</p>
+            </div>
           </TabsContent>
 
           <TabsContent value="sites">
