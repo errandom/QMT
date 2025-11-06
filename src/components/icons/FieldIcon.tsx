@@ -28,7 +28,7 @@ export function FieldIcon({ className, size = 24 }: FieldIconProps) {
       <line x1="21" y1="12" x2="21" y2="21" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.7" />
       
       <text
-        x="7.7"
+        x="6.5"
         y="10"
         fontSize="12"
         fontWeight="700"
@@ -41,7 +41,7 @@ export function FieldIcon({ className, size = 24 }: FieldIconProps) {
       </text>
       
       <text
-        x="16.3"
+        x="17.5"
         y="10"
         fontSize="12"
         fontWeight="700"
