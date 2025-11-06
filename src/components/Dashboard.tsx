@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -58,6 +58,21 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
   const tackleTeams = useMemo(() => teams?.filter(t => t.sportType === 'tackle' && t.isActive) || [], [teams]);
   const flagTeams = useMemo(() => teams?.filter(t => t.sportType === 'flag' && t.isActive) || [], [teams]);
 
+  const filteredTeams = useMemo(() => {
+    if (sportFilter === 'tackle') return tackleTeams;
+    if (sportFilter === 'flag') return flagTeams;
+    return [...tackleTeams, ...flagTeams];
+  }, [sportFilter, tackleTeams, flagTeams]);
+
+  useEffect(() => {
+    if (teamFilter !== 'all') {
+      const isTeamInFilteredList = filteredTeams.some(t => t.id === teamFilter);
+      if (!isTeamInFilteredList) {
+        setTeamFilter('all');
+      }
+    }
+  }, [sportFilter, teamFilter, filteredTeams]);
+
   const getSportLabel = () => {
     if (sportFilter === 'all') return 'All';
     if (sportFilter === 'tackle') return 'Tackle Football';
@@ -68,13 +83,13 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <div className="bg-gradient-to-r from-primary via-primary/95 to-secondary shadow-lg">
         <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
               <p className="text-primary-foreground/90 text-sm font-medium mt-1">ZURICH RENEGADES FOOTBALL</p>
             </div>
             {authState?.isAuthenticated && (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3">
                 <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                   <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
                     {authState.role === 'QMTadmin' ? (
@@ -88,10 +103,10 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 <Button 
                   variant="ghost" 
                   onClick={handleLogout} 
-                  className="gap-2 text-primary-foreground hover:bg-white/10"
+                  className="gap-2 text-primary-foreground hover:bg-white/10 md:h-auto h-8 md:px-4 px-2"
                 >
                   <SignOut size={18} />
-                  Logout
+                  <span className="hidden md:inline">Logout</span>
                 </Button>
               </div>
             )}
@@ -151,21 +166,29 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 </SelectTrigger>
                 <SelectContent className="w-[280px]">
                   <SelectItem value="all">All Teams</SelectItem>
-                  {tackleTeams.length > 0 && (
+                  {sportFilter === 'all' ? (
                     <>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
-                      {tackleTeams.map(team => (
-                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                      ))}
+                      {tackleTeams.length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Tackle</div>
+                          {tackleTeams.map(team => (
+                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                          ))}
+                        </>
+                      )}
+                      {flagTeams.length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
+                          {flagTeams.map(team => (
+                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                          ))}
+                        </>
+                      )}
                     </>
-                  )}
-                  {flagTeams.length > 0 && (
-                    <>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Flag</div>
-                      {flagTeams.map(team => (
-                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                      ))}
-                    </>
+                  ) : (
+                    filteredTeams.map(team => (
+                      <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                    ))
                   )}
                 </SelectContent>
               </Select>
@@ -225,13 +248,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
                         <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
-                          <Badge variant="outline" className="text-xs uppercase font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">
-                            <span className="hidden md:inline">{event.eventType}</span>
-                            <span className="md:hidden">
-                              {event.eventType === 'practice' ? 'P' : 
-                               event.eventType === 'game' ? 'G' : 
-                               event.eventType === 'meeting' ? 'M' : 'O'}
-                            </span>
+                          <Badge variant="outline" className="text-xs uppercase font-medium text-muted-foreground border-muted-foreground/30 h-7 items-center hidden md:flex">
+                            {event.eventType}
                           </Badge>
                           <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">
                             {event.status}
