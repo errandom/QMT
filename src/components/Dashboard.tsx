@@ -168,10 +168,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <div className="flex items-center gap-1">
-                  <Football size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
-                  <FootballHelmet size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
-                </div>
+                <Football size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Flag Football</span>
               </button>
             </div>
@@ -230,7 +227,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onManagement}
                 className="h-11 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
               >
-                <FadersHorizontal size={24} weight="fill" />
+                <Clipboard size={24} weight="fill" />
                 Management
               </Button>
             </div>
