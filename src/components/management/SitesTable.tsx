@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Plus, PencilSimple, Trash, Check, X } from '@phosphor-icons/react';
+import { Plus, PencilSimple, Trash, Check, X, MapPin } from '@phosphor-icons/react';
 import { useSites, useFields } from '@/hooks/use-data';
 import { Site } from '@/lib/types';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 export function SitesTable() {
   const [sites, setSites] = useSites();
@@ -21,6 +22,9 @@ export function SitesTable() {
     city: '',
     state: '',
     zipCode: '',
+    latitude: '',
+    longitude: '',
+    isActive: true,
     hasToilets: false,
     hasLockerRooms: false,
     hasEquipmentStash: false,
@@ -36,6 +40,9 @@ export function SitesTable() {
         city: site.city,
         state: site.state,
         zipCode: site.zipCode,
+        latitude: site.latitude || '',
+        longitude: site.longitude || '',
+        isActive: site.isActive,
         hasToilets: site.hasToilets,
         hasLockerRooms: site.hasLockerRooms,
         hasEquipmentStash: site.hasEquipmentStash,
@@ -49,6 +56,9 @@ export function SitesTable() {
         city: '',
         state: '',
         zipCode: '',
+        latitude: '',
+        longitude: '',
+        isActive: true,
         hasToilets: false,
         hasLockerRooms: false,
         hasEquipmentStash: false,
@@ -73,7 +83,18 @@ export function SitesTable() {
     } else {
       const newSite: Site = {
         id: `site-${Date.now()}`,
-        ...formData
+        name: formData.name,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        latitude: formData.latitude || undefined,
+        longitude: formData.longitude || undefined,
+        isActive: formData.isActive,
+        hasToilets: formData.hasToilets,
+        hasLockerRooms: formData.hasLockerRooms,
+        hasEquipmentStash: formData.hasEquipmentStash,
+        hasRestaurant: formData.hasRestaurant
       };
       setSites((current) => [...(current || []), newSite]);
       toast.success('Site created successfully');
@@ -113,78 +134,105 @@ export function SitesTable() {
         <CardContent>
           <div className="space-y-3">
             {sites && sites.length > 0 ? (
-              sites.map(site => (
-                <Card key={site.id} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      <div className="flex-1 space-y-3">
-                        <h3 className="text-lg font-bold">{site.name}</h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Address</div>
-                            <div>{site.address}</div>
-                            <div className="text-muted-foreground">{site.city}, {site.state} {site.zipCode}</div>
+              sites.map(site => {
+                const mapsUrl = site.latitude && site.longitude
+                  ? `https://maps.google.ch/?q=${site.latitude},${site.longitude}`
+                  : `https://maps.google.ch/?q=${encodeURIComponent(`${site.address}, ${site.city}, ${site.state} ${site.zipCode}`)}`;
+                
+                return (
+                  <Card key={site.id} className={`overflow-hidden ${!site.isActive ? 'opacity-60' : ''}`}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="text-lg font-bold">{site.name}</h3>
+                            <Badge variant={site.isActive ? 'default' : 'secondary'}>
+                              {site.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
                           </div>
                           
-                          <div>
-                            <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Amenities</div>
-                            <div className="flex flex-wrap gap-2">
-                              {site.hasToilets && (
-                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                  <Check size={12} weight="bold" />
-                                  Toilets
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Address</div>
+                              <div>{site.address}</div>
+                              <div className="text-muted-foreground">{site.city}, {site.state} {site.zipCode}</div>
+                              {(site.latitude && site.longitude) && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Coordinates: {site.latitude}, {site.longitude}
                                 </div>
                               )}
-                              {site.hasLockerRooms && (
-                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                  <Check size={12} weight="bold" />
-                                  Locker Rooms
-                                </div>
-                              )}
-                              {site.hasEquipmentStash && (
-                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                  <Check size={12} weight="bold" />
-                                  Equipment Stash
-                                </div>
-                              )}
-                              {site.hasRestaurant && (
-                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                  <Check size={12} weight="bold" />
-                                  Restaurant
-                                </div>
-                              )}
-                              {!site.hasToilets && !site.hasLockerRooms && !site.hasEquipmentStash && !site.hasRestaurant && (
-                                <div className="text-muted-foreground text-xs">No amenities</div>
-                              )}
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="gap-1 px-0 h-auto mt-2"
+                                asChild
+                              >
+                                <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                                  <MapPin size={14} weight="fill" />
+                                  View on Google Maps
+                                </a>
+                              </Button>
+                            </div>
+                            
+                            <div>
+                              <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Amenities</div>
+                              <div className="flex flex-wrap gap-2">
+                                {site.hasToilets && (
+                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                    <Check size={12} weight="bold" />
+                                    Toilets
+                                  </div>
+                                )}
+                                {site.hasLockerRooms && (
+                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                    <Check size={12} weight="bold" />
+                                    Locker Rooms
+                                  </div>
+                                )}
+                                {site.hasEquipmentStash && (
+                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                    <Check size={12} weight="bold" />
+                                    Equipment Stash
+                                  </div>
+                                )}
+                                {site.hasRestaurant && (
+                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                    <Check size={12} weight="bold" />
+                                    Restaurant
+                                  </div>
+                                )}
+                                {!site.hasToilets && !site.hasLockerRooms && !site.hasEquipmentStash && !site.hasRestaurant && (
+                                  <div className="text-muted-foreground text-xs">No amenities</div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
+                        
+                        <div className="flex gap-2 lg:flex-col">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDialog(site)}
+                            className="gap-1"
+                          >
+                            <PencilSimple size={16} />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(site.id)}
+                            className="gap-1"
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </div>
                       </div>
-                      
-                      <div className="flex gap-2 lg:flex-col">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDialog(site)}
-                          className="gap-1"
-                        >
-                          <PencilSimple size={16} />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(site.id)}
-                          className="gap-1"
-                        >
-                          <Trash size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             ) : (
               <div className="text-center text-muted-foreground py-8">
                 No sites found. Click "Add Site" to create one.
@@ -256,6 +304,42 @@ export function SitesTable() {
                   maxLength={10}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="latitude">Latitude</Label>
+                <Input
+                  id="latitude"
+                  value={formData.latitude}
+                  onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                  placeholder="47.3769"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="longitude">Longitude</Label>
+                <Input
+                  id="longitude"
+                  value={formData.longitude}
+                  onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                  placeholder="8.5417"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                />
+                <Label htmlFor="isActive" className="font-semibold">Active Site</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Inactive sites and their fields will not be available for selection when creating events.
+              </p>
             </div>
 
             <div className="space-y-4 p-4 rounded-lg bg-muted/50">

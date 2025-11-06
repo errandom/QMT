@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Plus, PencilSimple, Trash, Check } from '@phosphor-icons/react';
 import { useFields, useSites, useSchedule } from '@/hooks/use-data';
-import { Field, SportType } from '@/lib/types';
+import { Field } from '@/lib/types';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { getSiteById } from '@/lib/data-helpers';
@@ -22,7 +22,6 @@ export function FieldsTable() {
   const [formData, setFormData] = useState({
     name: '',
     siteId: '',
-    sportType: 'tackle' as SportType,
     turfType: 'natural' as 'artificial' | 'natural',
     hasLights: false,
     isFullField: true,
@@ -35,7 +34,6 @@ export function FieldsTable() {
       setFormData({
         name: field.name,
         siteId: field.siteId,
-        sportType: field.sportType,
         turfType: field.turfType,
         hasLights: field.hasLights,
         isFullField: field.isFullField,
@@ -46,7 +44,6 @@ export function FieldsTable() {
       setFormData({
         name: '',
         siteId: '',
-        sportType: 'tackle',
         turfType: 'natural',
         hasLights: false,
         isFullField: true,
@@ -67,7 +64,6 @@ export function FieldsTable() {
                 ...f, 
                 name: formData.name,
                 siteId: formData.siteId,
-                sportType: formData.sportType,
                 turfType: formData.turfType,
                 hasLights: formData.hasLights,
                 isFullField: formData.isFullField,
@@ -82,7 +78,6 @@ export function FieldsTable() {
         id: `field-${Date.now()}`,
         name: formData.name,
         siteId: formData.siteId,
-        sportType: formData.sportType,
         turfType: formData.turfType,
         hasLights: formData.hasLights,
         isFullField: formData.isFullField,
@@ -135,9 +130,6 @@ export function FieldsTable() {
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center gap-3 flex-wrap">
                             <h3 className="text-lg font-bold">{field.name}</h3>
-                            <Badge variant={field.sportType === 'tackle' ? 'default' : 'secondary'}>
-                              {field.sportType}
-                            </Badge>
                             <Badge variant="outline">
                               {field.turfType === 'artificial' ? 'Artificial Turf' : 'Natural Turf'}
                             </Badge>
@@ -242,32 +234,17 @@ export function FieldsTable() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sportType">Sport Type *</Label>
-                <Select value={formData.sportType} onValueChange={(value: SportType) => setFormData(prev => ({ ...prev, sportType: value }))}>
-                  <SelectTrigger id="sportType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tackle">Tackle</SelectItem>
-                    <SelectItem value="flag">Flag</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="turfType">Turf Type *</Label>
-                <Select value={formData.turfType} onValueChange={(value: 'artificial' | 'natural') => setFormData(prev => ({ ...prev, turfType: value }))}>
-                  <SelectTrigger id="turfType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="natural">Natural Turf</SelectItem>
-                    <SelectItem value="artificial">Artificial Turf</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="turfType">Turf Type *</Label>
+              <Select value={formData.turfType} onValueChange={(value: 'artificial' | 'natural') => setFormData(prev => ({ ...prev, turfType: value }))}>
+                <SelectTrigger id="turfType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="natural">Natural Turf</SelectItem>
+                  <SelectItem value="artificial">Artificial Turf</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

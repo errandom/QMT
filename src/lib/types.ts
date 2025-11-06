@@ -22,6 +22,9 @@ export interface Site {
   city: string;
   state: string;
   zipCode: string;
+  latitude?: string;
+  longitude?: string;
+  isActive: boolean;
   hasToilets: boolean;
   hasLockerRooms: boolean;
   hasEquipmentStash: boolean;
@@ -32,7 +35,6 @@ export interface Field {
   id: string;
   name: string;
   siteId: string;
-  sportType: SportType;
   turfType: 'artificial' | 'natural';
   hasLights: boolean;
   isFullField: boolean;

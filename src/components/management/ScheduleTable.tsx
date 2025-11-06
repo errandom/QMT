@@ -117,6 +117,11 @@ export function ScheduleTable() {
     if (!validateTimeRange()) {
       return;
     }
+
+    if (formData.eventType === 'game' && formData.teamIds.length > 1) {
+      toast.error('Game events can only have a single team selected');
+      return;
+    }
     
     if (editingEvent) {
       setSchedule((current) =>
@@ -174,12 +179,21 @@ export function ScheduleTable() {
   };
 
   const toggleTeam = (teamId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      teamIds: prev.teamIds.includes(teamId)
+    setFormData(prev => {
+      const newTeamIds = prev.teamIds.includes(teamId)
         ? prev.teamIds.filter(id => id !== teamId)
-        : [...prev.teamIds, teamId]
-    }));
+        : [...prev.teamIds, teamId];
+      
+      if (prev.eventType === 'game' && newTeamIds.length > 1) {
+        toast.error('Game events can only have a single team selected');
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        teamIds: newTeamIds
+      };
+    });
   };
 
   const toggleRecurringDay = (day: number) => {
@@ -345,7 +359,10 @@ export function ScheduleTable() {
                   <SelectValue placeholder="Select field" />
                 </SelectTrigger>
                 <SelectContent>
-                  {fields?.map(field => {
+                  {fields?.filter(field => {
+                    const site = getSiteById(sites || [], field.siteId);
+                    return site?.isActive !== false;
+                  }).map(field => {
                     const site = getSiteById(sites || [], field.siteId);
                     return (
                       <SelectItem key={field.id} value={field.id}>
@@ -369,7 +386,14 @@ export function ScheduleTable() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-right block">Teams * (Select one or multiple)</Label>
+              <Label className="text-right block">
+                Teams * {formData.eventType === 'game' ? '(Select one team only)' : '(Select one or multiple)'}
+              </Label>
+              {formData.eventType === 'game' && (
+                <p className="text-xs text-muted-foreground mb-2">
+                  Game events can only have a single team selected.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-2 p-3 bg-muted/50 rounded-lg max-h-40 overflow-y-auto">
                 {teams && teams.length > 0 ? (
                   teams.filter(t => t.isActive).map(team => (
@@ -417,7 +441,19 @@ export function ScheduleTable() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="eventType" className="text-right block">Event Type *</Label>
-                <Select value={formData.eventType} onValueChange={(value: EventType) => setFormData(prev => ({ ...prev, eventType: value }))}>
+                <Select 
+                  value={formData.eventType} 
+                  onValueChange={(value: EventType) => {
+                    setFormData(prev => {
+                      const newData = { ...prev, eventType: value };
+                      if (value === 'game' && prev.teamIds.length > 1) {
+                        newData.teamIds = [prev.teamIds[0]];
+                        toast.info('Only one team can be selected for game events. Other teams have been removed.');
+                      }
+                      return newData;
+                    });
+                  }}
+                >
                   <SelectTrigger id="eventType">
                     <SelectValue />
                   </SelectTrigger>

@@ -376,6 +376,37 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                             </div>
                           )}
 
+                          {eventTeams.length > 0 && (eventTeams[0]?.headCoachName || eventTeams[0]?.teamManagerName) && (
+                            <div className="space-y-2">
+                              {eventTeams[0]?.headCoachName && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <UserCircleGear size={16} weight="fill" className="text-primary flex-shrink-0" />
+                                  <div>
+                                    <span className="font-semibold">Head Coach:</span> {eventTeams[0].headCoachName}
+                                    {eventTeams[0].headCoachEmail && (
+                                      <a href={`mailto:${eventTeams[0].headCoachEmail}`} className="ml-2 text-secondary hover:underline">
+                                        {eventTeams[0].headCoachEmail}
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {eventTeams[0]?.teamManagerName && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <UserCircleGear size={16} weight="fill" className="text-accent flex-shrink-0" />
+                                  <div>
+                                    <span className="font-semibold">Team Manager:</span> {eventTeams[0].teamManagerName}
+                                    {eventTeams[0].teamManagerEmail && (
+                                      <a href={`mailto:${eventTeams[0].teamManagerEmail}`} className="ml-2 text-secondary hover:underline">
+                                        {eventTeams[0].teamManagerEmail}
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {event.notes && (
                             <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">{event.notes}</p>
                           )}
