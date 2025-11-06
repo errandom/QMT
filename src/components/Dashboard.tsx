@@ -281,9 +281,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
                         <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
-                          <Badge variant="outline" className="text-xs lowercase font-semibold text-foreground border-foreground/30 h-7 items-center hidden md:flex">
-                            {event.eventType}
-                          </Badge>
                           <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">
                             {event.status}
                           </Badge>
@@ -309,25 +306,30 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
                               <div className="p-2 rounded-lg bg-secondary/10">
-                                <Barbell size={24} weight="duotone" className="text-secondary" />
+                                <Barbell size={24} weight="duotone" className="text-secondary/80" />
                               </div>
                             ) : event.eventType === 'game' ? (
                               <div className="p-2 rounded-lg bg-primary/10">
-                                <Trophy size={24} weight="duotone" className="text-primary" />
+                                <Trophy size={24} weight="duotone" className="text-primary/80" />
                               </div>
                             ) : event.eventType === 'meeting' ? (
                               <div className="p-2 rounded-lg bg-accent/10">
-                                <Chalkboard size={24} weight="duotone" className="text-accent" />
+                                <Chalkboard size={24} weight="duotone" className="text-accent/80" />
                               </div>
                             ) : (
                               <div className="p-2 rounded-lg bg-muted">
-                                <Calendar size={24} weight="duotone" className="text-muted-foreground" />
+                                <Calendar size={24} weight="duotone" className="text-muted-foreground/80" />
                               </div>
                             )}
                             <div className="flex-1">
-                              <h3 className="text-xl font-bold">
-                                {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
-                              </h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-xl font-bold">
+                                  {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
+                                </h3>
+                                <Badge variant="outline" className="text-xs lowercase font-semibold text-foreground border-foreground/30 h-6 items-center">
+                                  {event.eventType}
+                                </Badge>
+                              </div>
                               {event.opponent && (
                                 <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
                               )}
@@ -357,72 +359,76 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           </div>
 
                           {field && site && (
-                            <div className="flex flex-wrap gap-2">
-                              {field.hasLights && (
-                                <Badge className="text-xs gap-1 bg-amber-500/20 text-amber-900 border-amber-500/40 font-semibold">
-                                  <Lightbulb size={14} weight="duotone" className="text-amber-600" />
-                                  Lights
-                                </Badge>
-                              )}
-                              <Badge className="text-xs gap-1 bg-emerald-500/20 text-emerald-900 border-emerald-500/40 font-semibold">
-                                {field.turfType === 'artificial' ? (
-                                  <>
-                                    <Circle size={14} weight="duotone" className="text-emerald-600" />
-                                    Artificial Turf
-                                  </>
-                                ) : field.turfType === 'natural' ? (
-                                  <>
-                                    <Plant size={14} weight="duotone" className="text-emerald-600" />
-                                    Natural Grass
-                                  </>
-                                ) : (
-                                  <>
-                                    <Circle size={14} weight="duotone" className="text-emerald-600" />
-                                    Indoor Gym
-                                  </>
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap gap-2">
+                                {field.hasLights && (
+                                  <Badge className="text-xs gap-1 bg-amber-500/20 text-amber-900 border-amber-500/40 font-semibold">
+                                    <Lightbulb size={14} weight="duotone" className="text-amber-600" />
+                                    Lights
+                                  </Badge>
                                 )}
-                              </Badge>
-                              <Badge className={`text-xs gap-1.5 font-semibold relative overflow-hidden ${
-                                field.isFullField 
-                                  ? 'bg-emerald-500/20 text-emerald-900 border-emerald-500/40'
-                                  : 'bg-gradient-to-r from-emerald-500/20 to-transparent text-emerald-900 border-emerald-500/40'
-                              }`}>
-                                {field.isFullField ? (
-                                  <>Full Field</>
-                                ) : (
-                                  <>Half Field</>
+                                <Badge className="text-xs gap-1 bg-emerald-500/20 text-emerald-900 border-emerald-500/40 font-semibold">
+                                  {field.turfType === 'artificial' ? (
+                                    <>
+                                      <Circle size={14} weight="duotone" className="text-emerald-600" />
+                                      Artificial Turf
+                                    </>
+                                  ) : field.turfType === 'natural' ? (
+                                    <>
+                                      <Plant size={14} weight="duotone" className="text-emerald-600" />
+                                      Natural Grass
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Circle size={14} weight="duotone" className="text-emerald-600" />
+                                      Indoor Gym
+                                    </>
+                                  )}
+                                </Badge>
+                                <Badge className={`text-xs gap-1.5 font-semibold relative overflow-hidden ${
+                                  field.isFullField 
+                                    ? 'bg-emerald-500/20 text-emerald-900 border-emerald-500/40'
+                                    : 'bg-gradient-to-r from-emerald-500/20 to-transparent text-emerald-900 border-emerald-500/40'
+                                }`}>
+                                  {field.isFullField ? (
+                                    <>Full Field</>
+                                  ) : (
+                                    <>Half Field</>
+                                  )}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {site.hasToilets && (
+                                  <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
+                                    <Toilet size={14} weight="duotone" />
+                                    Toilets
+                                  </Badge>
                                 )}
-                              </Badge>
-                              {site.hasToilets && (
-                                <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
-                                  <Toilet size={14} weight="duotone" />
-                                  Toilets
-                                </Badge>
-                              )}
-                              {site.hasLockerRooms && (
-                                <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
-                                  <Lockers size={14} weight="duotone" />
-                                  Locker Rooms
-                                </Badge>
-                              )}
-                              {site.hasEquipmentStash && (
-                                <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
-                                  <Backpack size={14} weight="duotone" />
-                                  Equipment Storage
-                                </Badge>
-                              )}
-                              {site.hasRestaurant && (
-                                <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
-                                  <ForkKnife size={14} weight="duotone" />
-                                  Restaurant
-                                </Badge>
-                              )}
-                              {site.hasParking && (
-                                <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
-                                  <Car size={14} weight="duotone" />
-                                  Parking
-                                </Badge>
-                              )}
+                                {site.hasLockerRooms && (
+                                  <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
+                                    <Lockers size={14} weight="duotone" />
+                                    Locker Rooms
+                                  </Badge>
+                                )}
+                                {site.hasEquipmentStash && (
+                                  <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
+                                    <Backpack size={14} weight="duotone" />
+                                    Equipment Storage
+                                  </Badge>
+                                )}
+                                {site.hasRestaurant && (
+                                  <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
+                                    <ForkKnife size={14} weight="duotone" />
+                                    Restaurant
+                                  </Badge>
+                                )}
+                                {site.hasParking && (
+                                  <Badge className="text-xs gap-1 bg-muted/80 text-muted-foreground border-border font-medium">
+                                    <Car size={14} weight="duotone" />
+                                    Parking
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           )}
 
