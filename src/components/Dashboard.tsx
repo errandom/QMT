@@ -6,6 +6,7 @@ import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, B
 import { FootballHelmet } from '@phosphor-icons/react';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
+import { SportsEquipmentIcon } from '@/components/icons';
 import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -219,7 +220,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestEquipment}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <Barbell size={20} weight="bold" />
+                <SportsEquipmentIcon size={20} weight="bold" />
                 Equipment
               </Button>
 
