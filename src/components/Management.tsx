@@ -14,7 +14,6 @@ import { SettingsView } from './management/SettingsView';
 import { ChecklistIcon } from './icons/ChecklistIcon';
 import { FieldIcon } from './icons/FieldIcon';
 import { JerseyIcon } from './icons/JerseyIcon';
-import { LocationFootballIcon } from './icons/LocationFootballIcon';
 
 interface ManagementProps {
   onLogout: () => void;
@@ -204,7 +203,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <LocationFootballIcon size={30} filled={activeTab === 'sites'} />
+                  <MapPin size={30} weight={activeTab === 'sites' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>
