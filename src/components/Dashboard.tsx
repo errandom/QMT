@@ -83,7 +83,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                       <UserCircleGear size={20} weight="fill" />
                     )}
                   </div>
-                  <span className="text-primary-foreground font-medium">{authState.username}</span>
+                  <span className="text-primary-foreground font-medium hidden md:inline">{authState.username}</span>
                 </div>
                 <Button 
                   variant="ghost" 
@@ -226,7 +226,12 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                       <CardContent className="px-6 py-3">
                         <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
                           <Badge variant="outline" className="text-xs uppercase font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">
-                            {event.eventType}
+                            <span className="hidden md:inline">{event.eventType}</span>
+                            <span className="md:hidden">
+                              {event.eventType === 'practice' ? 'P' : 
+                               event.eventType === 'game' ? 'G' : 
+                               event.eventType === 'meeting' ? 'M' : 'O'}
+                            </span>
                           </Badge>
                           <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">
                             {event.status}
@@ -239,7 +244,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                               className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 h-7 text-xs px-2"
                             >
                               <XCircle size={14} weight="fill" />
-                              Request Cancellation
+                              <span className="hidden md:inline">Request Cancellation</span>
+                              <span className="md:hidden">Cancel</span>
                             </Button>
                           )}
                         </div>

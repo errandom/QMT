@@ -54,7 +54,7 @@ export function Management({ onLogout }: ManagementProps) {
                     <UserCircleGear size={20} weight="fill" />
                   )}
                 </div>
-                <span className="text-primary-foreground font-medium">{authState?.username}</span>
+                <span className="text-primary-foreground font-medium hidden md:inline">{authState?.username}</span>
               </div>
               <Button 
                 variant="ghost" 
