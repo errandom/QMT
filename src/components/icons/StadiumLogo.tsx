@@ -1,48 +1,49 @@
 export function StadiumLogo({ className = "" }: { className?: string }) {
   return (
     <svg 
-      viewBox="0 0 120 80" 
+      viewBox="0 0 120 120" 
       className={className}
       xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      stroke="currentColor"
     >
-      <defs>
-        <linearGradient id="fieldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#2d5016', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#1a3009', stopOpacity: 1 }} />
-        </linearGradient>
-        <linearGradient id="trackGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#8b4513', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#5c2e0a', stopOpacity: 1 }} />
-        </linearGradient>
-      </defs>
+      <path 
+        d="M 28 40 L 28 44 L 32 44 L 32 72 L 28 72 L 28 76 L 42 76 L 42 72 L 36 72 L 36 60 L 40 60 C 42 60 44 58 44 56 L 44 48 C 44 46 42 44 40 44 L 36 44 L 36 40 Z M 36 48 L 40 48 L 40 56 L 36 56 Z" 
+        strokeWidth="2.5" 
+        strokeLinejoin="round"
+        fill="none"
+      />
       
-      <ellipse cx="60" cy="45" rx="55" ry="30" fill="url(#trackGradient)" />
+      <path 
+        d="M 80 44 C 74 44 70 48 70 56 L 70 60 C 70 68 74 72 80 72 C 86 72 90 68 90 60 L 90 56 C 90 48 86 44 80 44 Z M 80 48 C 84 48 86 50 86 56 L 86 60 C 86 66 84 68 80 68 C 76 68 74 66 74 60 L 74 56 C 74 50 76 48 80 48 Z" 
+        strokeWidth="2.5" 
+        strokeLinejoin="round"
+        fill="none"
+      />
       
-      <ellipse cx="60" cy="45" rx="45" ry="24" fill="url(#fieldGradient)" />
+      <line x1="60" y1="20" x2="60" y2="100" strokeWidth="3" strokeLinecap="round"/>
       
-      <line x1="15" y1="45" x2="105" y2="45" stroke="#ffffff" strokeWidth="0.5" opacity="0.6" />
-      <line x1="35" y1="28" x2="35" y2="62" stroke="#ffffff" strokeWidth="0.5" opacity="0.4" />
-      <line x1="85" y1="28" x2="85" y2="62" stroke="#ffffff" strokeWidth="0.5" opacity="0.4" />
-      <line x1="60" y1="24" x2="60" y2="66" stroke="#ffffff" strokeWidth="0.5" opacity="0.6" />
+      <line x1="20" y1="95" x2="100" y2="95" strokeWidth="3" strokeLinecap="round"/>
       
-      <ellipse cx="60" cy="45" rx="8" ry="5" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.5" />
+      <line x1="24" y1="95" x2="24" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="28" y1="95" x2="28" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="32" y1="95" x2="32" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="36" y1="95" x2="36" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="40" y1="95" x2="40" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="44" y1="95" x2="44" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="48" y1="95" x2="48" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="52" y1="95" x2="52" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="56" y1="95" x2="56" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
       
-      <path d="M 10 50 Q 10 20, 30 18" fill="none" stroke="#2c3e50" strokeWidth="2" opacity="0.7" />
-      <path d="M 110 50 Q 110 20, 90 18" fill="none" stroke="#2c3e50" strokeWidth="2" opacity="0.7" />
-      
-      <rect x="8" y="28" width="3" height="20" fill="#34495e" opacity="0.8" />
-      <rect x="109" y="28" width="3" height="20" fill="#34495e" opacity="0.8" />
-      <rect x="20" y="22" width="3" height="26" fill="#34495e" opacity="0.8" />
-      <rect x="97" y="22" width="3" height="26" fill="#34495e" opacity="0.8" />
-      <rect x="32" y="18" width="3" height="30" fill="#34495e" opacity="0.8" />
-      <rect x="85" y="18" width="3" height="30" fill="#34495e" opacity="0.8" />
-      
-      <circle cx="9.5" cy="28" r="1.5" fill="#f39c12" opacity="0.9" />
-      <circle cx="110.5" cy="28" r="1.5" fill="#f39c12" opacity="0.9" />
-      <circle cx="21.5" cy="22" r="1.5" fill="#f39c12" opacity="0.9" />
-      <circle cx="98.5" cy="22" r="1.5" fill="#f39c12" opacity="0.9" />
-      <circle cx="33.5" cy="18" r="1.5" fill="#f39c12" opacity="0.9" />
-      <circle cx="86.5" cy="18" r="1.5" fill="#f39c12" opacity="0.9" />
+      <line x1="64" y1="95" x2="64" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="68" y1="95" x2="68" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="72" y1="95" x2="72" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="76" y1="95" x2="76" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="80" y1="95" x2="80" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="84" y1="95" x2="84" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="88" y1="95" x2="88" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="92" y1="95" x2="92" y2="91" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="96" y1="95" x2="96" y2="88" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   );
 }
