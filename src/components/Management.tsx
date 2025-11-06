@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear } from '@phosphor-icons/react';
+import { SignOut, CalendarBlank, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Backpack } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -13,7 +13,6 @@ import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
 import { ChecklistIcon } from './icons/ChecklistIcon';
 import { TeamJerseyIcon } from './icons/TeamJerseyIcon';
-import { SportsEquipmentIcon } from './icons/SportsEquipmentIcon';
 import { FieldIcon } from './icons/FieldIcon';
 import { ArenaIcon } from './icons/ArenaIcon';
 
@@ -169,7 +168,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <SportsEquipmentIcon size={30} weight={activeTab === 'equipment' ? 'bold' : 'regular'} />
+                  <Backpack size={30} weight={activeTab === 'equipment' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
