@@ -37,6 +37,7 @@ function App() {
           onRequestEquipment={() => setShowEquipmentRequest(true)}
           onManagement={handleManagementClick}
           onLogout={handleLogout}
+          onLogin={() => setShowLoginDialog(true)}
         />
       ) : (
         <Management onLogout={handleLogout} />

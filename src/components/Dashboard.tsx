@@ -19,9 +19,10 @@ interface DashboardProps {
   onRequestEquipment: () => void;
   onManagement: () => void;
   onLogout?: () => void;
+  onLogin: () => void;
 }
 
-export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement, onLogout }: DashboardProps) {
+export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement, onLogout, onLogin }: DashboardProps) {
   const [teams] = useTeams();
   const [fields] = useFields();
   const [sites] = useSites();
@@ -86,9 +87,9 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
-              <p className="text-primary-foreground/90 text-sm font-medium mt-1">ZURICH RENEGADES FOOTBALL</p>
+              <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">ZURICH RENEGADES FOOTBALL</p>
             </div>
-            {authState?.isAuthenticated && (
+            {authState?.isAuthenticated ? (
               <div className="flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-3">
                 <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                   <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground">
@@ -109,6 +110,15 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                   <span className="hidden md:inline">Logout</span>
                 </Button>
               </div>
+            ) : (
+              <Button 
+                variant="ghost" 
+                onClick={onLogin} 
+                className="gap-2 text-primary-foreground hover:bg-white/10 border border-white/20 font-semibold"
+              >
+                <UserCircleGear size={20} weight="fill" />
+                <span className="hidden md:inline">Login</span>
+              </Button>
             )}
           </div>
         </div>

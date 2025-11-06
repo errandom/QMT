@@ -38,11 +38,11 @@ export function Management({ onLogout }: ManagementProps) {
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-primary-foreground tracking-tight">
-                ZURICH RENEGADES FOOTBALL
+              <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">
+                QMT | Operations
               </h1>
-              <p className="text-primary-foreground/90 text-sm font-medium mt-1">
-                Quick Mean Tough | Operations
+              <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">
+                ZURICH RENEGADES FOOTBALL
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export function Management({ onLogout }: ManagementProps) {
                 className="gap-2 text-primary-foreground hover:bg-white/10"
               >
                 <SignOut size={18} />
-                Logout
+                <span className="hidden md:inline">Logout</span>
               </Button>
             </div>
           </div>
