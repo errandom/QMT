@@ -12,7 +12,7 @@ import { RequestsTable } from './management/RequestsTable';
 import { UsersTable } from './management/UsersTable';
 import { SettingsView } from './management/SettingsView';
 import { ChecklistIcon } from './icons/ChecklistIcon';
-import { FootballPlayerIcon } from './icons/FootballPlayerIcon';
+import { TeamJerseyIcon } from './icons/TeamJerseyIcon';
 import { TacklePadsIcon } from './icons/TacklePadsIcon';
 import { FieldIcon } from './icons/FieldIcon';
 import { ArenaIcon } from './icons/ArenaIcon';
@@ -151,7 +151,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <FootballPlayerIcon size={30} filled={activeTab === 'teams'} />
+                  <TeamJerseyIcon size={30} filled={activeTab === 'teams'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
