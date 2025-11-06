@@ -14,13 +14,12 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
         fill="currentColor"
         className={className}
       >
-        <path d="M3 20h18v2H3v-2z"/>
-        <path d="M4 9v9h2V9H4z"/>
-        <path d="M8 9v9h2V9H8z"/>
-        <path d="M14 9v9h2V9h-2z"/>
-        <path d="M18 9v9h2V9h-2z"/>
-        <path d="M2 7l10-5 10 5v2H2V7z" opacity="0.85"/>
-        <circle cx="12" cy="14" r="3" fill="white" opacity="0.2"/>
+        <ellipse cx="12" cy="12" rx="10" ry="7" opacity="0.3"/>
+        <ellipse cx="12" cy="12" rx="9" ry="6" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+        <rect x="6" y="7" width="12" height="10" rx="1" opacity="0.2"/>
+        <rect x="6" y="7" width="12" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+        <line x1="12" y1="7" x2="12" y2="17" stroke="currentColor" strokeWidth="1"/>
+        <circle cx="12" cy="12" r="1.5" fill="none" stroke="currentColor" strokeWidth="1"/>
       </svg>
     );
   }
@@ -32,18 +31,16 @@ export function ArenaIcon({ size = 24, className = '', filled = false }: ArenaIc
       viewBox="0 0 24 24" 
       fill="none"
       stroke="currentColor" 
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round" 
       strokeLinejoin="round"
       className={className}
     >
-      <line x1="3" y1="20" x2="21" y2="20"/>
-      <line x1="5" y1="9" x2="5" y2="18"/>
-      <line x1="9" y1="9" x2="9" y2="18"/>
-      <line x1="15" y1="9" x2="15" y2="18"/>
-      <line x1="19" y1="9" x2="19" y2="18"/>
-      <path d="M2 9l10-5 10 5v0H2z"/>
-      <circle cx="12" cy="14" r="3"/>
+      <ellipse cx="12" cy="12" rx="10" ry="7"/>
+      <ellipse cx="12" cy="12" rx="9" ry="6"/>
+      <rect x="6" y="7" width="12" height="10" rx="1"/>
+      <line x1="12" y1="7" x2="12" y2="17"/>
+      <circle cx="12" cy="12" r="1.5"/>
     </svg>
   );
 }
