@@ -70,12 +70,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-primary-foreground tracking-tight">
-                Quick Mean Tough | Operations
-              </h1>
-              <p className="text-primary-foreground/90 text-sm font-medium mt-1">
-                ZURICH RENEGADES FOOTBALL
-              </p>
+              <h1 className="text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
+              <p className="text-primary-foreground/90 text-sm font-medium mt-1">ZURICH RENEGADES FOOTBALL</p>
             </div>
             {authState?.isAuthenticated && (
               <div className="flex items-center gap-3">
@@ -102,7 +98,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
           </div>
         </div>
       </div>
-
       <div className="container mx-auto px-6 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -356,7 +351,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
           </div>
         </motion.div>
       </div>
-
       {cancellationEvent && (
         <CancellationRequestDialog
           open={!!cancellationEvent}
