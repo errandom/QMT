@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Circle, Square } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Square } from '@phosphor-icons/react';
+import { FootballHelmet } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { FootballIcon } from '@/components/icons/FootballIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
@@ -123,7 +124,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <Circle size={24} weight={sportFilter === 'tackle' ? 'fill' : 'regular'} className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
+                <FootballHelmet size={24} weight={sportFilter === 'tackle' ? 'fill' : 'regular'} className={sportFilter === 'tackle' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Tackle Football</span>
               </button>
               <button
