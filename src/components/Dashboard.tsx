@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife, Football, Flag } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife, Football } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
@@ -85,9 +85,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm flex-shrink-0">
-                <Football size={40} weight="fill" className="text-primary-foreground" />
-              </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-tight">QMT | Operations</h1>
                 <p className="text-primary-foreground/90 text-sm md:text-base font-bold mt-1">ZURICH RENEGADES FOOTBALL</p>
@@ -146,7 +143,10 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <Football size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
+                <div className="flex items-center gap-1">
+                  <Football size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
+                  <FootballHelmet size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} className={sportFilter === 'all' ? 'drop-shadow-lg' : ''} />
+                </div>
                 <span className="hidden sm:inline">All Sports</span>
               </button>
               <button
@@ -168,7 +168,10 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <Flag size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
+                <div className="flex items-center gap-1">
+                  <Football size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
+                  <FootballHelmet size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
+                </div>
                 <span className="hidden sm:inline">Flag Football</span>
               </button>
             </div>
