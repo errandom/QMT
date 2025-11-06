@@ -339,7 +339,7 @@ export function ScheduleTable() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="fieldId">Field *</Label>
+              <Label htmlFor="fieldId" className="text-right block">Field *</Label>
               <Select value={formData.fieldId} onValueChange={(value) => setFormData(prev => ({ ...prev, fieldId: value }))} required>
                 <SelectTrigger id="fieldId">
                   <SelectValue placeholder="Select field" />
@@ -369,7 +369,7 @@ export function ScheduleTable() {
             </div>
 
             <div className="space-y-2">
-              <Label>Teams * (Select one or multiple)</Label>
+              <Label className="text-right block">Teams * (Select one or multiple)</Label>
               <div className="grid grid-cols-2 gap-2 p-3 bg-muted/50 rounded-lg max-h-40 overflow-y-auto">
                 {teams && teams.length > 0 ? (
                   teams.filter(t => t.isActive).map(team => (
@@ -392,7 +392,7 @@ export function ScheduleTable() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time *</Label>
+                <Label htmlFor="startTime" className="text-right block">Start Time *</Label>
                 <Input
                   id="startTime"
                   type="datetime-local"
@@ -403,7 +403,7 @@ export function ScheduleTable() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="endTime">End Time *</Label>
+                <Label htmlFor="endTime" className="text-right block">End Time *</Label>
                 <Input
                   id="endTime"
                   type="datetime-local"
@@ -416,7 +416,7 @@ export function ScheduleTable() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="eventType">Event Type *</Label>
+                <Label htmlFor="eventType" className="text-right block">Event Type *</Label>
                 <Select value={formData.eventType} onValueChange={(value: EventType) => setFormData(prev => ({ ...prev, eventType: value }))}>
                   <SelectTrigger id="eventType">
                     <SelectValue />
@@ -431,7 +431,7 @@ export function ScheduleTable() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="status" className="text-right block">Status *</Label>
                 <Select value={formData.status} onValueChange={(value: EventStatus) => setFormData(prev => ({ ...prev, status: value }))}>
                   <SelectTrigger id="status">
                     <SelectValue />
@@ -445,7 +445,7 @@ export function ScheduleTable() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="estimatedAttendance">Est. Attendance</Label>
+                <Label htmlFor="estimatedAttendance" className="text-right block">Est. Attendance</Label>
                 <Input
                   id="estimatedAttendance"
                   type="number"
@@ -458,7 +458,7 @@ export function ScheduleTable() {
 
             {formData.eventType === 'game' && (
               <div className="space-y-2">
-                <Label htmlFor="opponent">Opponent</Label>
+                <Label htmlFor="opponent" className="text-right block">Opponent</Label>
                 <Input
                   id="opponent"
                   value={formData.opponent}
@@ -481,7 +481,7 @@ export function ScheduleTable() {
               {formData.isRecurring && (
                 <div className="space-y-4 pl-2">
                   <div className="space-y-2">
-                    <Label>Select Days</Label>
+                    <Label className="text-right block">Select Days</Label>
                     <div className="flex gap-2 flex-wrap">
                       {weekDays.map((day, index) => (
                         <Button
@@ -500,7 +500,7 @@ export function ScheduleTable() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="recurringStartDate">Start Date</Label>
+                      <Label htmlFor="recurringStartDate" className="text-right block">Start Date</Label>
                       <Input
                         id="recurringStartDate"
                         type="date"
@@ -510,7 +510,7 @@ export function ScheduleTable() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="recurringEndDate">End Date</Label>
+                      <Label htmlFor="recurringEndDate" className="text-right block">End Date</Label>
                       <Input
                         id="recurringEndDate"
                         type="date"
@@ -524,7 +524,7 @@ export function ScheduleTable() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes" className="text-right block">Notes</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}

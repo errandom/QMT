@@ -228,8 +228,8 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                      <CardContent className="p-6 pt-2 pb-4">
-                        <div className="flex items-center justify-between gap-2 mb-2 pt-2">
+                      <CardContent className="p-6 pt-1 pb-4">
+                        <div className="flex items-center justify-between gap-2 mb-2 pt-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs uppercase font-medium text-muted-foreground border-muted-foreground/30">
                               {event.eventType}
