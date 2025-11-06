@@ -1,13 +1,12 @@
 import { useState, useMemo } from 'react';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarBlank, MapPin, Users, Flag } from '@phosphor-icons/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarBlank, MapPin, BuildingOffice, Clipboard, ShieldCheck, FootballHelmet } from '@phosphor-icons/react';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
+import { useAuth } from '@/hooks/use-auth';
 import { getUpcomingEvents, getEventsBySportType, getEventsByTeam, getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 
 interface DashboardProps {
@@ -21,6 +20,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
   const [fields] = useFields();
   const [sites] = useSites();
   const [schedule] = useSchedule();
+  const { authState } = useAuth();
   
   const [sportFilter, setSportFilter] = useState<'all' | 'tackle' | 'flag'>('all');
   const [teamFilter, setTeamFilter] = useState<string>('all');
@@ -37,43 +37,96 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
   const tackleTeams = useMemo(() => teams?.filter(t => t.sportType === 'tackle') || [], [teams]);
   const flagTeams = useMemo(() => teams?.filter(t => t.sportType === 'flag') || [], [teams]);
 
+  const getSportLabel = () => {
+    if (sportFilter === 'all') return 'All';
+    if (sportFilter === 'tackle') return 'Tackle Football';
+    return 'Flag Football';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-card to-muted">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      <div className="bg-gradient-to-r from-primary via-primary/95 to-secondary shadow-lg">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-primary-foreground tracking-tight">
+                ZURICH RENEGADES FOOTBALL
+              </h1>
+              <p className="text-primary-foreground/90 text-sm font-medium mt-1">
+                Quick Mean Tough | Operations
+              </p>
+            </div>
+            {authState?.isAuthenticated ? (
+              <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground font-semibold text-sm">
+                  {authState.username?.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-primary-foreground font-medium">{authState.username}</span>
+              </div>
+            ) : (
+              <Button 
+                onClick={onManagement}
+                className="bg-white/10 hover:bg-white/20 text-primary-foreground border border-white/30 backdrop-blur-sm"
+              >
+                Management Login
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-6 py-8">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl font-bold tracking-tight mb-2">QMT Facility Management</h1>
-          <p className="text-muted-foreground text-lg mb-8">Upcoming Events & Facility Information</p>
-        </motion.div>
+          <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
+          <p className="text-muted-foreground mb-8">Upcoming Events - {getSportLabel()}</p>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-8 items-start md:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Sport Type</label>
-              <ToggleGroup type="single" value={sportFilter} onValueChange={(value) => value && setSportFilter(value as 'all' | 'tackle' | 'flag')}>
-                <ToggleGroupItem value="all" aria-label="All sports" className="gap-2">
-                  All
-                </ToggleGroupItem>
-                <ToggleGroupItem value="tackle" aria-label="Tackle football" className="gap-2">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C10.07 2 8.5 3.57 8.5 5.5V7H7c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h1.5v1.5c0 1.93 1.57 3.5 3.5 3.5h1c1.93 0 3.5-1.57 3.5-3.5V14H18c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2h-1.5V5.5C16.5 3.57 14.93 2 13 2h-1zm-2 8v4h4v-4h-4z"/>
-                  </svg>
-                  Tackle
-                </ToggleGroupItem>
-                <ToggleGroupItem value="flag" aria-label="Flag football" className="gap-2">
-                  <Flag size={20} weight="fill" />
-                  Flag
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
+          <div className="grid grid-cols-3 gap-3 mb-8 p-2 bg-card rounded-2xl shadow-lg border border-border">
+            <button
+              onClick={() => setSportFilter('all')}
+              className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                sportFilter === 'all'
+                  ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <CalendarBlank size={24} weight={sportFilter === 'all' ? 'fill' : 'regular'} />
+              <span className="hidden sm:inline">All Sports</span>
+            </button>
+            <button
+              onClick={() => setSportFilter('tackle')}
+              className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                sportFilter === 'tackle'
+                  ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <FootballHelmet size={24} weight={sportFilter === 'tackle' ? 'fill' : 'regular'} />
+              <span className="hidden sm:inline">Tackle Football</span>
+            </button>
+            <button
+              onClick={() => setSportFilter('flag')}
+              className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                sportFilter === 'flag'
+                  ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg scale-105'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56h64V200H40ZM216,200H120V56h96V200Z"/>
+              </svg>
+              <span className="hidden sm:inline">Flag Football</span>
+            </button>
+          </div>
 
-            <div className="min-w-[200px]">
-              <label className="text-sm font-medium mb-2 block">Team</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="lg:col-span-1">
+              <label className="text-sm font-semibold mb-2 block text-foreground">Select Team</label>
               <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-card shadow-sm border-border h-12">
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
@@ -97,95 +150,110 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement 
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={onRequestFacility} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+            <Button 
+              onClick={onRequestFacility}
+              className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+            >
+              <BuildingOffice size={20} weight="fill" />
               Request Facility
             </Button>
-            <Button onClick={onRequestEquipment} className="bg-accent text-accent-foreground hover:bg-accent/90">
+
+            <Button 
+              onClick={onRequestEquipment}
+              className="h-12 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
+            >
+              <Clipboard size={20} weight="fill" />
               Request Equipment
             </Button>
-            <Button onClick={onManagement} variant="outline">
+
+            <Button 
+              onClick={onManagement}
+              className="h-12 bg-gradient-to-br from-primary to-primary/80 hover:shadow-lg transition-all duration-300 font-semibold gap-2"
+            >
+              <ShieldCheck size={20} weight="fill" />
               Management Section
             </Button>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          {upcomingEvents.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <CalendarBlank size={48} className="mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg text-muted-foreground">No upcoming events scheduled</p>
-              </CardContent>
-            </Card>
-          ) : (
-            upcomingEvents.map((event, index) => {
-              const team = getTeamById(teams || [], event.teamId);
-              const field = getFieldById(fields || [], event.fieldId);
-              const site = field ? getSiteById(sites || [], field.siteId) : undefined;
+          <div className="space-y-4">
+            {upcomingEvents.length === 0 ? (
+              <Card className="bg-gradient-to-br from-card to-muted/30 border-border shadow-lg">
+                <CardContent className="py-16 text-center">
+                  <div className="inline-flex p-6 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10 mb-4">
+                    <CalendarBlank size={48} className="text-primary" weight="duotone" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No Upcoming Events</h3>
+                  <p className="text-muted-foreground">There are currently no scheduled events. Check back soon!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              upcomingEvents.map((event, index) => {
+                const team = getTeamById(teams || [], event.teamId);
+                const field = getFieldById(fields || [], event.fieldId);
+                const site = field ? getSiteById(sites || [], field.siteId) : undefined;
 
-              return (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
-                  <Card className="hover:shadow-lg transition-shadow border-l-4" style={{
-                    borderLeftColor: team?.sportType === 'tackle' ? 'oklch(0.68 0.18 45)' : 'oklch(0.75 0.15 75)'
-                  }}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'}>
+                return (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                      <div className={`h-1.5 bg-gradient-to-r ${
+                        team?.sportType === 'tackle' 
+                          ? 'from-primary to-secondary' 
+                          : 'from-secondary to-accent'
+                      }`} />
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              {team?.sportType === 'tackle' ? (
+                                <div className="p-2 rounded-lg bg-primary/10">
+                                  <FootballHelmet size={24} weight="fill" className="text-primary" />
+                                </div>
+                              ) : (
+                                <div className="p-2 rounded-lg bg-accent/10">
+                                  <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor" className="text-accent">
+                                    <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56h64V200H40ZM216,200H120V56h96V200Z"/>
+                                  </svg>
+                                </div>
+                              )}
+                              <div>
+                                <h3 className="text-xl font-bold">{team?.name || 'Unknown Team'}</h3>
+                                {event.opponent && (
+                                  <p className="text-sm text-muted-foreground">vs {event.opponent}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wide">
                               {event.eventType}
-                            </Badge>
-                            {team?.sportType === 'tackle' ? (
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-secondary">
-                                <path d="M12 2C10.07 2 8.5 3.57 8.5 5.5V7H7c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h1.5v1.5c0 1.93 1.57 3.5 3.5 3.5h1c1.93 0 3.5-1.57 3.5-3.5V14H18c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2h-1.5V5.5C16.5 3.57 14.93 2 13 2h-1zm-2 8v4h4v-4h-4z"/>
-                              </svg>
-                            ) : (
-                              <Flag size={16} weight="fill" className="text-accent" />
-                            )}
+                            </div>
                           </div>
-                          <CardTitle className="text-xl">{team?.name || 'Unknown Team'}</CardTitle>
-                          {event.opponent && (
-                            <CardDescription className="mt-1">vs {event.opponent}</CardDescription>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                          <div className="text-right bg-muted/50 px-4 py-2 rounded-xl">
+                            <div className="text-sm font-bold text-primary">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-muted-foreground" />
-                          <span>{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin size={16} weight="fill" className="text-secondary" />
+                          <span className="font-medium">{site?.name || 'Unknown Site'} - {field?.name || 'Unknown Field'}</span>
                         </div>
-                        {site && (
-                          <div className="text-muted-foreground">
-                            {site.city}, {site.state}
-                          </div>
+                        {event.notes && (
+                          <p className="mt-3 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">{event.notes}</p>
                         )}
-                      </div>
-                      {event.notes && (
-                        <p className="mt-3 text-sm text-muted-foreground">{event.notes}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+        </motion.div>
       </div>
     </div>
   );

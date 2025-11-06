@@ -1,17 +1,18 @@
 # Planning Guide
 
-A comprehensive sports facility management system for tracking teams, sites, fields, schedules, and requests across tackle and flag football operations, with role-based access control for administrators and management staff.
+A modern, glossy facility management system for the Zurich Renegades Football club, managing both tackle and flag football operations with a sleek navy blue aesthetic reflecting the city of Zurich.
 
 **Experience Qualities**: 
-1. **Efficient** - Quick access to schedules and facility requests with minimal clicks
-2. **Organized** - Clear separation between public dashboard and management operations
-3. **Professional** - Clean, modern interface that inspires confidence in facility operations
+1. **Modern & Glossy** - Contemporary design with smooth shapes, subtle gradients, and premium feel
+2. **Intuitive** - Clear visual hierarchy with sport-specific iconography and easy navigation
+3. **Professional** - Polished interface that reflects the quality of Zurich Renegades organization
 
 **Complexity Level**: Light Application (multiple features with basic state)
-  - Multiple interconnected data views (teams, sites, fields, schedules, requests, users)
-  - Role-based authentication with two permission levels
-  - CRUD operations across multiple entity types
-  - Public dashboard with filtering capabilities
+  - Dashboard with sport type toggle and team filtering
+  - Public event schedule with zero-state handling
+  - Authentication with user state display
+  - Facility and equipment request forms
+  - Management console for administrators
 
 ## Essential Features
 
@@ -81,23 +82,23 @@ A comprehensive sports facility management system for tracking teams, sites, fie
 - **Network Errors**: Display user-friendly messages when operations fail
 
 ## Design Direction
-The public dashboard should feel modern, vibrant, and approachable with sports-themed visual elements and smooth transitions, while the management section should adopt a more classic, business-focused aesthetic with data tables and efficient layouts prioritizing functionality over flair.
+The design should evoke a premium, modern Swiss aesthetic with glossy surfaces, smooth rounded shapes, and a sophisticated navy blue color palette representing Zurich's professionalism and class - think sleek, contemporary sports facility with subtle depth and dimensionality.
 
 ## Color Selection
-Complementary (opposite colors) - Using energetic orange and cool blue to represent the dynamic nature of sports while maintaining professional credibility.
+Analogous (adjacent colors on the color wheel) - Using navy blue as the foundation with lighter blues to create a cohesive Zurich-inspired palette that feels elegant and trustworthy.
 
-- **Primary Color**: Deep Blue (oklch(0.45 0.15 250)) - Communicates trust, professionalism, and stability for the management aspects
+- **Primary Color**: Navy Blue (oklch(0.32 0.12 240)) - Deep, sophisticated navy representing Zurich's professional sports culture
 - **Secondary Colors**: 
-  - Energetic Orange (oklch(0.68 0.18 45)) - Represents action and sports energy for CTAs and sport type indicators
-  - Neutral Gray (oklch(0.55 0.01 250)) - Supporting color for secondary UI elements
-- **Accent Color**: Bright Amber (oklch(0.75 0.15 75)) - Attention-grabbing for important actions like submitting requests and CTAs
+  - Sky Blue (oklch(0.65 0.14 235)) - Bright, energetic blue for accents and active states
+  - Steel Blue (oklch(0.48 0.08 240)) - Mid-tone blue for secondary elements
+- **Accent Color**: Cyan Blue (oklch(0.72 0.15 220)) - Vibrant highlight for CTAs and important interactions
 - **Foreground/Background Pairings**:
-  - Background (White oklch(0.98 0 0)): Dark Blue text (oklch(0.25 0.08 250)) - Ratio 8.2:1 ✓
-  - Card (Light Gray oklch(0.96 0.005 250)): Dark Blue text (oklch(0.25 0.08 250)) - Ratio 7.8:1 ✓
-  - Primary (Deep Blue oklch(0.45 0.15 250)): White text (oklch(0.98 0 0)) - Ratio 6.5:1 ✓
-  - Secondary (Energetic Orange oklch(0.68 0.18 45)): Dark text (oklch(0.2 0.05 45)) - Ratio 6.1:1 ✓
-  - Accent (Bright Amber oklch(0.75 0.15 75)): Dark text (oklch(0.2 0.05 75)) - Ratio 7.2:1 ✓
-  - Muted (Light Gray oklch(0.92 0.005 250)): Medium text (oklch(0.45 0.05 250)) - Ratio 4.8:1 ✓
+  - Background (Light Blue Gray oklch(0.97 0.01 240)): Navy text (oklch(0.25 0.1 240)) - Ratio 9.1:1 ✓
+  - Card (White oklch(0.99 0 0)): Navy text (oklch(0.25 0.1 240)) - Ratio 10.2:1 ✓
+  - Primary (Navy oklch(0.32 0.12 240)): White text (oklch(0.99 0 0)) - Ratio 7.8:1 ✓
+  - Secondary (Sky Blue oklch(0.65 0.14 235)): Dark text (oklch(0.2 0.08 240)) - Ratio 6.4:1 ✓
+  - Accent (Cyan oklch(0.72 0.15 220)): Dark text (oklch(0.2 0.08 240)) - Ratio 7.9:1 ✓
+  - Muted (Blue Gray oklch(0.92 0.02 240)): Medium text (oklch(0.45 0.08 240)) - Ratio 5.2:1 ✓
 
 ## Font Selection
 The typeface should convey modern athleticism with clean geometric forms for the dashboard while maintaining readability for dense data tables in management - Inter provides this versatility with its excellent legibility at all sizes.
