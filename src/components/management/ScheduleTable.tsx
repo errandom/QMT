@@ -374,18 +374,27 @@ export function ScheduleTable() {
                                 )}
                               </div>
                               <div className="flex gap-2 flex-wrap">
-                                <Badge variant={event.eventType === 'game' ? 'default' : 'secondary'} className="text-xs uppercase">
+                                <Badge 
+                                  className={`text-xs uppercase font-semibold text-white ${
+                                    event.eventType === 'game' ? 'bg-emerald-600' :
+                                    event.eventType === 'practice' ? 'bg-blue-600' :
+                                    event.eventType === 'meeting' ? 'bg-purple-600' :
+                                    'bg-amber-600'
+                                  }`}
+                                >
                                   {event.eventType}
                                 </Badge>
-                                <Badge variant={
-                                  event.status === 'confirmed' ? 'default' : 
-                                  event.status === 'cancelled' ? 'destructive' : 
-                                  'secondary'
-                                } className="text-xs">
+                                <Badge 
+                                  className={`text-xs font-semibold text-white ${
+                                    event.status === 'confirmed' ? 'bg-green-600' : 
+                                    event.status === 'cancelled' ? 'bg-red-600' : 
+                                    'bg-slate-500'
+                                  }`}
+                                >
                                   {event.status}
                                 </Badge>
                                 {event.isRecurring && (
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge className="text-xs font-semibold bg-indigo-600 text-white">
                                     Recurring
                                   </Badge>
                                 )}

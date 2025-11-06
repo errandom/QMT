@@ -126,10 +126,16 @@ export function TeamsTable() {
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="text-lg font-bold">{team.name}</h3>
-                          <Badge variant={team.sportType === 'tackle' ? 'default' : team.sportType === 'all sports' ? 'outline' : 'secondary'}>
+                          <Badge 
+                            className={`font-semibold text-white ${
+                              team.sportType === 'tackle' ? 'bg-orange-600' : 
+                              team.sportType === 'all sports' ? 'bg-teal-600' : 
+                              'bg-pink-600'
+                            }`}
+                          >
                             {team.sportType}
                           </Badge>
-                          <Badge variant={team.isActive ? 'default' : 'secondary'}>
+                          <Badge className={`font-semibold text-white ${team.isActive ? 'bg-green-600' : 'bg-gray-500'}`}>
                             {team.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>

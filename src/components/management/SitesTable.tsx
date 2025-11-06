@@ -158,7 +158,7 @@ export function SitesTable() {
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center gap-3 flex-wrap">
                             <h3 className="text-lg font-bold">{site.name}</h3>
-                            <Badge variant={site.isActive ? 'default' : 'secondary'}>
+                            <Badge className={`font-semibold text-white ${site.isActive ? 'bg-green-600' : 'bg-gray-500'}`}>
                               {site.isActive ? 'Active' : 'Inactive'}
                             </Badge>
                           </div>

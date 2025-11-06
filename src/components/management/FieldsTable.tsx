@@ -130,7 +130,13 @@ export function FieldsTable() {
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center gap-3 flex-wrap">
                             <h3 className="text-lg font-bold">{field.name}</h3>
-                            <Badge variant="outline">
+                            <Badge 
+                              className={`font-semibold text-white ${
+                                field.turfType === 'artificial' ? 'bg-lime-600' : 
+                                field.turfType === 'natural' ? 'bg-green-700' : 
+                                'bg-cyan-600'
+                              }`}
+                            >
                               {field.turfType === 'artificial' ? 'Artificial Turf' : field.turfType === 'natural' ? 'Natural Turf' : 'Indoor Gym'}
                             </Badge>
                           </div>
