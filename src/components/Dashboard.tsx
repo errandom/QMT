@@ -281,9 +281,6 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     <Card className="bg-gradient-to-br from-card to-muted/20 border-border shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                       <CardContent className="px-6 py-3">
                         <div className="flex items-center justify-end gap-2 mb-2 min-h-[28px]">
-                          <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-7 flex items-center">
-                            {event.status}
-                          </Badge>
                           {canCancel && event.status !== 'cancelled' && (
                             <Button
                               variant="outline"
@@ -306,19 +303,19 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           <div className="flex items-center gap-3 flex-1">
                             {event.eventType === 'practice' ? (
                               <div className="p-2 rounded-lg bg-secondary/10">
-                                <Barbell size={24} weight="duotone" className="text-secondary/80" />
+                                <Barbell size={24} weight="duotone" className="text-secondary" />
                               </div>
                             ) : event.eventType === 'game' ? (
                               <div className="p-2 rounded-lg bg-primary/10">
-                                <Trophy size={24} weight="duotone" className="text-primary/80" />
+                                <Trophy size={24} weight="duotone" className="text-primary" />
                               </div>
                             ) : event.eventType === 'meeting' ? (
                               <div className="p-2 rounded-lg bg-accent/10">
-                                <Chalkboard size={24} weight="duotone" className="text-accent/80" />
+                                <Chalkboard size={24} weight="duotone" className="text-accent" />
                               </div>
                             ) : (
                               <div className="p-2 rounded-lg bg-muted">
-                                <Calendar size={24} weight="duotone" className="text-muted-foreground/80" />
+                                <Calendar size={24} weight="duotone" className="text-muted-foreground" />
                               </div>
                             )}
                             <div className="flex-1">
@@ -326,8 +323,11 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                                 <h3 className="text-xl font-bold">
                                   {eventTeams.map(t => t?.name).join(' & ') || 'Unknown Team'}
                                 </h3>
-                                <Badge variant="outline" className="text-xs lowercase font-semibold text-foreground border-foreground/30 h-6 items-center">
+                                <Badge variant="outline" className="text-xs lowercase font-semibold text-muted-foreground border-muted-foreground/30 h-6 items-center">
                                   {event.eventType}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs font-medium text-muted-foreground border-muted-foreground/30 h-6 flex items-center">
+                                  {event.status}
                                 </Badge>
                               </div>
                               {event.opponent && (
