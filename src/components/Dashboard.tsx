@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Circle } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Circle, Square } from '@phosphor-icons/react';
 import { GridironIcon } from '@/components/icons/GridironIcon';
 import { FootballIcon } from '@/components/icons/FootballIcon';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
@@ -134,7 +134,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }`}
               >
-                <FootballIcon size={24} filled={sportFilter === 'flag'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
+                <Square size={24} weight={sportFilter === 'flag' ? 'fill' : 'regular'} className={sportFilter === 'flag' ? 'drop-shadow-lg' : ''} />
                 <span className="hidden sm:inline">Flag Football</span>
               </button>
             </div>
