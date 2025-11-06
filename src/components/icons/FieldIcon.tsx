@@ -13,56 +13,54 @@ export function FieldIcon({ className, size = 24 }: FieldIconProps) {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      <rect
-        x="2"
-        y="3"
-        width="20"
-        height="18"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
+      <line x1="2" y1="20" x2="22" y2="20" stroke="currentColor" strokeWidth="2" />
       
-      <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" strokeWidth="2" />
+      <line x1="3" y1="14" x2="3" y2="20" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="5.5" y1="16" x2="5.5" y2="20" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="8" y1="16" x2="8" y2="20" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="10.5" y1="16" x2="10.5" y2="20" stroke="currentColor" strokeWidth="1.5" />
       
-      <line x1="4" y1="6" x2="4" y2="9" stroke="currentColor" strokeWidth="1" />
-      <line x1="4" y1="10.5" x2="4" y2="13.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="4" y1="15" x2="4" y2="18" stroke="currentColor" strokeWidth="1" />
+      <line x1="12" y1="10" x2="12" y2="20" stroke="currentColor" strokeWidth="2.5" />
       
-      <line x1="6.5" y1="6" x2="6.5" y2="8" stroke="currentColor" strokeWidth="1" />
-      <line x1="6.5" y1="9.5" x2="6.5" y2="11.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="6.5" y1="13" x2="6.5" y2="15" stroke="currentColor" strokeWidth="1" />
-      <line x1="6.5" y1="16" x2="6.5" y2="18" stroke="currentColor" strokeWidth="1" />
-      
-      <line x1="9" y1="6" x2="9" y2="8" stroke="currentColor" strokeWidth="1" />
-      <line x1="9" y1="9.5" x2="9" y2="11.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="9" y1="13" x2="9" y2="15" stroke="currentColor" strokeWidth="1" />
-      <line x1="9" y1="16" x2="9" y2="18" stroke="currentColor" strokeWidth="1" />
-      
-      <line x1="15" y1="6" x2="15" y2="8" stroke="currentColor" strokeWidth="1" />
-      <line x1="15" y1="9.5" x2="15" y2="11.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="15" y1="13" x2="15" y2="15" stroke="currentColor" strokeWidth="1" />
-      <line x1="15" y1="16" x2="15" y2="18" stroke="currentColor" strokeWidth="1" />
-      
-      <line x1="17.5" y1="6" x2="17.5" y2="8" stroke="currentColor" strokeWidth="1" />
-      <line x1="17.5" y1="9.5" x2="17.5" y2="11.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="17.5" y1="13" x2="17.5" y2="15" stroke="currentColor" strokeWidth="1" />
-      <line x1="17.5" y1="16" x2="17.5" y2="18" stroke="currentColor" strokeWidth="1" />
-      
-      <line x1="20" y1="6" x2="20" y2="9" stroke="currentColor" strokeWidth="1" />
-      <line x1="20" y1="10.5" x2="20" y2="13.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="20" y1="15" x2="20" y2="18" stroke="currentColor" strokeWidth="1" />
+      <line x1="13.5" y1="16" x2="13.5" y2="20" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="16" y1="16" x2="16" y2="20" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="18.5" y1="16" x2="18.5" y2="20" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="21" y1="14" x2="21" y2="20" stroke="currentColor" strokeWidth="1.5" />
       
       <text
         x="12"
-        y="15"
-        fontSize="8"
+        y="8"
+        fontSize="6"
         fontWeight="700"
         textAnchor="middle"
         fill="currentColor"
         fontFamily="Poppins, sans-serif"
       >
         50
+      </text>
+      
+      <text
+        x="9"
+        y="14"
+        fontSize="6"
+        fontWeight="700"
+        textAnchor="middle"
+        fill="currentColor"
+        fontFamily="Poppins, sans-serif"
+      >
+        5
+      </text>
+      
+      <text
+        x="15"
+        y="14"
+        fontSize="6"
+        fontWeight="700"
+        textAnchor="middle"
+        fill="currentColor"
+        fontFamily="Poppins, sans-serif"
+      >
+        0
       </text>
     </svg>
   );
