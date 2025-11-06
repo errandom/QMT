@@ -111,15 +111,15 @@ Analogous (adjacent colors on the color wheel) - Using navy blue as the foundati
   - Muted (Blue Gray oklch(0.92 0.02 240)): Medium text (oklch(0.45 0.08 240)) - Ratio 5.2:1 ✓
 
 ## Font Selection
-The typeface should convey modern professionalism and clarity with Roboto, providing excellent readability across all content types.
+The typeface should convey modern professionalism and clarity with Inter, providing excellent readability across all content types with its clean, geometric letterforms optimized for digital interfaces.
 
 - **Typographic Hierarchy**: 
-  - H1 (Page Titles): Roboto Bold/32px/normal letter spacing
-  - H2 (Section Headers): Roboto Semibold/24px/normal letter spacing
-  - H3 (Card Titles): Roboto Medium/18px/normal letter spacing
-  - Body (General Text): Roboto Regular/16px/normal line height (1.5)
-  - Small (Metadata): Roboto Regular/14px/normal line height (1.5)
-  - Caption (Table Headers): Roboto Medium/12px/normal letter spacing
+  - H1 (Page Titles): Inter Bold/32px/normal letter spacing
+  - H2 (Section Headers): Inter Semibold/24px/normal letter spacing
+  - H3 (Card Titles): Inter Medium/18px/normal letter spacing
+  - Body (General Text): Inter Regular/16px/normal line height (1.5)
+  - Small (Metadata): Inter Regular/14px/normal line height (1.5)
+  - Caption (Table Headers): Inter Medium/12px/normal letter spacing
 
 ## Animations
 Animations should emphasize transitions between filtered states and provide satisfying feedback for user actions while remaining subtle enough not to distract from the data-focused management interface.
