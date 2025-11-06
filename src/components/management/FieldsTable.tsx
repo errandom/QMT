@@ -22,7 +22,7 @@ export function FieldsTable() {
   const [formData, setFormData] = useState({
     name: '',
     siteId: '',
-    turfType: 'natural' as 'artificial' | 'natural',
+    turfType: 'natural' as 'artificial' | 'natural' | 'indoor-gym',
     hasLights: false,
     isFullField: true,
     capacity: ''
@@ -131,7 +131,7 @@ export function FieldsTable() {
                           <div className="flex items-center gap-3 flex-wrap">
                             <h3 className="text-lg font-bold">{field.name}</h3>
                             <Badge variant="outline">
-                              {field.turfType === 'artificial' ? 'Artificial Turf' : 'Natural Turf'}
+                              {field.turfType === 'artificial' ? 'Artificial Turf' : field.turfType === 'natural' ? 'Natural Turf' : 'Indoor Gym'}
                             </Badge>
                           </div>
                           
@@ -236,13 +236,14 @@ export function FieldsTable() {
 
             <div className="space-y-2">
               <Label htmlFor="turfType">Turf Type *</Label>
-              <Select value={formData.turfType} onValueChange={(value: 'artificial' | 'natural') => setFormData(prev => ({ ...prev, turfType: value }))}>
+              <Select value={formData.turfType} onValueChange={(value: 'artificial' | 'natural' | 'indoor-gym') => setFormData(prev => ({ ...prev, turfType: value }))}>
                 <SelectTrigger id="turfType">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="natural">Natural Turf</SelectItem>
                   <SelectItem value="artificial">Artificial Turf</SelectItem>
+                  <SelectItem value="indoor-gym">Indoor Gym</SelectItem>
                 </SelectContent>
               </Select>
             </div>

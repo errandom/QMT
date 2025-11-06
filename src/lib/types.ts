@@ -38,7 +38,7 @@ export interface Field {
   id: string;
   name: string;
   siteId: string;
-  turfType: 'artificial' | 'natural';
+  turfType: 'artificial' | 'natural' | 'indoor-gym';
   hasLights: boolean;
   isFullField: boolean;
   capacity?: number;
