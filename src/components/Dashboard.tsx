@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife, Football } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife, Football, Toolbox } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
@@ -12,7 +12,6 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { CancellationRequestDialog } from '@/components/CancellationRequestDialog';
 import { ScheduleEvent } from '@/lib/types';
-import { SportsEquipmentIcon } from '@/components/icons';
 
 interface DashboardProps {
   onRequestFacility: () => void;
@@ -220,7 +219,7 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                 onClick={onRequestEquipment}
                 className="h-11 bg-gradient-to-br from-secondary to-accent hover:shadow-lg transition-all duration-300 text-white font-semibold gap-2"
               >
-                <SportsEquipmentIcon size={20} weight="bold" />
+                <Toolbox size={20} weight="bold" />
                 Equipment
               </Button>
 
