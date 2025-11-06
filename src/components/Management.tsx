@@ -2,14 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { SignOut, CalendarBlank, ListChecks, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell } from '@phosphor-icons/react';
-import { GridironIcon } from '@/components/icons/GridironIcon';
-import { JerseyIcon } from '@/components/icons/JerseyIcon';
-import { ArenaIcon } from '@/components/icons/ArenaIcon';
-import { BleachersIcon } from '@/components/icons/BleachersIcon';
-import { PlayboardIcon } from '@/components/icons/PlayboardIcon';
-import { PantsIcon } from '@/components/icons/PantsIcon';
-import { ManagementIcon } from '@/components/icons/ManagementIcon';
+import { SignOut, CalendarBlank, ListChecks, Football, Gear, ArrowLeft, ShieldStar, UserCircleGear, Barbell, ClipboardText, Users, MapPin, Tray, Strategy } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { TeamsTable } from './management/TeamsTable';
 import { SitesTable } from './management/SitesTable';
@@ -115,7 +108,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'schedule' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <PlayboardIcon size={30} />
+                  <CalendarBlank size={30} weight={activeTab === 'schedule' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Schedule</CardTitle>
@@ -133,7 +126,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'requests' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <ManagementIcon size={30} />
+                  <ClipboardText size={30} weight={activeTab === 'requests' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Requests</CardTitle>
@@ -151,7 +144,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'teams' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <JerseyIcon size={30} filled={activeTab === 'teams'} />
+                  <Users size={30} weight={activeTab === 'teams' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Teams</CardTitle>
@@ -169,7 +162,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'equipment' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <PantsIcon size={30} />
+                  <Tray size={30} weight={activeTab === 'equipment' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Equipment</CardTitle>
@@ -187,7 +180,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'fields' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <BleachersIcon size={30} />
+                  <Strategy size={30} weight={activeTab === 'fields' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Fields</CardTitle>
@@ -205,7 +198,7 @@ export function Management({ onLogout }: ManagementProps) {
                 <div className={`p-3 rounded-xl ${
                   activeTab === 'sites' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}>
-                  <ArenaIcon size={30} filled={activeTab === 'sites'} />
+                  <MapPin size={30} weight={activeTab === 'sites' ? 'fill' : 'regular'} />
                 </div>
               </div>
               <CardTitle className="text-base">Sites</CardTitle>
