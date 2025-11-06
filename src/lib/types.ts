@@ -29,6 +29,9 @@ export interface Site {
   hasLockerRooms: boolean;
   hasEquipmentStash: boolean;
   hasRestaurant: boolean;
+  hasParking: boolean;
+  contactPhone?: string;
+  contactEmail?: string;
 }
 
 export interface Field {

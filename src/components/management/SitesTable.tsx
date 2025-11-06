@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Plus, PencilSimple, Trash, Check, X, MapPin } from '@phosphor-icons/react';
+import { Plus, PencilSimple, Trash, Check, X, MapPin, Car, Phone, Envelope } from '@phosphor-icons/react';
 import { useSites, useFields } from '@/hooks/use-data';
 import { Site } from '@/lib/types';
 import { toast } from 'sonner';
@@ -28,7 +28,10 @@ export function SitesTable() {
     hasToilets: false,
     hasLockerRooms: false,
     hasEquipmentStash: false,
-    hasRestaurant: false
+    hasRestaurant: false,
+    hasParking: false,
+    contactPhone: '',
+    contactEmail: ''
   });
 
   const handleOpenDialog = (site?: Site) => {
@@ -46,7 +49,10 @@ export function SitesTable() {
         hasToilets: site.hasToilets,
         hasLockerRooms: site.hasLockerRooms,
         hasEquipmentStash: site.hasEquipmentStash,
-        hasRestaurant: site.hasRestaurant
+        hasRestaurant: site.hasRestaurant,
+        hasParking: site.hasParking,
+        contactPhone: site.contactPhone || '',
+        contactEmail: site.contactEmail || ''
       });
     } else {
       setEditingSite(null);
@@ -62,7 +68,10 @@ export function SitesTable() {
         hasToilets: false,
         hasLockerRooms: false,
         hasEquipmentStash: false,
-        hasRestaurant: false
+        hasRestaurant: false,
+        hasParking: false,
+        contactPhone: '',
+        contactEmail: ''
       });
     }
     setIsDialogOpen(true);
@@ -94,7 +103,10 @@ export function SitesTable() {
         hasToilets: formData.hasToilets,
         hasLockerRooms: formData.hasLockerRooms,
         hasEquipmentStash: formData.hasEquipmentStash,
-        hasRestaurant: formData.hasRestaurant
+        hasRestaurant: formData.hasRestaurant,
+        hasParking: formData.hasParking,
+        contactPhone: formData.contactPhone || undefined,
+        contactEmail: formData.contactEmail || undefined
       };
       setSites((current) => [...(current || []), newSite]);
       toast.success('Site created successfully');
@@ -178,35 +190,65 @@ export function SitesTable() {
                               <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Amenities</div>
                               <div className="flex flex-wrap gap-2">
                                 {site.hasToilets && (
-                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     <Check size={12} weight="duotone" />
                                     Toilets
                                   </div>
                                 )}
                                 {site.hasLockerRooms && (
-                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     <Check size={12} weight="duotone" />
                                     Locker Rooms
                                   </div>
                                 )}
                                 {site.hasEquipmentStash && (
-                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     <Check size={12} weight="duotone" />
                                     Equipment Stash
                                   </div>
                                 )}
                                 {site.hasRestaurant && (
-                                  <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
                                     <Check size={12} weight="duotone" />
                                     Restaurant
                                   </div>
                                 )}
-                                {!site.hasToilets && !site.hasLockerRooms && !site.hasEquipmentStash && !site.hasRestaurant && (
+                                {site.hasParking && (
+                                  <div className="flex items-center gap-1 text-xs bg-secondary/20 text-secondary-foreground px-2 py-1 rounded">
+                                    <Check size={12} weight="duotone" />
+                                    Parking
+                                  </div>
+                                )}
+                                {!site.hasToilets && !site.hasLockerRooms && !site.hasEquipmentStash && !site.hasRestaurant && !site.hasParking && (
                                   <div className="text-muted-foreground text-xs">No amenities</div>
                                 )}
                               </div>
                             </div>
                           </div>
+                          
+                          {(site.contactPhone || site.contactEmail) && (
+                            <div className="mt-3 pt-3 border-t border-border">
+                              <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-2">Contact Information</div>
+                              <div className="flex flex-col gap-2 text-sm">
+                                {site.contactPhone && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone size={14} weight="duotone" className="text-primary" />
+                                    <a href={`tel:${site.contactPhone}`} className="hover:underline text-foreground">
+                                      {site.contactPhone}
+                                    </a>
+                                  </div>
+                                )}
+                                {site.contactEmail && (
+                                  <div className="flex items-center gap-2">
+                                    <Envelope size={14} weight="duotone" className="text-primary" />
+                                    <a href={`mailto:${site.contactEmail}`} className="hover:underline text-foreground">
+                                      {site.contactEmail}
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         
                         <div className="flex gap-2 lg:flex-col">
@@ -328,6 +370,30 @@ export function SitesTable() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone</Label>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  value={formData.contactPhone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
+                  placeholder="+41 XX XXX XX XX"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
+                  placeholder="contact@site.com"
+                />
+              </div>
+            </div>
+
             <div className="space-y-4 p-4 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
                 <Switch
@@ -379,6 +445,15 @@ export function SitesTable() {
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasRestaurant: checked }))}
                   />
                   <Label htmlFor="hasRestaurant">Restaurant</Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hasParking"
+                    checked={formData.hasParking}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasParking: checked }))}
+                  />
+                  <Label htmlFor="hasParking">Parking</Label>
                 </div>
               </div>
             </div>

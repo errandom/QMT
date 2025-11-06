@@ -32,6 +32,7 @@ export function ScheduleTable() {
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [formData, setFormData] = useState({
     fieldId: '',
+    siteId: '',
     teamIds: [] as string[],
     startTime: '',
     endTime: '',
@@ -49,8 +50,10 @@ export function ScheduleTable() {
   const handleOpenDialog = (event?: ScheduleEvent) => {
     if (event) {
       setEditingEvent(event);
+      const field = getFieldById(fields || [], event.fieldId);
       setFormData({
         fieldId: event.fieldId,
+        siteId: field?.siteId || '',
         teamIds: event.teamIds,
         startTime: event.startTime.slice(0, 16),
         endTime: event.endTime.slice(0, 16),
@@ -68,6 +71,7 @@ export function ScheduleTable() {
       setEditingEvent(null);
       setFormData({
         fieldId: '',
+        siteId: '',
         teamIds: [],
         startTime: '',
         endTime: '',
@@ -115,6 +119,19 @@ export function ScheduleTable() {
     e.preventDefault();
     
     if (!validateTimeRange()) {
+      return;
+    }
+
+    const requiresField = formData.eventType === 'practice' || formData.eventType === 'game';
+    const requiresSite = formData.eventType === 'meeting' || formData.eventType === 'other';
+
+    if (requiresField && !formData.fieldId) {
+      toast.error('Field selection is required for practice and game events');
+      return;
+    }
+
+    if (requiresSite && !formData.siteId) {
+      toast.error('Site selection is required for meeting and other events');
       return;
     }
 
@@ -206,7 +223,12 @@ export function ScheduleTable() {
   };
 
   const selectedField = fields?.find(f => f.id === formData.fieldId);
-  const selectedSite = selectedField ? sites?.find(s => s.id === selectedField.siteId) : undefined;
+  const selectedSite = selectedField 
+    ? sites?.find(s => s.id === selectedField.siteId) 
+    : sites?.find(s => s.id === formData.siteId);
+  
+  const requiresField = formData.eventType === 'practice' || formData.eventType === 'game';
+  const requiresSite = formData.eventType === 'meeting' || formData.eventType === 'other';
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -353,37 +375,107 @@ export function ScheduleTable() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="fieldId" className="text-right block">Field *</Label>
-              <Select value={formData.fieldId} onValueChange={(value) => setFormData(prev => ({ ...prev, fieldId: value }))} required>
-                <SelectTrigger id="fieldId">
-                  <SelectValue placeholder="Select field" />
+              <Label htmlFor="eventType" className="text-right block">Event Type *</Label>
+              <Select 
+                value={formData.eventType} 
+                onValueChange={(value: EventType) => {
+                  setFormData(prev => {
+                    const newData = { ...prev, eventType: value };
+                    if (value === 'game' && prev.teamIds.length > 1) {
+                      newData.teamIds = [prev.teamIds[0]];
+                      toast.info('Only one team can be selected for game events. Other teams have been removed.');
+                    }
+                    if (value === 'meeting' || value === 'other') {
+                      newData.fieldId = '';
+                    } else {
+                      newData.siteId = '';
+                    }
+                    return newData;
+                  });
+                }}
+              >
+                <SelectTrigger id="eventType">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {fields?.filter(field => {
-                    const site = getSiteById(sites || [], field.siteId);
-                    return site?.isActive !== false;
-                  }).map(field => {
-                    const site = getSiteById(sites || [], field.siteId);
-                    return (
-                      <SelectItem key={field.id} value={field.id}>
-                        {site?.name} - {field.name}
-                      </SelectItem>
-                    );
-                  })}
+                  <SelectItem value="practice">Practice</SelectItem>
+                  <SelectItem value="game">Game</SelectItem>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
-              {selectedSite && (
-                <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-                  <strong>Site:</strong> {selectedSite.name} | 
-                  <strong> Turf:</strong> {selectedField?.turfType} | 
-                  {selectedField?.hasLights && ' Lights ✓ |'}
-                  {selectedSite.hasToilets && ' Toilets ✓ |'}
-                  {selectedSite.hasLockerRooms && ' Locker Rooms ✓ |'}
-                  {selectedSite.hasEquipmentStash && ' Equipment ✓ |'}
-                  {selectedSite.hasRestaurant && ' Restaurant ✓'}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                {requiresField ? 'Practice and Game events require a field selection' : 'Meeting and Other events require a site selection'}
+              </p>
             </div>
+
+            {requiresField && (
+              <div className="space-y-2">
+                <Label htmlFor="fieldId" className="text-right block">Field *</Label>
+                <Select value={formData.fieldId} onValueChange={(value) => {
+                  const field = fields?.find(f => f.id === value);
+                  setFormData(prev => ({ ...prev, fieldId: value, siteId: field?.siteId || '' }));
+                }} required={requiresField}>
+                  <SelectTrigger id="fieldId">
+                    <SelectValue placeholder="Select field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fields?.filter(field => {
+                      const site = getSiteById(sites || [], field.siteId);
+                      return site?.isActive !== false;
+                    }).map(field => {
+                      const site = getSiteById(sites || [], field.siteId);
+                      return (
+                        <SelectItem key={field.id} value={field.id}>
+                          {site?.name} - {field.name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {selectedSite && selectedField && (
+                  <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                    <strong>Site:</strong> {selectedSite.name} | 
+                    <strong> Turf:</strong> {selectedField?.turfType} | 
+                    {selectedField?.hasLights && ' Lights ✓ |'}
+                    {selectedSite.hasToilets && ' Toilets ✓ |'}
+                    {selectedSite.hasLockerRooms && ' Locker Rooms ✓ |'}
+                    {selectedSite.hasEquipmentStash && ' Equipment ✓ |'}
+                    {selectedSite.hasRestaurant && ' Restaurant ✓'}
+                    {selectedSite.hasParking && ' Parking ✓'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {requiresSite && (
+              <div className="space-y-2">
+                <Label htmlFor="siteId" className="text-right block">Site *</Label>
+                <Select value={formData.siteId} onValueChange={(value) => setFormData(prev => ({ ...prev, siteId: value, fieldId: '' }))} required={requiresSite}>
+                  <SelectTrigger id="siteId">
+                    <SelectValue placeholder="Select site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sites?.filter(site => site.isActive).map(site => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedSite && !selectedField && (
+                  <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                    <strong>Site:</strong> {selectedSite.name} | 
+                    <strong> Address:</strong> {selectedSite.address}, {selectedSite.city}
+                    {selectedSite.hasToilets && ' | Toilets ✓'}
+                    {selectedSite.hasLockerRooms && ' | Locker Rooms ✓'}
+                    {selectedSite.hasEquipmentStash && ' | Equipment ✓'}
+                    {selectedSite.hasRestaurant && ' | Restaurant ✓'}
+                    {selectedSite.hasParking && ' | Parking ✓'}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="text-right block">
@@ -438,34 +530,7 @@ export function ScheduleTable() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="eventType" className="text-right block">Event Type *</Label>
-                <Select 
-                  value={formData.eventType} 
-                  onValueChange={(value: EventType) => {
-                    setFormData(prev => {
-                      const newData = { ...prev, eventType: value };
-                      if (value === 'game' && prev.teamIds.length > 1) {
-                        newData.teamIds = [prev.teamIds[0]];
-                        toast.info('Only one team can be selected for game events. Other teams have been removed.');
-                      }
-                      return newData;
-                    });
-                  }}
-                >
-                  <SelectTrigger id="eventType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="practice">Practice</SelectItem>
-                    <SelectItem value="game">Game</SelectItem>
-                    <SelectItem value="meeting">Meeting</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status" className="text-right block">Status *</Label>
                 <Select value={formData.status} onValueChange={(value: EventStatus) => setFormData(prev => ({ ...prev, status: value }))}>
@@ -574,7 +639,14 @@ export function ScheduleTable() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={formData.teamIds.length === 0}>
+              <Button 
+                type="submit" 
+                disabled={
+                  formData.teamIds.length === 0 || 
+                  (requiresField && !formData.fieldId) || 
+                  (requiresSite && !formData.siteId)
+                }
+              >
                 {editingEvent ? 'Update' : 'Create'}
               </Button>
             </div>

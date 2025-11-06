@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife, Football, Toolbox } from '@phosphor-icons/react';
+import { CalendarBlank, MapPin, Clipboard, UserCircleGear, ShieldStar, Trophy, Barbell, Chalkboard, Calendar, PlusCircle, SignOut, Gear, FadersHorizontal, Circle, XCircle, Lightning, TreeEvergreen, Toilet, Lockers, Backpack, ForkKnife, Football, Toolbox, Car } from '@phosphor-icons/react';
 import { FootballHelmet } from '@phosphor-icons/react';
 import { useTeams, useFields, useSites, useSchedule } from '@/hooks/use-data';
 import { useAuth } from '@/hooks/use-auth';
@@ -347,46 +347,52 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
                           {field && site && (
                             <div className="flex flex-wrap gap-2">
                               {field.hasLights && (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <Lightning size={14} weight="duotone" className="text-yellow-600" />
+                                <Badge variant="outline" className="text-xs gap-1 border-accent/30 text-accent-foreground">
+                                  <Lightning size={14} weight="duotone" className="text-accent" />
                                   Lights
                                 </Badge>
                               )}
-                              <Badge variant="outline" className="text-xs gap-1">
+                              <Badge variant="outline" className="text-xs gap-1 border-secondary/30 text-secondary-foreground">
                                 {field.turfType === 'artificial' ? (
                                   <>
-                                    <Circle size={14} weight="duotone" className="text-green-600" />
+                                    <Circle size={14} weight="duotone" className="text-secondary" />
                                     Artificial Turf
                                   </>
                                 ) : (
                                   <>
-                                    <TreeEvergreen size={14} weight="duotone" className="text-green-700" />
+                                    <TreeEvergreen size={14} weight="duotone" className="text-secondary" />
                                     Natural Grass
                                   </>
                                 )}
                               </Badge>
                               {site.hasToilets && (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <Toilet size={14} weight="duotone" className="text-blue-600" />
+                                <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
+                                  <Toilet size={14} weight="duotone" className="text-primary" />
                                   Toilets
                                 </Badge>
                               )}
                               {site.hasLockerRooms && (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <Lockers size={14} weight="duotone" className="text-purple-600" />
+                                <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
+                                  <Lockers size={14} weight="duotone" className="text-primary" />
                                   Locker Rooms
                                 </Badge>
                               )}
                               {site.hasEquipmentStash && (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <Backpack size={14} weight="duotone" className="text-orange-600" />
+                                <Badge variant="outline" className="text-xs gap-1 border-secondary/30 text-secondary-foreground">
+                                  <Backpack size={14} weight="duotone" className="text-secondary" />
                                   Equipment Storage
                                 </Badge>
                               )}
                               {site.hasRestaurant && (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <ForkKnife size={14} weight="duotone" className="text-red-600" />
+                                <Badge variant="outline" className="text-xs gap-1 border-accent/30 text-accent-foreground">
+                                  <ForkKnife size={14} weight="duotone" className="text-accent" />
                                   Restaurant
+                                </Badge>
+                              )}
+                              {site.hasParking && (
+                                <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary-foreground">
+                                  <Car size={14} weight="duotone" className="text-primary" />
+                                  Parking
                                 </Badge>
                               )}
                             </div>
