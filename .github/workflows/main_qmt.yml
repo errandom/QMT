@@ -10,18 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-
-      - name: npm install, build, and test
-        run: |
+        run: |      contents: read
           npm install
           npm run build --if-present
           npm run test --if-present
@@ -47,7 +36,7 @@ jobs:
           path: .
 
       - name: Login to Azure
-               uses: azure/login@v2
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_EBE2B72D41B641BCA78293AE35E90D0D }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_71BA4A2F74C2486EBBC8133A1E163C61 }}
@@ -58,3 +47,14 @@ jobs:
         with:
           app-name: 'QMT'
           slot-name: 'Production'
+
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: npm install, build, and test
