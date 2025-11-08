@@ -69,10 +69,11 @@ jobs:
         with:
           app-name: 'QMT'
           slot-name: 'Production'
-          package: .
+          package: './dist'
 
       - name: Configure startup command
         run: |
           az webapp config set \
             --name QMT \
             --resource-group renegades \
+
