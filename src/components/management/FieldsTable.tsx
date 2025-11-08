@@ -132,9 +132,9 @@ export function FieldsTable() {
                             <h3 className="text-lg font-bold">{field.name}</h3>
                             <Badge 
                               className={`font-semibold text-white ${
-                                field.turfType === 'artificial' ? 'bg-lime-600' : 
-                                field.turfType === 'natural' ? 'bg-green-700' : 
-                                'bg-cyan-600'
+                                field.turfType === 'artificial' ? 'bg-[oklch(0.60_0.16_150)]' : 
+                                field.turfType === 'natural' ? 'bg-[oklch(0.50_0.15_145)]' : 
+                                'bg-[oklch(0.55_0.14_240)]'
                               }`}
                             >
                               {field.turfType === 'artificial' ? 'Artificial Turf' : field.turfType === 'natural' ? 'Natural Turf' : 'Indoor Gym'}

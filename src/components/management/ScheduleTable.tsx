@@ -394,7 +394,7 @@ export function ScheduleTable() {
                                   {event.status}
                                 </Badge>
                                 {event.isRecurring && (
-                                  <Badge className="text-xs font-semibold bg-indigo-600 text-white">
+                                  <Badge className="text-xs font-semibold bg-[oklch(0.50_0.14_260)] text-white">
                                     Recurring
                                   </Badge>
                                 )}

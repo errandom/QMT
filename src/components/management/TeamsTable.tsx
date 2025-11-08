@@ -129,13 +129,13 @@ export function TeamsTable() {
                           <Badge 
                             className={`font-semibold ${
                               team.sportType === 'tackle' ? 'bg-[oklch(0.35_0.12_240)] text-white' : 
-                              team.sportType === 'all sports' ? 'bg-[oklch(0.45_0.08_240)] text-white' : 
-                              'bg-[oklch(0.72_0.15_220)] text-[oklch(0.2_0.08_240)]'
+                              team.sportType === 'all sports' ? 'bg-[oklch(0.60_0.14_240)] text-white' : 
+                              'bg-[oklch(0.72_0.15_235)] text-[oklch(0.2_0.08_240)]'
                             }`}
                           >
                             {team.sportType}
                           </Badge>
-                          <Badge className={`font-semibold text-white ${team.isActive ? 'bg-green-600' : 'bg-gray-500'}`}>
+                          <Badge className={`font-semibold text-white ${team.isActive ? 'bg-[oklch(0.50_0.15_150)]' : 'bg-[oklch(0.45_0.05_240)]'}`}>
                             {team.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>

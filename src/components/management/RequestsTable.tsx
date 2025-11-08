@@ -87,13 +87,13 @@ export function RequestsTable() {
                     <TableRow key={request.id}>
                       <TableCell>
                         <Badge 
-                          variant={
+                          className={`font-semibold ${
                             request.type === 'facility' 
-                              ? 'default' 
+                              ? 'bg-[oklch(0.50_0.14_240)] text-white'
                               : request.type === 'cancellation' 
-                              ? 'destructive' 
-                              : 'secondary'
-                          }
+                              ? 'bg-[oklch(0.65_0.20_25)] text-white'
+                              : 'bg-[oklch(0.68_0.15_235)] text-[oklch(0.2_0.08_240)]'
+                          }`}
                         >
                           {request.type}
                         </Badge>
@@ -111,13 +111,13 @@ export function RequestsTable() {
                       <TableCell>{format(new Date(request.requestedDate), 'MMM d, yyyy')}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={
+                          className={`font-semibold ${
                             request.status === 'approved' 
-                              ? 'default'
+                              ? 'bg-[oklch(0.50_0.15_150)] text-white'
                               : request.status === 'rejected'
-                              ? 'destructive'
-                              : 'secondary'
-                          }
+                              ? 'bg-[oklch(0.65_0.20_25)] text-white'
+                              : 'bg-[oklch(0.60_0.14_240)] text-white'
+                          }`}
                         >
                           {request.status}
                         </Badge>
@@ -192,13 +192,13 @@ export function RequestsTable() {
               <div>
                 <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
                 <Badge 
-                  variant={
+                  className={`font-semibold ${
                     selectedRequest.type === 'facility' 
-                      ? 'default' 
+                      ? 'bg-[oklch(0.50_0.14_240)] text-white'
                       : selectedRequest.type === 'cancellation' 
-                      ? 'destructive' 
-                      : 'secondary'
-                  }
+                      ? 'bg-[oklch(0.65_0.20_25)] text-white'
+                      : 'bg-[oklch(0.68_0.15_235)] text-[oklch(0.2_0.08_240)]'
+                  }`}
                 >
                   {selectedRequest.type}
                 </Badge>
@@ -224,13 +224,13 @@ export function RequestsTable() {
               <div>
                 <div className="text-sm font-medium text-muted-foreground mb-1">Status</div>
                 <Badge
-                  variant={
+                  className={`font-semibold ${
                     selectedRequest.status === 'approved' 
-                      ? 'default'
+                      ? 'bg-[oklch(0.50_0.15_150)] text-white'
                       : selectedRequest.status === 'rejected'
-                      ? 'destructive'
-                      : 'secondary'
-                  }
+                      ? 'bg-[oklch(0.65_0.20_25)] text-white'
+                      : 'bg-[oklch(0.60_0.14_240)] text-white'
+                  }`}
                 >
                   {selectedRequest.status}
                 </Badge>
