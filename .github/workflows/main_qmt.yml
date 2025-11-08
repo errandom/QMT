@@ -16,7 +16,7 @@ jobs:
       # Checkout code
       - uses: actions/checkout@v4
 
-      # Set up Node.js
+      # Set up Node.js with caching
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -26,7 +26,7 @@ jobs:
       # Install dependencies and build
       - name: Install dependencies and build
         run: |
-          npm ci
+          npm install
           npm run build
 
       # Upload build artifact
@@ -51,9 +51,10 @@ jobs:
           name: vite-app
           path: .
 
-      # Install serve globally (for static hosting)
-      - name: Install serve
-        run: npm install -g serve
+      # Install Azure CLI
+      - name: Install Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
       # Login to Azure
       - name: Login to Azure
@@ -69,3 +70,19 @@ jobs:
         with:
           app-name: 'QMT'
           slot-name: 'Production'
+          package: .
+
+      # Configure startup command
+      - name: Configure startup command
+        run: |
+          az webapp config set \
+            --name QMT \
+                       --resource-group renegades \
+            --startup-file "serve -s dist -l 8080"
+
+      # Set Node version in App Settings
+      - name: Configure Node version
+        run: |
+          az webapp config appsettings set \
+            --name QMT \
+            --resource-group renegades \
