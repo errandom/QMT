@@ -76,4 +76,7 @@ jobs:
           az webapp config set \
             --name QMT \
             --resource-group renegades \
+            --startup-file "npx serve -s dist -l 8080"
+
+
 
