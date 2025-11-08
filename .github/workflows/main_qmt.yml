@@ -53,17 +53,16 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-            --            --resource-group renegades \          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_EBE2B72D41B641BCA78293AE35E90D0D }}
-            --startup-file "serve -s dist -l 8080"
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_EBE2B72D41B641BCA78293AE35E90D0D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_71BA4A2F74C2486EBBC8133A1E163C61 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_31F8C530965645BBA41ABCD6D3E3CF99 }}
 
       - name: Configure Node version
         run: |
           az webapp config appsettings set \
             --name QMT \
             --resource-group renegades \
-
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_71BA4A2F74C2486EBBC8133A1E163C61 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_31F8C530965645BBA41ABCD6D3E3CF99 }}
+            --settings WEBSITE_NODE_DEFAULT_VERSION=20.x
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
@@ -76,3 +75,4 @@ jobs:
         run: |
           az webapp config set \
             --name QMT \
+            --resource-group renegades \
