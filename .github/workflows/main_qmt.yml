@@ -45,7 +45,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: vite-app
-          path: .
+          path: dist   # ✅ Ensures files are restored into ./dist
+
+      - name: Verify downloaded files
+        run: ls -R dist
 
       - name: Install Azure CLI
         run: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
@@ -69,16 +72,10 @@ jobs:
         with:
           app-name: 'QMT'
           slot-name: 'Production'
-          package: './dist'
+          package          package: './dist'   # ✅ Correct path after artifact download
 
       - name: Configure startup command
         run: |
           az webapp config set \
             --name QMT \
             --resource-group renegades \
-            --startup-file "npx serve -s dist -l 8080"
-
-
-
-
-
