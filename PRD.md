@@ -14,6 +14,25 @@ A modern, glossy facility management system for the Zurich Renegades Football cl
   - Facility and equipment request forms
   - Management console for administrators
 
+## Data Management Architecture
+
+### SQL-Like Database Layer
+- **Functionality**: Comprehensive CRUD operations with SQL-like querying capabilities built on Spark KV persistence
+- **Purpose**: Provide structured, validated, and type-safe data management with advanced filtering similar to SQL databases
+- **Features**:
+  - SELECT queries with WHERE clauses (value-based and function-based filtering)
+  - INSERT operations (single and batch) with automatic validation
+  - UPDATE operations (by ID or WHERE clause)
+  - DELETE operations (by ID or WHERE clause)
+  - COUNT and EXISTS utilities
+  - Full data backup and restore capabilities
+  - Zod schema validation for all operations
+  - TypeScript type safety throughout
+- **Tables**: teams, sites, fields, schedule, requests, users
+- **Storage**: Spark KV persistence API (data survives page refreshes)
+- **Validation**: Automatic Zod schema validation prevents invalid data
+- **Documentation**: Complete guide in DATABASE_GUIDE.md
+
 ## Essential Features
 
 ### Public Dashboard
