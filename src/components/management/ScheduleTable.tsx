@@ -375,20 +375,20 @@ export function ScheduleTable() {
                               </div>
                               <div className="flex gap-2 flex-wrap">
                                 <Badge 
-                                  className={`text-xs uppercase font-semibold text-white ${
-                                    event.eventType === 'game' ? 'bg-emerald-600' :
-                                    event.eventType === 'practice' ? 'bg-blue-600' :
-                                    event.eventType === 'meeting' ? 'bg-purple-600' :
-                                    'bg-amber-600'
+                                  className={`text-xs uppercase font-semibold ${
+                                    event.eventType === 'game' ? 'bg-[oklch(0.35_0.12_240)] text-white' :
+                                    event.eventType === 'practice' ? 'bg-[oklch(0.55_0.14_240)] text-white' :
+                                    event.eventType === 'meeting' ? 'bg-[oklch(0.75_0.15_235)] text-[oklch(0.2_0.08_240)]' :
+                                    'bg-[oklch(0.2_0.08_240)] text-white'
                                   }`}
                                 >
                                   {event.eventType}
                                 </Badge>
                                 <Badge 
-                                  className={`text-xs font-semibold text-white ${
-                                    event.status === 'confirmed' ? 'bg-green-600' : 
-                                    event.status === 'cancelled' ? 'bg-red-600' : 
-                                    'bg-slate-500'
+                                  className={`text-xs font-semibold ${
+                                    event.status === 'confirmed' ? 'bg-[oklch(0.45_0.15_150)] text-white' : 
+                                    event.status === 'cancelled' ? 'bg-[oklch(0.65_0.20_25)] text-white' : 
+                                    'bg-[oklch(0.60_0.12_150)] text-white'
                                   }`}
                                 >
                                   {event.status}

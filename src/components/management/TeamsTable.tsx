@@ -127,10 +127,10 @@ export function TeamsTable() {
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="text-lg font-bold">{team.name}</h3>
                           <Badge 
-                            className={`font-semibold text-white ${
-                              team.sportType === 'tackle' ? 'bg-orange-600' : 
-                              team.sportType === 'all sports' ? 'bg-teal-600' : 
-                              'bg-pink-600'
+                            className={`font-semibold ${
+                              team.sportType === 'tackle' ? 'bg-[oklch(0.35_0.12_240)] text-white' : 
+                              team.sportType === 'all sports' ? 'bg-[oklch(0.45_0.08_240)] text-white' : 
+                              'bg-[oklch(0.72_0.15_220)] text-[oklch(0.2_0.08_240)]'
                             }`}
                           >
                             {team.sportType}
