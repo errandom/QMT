@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { XCircle } from '@phosphor-icons/react';
+import { toast } from 'sonner';
 import { useRequests } from '@/hooks/use-data';
 import { ScheduleEvent } from '@/lib/types';
-import { toast } from 'sonner';
-import { XCircle } from '@phosphor-icons/react';
 
 interface CancellationRequestDialogProps {
   open: boolean;
@@ -66,50 +66,53 @@ export function CancellationRequestDialog({ open, onOpenChange, event }: Cancell
             <div className="p-2 rounded-lg bg-destructive/10">
               <XCircle size={24} weight="duotone" className="text-destructive" />
             </div>
-            <DialogTitle className="text-2xl">Request Cancellation</DialogTitle>
+            <div>
+              <DialogTitle>Request Event Cancellation</DialogTitle>
+              <DialogDescription>
+                Submit a request to cancel this event
+              </DialogDescription>
+            </div>
           </div>
-          <DialogDescription>
-            Submit a request to cancel this event. The operations office will review your request.
-          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Your Name</Label>
+            <Label htmlFor="name">Your Name *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your full name"
+              placeholder="Enter your name"
               required
+              disabled={isSubmitting}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reason">Reason for Cancellation</Label>
+            <Label htmlFor="reason">Reason for Cancellation *</Label>
             <Textarea
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Please provide a detailed reason for the cancellation request"
+              placeholder="Please provide a reason for cancellation"
               rows={5}
               required
+              disabled={isSubmitting}
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
               className="flex-1"
+              onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              variant="destructive"
               className="flex-1"
               disabled={isSubmitting}
             >

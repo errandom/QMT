@@ -1,26 +1,26 @@
 import { useKV } from '@github/spark/hooks';
 import { Team, Site, Field, ScheduleEvent, Request, User } from '@/lib/types';
 
-export function useTeams() {
+export const useTeams = () => {
   return useKV<Team[]>('teams', []);
-}
+};
 
-export function useSites() {
+export const useSites = () => {
   return useKV<Site[]>('sites', []);
-}
+};
 
-export function useFields() {
+export const useFields = () => {
   return useKV<Field[]>('fields', []);
-}
+};
 
-export function useSchedule() {
+export const useSchedule = () => {
   return useKV<ScheduleEvent[]>('schedule', []);
-}
+};
 
-export function useRequests() {
+export const useRequests = () => {
   return useKV<Request[]>('requests', []);
-}
+};
 
-export function useUsers() {
+export const useUsers = () => {
   return useKV<User[]>('users', []);
-}
+};
