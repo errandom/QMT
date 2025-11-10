@@ -1,0 +1,81 @@
+name: Build and deploy Vite app to Azure Web App - QMT
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies and build
+        run: |
+          npm install
+          npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-app
+          path: dist/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vite-app
+          path: dist   # ✅ Ensures files are restored into ./dist
+
+      - name: Verify downloaded files
+        run: ls -R dist
+
+      - name: Install Azure CLI
+        run: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_EBE2B72D41B641BCA78293AE35E90D0D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_71BA4A2F74C2486EBBC8133A1E163C61 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_31F8C530965645BBA41ABCD6D3E3CF99 }}
+
+      - name: Configure Node version
+        run: |
+          az webapp config appsettings set \
+            --name QMT \
+            --resource-group renegades \
+            --settings WEBSITE_NODE_DEFAULT_VERSION=20.x
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'QMT'
+          slot-name: 'Production'
+          package          package: './dist'   # ✅ Correct path after artifact download
+
+      - name: Configure startup command
+        run: |
+          az webapp config set \
+            --name QMT \
+            --resource-group renegades \
