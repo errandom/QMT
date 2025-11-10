@@ -99,12 +99,20 @@ export type WhereClause<T> = {
 };
 
 export class Database {
+  private static ensureSparkRuntime(): void {
+    if (typeof window === 'undefined' || !window.spark || !window.spark.kv) {
+      throw new Error('Spark runtime is not available. Please ensure the application is running in a Spark environment.');
+    }
+  }
+
   private static async getTable<T>(tableName: TableName): Promise<T[]> {
+    this.ensureSparkRuntime();
     const data = await window.spark.kv.get<T[]>(tableName);
     return data || [];
   }
 
   private static async setTable<T>(tableName: TableName, data: T[]): Promise<void> {
+    this.ensureSparkRuntime();
     await window.spark.kv.set(tableName, data);
   }
 

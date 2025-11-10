@@ -15,29 +15,29 @@ export function useAuth() {
 
   const login = (username: string, password: string): boolean => {
     if (username === 'QMTadmin' && password === CREDENTIALS.QMTadmin) {
-      setAuthState({
+      setAuthState((current) => ({
         isAuthenticated: true,
         role: 'QMTadmin',
         username: 'QMTadmin'
-      });
+      }));
       return true;
     } else if (username === 'QMTmgmt' && password === CREDENTIALS.QMTmgmt) {
-      setAuthState({
+      setAuthState((current) => ({
         isAuthenticated: true,
         role: 'QMTmgmt',
         username: 'QMTmgmt'
-      });
+      }));
       return true;
     }
     return false;
   };
 
   const logout = () => {
-    setAuthState({
+    setAuthState((current) => ({
       isAuthenticated: false,
       role: null,
       username: null
-    });
+    }));
   };
 
   return {
