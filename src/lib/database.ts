@@ -107,13 +107,23 @@ export class Database {
 
   private static async getTable<T>(tableName: TableName): Promise<T[]> {
     this.ensureSparkRuntime();
-    const data = await window.spark.kv.get<T[]>(tableName);
-    return data || [];
+    try {
+      const data = await window.spark.kv.get<T[]>(tableName);
+      return data || [];
+    } catch (error) {
+      console.error(`Error reading table ${tableName}:`, error);
+      return [];
+    }
   }
 
   private static async setTable<T>(tableName: TableName, data: T[]): Promise<void> {
     this.ensureSparkRuntime();
-    await window.spark.kv.set(tableName, data);
+    try {
+      await window.spark.kv.set(tableName, data);
+    } catch (error) {
+      console.error(`Error writing to table ${tableName}:`, error);
+      throw error;
+    }
   }
 
   static async select<T>(

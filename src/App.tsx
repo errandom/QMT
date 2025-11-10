@@ -15,13 +15,22 @@ function App() {
   const [showEquipmentRequest, setShowEquipmentRequest] = useState(false);
 
   useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 50;
+    
     const checkSparkRuntime = () => {
+      attempts++;
+      
       if (typeof window !== 'undefined' && window.spark?.kv) {
         setIsSparkReady(true);
-      } else {
+      } else if (attempts < maxAttempts) {
         setTimeout(checkSparkRuntime, 100);
+      } else {
+        console.error('Spark runtime failed to initialize after', maxAttempts, 'attempts');
+        setIsSparkReady(true);
       }
     };
+    
     checkSparkRuntime();
   }, []);
 
@@ -46,7 +55,8 @@ function App() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Initializing application...</p>
+          <p className="mt-2 text-xs text-muted-foreground">Waiting for runtime environment</p>
         </div>
       </div>
     );
