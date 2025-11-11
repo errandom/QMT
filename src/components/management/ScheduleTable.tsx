@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { getTeamById, getFieldById, getSiteById } from '@/lib/data-helpers';
 import { format } from 'date-fns';
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 
 const EVENT_ICONS = {
   practice: Barbell,
