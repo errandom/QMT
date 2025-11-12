@@ -1,16 +1,16 @@
-# SQL-Like Database System Guide
+# SQL Database System Guide
 
 ## Overview
 
-Your QMT Operations app now has a comprehensive SQL-like database layer built on top of the Spark KV persistence API. This system provides full CRUD (Create, Read, Update, Delete) capabilities with data validation, type safety, and advanced querying features similar to SQL databases.
+Your QMT Operations app now has a comprehensive SQL database layer powered by Azure SQL. This system provides full CRUD (Create, Read, Update, Delete) capabilities with data validation, type safety, and advanced querying features similar to traditional SQL databases.
 
 ## Architecture
 
 ### Data Storage
-- **Backend**: Spark KV (Key-Value) persistence API
+- **Backend**: Azure SQL Database
 - **Validation**: Zod schema validation for all operations
 - **Type Safety**: Full TypeScript support
-- **Persistence**: Data survives page refreshes and sessions
+- **Persistence**: Data is stored in Azure SQL and survives app restarts and deployments
 
 ### Available Tables
 - `teams` - Football teams (tackle/flag)
@@ -329,13 +329,13 @@ try {
 ### Create Backup
 ```typescript
 const backup = await Database.backup();
-localStorage.setItem('qmt-backup', JSON.stringify(backup));
-console.log('Backup created');
+// You can store the backup in a file or download it for safekeeping
+console.log('Backup created:', backup);
 ```
 
 ### Restore from Backup
 ```typescript
-const backupData = JSON.parse(localStorage.getItem('qmt-backup'));
+// Load backup data from a file or other source
 await Database.restore(backupData);
 console.log('Database restored');
 ```
@@ -425,12 +425,11 @@ function TeamsList() {
 
 ## Performance Considerations
 
-- All data is loaded into memory for operations
-- Filtering happens client-side
-- Best for datasets < 10,000 records per table
+- All data is loaded from Azure SQL for operations
+- Filtering happens in the app or via SQL queries
 - For larger datasets, consider pagination in your UI
-- Use function-based WHERE clauses sparingly (they're slower)
+- Use function-based WHERE clauses sparingly (they're slower and may require client-side filtering)
 
 ## Conclusion
 
-This database system gives you the power of SQL-like operations while maintaining the simplicity of the Spark KV persistence API. It's perfect for managing structured data in your QMT Operations application with full type safety and validation.
+This database system gives you the power of SQL operations with full type safety and validation, making it ideal for managing structured data in your QMT Operations application.
