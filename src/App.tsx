@@ -4,7 +4,7 @@ import { useAuth } from './hooks/use-auth';
 import Dashboard from './components/Dashboard';
 import Management from './components/Management';
 import DatabaseDemo from './components/DatabaseDemo';
-import ErrorFallback from './ErrorFallback';
+import { ErrorFallback } from './ErrorFallback'; // ✅ Correct for named export
 
 function App() {
   const { teams, loading: teamsLoading, error: teamsError } = useTeams();
@@ -37,8 +37,8 @@ function App() {
   }
 
   if (error) {
-    return <ErrorFallback error={error} />;
-  }
+    return <ErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />;
+
 
   return (
     <div>
