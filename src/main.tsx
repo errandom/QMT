@@ -8,8 +8,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
-      onReset={() => window.location.reload()} // reload on retry
+      onReset={() => window.location.reload()}
     >
       <App />
     </ErrorBoundary>
   </React.StrictMode>
+);
