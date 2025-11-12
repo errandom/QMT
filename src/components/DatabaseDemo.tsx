@@ -216,3 +216,4 @@ export function DatabaseDemo() {
     </div>
   );
 }
+export default DatabaseDemo;
