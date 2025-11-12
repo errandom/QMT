@@ -1,101 +1,73 @@
-import { useState, useEffect } from 'react';
-import { Dashboard } from './components/Dashboard';
-import { Management } from './components/Management';
-import { LoginDialog } from './components/LoginDialog';
-import { RequestDialog } from './components/RequestDialog';
+import React from 'react';
+import { useTeams, useSites, useFields, useSchedule, useRequests, useUsers } from './hooks/use-data';
 import { useAuth } from './hooks/use-auth';
-import { Toaster } from './components/ui/sonner';
+import Dashboard from './components/Dashboard';
+import Management from './components/Management';
+import DatabaseDemo from './components/DatabaseDemo';
+import ErrorFallback from './ErrorFallback';
 
 function App() {
-  const [isSparkReady, setIsSparkReady] = useState(false);
-  const { authState } = useAuth();
-  const [view, setView] = useState<'dashboard' | 'management'>('dashboard');
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [showFacilityRequest, setShowFacilityRequest] = useState(false);
-  const [showEquipmentRequest, setShowEquipmentRequest] = useState(false);
+  const { teams, loading: teamsLoading, error: teamsError } = useTeams();
+  const { sites, loading: sitesLoading, error: sitesError } = useSites();
+  const { fields, loading: fieldsLoading, error: fieldsError } = useFields();
+  const { schedule, loading: scheduleLoading, error: scheduleError } = useSchedule();
+  const { requests, loading: requestsLoading, error: requestsError } = useRequests();
+  const { users, loading: usersLoading, error: usersError } = useUsers();
+  const { authState, login, logout, isAdmin } = useAuth();
 
-  useEffect(() => {
-    let attempts = 0;
-    const maxAttempts = 50;
-    
-    const checkSparkRuntime = () => {
-      attempts++;
-      
-      if (typeof window !== 'undefined' && window.spark?.kv) {
-        setIsSparkReady(true);
-      } else if (attempts < maxAttempts) {
-        setTimeout(checkSparkRuntime, 100);
-      } else {
-        console.error('Spark runtime failed to initialize after', maxAttempts, 'attempts');
-        setIsSparkReady(true);
-      }
-    };
-    
-    checkSparkRuntime();
-  }, []);
+  // Aggregate loading and error states
+  const loading =
+    teamsLoading ||
+    sitesLoading ||
+    fieldsLoading ||
+    scheduleLoading ||
+    requestsLoading ||
+    usersLoading;
 
-  const handleManagementClick = () => {
-    if (authState?.isAuthenticated) {
-      setView('management');
-    } else {
-      setShowLoginDialog(true);
-    }
-  };
+  const error =
+    teamsError ||
+    sitesError ||
+    fieldsError ||
+    scheduleError ||
+    requestsError ||
+    usersError;
 
-  const handleLoginSuccess = () => {
-    setView('management');
-  };
+  if (loading) {
+    return <div className="p-8 text-center">Loading data from SQL database...</div>;
+  }
 
-  const handleLogout = () => {
-    setView('dashboard');
-  };
-
-  if (!isSparkReady) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Initializing application...</p>
-          <p className="mt-2 text-xs text-muted-foreground">Waiting for runtime environment</p>
-        </div>
-      </div>
-    );
+  if (error) {
+    return <ErrorFallback error={error} />;
   }
 
   return (
-    <>
-      {view === 'dashboard' ? (
-        <Dashboard
-          onRequestFacility={() => setShowFacilityRequest(true)}
-          onRequestEquipment={() => setShowEquipmentRequest(true)}
-          onManagement={handleManagementClick}
-          onLogout={handleLogout}
-          onLogin={() => setShowLoginDialog(true)}
-        />
-      ) : (
-        <Management onLogout={handleLogout} />
-      )}
-
-      <LoginDialog
-        open={showLoginDialog}
-        onOpenChange={setShowLoginDialog}
-        onSuccess={handleLoginSuccess}
+    <div>
+      <Dashboard
+        teams={teams}
+        sites={sites}
+        fields={fields}
+        schedule={schedule}
+        requests={requests}
+        users={users}
+        authState={authState}
+        login={login}
+        logout={logout}
+        isAdmin={isAdmin}
       />
-
-      <RequestDialog
-        open={showFacilityRequest}
-        onOpenChange={setShowFacilityRequest}
-        type="facility"
+      <Management
+        teams={teams}
+        sites={sites}
+        fields={fields}
+        schedule={schedule}
+        requests={requests}
+        users={users}
+        authState={authState}
+        login={login}
+        logout={logout}
+        isAdmin={isAdmin}
       />
-
-      <RequestDialog
-        open={showEquipmentRequest}
-        onOpenChange={setShowEquipmentRequest}
-        type="equipment"
-      />
-
-      <Toaster />
-    </>
+      <DatabaseDemo />
+    </div>
   );
 }
 
