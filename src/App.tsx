@@ -4,7 +4,7 @@ import { useAuth } from './hooks/use-auth';
 import Dashboard from './components/Dashboard';
 import Management from './components/Management';
 import DatabaseDemo from './components/DatabaseDemo';
-import { ErrorFallback } from './ErrorFallback'; // ✅ Correct for named export
+import { ErrorFallback } from './ErrorFallback';
 
 function App() {
   const { teams, loading: teamsLoading, error: teamsError } = useTeams();
@@ -15,7 +15,6 @@ function App() {
   const { users, loading: usersLoading, error: usersError } = useUsers();
   const { authState, login, logout, isAdmin } = useAuth();
 
-  // Aggregate loading and error states
   const loading =
     teamsLoading ||
     sitesLoading ||
@@ -38,7 +37,7 @@ function App() {
 
   if (error) {
     return <ErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />;
-
+  }
 
   return (
     <div>
@@ -71,4 +70,3 @@ function App() {
   );
 }
 
-export default App;
