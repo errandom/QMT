@@ -486,3 +486,4 @@ export function Dashboard({ onRequestFacility, onRequestEquipment, onManagement,
     </div>
   );
 }
+export default Dashboard;
