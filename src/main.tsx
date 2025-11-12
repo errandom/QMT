@@ -1,15 +1,15 @@
-import { createRoot } from 'react-dom/client';
-import { ErrorBoundary } from "react-error-boundary";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { ErrorBoundary } from 'react-error-boundary';
+import App from './App';
+import { ErrorFallback } from './ErrorFallback';
 
-import App from './App.tsx';
-import { ErrorFallback } from './ErrorFallback.tsx';
-
-import "./main.css";
-import "./styles/theme.css";
-import "./index.css";
-
-createRoot(document.getElementById('root')!).render(
-  <ErrorBoundary FallbackComponent={ErrorFallback}>
-    <App />
-  </ErrorBoundary>
-);
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => window.location.reload()} // reload on retry
+    >
+      <App />
+    </ErrorBoundary>
+  </React.StrictMode>
