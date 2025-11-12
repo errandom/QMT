@@ -246,3 +246,4 @@ export function Management({ onLogout }: ManagementProps) {
     </div>
   );
 }
+export default Management;
