@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import sql from 'mssql';
 
 const TeamSchema = z.object({
   id: z.string(),
@@ -98,61 +99,54 @@ export type WhereClause<T> = {
   [K in keyof T]?: T[K] | ((value: T[K]) => boolean);
 };
 
+const connectionString = process.env.AZURE_SQL_CONNECTION_STRING;
+
+async function getPool() {
+  if (!connectionString) throw new Error('Missing SQL connection string');
+  // Use a global pool to avoid multiple connections
+  if (!(global as any).mssqlPool) {
+    (global as any).mssqlPool = await sql.connect(connectionString);
+  }
+  return (global as any).mssqlPool as sql.ConnectionPool;
+}
+
 export class Database {
-  private static ensureSparkRuntime(): void {
-    if (typeof window === 'undefined' || !window.spark || !window.spark.kv) {
-      throw new Error('Spark runtime is not available. Please ensure the application is running in a Spark environment.');
-    }
-  }
-
-  private static async getTable<T>(tableName: TableName): Promise<T[]> {
-    this.ensureSparkRuntime();
-    try {
-      const data = await window.spark.kv.get<T[]>(tableName);
-      return data || [];
-    } catch (error) {
-      console.error(`Error reading table ${tableName}:`, error);
-      return [];
-    }
-  }
-
-  private static async setTable<T>(tableName: TableName, data: T[]): Promise<void> {
-    this.ensureSparkRuntime();
-    try {
-      await window.spark.kv.set(tableName, data);
-    } catch (error) {
-      console.error(`Error writing to table ${tableName}:`, error);
-      throw error;
-    }
-  }
-
   static async select<T>(
     tableName: TableName,
     where?: WhereClause<T>
   ): Promise<T[]> {
-    const data = await this.getTable<T>(tableName);
-    
-    if (!where) return data;
-
-    return data.filter(record => {
-      return Object.entries(where).every(([key, value]) => {
-        const recordValue = (record as any)[key];
-        
-        if (typeof value === 'function') {
-          return value(recordValue);
+    const pool = await getPool();
+    let query = `SELECT * FROM ${tableName}`;
+    if (where && Object.keys(where).length > 0) {
+      const conditions = Object.entries(where)
+        .filter(([_, value]) => typeof value !== 'function')
+        .map(([key, value]) => `${key} = @${key}`);
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+    }
+    const request = pool.request();
+    if (where) {
+      Object.entries(where).forEach(([key, value]) => {
+        if (typeof value !== 'function') {
+          request.input(key, value);
         }
-        
-        return recordValue === value;
       });
-    });
+    }
+    const result = await request.query(query);
+    return result.recordset as T[];
   }
 
   static async selectById<T extends { id: string }>(
     tableName: TableName,
     id: string
   ): Promise<T | null> {
-    const data = await this.getTable<T>(tableName);
-    return data.find(record => record.id === id) || null;
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .input('id', id)
+      .query(`SELECT * FROM ${tableName} WHERE id = @id`);
+    return result.recordset[0] || null;
   }
 
   static async insert<T extends { id: string }>(
@@ -161,18 +155,15 @@ export class Database {
   ): Promise<T> {
     const schema = schemas[tableName];
     const validated = schema.parse(record);
-    
-    const data = await this.getTable<T>(tableName);
-    
-    const exists = data.some(r => r.id === record.id);
-    if (exists) {
-      throw new Error(`Record with id ${record.id} already exists`);
-    }
-    
-    data.push(validated as unknown as T);
-    await this.setTable(tableName, data);
-    
-    return validated as unknown as T;
+    const pool = await getPool();
+    const keys = Object.keys(validated);
+    const values = keys.map(k => `@${k}`);
+    const request = pool.request();
+    keys.forEach(k => request.input(k, (validated as any)[k]));
+    await request.query(
+      `INSERT INTO ${tableName} (${keys.join(',')}) VALUES (${values.join(',')})`
+    );
+    return validated as T;
   }
 
   static async insertMany<T extends { id: string }>(
@@ -180,21 +171,18 @@ export class Database {
     records: T[]
   ): Promise<T[]> {
     const schema = schemas[tableName];
-    const validated = records.map(r => schema.parse(r) as unknown as T);
-    
-    const data = await this.getTable<T>(tableName);
-    
-    for (const record of validated) {
-      const exists = data.some(r => r.id === record.id);
-      if (exists) {
-        throw new Error(`Record with id ${record.id} already exists`);
-      }
+    const pool = await getPool();
+    for (const record of records) {
+      const validated = schema.parse(record);
+      const keys = Object.keys(validated);
+      const values = keys.map(k => `@${k}`);
+      const request = pool.request();
+      keys.forEach(k => request.input(k, (validated as any)[k]));
+      await request.query(
+        `INSERT INTO ${tableName} (${keys.join(',')}) VALUES (${values.join(',')})`
+      );
     }
-    
-    data.push(...validated);
-    await this.setTable(tableName, data);
-    
-    return validated;
+    return records;
   }
 
   static async update<T extends { id: string }>(
@@ -202,20 +190,17 @@ export class Database {
     id: string,
     updates: Partial<T>
   ): Promise<T | null> {
-    const data = await this.getTable<T>(tableName);
-    const index = data.findIndex(record => record.id === id);
-    
-    if (index === -1) return null;
-    
-    const updatedRecord = { ...data[index], ...updates };
-    
-    const schema = schemas[tableName];
-    const validated = schema.parse(updatedRecord);
-    
-    data[index] = validated as unknown as T;
-    await this.setTable(tableName, data);
-    
-    return validated as unknown as T;
+    const pool = await getPool();
+    const keys = Object.keys(updates);
+    if (keys.length === 0) return null;
+    const setClause = keys.map(k => `${k} = @${k}`).join(', ');
+    const request = pool.request();
+    keys.forEach(k => request.input(k, (updates as any)[k]));
+    request.input('id', id);
+    await request.query(
+      `UPDATE ${tableName} SET ${setClause} WHERE id = @id`
+    );
+    return this.selectById<T>(tableName, id);
   }
 
   static async updateWhere<T extends { id: string }>(
@@ -223,85 +208,82 @@ export class Database {
     where: WhereClause<T>,
     updates: Partial<T>
   ): Promise<number> {
-    const data = await this.getTable<T>(tableName);
-    let updateCount = 0;
-    
-    const schema = schemas[tableName];
-    
-    for (let i = 0; i < data.length; i++) {
-      const record = data[i];
-      const matches = Object.entries(where).every(([key, value]) => {
-        const recordValue = (record as any)[key];
-        
-        if (typeof value === 'function') {
-          return value(recordValue);
-        }
-        
-        return recordValue === value;
-      });
-      
-      if (matches) {
-        const updatedRecord = { ...record, ...updates };
-        data[i] = schema.parse(updatedRecord) as unknown as T;
-        updateCount++;
+    const pool = await getPool();
+    const updateKeys = Object.keys(updates);
+    if (updateKeys.length === 0) return 0;
+    const setClause = updateKeys.map(k => `${k} = @${k}`).join(', ');
+    const whereKeys = Object.entries(where)
+      .filter(([_, value]) => typeof value !== 'function')
+      .map(([key, value]) => `${key} = @where_${key}`);
+    const request = pool.request();
+    updateKeys.forEach(k => request.input(k, (updates as any)[k]));
+    Object.entries(where).forEach(([key, value]) => {
+      if (typeof value !== 'function') {
+        request.input(`where_${key}`, value);
       }
-    }
-    
-    if (updateCount > 0) {
-      await this.setTable(tableName, data);
-    }
-    
-    return updateCount;
+    });
+    const query = `UPDATE ${tableName} SET ${setClause}` +
+      (whereKeys.length > 0 ? ` WHERE ${whereKeys.join(' AND ')}` : '');
+    const result = await request.query(query);
+    return result.rowsAffected[0] || 0;
   }
 
   static async delete<T extends { id: string }>(
     tableName: TableName,
     id: string
   ): Promise<boolean> {
-    const data = await this.getTable<T>(tableName);
-    const initialLength = data.length;
-    const filtered = data.filter(record => record.id !== id);
-    
-    if (filtered.length === initialLength) return false;
-    
-    await this.setTable(tableName, filtered);
-    return true;
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .input('id', id)
+      .query(`DELETE FROM ${tableName} WHERE id = @id`);
+    return result.rowsAffected[0] > 0;
   }
 
   static async deleteWhere<T>(
     tableName: TableName,
     where: WhereClause<T>
   ): Promise<number> {
-    const data = await this.getTable<T>(tableName);
-    const initialLength = data.length;
-    
-    const filtered = data.filter(record => {
-      return !Object.entries(where).every(([key, value]) => {
-        const recordValue = (record as any)[key];
-        
-        if (typeof value === 'function') {
-          return value(recordValue);
-        }
-        
-        return recordValue === value;
-      });
+    const pool = await getPool();
+    const whereKeys = Object.entries(where)
+      .filter(([_, value]) => typeof value !== 'function')
+      .map(([key, value]) => `${key} = @${key}`);
+    const request = pool.request();
+    Object.entries(where).forEach(([key, value]) => {
+      if (typeof value !== 'function') {
+        request.input(key, value);
+      }
     });
-    
-    const deleteCount = initialLength - filtered.length;
-    
-    if (deleteCount > 0) {
-      await this.setTable(tableName, filtered);
-    }
-    
-    return deleteCount;
+    const query = `DELETE FROM ${tableName}` +
+      (whereKeys.length > 0 ? ` WHERE ${whereKeys.join(' AND ')}` : '');
+    const result = await request.query(query);
+    return result.rowsAffected[0] || 0;
   }
 
   static async count<T>(
     tableName: TableName,
     where?: WhereClause<T>
   ): Promise<number> {
-    const data = await this.select<T>(tableName, where);
-    return data.length;
+    const pool = await getPool();
+    let query = `SELECT COUNT(*) as count FROM ${tableName}`;
+    if (where && Object.keys(where).length > 0) {
+      const conditions = Object.entries(where)
+        .filter(([_, value]) => typeof value !== 'function')
+        .map(([key, value]) => `${key} = @${key}`);
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+    }
+    const request = pool.request();
+    if (where) {
+      Object.entries(where).forEach(([key, value]) => {
+        if (typeof value !== 'function') {
+          request.input(key, value);
+        }
+      });
+    }
+    const result = await request.query(query);
+    return result.recordset[0].count;
   }
 
   static async exists<T>(
@@ -313,23 +295,25 @@ export class Database {
   }
 
   static async clear(tableName: TableName): Promise<void> {
-    await this.setTable(tableName, []);
+    const pool = await getPool();
+    await pool.request().query(`DELETE FROM ${tableName}`);
   }
 
   static async backup(): Promise<Record<TableName, any[]>> {
     const tables: TableName[] = ['teams', 'sites', 'fields', 'schedule', 'requests', 'users'];
     const backup: any = {};
-    
     for (const table of tables) {
-      backup[table] = await this.getTable(table);
+      backup[table] = await this.select(table);
     }
-    
     return backup;
   }
 
   static async restore(backup: Record<TableName, any[]>): Promise<void> {
     for (const [table, data] of Object.entries(backup)) {
-      await this.setTable(table as TableName, data);
+      await this.clear(table as TableName);
+      for (const record of data) {
+        await this.insert(table as TableName, record);
+      }
     }
   }
 }
