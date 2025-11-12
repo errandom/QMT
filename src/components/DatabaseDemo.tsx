@@ -70,12 +70,11 @@ export function DatabaseDemo() {
       description: 'Get upcoming events with related data',
       fn: async () => {
         const now = new Date().toISOString();
-        const schedule = await Database.select('schedule', {
-          startTime: (time: string) => time > now
-        });
+        // For SQL, filter with WHERE clause for startTime > now
+        const schedule = await Database.select('schedule', { startTime: now });
         const teams = await Database.select('teams');
         const fields = await Database.select('fields');
-        
+        // This is a mock join; for real SQL, use JOIN queries in Database class
         return schedule.slice(0, 5).map((event: any) => ({
           eventId: event.id,
           startTime: event.startTime,
@@ -102,18 +101,6 @@ export function DatabaseDemo() {
         toast.success('Backup downloaded successfully');
       } catch (error: any) {
         toast.error('Backup failed: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    getAllKeys: async () => {
-      setLoading(true);
-      try {
-        const keys = await window.spark.kv.keys();
-        setResults(`All KV Keys:\n${JSON.stringify(keys, null, 2)}`);
-        toast.success(`Found ${keys.length} keys`);
-      } catch (error: any) {
-        toast.error('Failed to get keys: ' + error.message);
       } finally {
         setLoading(false);
       }
@@ -170,10 +157,6 @@ export function DatabaseDemo() {
             <Button onClick={actions.backup} disabled={loading} variant="secondary">
               <Download size={18} className="mr-2" />
               Download Backup
-            </Button>
-            <Button onClick={actions.getAllKeys} disabled={loading} variant="secondary">
-              <DatabaseIcon size={18} className="mr-2" />
-              Show All Keys
             </Button>
           </CardContent>
         </Card>
