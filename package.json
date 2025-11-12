@@ -1,5 +1,5 @@
 {
-    "name": "spark-template",--test
+    "name": "spark-template",
     "private": true,
     "version": "0.0.0",
     "type": "module",
