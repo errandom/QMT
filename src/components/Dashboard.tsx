@@ -61,14 +61,13 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-24 rounded-2xl bg-gradient-to-br from-blue-950 via-blue-800 to-blue-600 p-1.5 shadow-2xl shadow-blue-900/40">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-60" style={{ mixBlendMode: 'overlay' }} />
-            <div className="absolute inset-0 rounded-2xl backdrop-blur-3xl bg-gradient-to-br from-blue-900/30 via-blue-700/30 to-blue-500/30" />
+          <div className="relative w-full h-24 rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 p-1.5 shadow-lg shadow-slate-800/20">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
-            <div className="relative h-full rounded-xl bg-gradient-to-br from-slate-900/40 to-slate-900/60 backdrop-blur-sm p-1.5">
+            <div className="relative h-full rounded-xl bg-gradient-to-br from-slate-800/30 to-slate-800/40 backdrop-blur-sm p-1.5">
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute top-0 bottom-0 bg-white rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-0 bottom-0 bg-white rounded-lg shadow-lg shadow-black/20 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
                     width: 'calc(33.333% - 0.333rem)',
@@ -82,7 +81,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'text-slate-900' 
-                        : 'text-white/90 hover:text-white hover:scale-105'
+                        : 'text-white/80 hover:text-white hover:scale-105'
                     }`}
                   >
                     <div className="flex items-center gap-1">
