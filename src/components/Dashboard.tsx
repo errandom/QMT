@@ -61,9 +61,9 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-24 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-1.5 shadow-2xl shadow-purple-500/40">
+          <div className="relative w-full h-24 rounded-2xl bg-gradient-to-br from-blue-950 via-blue-800 to-blue-600 p-1.5 shadow-2xl shadow-blue-900/40">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-60" style={{ mixBlendMode: 'overlay' }} />
-            <div className="absolute inset-0 rounded-2xl backdrop-blur-3xl bg-gradient-to-br from-indigo-500/30 via-purple-500/30 to-pink-500/30" />
+            <div className="absolute inset-0 rounded-2xl backdrop-blur-3xl bg-gradient-to-br from-blue-900/30 via-blue-700/30 to-blue-500/30" />
             
             <div className="relative h-full rounded-xl bg-gradient-to-br from-slate-900/40 to-slate-900/60 backdrop-blur-sm p-1.5">
               <div className="relative grid grid-cols-3 gap-2 h-full">
