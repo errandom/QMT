@@ -158,7 +158,7 @@ export default function ScheduleManager() {
                 <CalendarBlank size={14} />
                 {event.date} • {event.startTime} - {event.endTime}
               </div>
-              {event.teamIds.length > 0 && (
+              {event.teamIds && event.teamIds.length > 0 && (
                 <div className="text-xs text-muted-foreground">
                   Teams: {event.teamIds.map(id => teams.find(t => t.id === id)?.name).join(', ')}
                 </div>

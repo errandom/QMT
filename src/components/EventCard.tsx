@@ -209,7 +209,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           </>
         )}
 
-        {eventTeams.length > 0 && (
+        {eventTeams && eventTeams.length > 0 && (
           <>
             <Separator />
             <div className="space-y-1.5">
