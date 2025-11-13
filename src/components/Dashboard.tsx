@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football } from '@phosphor-icons/react'
+import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football, Plus } from '@phosphor-icons/react'
 import EventList from './EventList'
 import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
@@ -103,10 +103,12 @@ export default function Dashboard({ currentUser }: DashboardProps) {
 
               <div className="flex gap-2">
                 <Button onClick={() => setShowFacilityDialog(true)} variant="outline" size="sm" className="flex-1 sm:flex-none">
+                  <Plus className="mr-2" size={16} />
                   <MapPin className="mr-2" size={16} />
                   Facility
                 </Button>
                 <Button onClick={() => setShowEquipmentDialog(true)} variant="outline" size="sm" className="flex-1 sm:flex-none">
+                  <Plus className="mr-2" size={16} />
                   <Cube className="mr-2" size={16} />
                   Equipment
                 </Button>
