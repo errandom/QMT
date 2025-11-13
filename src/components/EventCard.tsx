@@ -14,9 +14,13 @@ import {
   Shower,
   ForkKnife,
   Package,
-  Lightbulb
+  Lightbulb,
+  Trophy,
+  Barbell,
+  Strategy,
+  CalendarCheck
 } from '@phosphor-icons/react'
-import { Event, Team, Field, Site } from '@/lib/types'
+import { Event, Team, Field, Site, EventType } from '@/lib/types'
 import { toast } from 'sonner'
 
 interface EventCardProps {
@@ -27,10 +31,17 @@ interface EventCardProps {
 }
 
 const eventTypeColors = {
-  'Game': 'border-2 border-accent text-accent bg-transparent',
-  'Practice': 'border-2 border-secondary text-secondary bg-transparent',
-  'Meeting': 'border-2 border-muted-foreground text-muted-foreground bg-transparent',
-  'Other': 'border-2 border-muted-foreground text-muted-foreground bg-transparent'
+  'Game': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent',
+  'Practice': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent',
+  'Meeting': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent',
+  'Other': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent'
+}
+
+const eventTypeIcons: Record<EventType, React.ReactNode> = {
+  'Game': <Trophy size={20} weight="duotone" />,
+  'Practice': <Barbell size={20} weight="duotone" />,
+  'Meeting': <Strategy size={20} weight="duotone" />,
+  'Other': <CalendarCheck size={20} weight="duotone" />
 }
 
 const statusColors = {
@@ -64,7 +75,12 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
             </div>
-            <CardTitle className="text-lg">{event.title}</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="text-[oklch(0.35_0.08_250)]">
+                {eventTypeIcons[event.eventType]}
+              </div>
+              <CardTitle className="text-lg">{event.title}</CardTitle>
+            </div>
           </div>
           {showWeather && (
             <div className="text-right text-sm">
