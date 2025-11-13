@@ -43,7 +43,7 @@ const statusColors = {
 export default function EventCard({ event, teams, fields, sites }: EventCardProps) {
   const field = fields.find(f => f.id === event.fieldId)
   const site = field ? sites.find(s => s.id === field.siteId) : undefined
-  const eventTeams = teams.filter(t => event.teamIds.includes(t.id))
+  const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
   
   const eventDate = new Date(event.date + ' ' + event.startTime)
   const now = new Date()

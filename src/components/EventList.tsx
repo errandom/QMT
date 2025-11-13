@@ -19,10 +19,11 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
     if (event.status === 'Cancelled') return false
 
     if (teamFilter !== 'all') {
-      if (!event.teamIds.includes(teamFilter)) return false
+      if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
     }
 
     if (sportFilter !== 'All Sports') {
+      if (!event.teamIds) return false
       const eventTeams = teams.filter(t => event.teamIds.includes(t.id))
       if (eventTeams.length === 0) return false
       if (!eventTeams.some(t => t.sportType === sportFilter)) return false

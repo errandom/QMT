@@ -26,10 +26,11 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     if (event.status === 'Cancelled') return false
 
     if (teamFilter !== 'all') {
-      if (!event.teamIds.includes(teamFilter)) return false
+      if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
     }
 
     if (sportFilter !== 'All Sports') {
+      if (!event.teamIds) return false
       const eventTeams = teams.filter(t => event.teamIds.includes(t.id))
       if (eventTeams.length === 0) return false
       if (!eventTeams.some(t => t.sportType === sportFilter)) return false
@@ -130,8 +131,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                 const position = getEventPosition(event.startTime, event.endTime)
                                 if (!position) return null
                                 
-                                const eventTeams = teams.filter(t => event.teamIds.includes(t.id))
-                                const teamColor = getTeamColor(event.teamIds)
+                                const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
+                                const teamColor = getTeamColor(event.teamIds || [])
                                 
                                 return (
                                   <Tooltip key={event.id}>
