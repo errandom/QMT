@@ -28,16 +28,16 @@ interface EventCardProps {
 }
 
 const eventTypeColors = {
-  'Game': 'bg-accent text-accent-foreground',
-  'Practice': 'bg-secondary text-secondary-foreground',
-  'Meeting': 'bg-muted text-muted-foreground',
-  'Other': 'bg-muted text-muted-foreground'
+  'Game': 'border-2 border-accent text-accent bg-transparent',
+  'Practice': 'border-2 border-secondary text-secondary bg-transparent',
+  'Meeting': 'border-2 border-muted-foreground text-muted-foreground bg-transparent',
+  'Other': 'border-2 border-muted-foreground text-muted-foreground bg-transparent'
 }
 
 const statusColors = {
-  'Planned': 'bg-yellow-500 text-white',
-  'Confirmed': 'bg-green-600 text-white',
-  'Cancelled': 'bg-destructive text-destructive-foreground'
+  'Planned': 'border-2 border-yellow-500 text-yellow-600 bg-transparent',
+  'Confirmed': 'border-2 border-green-600 text-green-600 bg-transparent',
+  'Cancelled': 'border-2 border-destructive text-destructive bg-transparent'
 }
 
 export default function EventCard({ event, teams, fields, sites }: EventCardProps) {
