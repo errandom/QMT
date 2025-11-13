@@ -8,62 +8,59 @@ export default function FootballHelmetIcon({ className, size = 18 }: FootballHel
     <svg
       width={size}
       height={size}
-      viewBox="0 0 20 20"
+      viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      <rect
-        x="1"
-        y="1"
-        width="18"
-        height="18"
-        rx="2"
+      <path
+        d="M19 12C19 8.5 17 5.5 14 4C12.5 3.3 10.5 3.3 9 4C6 5.5 4 8.5 4 12C4 13.5 4.5 15 5.5 16.5L6 17.2C6.5 18.2 7.3 18.8 8.3 19.1L10 19.5C10.6 19.7 11.3 19.7 12 19.7C13.2 19.7 14 19.3 14.8 18.3L15.5 17.2C16.5 15.7 17.5 13.8 17.5 12"
         stroke="currentColor"
         strokeWidth="1.5"
-      />
-      <path
-        d="M15.5 10C15.5 7.2 13.8 4.8 11 4C9.8 3.6 8.5 3.6 7.3 4C5.6 4.8 4.5 6.5 4.5 8.5C4.5 9.7 4.9 10.8 5.7 12L6.1 12.5C6.5 13.2 7.1 13.6 7.9 13.8L9.2 14.1C9.6 14.2 10 14.2 10.4 14.2C11.2 14.2 11.8 14 12.3 13.4L13.1 12.5C13.9 11.4 14.8 10.1 14.8 8.8"
-        stroke="currentColor"
-        strokeWidth="1.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M14.8 9.5L16.5 10.5C16.8 10.6 17 10.9 17 11.2C17 11.5 16.8 11.8 16.5 11.9L14.3 13"
+        d="M17.5 13L20 14.5C20.4 14.7 20.7 15.1 20.7 15.6C20.7 16.1 20.4 16.5 20 16.7L17 18.5"
         stroke="currentColor"
-        strokeWidth="1.2"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M7 8.5L7 12"
+        d="M8 10L8 15"
         stroke="currentColor"
-        strokeWidth="1"
+        strokeWidth="1.2"
         strokeLinecap="round"
       />
       <path
-        d="M8.5 8.5L8.5 12"
+        d="M10 10L10 15"
         stroke="currentColor"
-        strokeWidth="1"
+        strokeWidth="1.2"
         strokeLinecap="round"
       />
       <path
-        d="M10 8.5L10 12"
+        d="M12 10L12 15"
         stroke="currentColor"
-        strokeWidth="1"
+        strokeWidth="1.2"
         strokeLinecap="round"
       />
       <path
-        d="M7 9.8L10 9.8"
+        d="M14 10L14 15"
         stroke="currentColor"
-        strokeWidth="1"
+        strokeWidth="1.2"
         strokeLinecap="round"
       />
       <path
-        d="M7 11L10 11"
+        d="M8 11.8L14 11.8"
         stroke="currentColor"
-        strokeWidth="1"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8 13.5L14 13.5"
+        stroke="currentColor"
+        strokeWidth="1.2"
         strokeLinecap="round"
       />
     </svg>
