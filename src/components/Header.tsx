@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { SignIn, SignOut, Crown, Detective, UserCircle } from '@phosphor-icons/react'
+import { SignIn, SignOut, Crown, Detective } from '@phosphor-icons/react'
 import LoginDialog from './LoginDialog'
 import { User } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
@@ -35,12 +35,20 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
 
   const getRoleIcon = (role: string) => {
     if (role === 'admin') {
-      return <Crown size={28} weight="fill" className="text-yellow-400" />
+      return (
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+          <Crown size={24} weight="thin" className="text-foreground" />
+        </div>
+      )
     }
     if (role === 'mgmt') {
-      return <Detective size={28} weight="fill" className="text-blue-400" />
+      return (
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+          <Detective size={24} weight="thin" className="text-foreground" />
+        </div>
+      )
     }
-    return <UserCircle size={28} weight="fill" className="text-primary-foreground" />
+    return null
   }
 
   return (
