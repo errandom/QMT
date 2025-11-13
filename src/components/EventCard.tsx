@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,7 +22,7 @@ import {
   CalendarCheck
 } from '@phosphor-icons/react'
 import { Event, Team, Field, Site, EventType } from '@/lib/types'
-import { toast } from 'sonner'
+import CancellationRequestDialog from './CancellationRequestDialog'
 
 interface EventCardProps {
   event: Event
@@ -51,6 +52,8 @@ const statusColors = {
 }
 
 export default function EventCard({ event, teams, fields, sites }: EventCardProps) {
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false)
+  
   const field = fields.find(f => f.id === event.fieldId)
   const site = field ? sites.find(s => s.id === field.siteId) : undefined
   const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
@@ -58,11 +61,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const eventDate = new Date(event.date + ' ' + event.startTime)
   const now = new Date()
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-  const canRequestCancellation = hoursUntilEvent > 24
-
-  const handleCancellationRequest = () => {
-    toast.success('Cancellation request submitted')
-  }
+  const canRequestCancellation = hoursUntilEvent > 36
 
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
@@ -71,9 +70,20 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
+              {canRequestCancellation && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-6 px-3 text-xs border-2 border-[oklch(0.55_0.22_25)] text-[oklch(0.55_0.22_25)] hover:bg-[oklch(0.55_0.22_25)] hover:text-white ml-auto"
+                  onClick={() => setCancellationDialogOpen(true)}
+                >
+                  <Prohibit className="mr-1.5" size={14} />
+                  Request Cancellation
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <div className="text-[oklch(0.35_0.08_250)]">
@@ -234,22 +244,16 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <span>{event.otherParticipants}</span>
           </div>
         )}
-
-        {canRequestCancellation && (
-          <>
-            <Separator />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full"
-              onClick={handleCancellationRequest}
-            >
-              <Prohibit className="mr-2" size={16} />
-              Request Cancellation
-            </Button>
-          </>
-        )}
       </CardContent>
+      
+      <CancellationRequestDialog
+        open={cancellationDialogOpen}
+        onOpenChange={setCancellationDialogOpen}
+        eventId={event.id}
+        eventTitle={event.title}
+        eventDate={event.date}
+        eventTime={event.startTime}
+      />
     </Card>
   )
 }

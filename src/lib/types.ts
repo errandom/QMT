@@ -110,6 +110,21 @@ export interface EquipmentRequest {
   reviewedBy?: string
 }
 
+export interface CancellationRequest {
+  id: string
+  requestorName: string
+  requestorPhone: string
+  eventId: string
+  eventTitle: string
+  eventDate: string
+  eventTime: string
+  justification: string
+  status: RequestStatus
+  createdAt: string
+  reviewedAt?: string
+  reviewedBy?: string
+}
+
 export interface Equipment {
   id: string
   name: string
