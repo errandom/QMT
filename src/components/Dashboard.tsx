@@ -2,26 +2,47 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football, Plus } from '@phosphor-icons/react'
+import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football, Plus, Briefcase } from '@phosphor-icons/react'
 import EventList from './EventList'
 import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
 import EquipmentRequestDialog from './EquipmentRequestDialog'
+import LoginDialog from './LoginDialog'
 import FootballHelmetIcon from './FootballHelmetIcon'
 import { User, SportType } from '@/lib/types'
 import { useKV } from '@github/spark/hooks'
+import { hasAccess } from '@/lib/auth'
 
 interface DashboardProps {
   currentUser: User | null
+  onLogin?: (user: User) => void
+  onNavigateToOffice?: () => void
 }
 
-export default function Dashboard({ currentUser }: DashboardProps) {
+export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: DashboardProps) {
   const [sportFilter, setSportFilter] = useState<'All Sports' | SportType>('All Sports')
   const [teamFilter, setTeamFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'schedule'>('list')
   const [showFacilityDialog, setShowFacilityDialog] = useState(false)
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [teams] = useKV('teams', [])
+
+  const handleOfficeClick = () => {
+    if (currentUser && hasAccess(currentUser)) {
+      onNavigateToOffice?.()
+    } else {
+      setShowLoginDialog(true)
+    }
+  }
+
+  const handleLoginSuccess = (user: User) => {
+    onLogin?.(user)
+    setShowLoginDialog(false)
+    if (hasAccess(user)) {
+      onNavigateToOffice?.()
+    }
+  }
 
   const filteredTeams = teams.filter((team: any) => {
     if (sportFilter === 'All Sports') return team.isActive
@@ -112,6 +133,10 @@ export default function Dashboard({ currentUser }: DashboardProps) {
                   <Cube className="mr-2" size={16} />
                   Equipment
                 </Button>
+                <Button onClick={handleOfficeClick} variant="outline" size="sm" className="flex-1 sm:flex-none">
+                  <Briefcase className="mr-2" size={16} />
+                  Operations Office
+                </Button>
               </div>
             </div>
 
@@ -148,6 +173,12 @@ export default function Dashboard({ currentUser }: DashboardProps) {
       <EquipmentRequestDialog
         open={showEquipmentDialog}
         onOpenChange={setShowEquipmentDialog}
+      />
+
+      <LoginDialog
+        open={showLoginDialog}
+        onOpenChange={setShowLoginDialog}
+        onLoginSuccess={handleLoginSuccess}
       />
     </>
   )

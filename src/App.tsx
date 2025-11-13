@@ -21,7 +21,11 @@ function App() {
       />
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {view === 'dashboard' ? (
-          <Dashboard currentUser={currentUser} />
+          <Dashboard 
+            currentUser={currentUser} 
+            onLogin={setCurrentUser}
+            onNavigateToOffice={() => setView('office')}
+          />
         ) : (
           <OperationsOffice 
             currentUser={currentUser} 
