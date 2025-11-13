@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { SignIn, SignOut, Crown, Detective } from '@phosphor-icons/react'
+import { SignIn, SignOut, Crown, Detective, UserCircle } from '@phosphor-icons/react'
 import LoginDialog from './LoginDialog'
 import { User } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
@@ -35,12 +35,12 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
 
   const getRoleIcon = (role: string) => {
     if (role === 'admin') {
-      return <Crown size={16} weight="fill" className="text-yellow-400" />
+      return <Crown size={28} weight="fill" className="text-yellow-400" />
     }
     if (role === 'mgmt') {
-      return <Detective size={16} weight="fill" className="text-blue-400" />
+      return <Detective size={28} weight="fill" className="text-blue-400" />
     }
-    return null
+    return <UserCircle size={28} weight="fill" className="text-primary-foreground" />
   }
 
   return (
@@ -57,18 +57,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
               {currentUser ? (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Avatar className="h-9 w-9 border-2 border-primary-foreground/20">
-                        <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground font-semibold">
-                          {currentUser.username.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {getRoleIcon(currentUser.role) && (
-                        <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
-                          {getRoleIcon(currentUser.role)}
-                        </div>
-                      )}
-                    </div>
+                    {getRoleIcon(currentUser.role)}
                     <span className="text-sm font-medium hidden sm:inline">{currentUser.username}</span>
                   </div>
                   <Button

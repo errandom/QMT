@@ -54,18 +54,27 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
       <div className="space-y-6">
         <div className="space-y-4">
           <Tabs value={sportFilter} onValueChange={(v) => setSportFilter(v as any)} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-14">
-              <TabsTrigger value="All Sports" className="h-full">
-                <FootballHelmetIcon className="mr-2" size={20} />
-                <Football className="mr-2" size={20} weight="duotone" />
+            <TabsList className="w-full grid grid-cols-3 h-20 gap-3 bg-transparent p-0">
+              <TabsTrigger 
+                value="All Sports" 
+                className="h-full text-base font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-500 data-[state=active]:via-purple-600 data-[state=active]:to-purple-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 bg-gradient-to-br from-muted/80 to-muted hover:from-muted hover:to-muted/90 transition-all duration-200 data-[state=active]:scale-[1.02] backdrop-blur-sm"
+              >
+                <FootballHelmetIcon className="mr-2" size={28} />
+                <Football className="mr-2" size={28} weight="duotone" />
                 All Sports
               </TabsTrigger>
-              <TabsTrigger value="Tackle Football" className="h-full">
-                <FootballHelmetIcon className="mr-2" size={20} />
+              <TabsTrigger 
+                value="Tackle Football" 
+                className="h-full text-base font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:via-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 bg-gradient-to-br from-muted/80 to-muted hover:from-muted hover:to-muted/90 transition-all duration-200 data-[state=active]:scale-[1.02] backdrop-blur-sm"
+              >
+                <FootballHelmetIcon className="mr-2" size={28} />
                 Tackle Football
               </TabsTrigger>
-              <TabsTrigger value="Flag Football" className="h-full">
-                <Football className="mr-2" size={20} weight="duotone" />
+              <TabsTrigger 
+                value="Flag Football" 
+                className="h-full text-base font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-emerald-500 data-[state=active]:via-emerald-600 data-[state=active]:to-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-500/50 bg-gradient-to-br from-muted/80 to-muted hover:from-muted hover:to-muted/90 transition-all duration-200 data-[state=active]:scale-[1.02] backdrop-blur-sm"
+              >
+                <Football className="mr-2" size={28} weight="duotone" />
                 Flag Football
               </TabsTrigger>
             </TabsList>
