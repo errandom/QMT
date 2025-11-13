@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football, CirclesThreePlus } from '@phosphor-icons/react'
+import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football } from '@phosphor-icons/react'
 import EventList from './EventList'
 import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
 import EquipmentRequestDialog from './EquipmentRequestDialog'
+import FootballHelmetIcon from './FootballHelmetIcon'
 import { User, SportType } from '@/lib/types'
 import { useKV } from '@github/spark/hooks'
 
@@ -34,12 +35,12 @@ export default function Dashboard({ currentUser }: DashboardProps) {
           <Tabs value={sportFilter} onValueChange={(v) => setSportFilter(v as any)} className="w-full">
             <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="All Sports">
-                <CirclesThreePlus className="mr-2" size={18} />
+                <FootballHelmetIcon className="mr-2" size={18} />
                 <Football className="mr-2" size={18} />
                 All Sports
               </TabsTrigger>
               <TabsTrigger value="Tackle Football">
-                <CirclesThreePlus className="mr-2" size={18} />
+                <FootballHelmetIcon className="mr-2" size={18} />
                 Tackle Football
               </TabsTrigger>
               <TabsTrigger value="Flag Football">
