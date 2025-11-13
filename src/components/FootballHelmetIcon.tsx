@@ -14,51 +14,35 @@ export default function FootballHelmetIcon({ className, size = 18 }: FootballHel
       className={className}
     >
       <path
-        d="M18 12.5C18 9.2 16.5 6.3 14 4.8C12.7 4 11.3 4 10 4.8C7.5 6.3 6 9.2 6 12.5V14C6 15.7 6.8 17.2 8.2 18L9.5 18.8C10.4 19.3 11.6 19.3 12.5 18.8L13.8 18C15.2 17.2 16 15.7 16 14V13"
+        d="M19 11C19 7.5 17.5 4.5 15 3C13.5 2 10.5 2 9 3C6.5 4.5 5 7.5 5 11V13.5C5 15.5 6 17.2 7.5 18.2L9 19.2C10 19.8 11.5 20 12.5 19.5L14 18.5C15.5 17.5 16.5 16 17 14.5"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M16 13.5H19.5C20.3 13.5 21 14.2 21 15C21 15.8 20.3 16.5 19.5 16.5H17.5"
+        d="M17 14H20C20.8 14 21.5 14.7 21.5 15.5C21.5 16.3 20.8 17 20 17H17.5"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M9 11H9.5C10.3 11 11 11.7 11 12.5V13.5C11 14.3 10.3 15 9.5 15H9C8.2 15 7.5 14.3 7.5 13.5V12.5C7.5 11.7 8.2 11 9 11Z"
+        d="M8 10.5H10"
         stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <line
-        x1="9"
-        y1="13"
-        x2="5"
-        y2="13"
-        stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
-      <line
-        x1="9"
-        y1="15"
-        x2="5.5"
-        y2="16"
+      <path
+        d="M8 13H10.5"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
-      <line
-        x1="9"
-        y1="11"
-        x2="5.5"
-        y2="10"
+      <path
+        d="M8 15.5H10"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
     </svg>
