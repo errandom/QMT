@@ -142,14 +142,17 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div className="flex flex-wrap gap-2 ml-6 text-xs">
                 <span className="flex items-center gap-1">
                   {field.turfType === 'Artificial Turf' ? (
-                    <div className="relative">
-                      <Lightbulb size={14} />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-[18px] h-[1.5px] bg-current rotate-45" />
-                      </div>
+                    <div className="relative inline-flex items-center justify-center" style={{ width: '14px', height: '14px' }}>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M7 2 L7 6 M5 3.5 L6 5.5 M9 3.5 L8 5.5 M4 6 L5.5 7.5 M10 6 L8.5 7.5 M7 8 L7 11.5 M3 9.5 L4.5 10.5 M11 9.5 L9.5 10.5" strokeLinecap="round" />
+                        <circle cx="7" cy="7" r="6" />
+                        <line x1="2" y1="2" x2="12" y2="12" strokeWidth="2" />
+                      </svg>
                     </div>
                   ) : (
-                    <span>🌱</span>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M7 2 L7 6 M5 3.5 L6 5.5 M9 3.5 L8 5.5 M4 6 L5.5 7.5 M10 6 L8.5 7.5 M7 8 L7 11.5 M3 9.5 L4.5 10.5 M11 9.5 L9.5 10.5" strokeLinecap="round" />
+                    </svg>
                   )}
                   {field.turfType}
                 </span>
