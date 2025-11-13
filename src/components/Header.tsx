@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { SignIn, SignOut, House } from '@phosphor-icons/react'
+import { SignIn, SignOut, Crown, Detective } from '@phosphor-icons/react'
 import LoginDialog from './LoginDialog'
 import { User } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
@@ -33,6 +33,16 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
     }
   }
 
+  const getRoleIcon = (role: string) => {
+    if (role === 'admin') {
+      return <Crown size={16} weight="fill" className="text-yellow-400" />
+    }
+    if (role === 'mgmt') {
+      return <Detective size={16} weight="fill" className="text-blue-400" />
+    }
+    return null
+  }
+
   return (
     <>
       <header className="bg-gradient-to-r from-primary via-accent to-secondary text-primary-foreground shadow-lg sticky top-0 z-50">
@@ -44,26 +54,21 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
             </div>
             
             <div className="flex items-center gap-3">
-              {currentView === 'office' && currentUser && hasAccess(currentUser) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onNavigate('dashboard')}
-                  className="text-primary-foreground hover:bg-primary-foreground/10"
-                >
-                  <House className="mr-2" size={18} />
-                  Dashboard
-                </Button>
-              )}
-              
               {currentUser ? (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-9 w-9 border-2 border-primary-foreground/20">
-                      <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground font-semibold">
-                        {currentUser.username.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-9 w-9 border-2 border-primary-foreground/20">
+                        <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground font-semibold">
+                          {currentUser.username.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {getRoleIcon(currentUser.role) && (
+                        <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
+                          {getRoleIcon(currentUser.role)}
+                        </div>
+                      )}
+                    </div>
                     <span className="text-sm font-medium hidden sm:inline">{currentUser.username}</span>
                   </div>
                   <Button
@@ -72,7 +77,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                     onClick={onLogout}
                     className="text-primary-foreground hover:bg-primary-foreground/10"
                   >
-                    <SignOut size={18} />
+                    <SignOut size={18} weight="bold" />
                   </Button>
                 </div>
               ) : (
@@ -82,7 +87,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   onClick={handleOfficeClick}
                   className="text-primary-foreground hover:bg-primary-foreground/10"
                 >
-                  <SignIn className="mr-2" size={18} />
+                  <SignIn className="mr-2" size={18} weight="bold" />
                   Office
                 </Button>
               )}

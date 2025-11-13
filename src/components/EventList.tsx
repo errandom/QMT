@@ -3,6 +3,7 @@ import { Event, SportType, Team, Field, Site } from '@/lib/types'
 import EventCard from './EventCard'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CalendarBlank } from '@phosphor-icons/react'
+import { useEffect } from 'react'
 
 interface EventListProps {
   sportFilter: 'All Sports' | SportType
@@ -10,10 +11,32 @@ interface EventListProps {
 }
 
 export default function EventList({ sportFilter, teamFilter }: EventListProps) {
-  const [events = []] = useKV<Event[]>('events', [])
+  const [events = [], setEvents] = useKV<Event[]>('events', [])
   const [teams = []] = useKV<Team[]>('teams', [])
   const [fields = []] = useKV<Field[]>('fields', [])
   const [sites = []] = useKV<Site[]>('sites', [])
+
+  useEffect(() => {
+    const now = new Date()
+    let needsUpdate = false
+    
+    const updatedEvents = events.map(event => {
+      if (event.status === 'Planned') {
+        const eventDate = new Date(event.date + ' ' + event.startTime)
+        const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+        
+        if (hoursUntilEvent < 24 && hoursUntilEvent > 0) {
+          needsUpdate = true
+          return { ...event, status: 'Confirmed' as const }
+        }
+      }
+      return event
+    })
+    
+    if (needsUpdate) {
+      setEvents(updatedEvents)
+    }
+  }, [events, setEvents])
 
   const filteredEvents = events.filter((event) => {
     if (event.status === 'Cancelled') return false

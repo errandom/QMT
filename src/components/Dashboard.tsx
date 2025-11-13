@@ -56,98 +56,96 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
           <Tabs value={sportFilter} onValueChange={(v) => setSportFilter(v as any)} className="w-full">
             <TabsList className="w-full grid grid-cols-3 h-14">
               <TabsTrigger value="All Sports" className="h-full">
-                <FootballHelmetIcon className="mr-2" size={18} />
-                <Football className="mr-2" size={18} />
+                <FootballHelmetIcon className="mr-2" size={20} />
+                <Football className="mr-2" size={20} weight="duotone" />
                 All Sports
               </TabsTrigger>
               <TabsTrigger value="Tackle Football" className="h-full">
-                <FootballHelmetIcon className="mr-2" size={18} />
+                <FootballHelmetIcon className="mr-2" size={20} />
                 Tackle Football
               </TabsTrigger>
               <TabsTrigger value="Flag Football" className="h-full">
-                <Football className="mr-2" size={18} />
+                <Football className="mr-2" size={20} weight="duotone" />
                 Flag Football
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
-                    <>
-                      <SelectItem value="divider" disabled className="text-xs font-semibold text-muted-foreground">
-                        {sportFilter}
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-full sm:w-[240px] h-10">
+                <SelectValue placeholder="All Teams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
+                  <>
+                    <SelectItem value="divider" disabled className="text-xs font-semibold text-muted-foreground">
+                      {sportFilter}
+                    </SelectItem>
+                    {filteredTeams.map((team: any) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
                       </SelectItem>
-                      {filteredTeams.map((team: any) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
+                    ))}
+                  </>
+                )}
+                {sportFilter === 'All Sports' && (
+                  <>
+                    {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').length > 0 && (
+                      <>
+                        <SelectItem value="tackle-divider" disabled className="text-xs font-semibold text-muted-foreground">
+                          Tackle Football
                         </SelectItem>
-                      ))}
-                    </>
-                  )}
-                  {sportFilter === 'All Sports' && (
-                    <>
-                      {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').length > 0 && (
-                        <>
-                          <SelectItem value="tackle-divider" disabled className="text-xs font-semibold text-muted-foreground">
-                            Tackle Football
+                        {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
                           </SelectItem>
-                          {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
-                            <SelectItem key={team.id} value={team.id}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                      {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').length > 0 && (
-                        <>
-                          <SelectItem value="flag-divider" disabled className="text-xs font-semibold text-muted-foreground">
-                            Flag Football
+                        ))}
+                      </>
+                    )}
+                    {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').length > 0 && (
+                      <>
+                        <SelectItem value="flag-divider" disabled className="text-xs font-semibold text-muted-foreground">
+                          Flag Football
+                        </SelectItem>
+                        {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
                           </SelectItem>
-                          {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
-                            <SelectItem key={team.id} value={team.id}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
 
-              <div className="flex gap-2">
-                <Button onClick={() => setShowFacilityDialog(true)} variant="outline" size="sm" className="flex-1 sm:flex-none">
-                  <Plus className="mr-2" size={16} />
-                  <MapPin className="mr-2" size={16} />
-                  Facility
-                </Button>
-                <Button onClick={() => setShowEquipmentDialog(true)} variant="outline" size="sm" className="flex-1 sm:flex-none">
-                  <Plus className="mr-2" size={16} />
-                  <Cube className="mr-2" size={16} />
-                  Equipment
-                </Button>
-                <Button onClick={handleOfficeClick} variant="outline" size="sm" className="flex-1 sm:flex-none">
-                  <Briefcase className="mr-2" size={16} />
-                  Operations Office
-                </Button>
-              </div>
+            <div className="flex gap-2 flex-1 sm:flex-none">
+              <Button onClick={() => setShowFacilityDialog(true)} variant="outline" className="flex-1 h-10 sm:min-w-[140px]">
+                <Plus className="mr-2" size={18} weight="bold" />
+                <MapPin className="mr-2" size={18} weight="duotone" />
+                Facility
+              </Button>
+              <Button onClick={() => setShowEquipmentDialog(true)} variant="outline" className="flex-1 h-10 sm:min-w-[140px]">
+                <Plus className="mr-2" size={18} weight="bold" />
+                <Cube className="mr-2" size={18} weight="duotone" />
+                Equipment
+              </Button>
+              <Button onClick={handleOfficeClick} variant="outline" className="flex-1 h-10 sm:min-w-[160px]">
+                <Briefcase className="mr-2" size={18} weight="duotone" />
+                Office
+              </Button>
             </div>
 
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full sm:w-auto">
-              <TabsList className="w-full sm:w-auto">
-                <TabsTrigger value="list" className="flex-1 sm:flex-none">
-                  <ListBullets className="mr-2" size={16} />
+              <TabsList className="w-full sm:w-auto h-10">
+                <TabsTrigger value="list" className="flex-1 sm:flex-none h-9">
+                  <ListBullets className="mr-2" size={18} weight="duotone" />
                   List
                 </TabsTrigger>
-                <TabsTrigger value="schedule" className="flex-1 sm:flex-none">
-                  <Calendar className="mr-2" size={16} />
+                <TabsTrigger value="schedule" className="flex-1 sm:flex-none h-9">
+                  <Calendar className="mr-2" size={18} weight="duotone" />
                   Schedule
                 </TabsTrigger>
               </TabsList>

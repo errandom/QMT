@@ -123,7 +123,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <Prohibit size={16} />
+                        <Prohibit size={18} weight="duotone" />
                         Cancellation Request - {request.eventTitle}
                       </CardTitle>
                       <Badge variant={
@@ -140,7 +140,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                           variant="default"
                           onClick={() => handleApproveCancellation(request.id)}
                         >
-                          <Check className="mr-1" size={14} />
+                          <Check className="mr-1" size={16} weight="bold" />
                           Approve
                         </Button>
                         <Button
@@ -148,7 +148,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                           variant="destructive"
                           onClick={() => handleRejectCancellation(request.id)}
                         >
-                          <X className="mr-1" size={14} />
+                          <X className="mr-1" size={16} weight="bold" />
                           Reject
                         </Button>
                       </div>
@@ -202,7 +202,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <ClipboardText size={16} />
+                        <ClipboardText size={18} weight="duotone" />
                         {request.eventType} Request
                       </CardTitle>
                       <Badge variant={
@@ -219,7 +219,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                           variant="default"
                           onClick={() => handleApproveFacility(request.id)}
                         >
-                          <Check className="mr-1" size={14} />
+                          <Check className="mr-1" size={16} weight="bold" />
                           Approve
                         </Button>
                         <Button
@@ -227,7 +227,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                           variant="destructive"
                           onClick={() => handleRejectFacility(request.id)}
                         >
-                          <X className="mr-1" size={14} />
+                          <X className="mr-1" size={16} weight="bold" />
                           Reject
                         </Button>
                       </div>
@@ -293,7 +293,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <ClipboardText size={16} />
+                        <ClipboardText size={18} weight="duotone" />
                         Equipment Request
                       </CardTitle>
                       <Badge variant={
@@ -310,7 +310,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                           variant="default"
                           onClick={() => handleApproveEquipment(request.id)}
                         >
-                          <Check className="mr-1" size={14} />
+                          <Check className="mr-1" size={16} weight="bold" />
                           Approve
                         </Button>
                         <Button
@@ -318,7 +318,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                           variant="destructive"
                           onClick={() => handleRejectEquipment(request.id)}
                         >
-                          <X className="mr-1" size={14} />
+                          <X className="mr-1" size={16} weight="bold" />
                           Reject
                         </Button>
                       </div>

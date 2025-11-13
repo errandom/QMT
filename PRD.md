@@ -48,11 +48,18 @@ A comprehensive facility and event management system for the Zurich Renegades Am
 - **Success criteria**: Time blocks align correctly, events don't overlap visually, Monday-Friday shown, current planning period displayed
 
 ### Event Cancellation Request
-- **Functionality**: Button on events >36hrs in future to request cancellation with detailed form
+- **Functionality**: Button on events >36hrs in future (status Confirmed or Planned) to request cancellation with detailed form
 - **Purpose**: Allow stakeholders to formally request event cancellation with proper justification
 - **Trigger**: Click "Request Cancellation" on event card
 - **Progression**: Button click → Dialog opens → User enters name, phone, justification → Submit → Request logged → Appears in Operations Office
-- **Success criteria**: Button only appears when >36hrs out and event not already cancelled, validates required fields, creates reviewable request in Operations Office
+- **Success criteria**: Button only appears when >36hrs out and event status is Confirmed or Planned, validates required fields, creates reviewable request in Operations Office
+
+### Event Status Auto-Update
+- **Functionality**: Automatically updates events from Planned to Confirmed status when <24hrs from start
+- **Purpose**: Ensure no events remain in Planned status close to start time
+- **Trigger**: System checks on page load/refresh
+- **Progression**: Event list loads → System checks each Planned event → If <24hrs away → Status changes to Confirmed → Display updates
+- **Success criteria**: No Planned events exist within 24hrs of start time, status updates persist across sessions
 
 ### Authentication & Authorization
 - **Functionality**: Login dialog with role-based access (admin/mgmt only for Operations Office)

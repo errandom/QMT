@@ -61,7 +61,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const eventDate = new Date(event.date + ' ' + event.startTime)
   const now = new Date()
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-  const canRequestCancellation = hoursUntilEvent > 36
+  const canRequestCancellation = hoursUntilEvent > 36 && (event.status === 'Confirmed' || event.status === 'Planned')
 
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
@@ -73,11 +73,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
-              {canRequestCancellation && event.status !== 'Cancelled' && (
+              {canRequestCancellation && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-7 px-3 text-xs border-2 border-[oklch(0.55_0.22_25)] text-[oklch(0.55_0.22_25)] hover:bg-[oklch(0.55_0.22_25)] hover:text-white transition-colors ml-auto"
+                  className="h-7 px-3 text-xs border-2 border-[oklch(0.55_0.22_25)] text-[oklch(0.55_0.22_25)] hover:bg-[oklch(0.55_0.22_25)] hover:text-white transition-colors"
                   onClick={() => setCancellationDialogOpen(true)}
                 >
                   <Prohibit className="mr-1.5" size={14} weight="bold" />
@@ -103,12 +103,12 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       
       <CardContent className="space-y-2.5 pt-0">
         <div className="flex items-center gap-2 text-sm">
-          <CalendarBlank className="text-muted-foreground" size={16} />
+          <CalendarBlank className="text-muted-foreground" size={18} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
 
         <div className="flex items-center gap-2 text-sm">
-          <Clock className="text-muted-foreground" size={16} />
+          <Clock className="text-muted-foreground" size={18} weight="duotone" />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
@@ -117,7 +117,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <Separator />
             <div className="space-y-1.5">
               <div className="flex items-start gap-2 text-sm">
-                <MapPin className="text-muted-foreground mt-0.5" size={16} />
+                <MapPin className="text-muted-foreground mt-0.5" size={18} weight="duotone" />
                 <div>
                   <div className="font-semibold">{site.name} - {field.name}</div>
                   <div className="text-muted-foreground text-xs">
@@ -129,37 +129,37 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div className="flex flex-wrap gap-2 ml-6">
                 {site.amenities.parking && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <CarSimple size={14} />
+                    <CarSimple size={16} weight="duotone" />
                     <span>Parking</span>
                   </div>
                 )}
                 {site.amenities.toilets && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Toilet size={14} />
+                    <Toilet size={16} weight="duotone" />
                     <span>Toilets</span>
                   </div>
                 )}
                 {site.amenities.lockerRooms && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Lockers size={14} />
+                    <Lockers size={16} weight="duotone" />
                     <span>Lockers</span>
                   </div>
                 )}
                 {site.amenities.shower && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Shower size={14} />
+                    <Shower size={16} weight="duotone" />
                     <span>Shower</span>
                   </div>
                 )}
                 {site.amenities.restaurant && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <ForkKnife size={14} />
+                    <ForkKnife size={16} weight="duotone" />
                     <span>Restaurant</span>
                   </div>
                 )}
                 {site.amenities.equipmentStash && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Package size={14} />
+                    <Package size={16} weight="duotone" />
                     <span>Equipment</span>
                   </div>
                 )}
@@ -168,35 +168,35 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div className="flex flex-wrap gap-2 ml-6 text-xs">
                 <span className="flex items-center gap-1">
                   {field.turfType === 'Artificial Turf' ? (
-                    <div className="relative inline-flex items-center justify-center" style={{ width: '14px', height: '14px' }}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M7 2 L7 6 M5 3.5 L6 5.5 M9 3.5 L8 5.5 M4 6 L5.5 7.5 M10 6 L8.5 7.5 M7 8 L7 11.5 M3 9.5 L4.5 10.5 M11 9.5 L9.5 10.5" strokeLinecap="round" />
-                        <circle cx="7" cy="7" r="6" />
-                        <line x1="2" y1="2" x2="12" y2="12" strokeWidth="2" />
+                    <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
+                        <circle cx="8" cy="8" r="6.5" />
+                        <line x1="2" y1="2" x2="14" y2="14" strokeWidth="2" />
                       </svg>
                     </div>
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M7 2 L7 6 M5 3.5 L6 5.5 M9 3.5 L8 5.5 M4 6 L5.5 7.5 M10 6 L8.5 7.5 M7 8 L7 11.5 M3 9.5 L4.5 10.5 M11 9.5 L9.5 10.5" strokeLinecap="round" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
                     </svg>
                   )}
                   {field.turfType}
                 </span>
                 {field.hasLights && (
                   <span className="flex items-center gap-1">
-                    <Lightbulb size={14} />
+                    <Lightbulb size={16} weight="duotone" />
                     Lights
                   </span>
                 )}
                 <span className="flex items-center gap-1">
                   {field.fieldSize === 'Full' ? (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="2" y="3" width="10" height="8" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="3" width="12" height="10" />
                     </svg>
                   ) : field.fieldSize === 'Shared' ? (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="2" y="3" width="10" height="8" />
-                      <rect x="2" y="3" width="5" height="8" fill="currentColor" opacity="0.3" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="3" width="12" height="10" />
+                      <rect x="2" y="3" width="6" height="10" fill="currentColor" opacity="0.3" />
                     </svg>
                   ) : (
                     <span>{field.fieldSize}</span>
@@ -214,7 +214,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <Separator />
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Users className="text-muted-foreground" size={16} />
+                <Users className="text-muted-foreground" size={18} weight="duotone" />
                 <span>Teams</span>
               </div>
               <div className="ml-6 space-y-1.5">
