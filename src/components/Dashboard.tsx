@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarBlank, Cube, MapPin, ListBullets, Calendar, Football, Plus, Briefcase } from '@phosphor-icons/react'
+import { Cube, MapPin, ListBullets, Calendar, Football, Plus, Briefcase } from '@phosphor-icons/react'
 import EventList from './EventList'
 import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
@@ -49,36 +49,52 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     return team.isActive && team.sportType === sportFilter
   })
 
+  const sportOptions = [
+    { value: 'All Sports', label: 'All Sports', icon: <Football size={28} weight="duotone" />, iconAlt: <FootballHelmetIcon size={28} /> },
+    { value: 'Tackle Football', label: 'Tackle Football', icon: <FootballHelmetIcon size={28} /> },
+    { value: 'Flag Football', label: 'Flag Football', icon: <Football size={28} weight="duotone" /> }
+  ]
+
+  const activeIndex = sportOptions.findIndex(opt => opt.value === sportFilter)
+
   return (
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <Tabs value={sportFilter} onValueChange={(v) => setSportFilter(v as any)} className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-20 gap-3 bg-transparent p-0">
-              <TabsTrigger 
-                value="All Sports" 
-                className="h-full text-base font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-500 data-[state=active]:via-purple-600 data-[state=active]:to-purple-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 bg-gradient-to-br from-muted/80 to-muted hover:from-muted hover:to-muted/90 transition-all duration-200 data-[state=active]:scale-[1.02] backdrop-blur-sm"
-              >
-                <FootballHelmetIcon className="mr-2" size={28} />
-                <Football className="mr-2" size={28} weight="duotone" />
-                All Sports
-              </TabsTrigger>
-              <TabsTrigger 
-                value="Tackle Football" 
-                className="h-full text-base font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:via-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 bg-gradient-to-br from-muted/80 to-muted hover:from-muted hover:to-muted/90 transition-all duration-200 data-[state=active]:scale-[1.02] backdrop-blur-sm"
-              >
-                <FootballHelmetIcon className="mr-2" size={28} />
-                Tackle Football
-              </TabsTrigger>
-              <TabsTrigger 
-                value="Flag Football" 
-                className="h-full text-base font-semibold data-[state=active]:bg-gradient-to-br data-[state=active]:from-emerald-500 data-[state=active]:via-emerald-600 data-[state=active]:to-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-500/50 bg-gradient-to-br from-muted/80 to-muted hover:from-muted hover:to-muted/90 transition-all duration-200 data-[state=active]:scale-[1.02] backdrop-blur-sm"
-              >
-                <Football className="mr-2" size={28} weight="duotone" />
-                Flag Football
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="relative w-full h-24 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-1.5 shadow-2xl shadow-purple-500/40">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-60" style={{ mixBlendMode: 'overlay' }} />
+            <div className="absolute inset-0 rounded-2xl backdrop-blur-3xl bg-gradient-to-br from-indigo-500/30 via-purple-500/30 to-pink-500/30" />
+            
+            <div className="relative h-full rounded-xl bg-gradient-to-br from-slate-900/40 to-slate-900/60 backdrop-blur-sm p-1.5">
+              <div className="relative grid grid-cols-3 gap-2 h-full">
+                <div 
+                  className="absolute top-0 bottom-0 bg-white rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  style={{
+                    left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
+                    width: 'calc(33.333% - 0.333rem)',
+                  }}
+                />
+                
+                {sportOptions.map((option, index) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setSportFilter(option.value as any)}
+                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
+                      sportFilter === option.value 
+                        ? 'text-slate-900' 
+                        : 'text-white/90 hover:text-white hover:scale-105'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {option.iconAlt || option.icon}
+                      {option.iconAlt && option.icon}
+                    </div>
+                    <span className="text-sm font-bold tracking-tight">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
