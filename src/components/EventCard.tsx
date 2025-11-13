@@ -73,14 +73,14 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
-              {canRequestCancellation && (
+              {canRequestCancellation && event.status !== 'Cancelled' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-6 px-3 text-xs border-2 border-[oklch(0.55_0.22_25)] text-[oklch(0.55_0.22_25)] hover:bg-[oklch(0.55_0.22_25)] hover:text-white ml-auto"
+                  className="h-7 px-3 text-xs border-2 border-[oklch(0.55_0.22_25)] text-[oklch(0.55_0.22_25)] hover:bg-[oklch(0.55_0.22_25)] hover:text-white transition-colors ml-auto"
                   onClick={() => setCancellationDialogOpen(true)}
                 >
-                  <Prohibit className="mr-1.5" size={14} />
+                  <Prohibit className="mr-1.5" size={14} weight="bold" />
                   Request Cancellation
                 </Button>
               )}
