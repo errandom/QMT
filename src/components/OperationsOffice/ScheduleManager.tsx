@@ -28,7 +28,7 @@ export default function ScheduleManager() {
   const [events = [], setEvents] = useKV<Event[]>('events', [])
   const [teams = []] = useKV<Team[]>('teams', [])
   const [fields = []] = useKV<Field[]>('fields', [])
-  const [sites = []] = useKV('sites', [])
+  const [sites = []] = useKV<any[]>('sites', [])
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
 
@@ -51,7 +51,7 @@ export default function ScheduleManager() {
 
   const activeTeams = teams.filter(t => t.isActive)
   const activeFields = fields.filter((f: any) => {
-    const site = sites.find((s: any) => s.id === f.siteId)
+    const site = (sites || []).find((s: any) => s.id === f.siteId)
     return f.isActive && site?.isActive
   })
 
@@ -256,7 +256,7 @@ export default function ScheduleManager() {
                 <SelectContent>
                   {activeFields.map((field: any) => (
                     <SelectItem key={field.id} value={field.id}>
-                      {field.name} ({sites.find((s: any) => s.id === field.siteId)?.name})
+                      {field.name} ({(sites || []).find((s: any) => s.id === field.siteId)?.name})
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 
 export default function SitesManager() {
   const [sites = [], setSites] = useKV<Site[]>('sites', [])
-  const [fields = [], setFields] = useKV('fields', [])
+  const [fields = [], setFields] = useKV<any[]>('fields', [])
   const [showDialog, setShowDialog] = useState(false)
   const [editingSite, setEditingSite] = useState<Site | null>(null)
 
@@ -79,12 +79,12 @@ export default function SitesManager() {
     
     if (editingSite) {
       setSites((current) =>
-        current.map(s => s.id === editingSite.id ? { ...formData, id: editingSite.id } as Site : s)
+        (current || []).map(s => s.id === editingSite.id ? { ...formData, id: editingSite.id } as Site : s)
       )
       
       if (!formData.isActive) {
         setFields((current: any) =>
-          current.map((f: any) => 
+          (current || []).map((f: any) => 
             f.siteId === editingSite.id ? { ...f, isActive: false } : f
           )
         )
@@ -97,7 +97,7 @@ export default function SitesManager() {
         id: `site-${Date.now()}`
       } as Site
       
-      setSites((current) => [...current, newSite])
+      setSites((current) => [...(current || []), newSite])
       toast.success('Site created successfully')
     }
     

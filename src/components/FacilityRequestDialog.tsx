@@ -67,7 +67,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
       createdAt: new Date().toISOString()
     }
 
-    setRequests((current) => [...current, newRequest])
+    setRequests((current) => [...(current || []), newRequest])
     toast.success('Facility request submitted successfully')
     
     setName('')
@@ -91,7 +91,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
     )
   }
 
-  const activeTeams = teams.filter(t => t.isActive)
+  const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

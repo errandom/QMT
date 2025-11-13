@@ -15,7 +15,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [facilityRequests = [], setFacilityRequests] = useKV<FacilityRequest[]>('facility-requests', [])
   const [equipmentRequests = [], setEquipmentRequests] = useKV<EquipmentRequest[]>('equipment-requests', [])
   const [cancellationRequests = [], setCancellationRequests] = useKV<CancellationRequest[]>('cancellation-requests', [])
-  const [teams = []] = useKV('teams', [])
+  const [teams = []] = useKV<any[]>('teams', [])
 
   const handleApproveFacility = (requestId: string) => {
     setFacilityRequests((current = []) =>

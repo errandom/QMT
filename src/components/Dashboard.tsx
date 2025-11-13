@@ -26,7 +26,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
   const [showFacilityDialog, setShowFacilityDialog] = useState(false)
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
-  const [teams] = useKV('teams', [])
+  const [teams] = useKV<any[]>('teams', [])
 
   const handleOfficeClick = () => {
     if (currentUser && hasAccess(currentUser)) {
@@ -44,7 +44,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     }
   }
 
-  const filteredTeams = teams.filter((team: any) => {
+  const filteredTeams = (teams || []).filter((team: any) => {
     if (sportFilter === 'All Sports') return team.isActive
     return team.isActive && team.sportType === sportFilter
   })
@@ -93,24 +93,24 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   )}
                   {sportFilter === 'All Sports' && (
                     <>
-                      {teams.filter((t: any) => t.isActive && t.sportType === 'Tackle Football').length > 0 && (
+                      {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').length > 0 && (
                         <>
                           <SelectItem value="tackle-divider" disabled className="text-xs font-semibold text-muted-foreground">
                             Tackle Football
                           </SelectItem>
-                          {teams.filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
+                          {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
                             <SelectItem key={team.id} value={team.id}>
                               {team.name}
                             </SelectItem>
                           ))}
                         </>
                       )}
-                      {teams.filter((t: any) => t.isActive && t.sportType === 'Flag Football').length > 0 && (
+                      {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').length > 0 && (
                         <>
                           <SelectItem value="flag-divider" disabled className="text-xs font-semibold text-muted-foreground">
                             Flag Football
                           </SelectItem>
-                          {teams.filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
+                          {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
                             <SelectItem key={team.id} value={team.id}>
                               {team.name}
                             </SelectItem>

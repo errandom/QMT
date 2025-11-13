@@ -46,7 +46,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
       createdAt: new Date().toISOString()
     }
 
-    setRequests((current) => [...current, newRequest])
+    setRequests((current) => [...(current || []), newRequest])
     toast.success('Equipment request submitted successfully')
     
     setName('')
@@ -66,7 +66,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
     )
   }
 
-  const activeTeams = teams.filter(t => t.isActive)
+  const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
