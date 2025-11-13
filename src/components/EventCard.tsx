@@ -14,8 +14,7 @@ import {
   Shower,
   ForkKnife,
   Package,
-  Lightning,
-  Plant
+  Lightbulb
 } from '@phosphor-icons/react'
 import { Event, Team, Field, Site } from '@/lib/types'
 import { toast } from 'sonner'
@@ -142,16 +141,39 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
               <div className="flex flex-wrap gap-2 ml-6 text-xs">
                 <span className="flex items-center gap-1">
-                  <Plant size={14} />
+                  {field.turfType === 'Artificial Turf' ? (
+                    <div className="relative">
+                      <Lightbulb size={14} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-[18px] h-[1.5px] bg-current rotate-45" />
+                      </div>
+                    </div>
+                  ) : (
+                    <span>🌱</span>
+                  )}
                   {field.turfType}
                 </span>
                 {field.hasLights && (
                   <span className="flex items-center gap-1">
-                    <Lightning size={14} />
+                    <Lightbulb size={14} />
                     Lights
                   </span>
                 )}
-                <span>{field.fieldSize} Field</span>
+                <span className="flex items-center gap-1">
+                  {field.fieldSize === 'Full' ? (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="3" width="10" height="8" />
+                    </svg>
+                  ) : field.fieldSize === 'Shared' ? (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="3" width="10" height="8" />
+                      <rect x="2" y="3" width="5" height="8" fill="currentColor" opacity="0.3" />
+                    </svg>
+                  ) : (
+                    <span>{field.fieldSize}</span>
+                  )}
+                  {field.fieldSize} Field
+                </span>
                 {field.capacity && <span>Capacity: {field.capacity}</span>}
               </div>
             </div>
