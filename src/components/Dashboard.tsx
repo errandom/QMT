@@ -7,7 +7,6 @@ import EventList from './EventList'
 import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
 import EquipmentRequestDialog from './EquipmentRequestDialog'
-import FootballHelmetIcon from './FootballHelmetIcon'
 import { User, SportType } from '@/lib/types'
 import { useKV } from '@github/spark/hooks'
 
@@ -40,7 +39,7 @@ export default function Dashboard({ currentUser }: DashboardProps) {
                 All Sports
               </TabsTrigger>
               <TabsTrigger value="Tackle Football" className="h-full">
-                <FootballHelmetIcon className="mr-2" size={18} />
+                <Football className="mr-2" size={18} />
                 Tackle Football
               </TabsTrigger>
               <TabsTrigger value="Flag Football" className="h-full">
