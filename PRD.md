@@ -130,24 +130,24 @@ A comprehensive facility and event management system for the Zurich Renegades Am
 
 ## Design Direction
 
-The design should evoke professionalism and operational precision while maintaining approachability—this is a sports club, not a military operation. The glossy, modern aesthetic should feel like premium sports management software with a Swiss sensibility: clean, precise, and efficient. The navy-to-light-blue gradient represents the club's identity and Zurich's connection to water and sky, creating visual interest without distraction. The interface should balance information density (many data points per event) with breathing room (not overwhelming), using cards and clear hierarchy. Think modern SaaS dashboard meets sports team management.
+The design should evoke professionalism and operational precision with a sophisticated, muted aesthetic—think premium sports management software with executive restraint. The slate gray palette conveys Swiss precision and understated authority without unnecessary vibrancy. The interface balances information density (many data points per event) with breathing room through clean cards, subtle shadows, and careful hierarchy. The sports toggle exemplifies this approach: a refined slate gradient background with a crisp white indicator that slides smoothly—elegant, functional, and uncluttered. Think Apple's design sensibility applied to sports operations.
 
 ## Color Selection
 
-Analogous color scheme centered on navy blue, transitioning through lighter blues to represent Zurich and water/sky, creating a cohesive, professional sports brand identity.
+Monochromatic slate palette with minimal chroma, creating a sophisticated, professional appearance that prioritizes content over decoration.
 
-- **Primary Color**: Navy Blue (oklch(0.35 0.08 250)) - Conveys authority, professionalism, and team identity; used for primary actions and header
+- **Primary Color**: Charcoal Slate (oklch(0.45 0.01 250)) - Conveys quiet authority and professionalism; used for primary actions and text
 - **Secondary Colors**: 
-  - Bright Azure (oklch(0.65 0.15 240)) - Supporting interactive elements, represents Zurich's lake
-  - Light Sky Blue (oklch(0.85 0.08 240)) - Subtle backgrounds, represents openness and clarity
-- **Accent Color**: Vivid Blue (oklch(0.55 0.18 245)) - Highlights, CTAs, focus states, draws attention to key actions
+  - Medium Slate (oklch(0.50 0.01 250)) - Supporting interactive elements and secondary actions
+  - Light Slate (oklch(0.90 0.01 250)) - Muted backgrounds for subtle distinction
+- **Accent Color**: Slate Blue (oklch(0.48 0.01 250)) - Subtle highlights that integrate with the monochrome theme
 - **Foreground/Background Pairings**:
-  - Background (White oklch(0.98 0 0)): Navy foreground (oklch(0.25 0.08 250)) - Ratio 10.2:1 ✓
-  - Card (Light Gray oklch(0.97 0.005 240)): Navy foreground (oklch(0.25 0.08 250)) - Ratio 9.8:1 ✓
-  - Primary (Navy oklch(0.35 0.08 250)): White text (oklch(0.98 0 0)) - Ratio 8.5:1 ✓
-  - Secondary (Bright Azure oklch(0.65 0.15 240)): Navy text (oklch(0.25 0.08 250)) - Ratio 5.2:1 ✓
-  - Accent (Vivid Blue oklch(0.55 0.18 245)): White text (oklch(0.98 0 0)) - Ratio 5.8:1 ✓
-  - Muted (Light Sky Blue oklch(0.85 0.08 240)): Navy text (oklch(0.25 0.08 250)) - Ratio 6.5:1 ✓
+  - Background (Near White oklch(0.98 0.005 250)): Charcoal foreground (oklch(0.30 0.02 250)) - Ratio 10.8:1 ✓
+  - Card (White oklch(0.99 0.002 250)): Charcoal foreground (oklch(0.30 0.02 250)) - Ratio 11.2:1 ✓
+  - Primary (Charcoal oklch(0.45 0.01 250)): White text (oklch(0.98 0 0)) - Ratio 7.2:1 ✓
+  - Secondary (Medium Slate oklch(0.50 0.01 250)): White text (oklch(0.98 0 0)) - Ratio 6.5:1 ✓
+  - Accent (Slate Blue oklch(0.48 0.01 250)): White text (oklch(0.98 0 0)) - Ratio 6.8:1 ✓
+  - Muted (Light Slate oklch(0.90 0.01 250)): Charcoal text (oklch(0.50 0.01 250)) - Ratio 5.8:1 ✓
 
 ## Font Selection
 

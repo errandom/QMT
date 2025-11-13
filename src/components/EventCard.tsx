@@ -32,10 +32,10 @@ interface EventCardProps {
 }
 
 const eventTypeColors = {
-  'Game': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent',
-  'Practice': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent',
-  'Meeting': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent',
-  'Other': 'border-2 border-[oklch(0.35_0.08_250)] text-[oklch(0.35_0.08_250)] bg-transparent'
+  'Game': 'border-2 border-slate-700 text-slate-700 bg-transparent',
+  'Practice': 'border-2 border-slate-700 text-slate-700 bg-transparent',
+  'Meeting': 'border-2 border-slate-700 text-slate-700 bg-transparent',
+  'Other': 'border-2 border-slate-700 text-slate-700 bg-transparent'
 }
 
 const eventTypeIcons: Record<EventType, React.ReactNode> = {
@@ -77,7 +77,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-7 px-3 text-xs border-2 border-[oklch(0.55_0.22_25)] text-[oklch(0.55_0.22_25)] hover:bg-[oklch(0.55_0.22_25)] hover:text-white transition-colors"
+                  className="h-7 px-3 text-xs border-2 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
                   onClick={() => setCancellationDialogOpen(true)}
                 >
                   <Prohibit className="mr-1.5" size={14} weight="bold" />
@@ -86,7 +86,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="text-[oklch(0.35_0.08_250)]">
+              <div className="text-slate-700">
                 {eventTypeIcons[event.eventType]}
               </div>
               <CardTitle className="text-lg">{event.title}</CardTitle>

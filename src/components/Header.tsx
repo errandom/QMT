@@ -53,12 +53,12 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
 
   return (
     <>
-      <header className="bg-gradient-to-r from-primary via-accent to-secondary text-primary-foreground shadow-lg sticky top-0 z-50">
+      <header className="bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 text-white shadow-lg shadow-slate-800/20 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">QMT | Operations</h1>
-              <p className="text-sm text-primary-foreground/90 tracking-wide">ZURICH RENEGADES FOOTBALL</p>
+              <p className="text-sm text-white/90 tracking-wide">ZURICH RENEGADES FOOTBALL</p>
             </div>
             
             <div className="flex items-center gap-3">
@@ -72,7 +72,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                     variant="ghost"
                     size="sm"
                     onClick={onLogout}
-                    className="text-primary-foreground hover:bg-primary-foreground/10"
+                    className="text-white hover:bg-white/10"
                   >
                     <SignOut size={18} weight="bold" />
                   </Button>
@@ -82,7 +82,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   variant="ghost"
                   size="sm"
                   onClick={handleOfficeClick}
-                  className="text-primary-foreground hover:bg-primary-foreground/10"
+                  className="text-white hover:bg-white/10"
                 >
                   <SignIn className="mr-2" size={18} weight="bold" />
                   Office
