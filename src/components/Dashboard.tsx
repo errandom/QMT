@@ -32,17 +32,17 @@ export default function Dashboard({ currentUser }: DashboardProps) {
       <div className="space-y-6">
         <div className="space-y-4">
           <Tabs value={sportFilter} onValueChange={(v) => setSportFilter(v as any)} className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="All Sports">
+            <TabsList className="w-full grid grid-cols-3 h-14">
+              <TabsTrigger value="All Sports" className="h-full">
                 <Square className="mr-2" size={18} />
                 <Football className="mr-2" size={18} />
                 All Sports
               </TabsTrigger>
-              <TabsTrigger value="Tackle Football">
+              <TabsTrigger value="Tackle Football" className="h-full">
                 <Square className="mr-2" size={18} />
                 Tackle Football
               </TabsTrigger>
-              <TabsTrigger value="Flag Football">
+              <TabsTrigger value="Flag Football" className="h-full">
                 <Football className="mr-2" size={18} />
                 Flag Football
               </TabsTrigger>

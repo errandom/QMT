@@ -68,10 +68,10 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="space-y-2 flex-1">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex-1">
+            <div className="flex flex-wrap gap-2 mb-2">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
             </div>
@@ -91,7 +91,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2.5 pt-0">
         <div className="flex items-center gap-2 text-sm">
           <CalendarBlank className="text-muted-foreground" size={16} />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -105,7 +105,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         {site && field && (
           <>
             <Separator />
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-start gap-2 text-sm">
                 <MapPin className="text-muted-foreground mt-0.5" size={16} />
                 <div>
@@ -202,12 +202,12 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         {eventTeams.length > 0 && (
           <>
             <Separator />
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Users className="text-muted-foreground" size={16} />
                 <span>Teams</span>
               </div>
-              <div className="ml-6 space-y-2">
+              <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
                   <div key={team.id} className="text-sm">
                     <div className="font-medium">{team.name}</div>
