@@ -76,7 +76,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
           <div className="relative w-full h-24 rounded-2xl glass-card p-1.5">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
-            <div className="relative h-full rounded-xl backdrop-blur-sm p-3 shadow-inner" style={{
+            <div className="relative h-full rounded-xl backdrop-blur-sm p-2 shadow-inner" style={{
               background: '#3e4347'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
@@ -178,15 +178,15 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-[260px] h-10 rounded-md p-1" style={{
+            <div className="relative w-full sm:w-[260px] h-10 rounded-md p-0.5" style={{
               background: '#001f3f'
             }}>
               <div className="relative w-full h-full flex gap-1">
                 <div 
                   className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
-                    left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
-                    width: 'calc(50% - 8px)',
+                    left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
+                    width: 'calc(50% - 4px)',
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
                   }}
