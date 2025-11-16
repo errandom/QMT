@@ -97,15 +97,15 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <button
                     key={option.value}
                     onClick={() => setSportFilter(option.value as any)}
-                    className={`relative z-10 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${
+                    className={`group relative z-10 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'drop-shadow-lg' 
-                        : 'opacity-70 hover:opacity-90 hover:scale-105'
+                        : 'opacity-70 hover:opacity-90'
                     }`}
                     style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                   >
-                    {option.icon}
-                    <span className="text-sm font-bold tracking-tight">{option.label}</span>
+                    <span className="transition-transform group-hover:scale-110 inline-block">{option.icon}</span>
+                    <span className="text-sm font-bold tracking-tight transition-transform group-hover:scale-110 inline-block">{option.label}</span>
                   </button>
                 ))}
               </div>
@@ -163,19 +163,19 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
-                <Plus className="mr-2" size={18} weight="bold" />
-                <MapPin className="mr-2" size={18} weight="duotone" />
-                Facility
+              <Button onClick={() => setShowFacilityDialog(true)} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
+                <Plus className="mr-2 transition-transform group-hover:scale-110" size={18} weight="bold" />
+                <MapPin className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+                <span className="transition-transform group-hover:scale-110 inline-block">Facility</span>
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
-                <Plus className="mr-2" size={18} weight="bold" />
-                <Cube className="mr-2" size={18} weight="duotone" />
-                Equipment
+              <Button onClick={() => setShowEquipmentDialog(true)} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
+                <Plus className="mr-2 transition-transform group-hover:scale-110" size={18} weight="bold" />
+                <Cube className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+                <span className="transition-transform group-hover:scale-110 inline-block">Equipment</span>
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
-                <Briefcase className="mr-2" size={18} weight="duotone" />
-                Office
+              <Button onClick={handleOfficeClick} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
+                <Briefcase className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+                <span className="transition-transform group-hover:scale-110 inline-block">Office</span>
               </Button>
             </div>
 
@@ -201,28 +201,28 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
+                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
                     viewMode === 'list' 
                       ? 'drop-shadow-lg' 
-                      : 'opacity-70 hover:opacity-90 hover:scale-105'
+                      : 'opacity-70 hover:opacity-90'
                   }`}
                   style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                 >
-                  <ListBullets size={18} weight="duotone" />
-                  <span className="font-bold text-sm">List</span>
+                  <ListBullets className="transition-transform group-hover:scale-110" size={18} weight="duotone" />
+                  <span className="font-bold text-sm transition-transform group-hover:scale-110 inline-block">List</span>
                 </button>
                 
                 <button
                   onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
+                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
                     viewMode === 'schedule' 
                       ? 'drop-shadow-lg' 
-                      : 'opacity-70 hover:opacity-90 hover:scale-105'
+                      : 'opacity-70 hover:opacity-90'
                   }`}
                   style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                 >
-                  <Calendar size={18} weight="duotone" />
-                  <span className="font-bold text-sm">Schedule</span>
+                  <Calendar className="transition-transform group-hover:scale-110" size={18} weight="duotone" />
+                  <span className="font-bold text-sm transition-transform group-hover:scale-110 inline-block">Schedule</span>
                 </button>
               </div>
             </div>

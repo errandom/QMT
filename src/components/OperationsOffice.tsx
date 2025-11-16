@@ -45,33 +45,33 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-7 border-white/20 bg-[#3e4347] rounded-lg">
-          <TabsTrigger value="schedule" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <CalendarBlank className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Schedule</span>
+          <TabsTrigger value="schedule" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <CalendarBlank className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="requests" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <ClipboardText className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Requests</span>
+          <TabsTrigger value="requests" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <ClipboardText className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Requests</span>
           </TabsTrigger>
-          <TabsTrigger value="teams" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <Users className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Teams</span>
+          <TabsTrigger value="teams" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <Users className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Teams</span>
           </TabsTrigger>
-          <TabsTrigger value="equipment" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <Cube className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Equipment</span>
+          <TabsTrigger value="equipment" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <Cube className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Equipment</span>
           </TabsTrigger>
-          <TabsTrigger value="fields" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <GridFour className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Fields</span>
+          <TabsTrigger value="fields" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <GridFour className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Fields</span>
           </TabsTrigger>
-          <TabsTrigger value="sites" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <MapPin className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Sites</span>
+          <TabsTrigger value="sites" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <MapPin className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Sites</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="data-[state=active]:bg-white/20 text-white rounded-lg">
-            <Gear className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Settings</span>
+          <TabsTrigger value="settings" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
+            <Gear className="mr-2 transition-transform group-hover:scale-110" size={18} weight="duotone" />
+            <span className="hidden sm:inline transition-transform group-hover:scale-110 inline-block">Settings</span>
           </TabsTrigger>
         </TabsList>
 

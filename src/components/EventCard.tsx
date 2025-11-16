@@ -66,7 +66,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
   return (
-    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 hover:scale-[1.02] rounded-[8pt]">
+    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 rounded-[8pt]">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
@@ -77,11 +77,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-7 px-3 text-xs border-2 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
+                  className="group h-7 px-3 text-xs border-2 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
                   onClick={() => setCancellationDialogOpen(true)}
                 >
-                  <Prohibit className="mr-1.5" size={14} weight="bold" />
-                  Request Cancellation
+                  <Prohibit className="mr-1.5 transition-transform group-hover:scale-110" size={14} weight="bold" />
+                  <span className="transition-transform group-hover:scale-110 inline-block">Request Cancellation</span>
                 </Button>
               )}
             </div>

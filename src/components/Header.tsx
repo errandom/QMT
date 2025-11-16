@@ -75,9 +75,9 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                     variant="ghost"
                     size="sm"
                     onClick={onLogout}
-                    className="text-white hover:bg-white/15 transition-all rounded-lg"
+                    className="group text-white hover:bg-white/15 transition-all rounded-lg"
                   >
-                    <SignOut size={18} weight="bold" style={{ color: '#f5f5f5' }} />
+                    <SignOut className="transition-transform group-hover:scale-110" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
                   </Button>
                 </div>
               ) : (
@@ -85,10 +85,10 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   variant="ghost"
                   size="sm"
                   onClick={handleOfficeClick}
-                  className="text-white hover:bg-[#001f3f]/80 transition-all rounded-lg bg-[#001f3f]"
+                  className="group text-white hover:bg-[#001f3f]/80 transition-all rounded-lg bg-[#001f3f]"
                 >
-                  <SignIn className="mr-2" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
-                  Office
+                  <SignIn className="mr-2 transition-transform group-hover:scale-110" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
+                  <span className="transition-transform group-hover:scale-110 inline-block">Office</span>
                 </Button>
               )}
             </div>
