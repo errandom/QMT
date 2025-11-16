@@ -171,21 +171,21 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#3e4347] hover:bg-[#3e4347]/90 transition-all text-white text-sm">
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
-            <div className="relative w-full lg:w-[260px] h-10 rounded-xl p-0.5" style={{
+            <div className="relative w-full lg:w-[260px] h-10 rounded-lg p-1" style={{
               background: '#3e4347'
             }}>
               <div className="relative w-full h-full flex gap-1">
                 <div 
-                  className="absolute top-0.5 bottom-0.5 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-1 bottom-1 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
-                    left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
-                    width: 'calc(50% - 4px)',
+                    left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
+                    width: 'calc(50% - 8px)',
                     background: 'rgba(36, 139, 204, 0.75)',
                     boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
@@ -193,7 +193,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
                     viewMode === 'list' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -206,7 +206,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
                     viewMode === 'schedule' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
