@@ -8,6 +8,7 @@ import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
 import EquipmentRequestDialog from './EquipmentRequestDialog'
 import LoginDialog from './LoginDialog'
+import FootballHelmetIcon from './FootballHelmetIcon'
 import { User, SportType } from '@/lib/types'
 import { useKV } from '@github/spark/hooks'
 import { hasAccess } from '@/lib/auth'
@@ -57,7 +58,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     { 
       value: 'Tackle Football', 
       label: 'Tackle Football', 
-      icon: <Football size={32} weight="fill" /> 
+      icon: <FootballHelmetIcon size={32} /> 
     },
     { 
       value: 'Flag Football', 
