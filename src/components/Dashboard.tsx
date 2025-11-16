@@ -80,11 +80,11 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + 0.5rem)`,
-                    top: '0.5rem',
-                    bottom: '0.5rem',
+                    top: '0.25rem',
+                    bottom: '0.25rem',
                     width: 'calc(33.333% - 1rem)',
                     background: 'rgba(36, 139, 204, 0.75)',
                     boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
@@ -95,7 +95,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <button
                     key={option.value}
                     onClick={() => setSportFilter(option.value as any)}
-                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
+                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-md transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -178,22 +178,22 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </div>
 
             <div className="relative w-full sm:w-[260px] h-10 rounded-md p-0.5" style={{
-              background: '#001f3f'
+              background: '#3e4347'
             }}>
               <div className="relative w-full h-full flex gap-1">
                 <div 
-                  className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-0.5 bottom-0.5 rounded shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
                     width: 'calc(50% - 4px)',
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
+                    background: 'rgba(36, 139, 204, 0.75)',
+                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
                 />
                 
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded transition-all duration-300 ${
                     viewMode === 'list' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -206,7 +206,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded transition-all duration-300 ${
                     viewMode === 'schedule' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
