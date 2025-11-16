@@ -38,7 +38,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white drop-shadow-lg">Operations Office</h1>
+          <h1 className="text-2xl font-bold text-[oklch(0.28_0.08_240)] drop-shadow-lg">Operations Office</h1>
           <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
         </div>
       </div>
