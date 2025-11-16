@@ -50,9 +50,22 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
   })
 
   const sportOptions = [
-    { value: 'All Sports', label: 'All Sports', icon: <Football size={28} weight="duotone" />, iconAlt: <FootballHelmetIcon size={28} /> },
-    { value: 'Tackle Football', label: 'Tackle Football', icon: <FootballHelmetIcon size={28} /> },
-    { value: 'Flag Football', label: 'Flag Football', icon: <Football size={28} weight="duotone" /> }
+    { 
+      value: 'All Sports', 
+      label: 'All Sports', 
+      icon: <Football size={28} weight="duotone" />, 
+      iconAlt: <FootballHelmetIcon size={28} /> 
+    },
+    { 
+      value: 'Tackle Football', 
+      label: 'Tackle Football', 
+      icon: <FootballHelmetIcon size={28} /> 
+    },
+    { 
+      value: 'Flag Football', 
+      label: 'Flag Football', 
+      icon: <Football size={28} weight="duotone" /> 
+    }
   ]
 
   const activeIndex = sportOptions.findIndex(opt => opt.value === sportFilter)
@@ -64,14 +77,17 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
           <div className="relative w-full h-24 rounded-2xl glass-card p-1.5">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
-            <div className="relative h-full rounded-xl bg-gradient-to-br from-[oklch(0.35_0.12_250)] to-[oklch(0.28_0.10_250)] backdrop-blur-sm p-1.5 shadow-inner">
+            <div className="relative h-full rounded-xl backdrop-blur-sm p-1.5 shadow-inner" style={{
+              background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)'
+            }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute top-0 bottom-0 bg-gradient-to-br from-[oklch(0.60_0.15_220)] to-[oklch(0.50_0.12_230)] rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-0 bottom-0 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
                     width: 'calc(33.333% - 0.333rem)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
                   }}
                 />
                 
@@ -81,9 +97,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     onClick={() => setSportFilter(option.value as any)}
                     className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
                       sportFilter === option.value 
-                        ? 'text-white drop-shadow-lg' 
-                        : 'text-white/70 hover:text-white/90 hover:scale-105'
+                        ? 'drop-shadow-lg' 
+                        : 'opacity-70 hover:opacity-90 hover:scale-105'
                     }`}
+                    style={{ color: '#f5f5f5' }}
                   >
                     <div className="flex items-center gap-1">
                       {option.iconAlt || option.icon}
@@ -98,18 +115,20 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="glass-button w-full sm:w-[240px] h-10 text-white border-white/20">
+              <SelectTrigger className="w-full sm:w-[240px] h-10 border-white/20 text-white" style={{
+                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)'
+              }}>
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
-                <SelectItem value="all">All Teams</SelectItem>
+                <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
                 {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
                   <>
                     <SelectItem value="divider" disabled className="text-xs font-semibold text-muted-foreground">
                       {sportFilter}
                     </SelectItem>
                     {filteredTeams.map((team: any) => (
-                      <SelectItem key={team.id} value={team.id}>
+                      <SelectItem key={team.id} value={team.id} className="text-foreground">
                         {team.name}
                       </SelectItem>
                     ))}
@@ -123,7 +142,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                           Tackle Football
                         </SelectItem>
                         {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
-                          <SelectItem key={team.id} value={team.id}>
+                          <SelectItem key={team.id} value={team.id} className="text-foreground">
                             {team.name}
                           </SelectItem>
                         ))}
@@ -135,7 +154,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                           Flag Football
                         </SelectItem>
                         {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
-                          <SelectItem key={team.id} value={team.id}>
+                          <SelectItem key={team.id} value={team.id} className="text-foreground">
                             {team.name}
                           </SelectItem>
                         ))}
@@ -147,24 +166,35 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1 sm:flex-none">
-              <Button onClick={() => setShowFacilityDialog(true)} className="glass-button flex-1 h-10 sm:min-w-[140px] text-white hover:text-white border-white/20">
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 hover:opacity-90 transition-all" style={{
+                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+                color: '#f5f5f5'
+              }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="glass-button flex-1 h-10 sm:min-w-[140px] text-white hover:text-white border-white/20">
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 hover:opacity-90 transition-all" style={{
+                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+                color: '#f5f5f5'
+              }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="glass-button flex-1 h-10 sm:min-w-[160px] text-white hover:text-white border-white/20">
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 hover:opacity-90 transition-all" style={{
+                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+                color: '#f5f5f5'
+              }}>
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full sm:w-auto">
-              <TabsList className="glass-button w-full sm:w-auto h-10 border-white/20">
+              <TabsList className="w-full sm:w-auto h-10 border-white/20" style={{
+                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)'
+              }}>
                 <TabsTrigger value="list" className="flex-1 sm:flex-none h-9 data-[state=active]:bg-white/20 text-white">
                   <ListBullets className="mr-2" size={18} weight="duotone" />
                   List

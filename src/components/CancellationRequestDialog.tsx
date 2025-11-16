@@ -118,10 +118,16 @@ export default function CancellationRequestDialog({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleClose} style={{
+              borderColor: '#001f3f',
+              color: '#2c3e50'
+            }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} style={{
+              background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+              color: '#f5f5f5'
+            }}>
               {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </Button>
           </DialogFooter>

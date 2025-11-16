@@ -69,10 +69,16 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} style={{
+              borderColor: '#001f3f',
+              color: '#2c3e50'
+            }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} style={{
+              background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+              color: '#f5f5f5'
+            }}>
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </div>

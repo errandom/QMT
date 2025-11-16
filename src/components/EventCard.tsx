@@ -86,29 +86,29 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="text-[oklch(0.35_0.10_250)]">
+              <div style={{ color: '#2c3e50' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-lg text-white">{event.title}</CardTitle>
+              <CardTitle className="text-lg" style={{ color: '#2c3e50' }}>{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && (
             <div className="text-right text-sm">
-              <div className="text-white/70">Weather</div>
-              <div className="font-medium text-white">18°C ⛅</div>
+              <div style={{ color: '#6b7280' }}>Weather</div>
+              <div className="font-medium" style={{ color: '#2c3e50' }}>18°C ⛅</div>
             </div>
           )}
         </div>
       </CardHeader>
       
       <CardContent className="space-y-2.5 pt-0">
-        <div className="flex items-center gap-2 text-sm text-white">
-          <CalendarBlank className="text-white/70" size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-sm" style={{ color: '#2c3e50' }}>
+          <CalendarBlank style={{ color: '#6b7280' }} size={18} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-white">
-          <Clock className="text-white/70" size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-sm" style={{ color: '#2c3e50' }}>
+          <Clock style={{ color: '#6b7280' }} size={18} weight="duotone" />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
@@ -116,11 +116,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <>
             <Separator className="bg-white/20" />
             <div className="space-y-1.5">
-              <div className="flex items-start gap-2 text-sm text-white">
-                <MapPin className="text-white/70 mt-0.5" size={18} weight="duotone" />
+              <div className="flex items-start gap-2 text-sm" style={{ color: '#2c3e50' }}>
+                <MapPin style={{ color: '#6b7280' }} className="mt-0.5" size={18} weight="duotone" />
                 <div>
                   <div className="font-semibold">{site.name} - {field.name}</div>
-                  <div className="text-white/70 text-xs">
+                  <div className="text-xs" style={{ color: '#6b7280' }}>
                     {site.address}, {site.zipCode} {site.city}
                   </div>
                 </div>
@@ -128,44 +128,44 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
               <div className="flex flex-wrap gap-2 ml-6">
                 {site.amenities.parking && (
-                  <div className="flex items-center gap-1 text-xs text-white/70">
+                  <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
                     <CarSimple size={16} weight="duotone" />
                     <span>Parking</span>
                   </div>
                 )}
                 {site.amenities.toilets && (
-                  <div className="flex items-center gap-1 text-xs text-white/70">
+                  <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
                     <Toilet size={16} weight="duotone" />
                     <span>Toilets</span>
                   </div>
                 )}
                 {site.amenities.lockerRooms && (
-                  <div className="flex items-center gap-1 text-xs text-white/70">
+                  <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
                     <Lockers size={16} weight="duotone" />
                     <span>Lockers</span>
                   </div>
                 )}
                 {site.amenities.shower && (
-                  <div className="flex items-center gap-1 text-xs text-white/70">
+                  <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
                     <Shower size={16} weight="duotone" />
                     <span>Shower</span>
                   </div>
                 )}
                 {site.amenities.restaurant && (
-                  <div className="flex items-center gap-1 text-xs text-white/70">
+                  <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
                     <ForkKnife size={16} weight="duotone" />
                     <span>Restaurant</span>
                   </div>
                 )}
                 {site.amenities.equipmentStash && (
-                  <div className="flex items-center gap-1 text-xs text-white/70">
+                  <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
                     <Package size={16} weight="duotone" />
                     <span>Equipment</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2 ml-6 text-xs text-white">
+              <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: '#2c3e50' }}>
                 <span className="flex items-center gap-1">
                   {field.turfType === 'Artificial Turf' ? (
                     <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
@@ -213,16 +213,16 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <>
             <Separator className="bg-white/20" />
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-sm font-medium text-white">
-                <Users className="text-white/70" size={18} weight="duotone" />
+              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#2c3e50' }}>
+                <Users style={{ color: '#6b7280' }} size={18} weight="duotone" />
                 <span>Teams</span>
               </div>
               <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
-                  <div key={team.id} className="text-sm text-white">
+                  <div key={team.id} className="text-sm" style={{ color: '#2c3e50' }}>
                     <div className="font-medium">{team.name}</div>
                     {(event.eventType === 'Game' || event.eventType === 'Practice') && (
-                      <div className="text-xs text-white/70 space-y-0.5">
+                      <div className="text-xs space-y-0.5" style={{ color: '#6b7280' }}>
                         {team.headCoach && (
                           <div>Coach: {team.headCoach.firstName} {team.headCoach.lastName}</div>
                         )}
@@ -239,8 +239,8 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         )}
 
         {event.otherParticipants && (
-          <div className="text-sm text-white">
-            <span className="text-white/70">Participants: </span>
+          <div className="text-sm" style={{ color: '#2c3e50' }}>
+            <span style={{ color: '#6b7280' }}>Participants: </span>
             <span>{event.otherParticipants}</span>
           </div>
         )}
