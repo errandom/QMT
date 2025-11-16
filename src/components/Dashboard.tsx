@@ -8,7 +8,6 @@ import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
 import EquipmentRequestDialog from './EquipmentRequestDialog'
 import LoginDialog from './LoginDialog'
-import FootballHelmetIcon from './FootballHelmetIcon'
 import { User, SportType } from '@/lib/types'
 import { useKV } from '@github/spark/hooks'
 import { hasAccess } from '@/lib/auth'
@@ -53,13 +52,12 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     { 
       value: 'All Sports', 
       label: 'All Sports', 
-      icon: <Football size={32} weight="duotone" />, 
-      iconAlt: <FootballHelmetIcon size={32} /> 
+      icon: <Football size={32} weight="duotone" />
     },
     { 
       value: 'Tackle Football', 
       label: 'Tackle Football', 
-      icon: <FootballHelmetIcon size={32} /> 
+      icon: <Football size={32} weight="fill" /> 
     },
     { 
       value: 'Flag Football', 
@@ -102,10 +100,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     }`}
                     style={{ color: '#f5f5f5' }}
                   >
-                    <div className="flex items-center gap-1">
-                      {option.value === 'All Sports' ? option.iconAlt : option.icon}
-                      {option.value === 'All Sports' && option.icon}
-                    </div>
+                    {option.icon}
                     <span className="text-base font-bold tracking-tight">{option.label}</span>
                   </button>
                 ))}
