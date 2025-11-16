@@ -39,10 +39,10 @@ const eventTypeColors = {
 }
 
 const eventTypeIcons: Record<EventType, React.ReactNode> = {
-  'Game': <Trophy size={20} weight="duotone" />,
-  'Practice': <Barbell size={20} weight="duotone" />,
-  'Meeting': <Strategy size={20} weight="duotone" />,
-  'Other': <CalendarCheck size={20} weight="duotone" />
+  'Game': <Trophy size={28} weight="duotone" />,
+  'Practice': <Barbell size={28} weight="duotone" />,
+  'Meeting': <Strategy size={28} weight="duotone" />,
+  'Other': <CalendarCheck size={28} weight="duotone" />
 }
 
 const statusColors = {
@@ -89,7 +89,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div style={{ color: '#001f3f' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-lg font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
+              <CardTitle className="text-xl font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && (
@@ -102,13 +102,13 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       </CardHeader>
       
       <CardContent className="space-y-2.5 pt-0">
-        <div className="flex items-center gap-2 text-sm" style={{ color: '#001f3f' }}>
-          <CalendarBlank style={{ color: '#248bcc' }} size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-base" style={{ color: '#001f3f' }}>
+          <CalendarBlank style={{ color: '#248bcc' }} size={22} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm" style={{ color: '#001f3f' }}>
-          <Clock style={{ color: '#248bcc' }} size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-base" style={{ color: '#001f3f' }}>
+          <Clock style={{ color: '#248bcc' }} size={22} weight="duotone" />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
@@ -116,11 +116,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <>
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-start gap-2 text-sm" style={{ color: '#001f3f' }}>
-                <MapPin style={{ color: '#248bcc' }} className="mt-0.5" size={18} weight="duotone" />
+              <div className="flex items-start gap-2 text-base" style={{ color: '#001f3f' }}>
+                <MapPin style={{ color: '#248bcc' }} className="mt-0.5" size={22} weight="duotone" />
                 <div>
                   <div className="font-semibold">{site.name} - {field.name}</div>
-                  <div className="text-xs" style={{ color: '#6b7280' }}>
+                  <div className="text-sm" style={{ color: '#6b7280' }}>
                     {site.address}, {site.zipCode} {site.city}
                   </div>
                 </div>
@@ -213,16 +213,16 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <>
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#001f3f' }}>
-                <Users style={{ color: '#248bcc' }} size={18} weight="duotone" />
+              <div className="flex items-center gap-2 text-base font-medium" style={{ color: '#001f3f' }}>
+                <Users style={{ color: '#248bcc' }} size={22} weight="duotone" />
                 <span>Teams</span>
               </div>
               <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
-                  <div key={team.id} className="text-sm" style={{ color: '#001f3f' }}>
+                  <div key={team.id} className="text-base" style={{ color: '#001f3f' }}>
                     <div className="font-medium">{team.name}</div>
                     {(event.eventType === 'Game' || event.eventType === 'Practice') && (
-                      <div className="text-xs space-y-0.5" style={{ color: '#6b7280' }}>
+                      <div className="text-sm space-y-0.5" style={{ color: '#6b7280' }}>
                         {team.headCoach && (
                           <div>Coach: {team.headCoach.firstName} {team.headCoach.lastName}</div>
                         )}
@@ -239,7 +239,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         )}
 
         {event.otherParticipants && (
-          <div className="text-sm" style={{ color: '#001f3f' }}>
+          <div className="text-base" style={{ color: '#001f3f' }}>
             <span style={{ color: '#6b7280' }}>Participants: </span>
             <span>{event.otherParticipants}</span>
           </div>
