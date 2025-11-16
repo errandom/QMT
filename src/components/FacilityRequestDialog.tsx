@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -94,41 +94,71 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Request Facility</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="overflow-y-auto"
+        style={{
+          width: '90vw',
+          height: '90vh',
+          maxWidth: '90vw',
+          backgroundColor: 'oklch(0.98 0.01 210)',
+          color: 'oklch(0.28 0.005 240)',
+          border: 'none',
+          padding: '2rem'
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle style={{ color: 'oklch(0.28 0.005 240)', fontSize: '1.5rem', fontWeight: '600' }}>
+            Request Facility
+          </DialogTitle>
+          <DialogDescription style={{ color: 'oklch(0.45 0.02 240)' }}>
             Submit a request to book a facility for your team or event
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name" style={{ color: 'oklch(0.28 0.005 240)' }}>Name *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
+              <Label htmlFor="phone" style={{ color: 'oklch(0.28 0.005 240)' }}>Phone *</Label>
               <Input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="event-type">Event Type *</Label>
+            <Label htmlFor="event-type" style={{ color: 'oklch(0.28 0.005 240)' }}>Event Type *</Label>
             <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
-              <SelectTrigger id="event-type">
+              <SelectTrigger 
+                id="event-type"
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
+              >
                 <SelectValue placeholder="Select event type" />
               </SelectTrigger>
               <SelectContent>
@@ -142,8 +172,14 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           {(eventType === 'Game' || eventType === 'Practice') && (
             <div className="space-y-2">
-              <Label>Teams * (select at least one)</Label>
-              <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-32 overflow-y-auto">
+              <Label style={{ color: 'oklch(0.28 0.005 240)' }}>Teams * (select at least one)</Label>
+              <div 
+                className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-32 overflow-y-auto"
+                style={{
+                  border: '1px solid #248bcc',
+                  backgroundColor: 'white'
+                }}
+              >
                 {activeTeams.map(team => (
                   <div key={team.id} className="flex items-center space-x-2">
                     <Checkbox
@@ -154,6 +190,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                     <label
                       htmlFor={`team-${team.id}`}
                       className="text-sm cursor-pointer"
+                      style={{ color: 'oklch(0.28 0.005 240)' }}
                     >
                       {team.name}
                     </label>
@@ -165,21 +202,32 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           {eventType && eventType !== 'Game' && eventType !== 'Practice' && (
             <div className="space-y-2">
-              <Label htmlFor="purpose">Purpose *</Label>
+              <Label htmlFor="purpose" style={{ color: 'oklch(0.28 0.005 240)' }}>Purpose *</Label>
               <Input
                 id="purpose"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 placeholder="Specify the purpose"
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
           )}
 
           {(eventType === 'Meeting' || eventType === 'Other') && activeTeams.length > 0 && (
             <div className="space-y-2">
-              <Label>Teams (optional)</Label>
-              <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-32 overflow-y-auto">
+              <Label style={{ color: 'oklch(0.28 0.005 240)' }}>Teams (optional)</Label>
+              <div 
+                className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-32 overflow-y-auto"
+                style={{
+                  border: '1px solid #248bcc',
+                  backgroundColor: 'white'
+                }}
+              >
                 {activeTeams.map(team => (
                   <div key={team.id} className="flex items-center space-x-2">
                     <Checkbox
@@ -190,6 +238,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                     <label
                       htmlFor={`team-opt-${team.id}`}
                       className="text-sm cursor-pointer"
+                      style={{ color: 'oklch(0.28 0.005 240)' }}
                     >
                       {team.name}
                     </label>
@@ -201,27 +250,37 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Date *</Label>
+              <Label htmlFor="date" style={{ color: 'oklch(0.28 0.005 240)' }}>Date *</Label>
               <Input
                 id="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-time">Start Time *</Label>
+              <Label htmlFor="start-time" style={{ color: 'oklch(0.28 0.005 240)' }}>Start Time *</Label>
               <Input
                 id="start-time"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="duration">Duration (min) *</Label>
+              <Label htmlFor="duration" style={{ color: 'oklch(0.28 0.005 240)' }}>Duration (min) *</Label>
               <Input
                 id="duration"
                 type="number"
@@ -230,34 +289,59 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Additional Details</Label>
+            <Label htmlFor="description" style={{ color: 'oklch(0.28 0.005 240)' }}>Additional Details</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Any additional context or special requirements..."
               rows={3}
+              style={{
+                borderColor: '#248bcc',
+                backgroundColor: 'white',
+                color: 'oklch(0.28 0.005 240)'
+              }}
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} style={{
-              borderColor: '#3e4347',
-              color: '#2c3e50'
-            }}>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              style={{
+                borderColor: '#3e4347',
+                backgroundColor: 'white',
+                color: '#3e4347'
+              }}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-[#3e4347] hover:opacity-90 text-white">
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              style={{
+                backgroundColor: 'oklch(0.28 0.005 240)',
+                color: 'white',
+                border: 'none'
+              }}
+              className="hover:opacity-90"
+            >
               {isLoading ? 'Submitting...' : 'Submit Request'}
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

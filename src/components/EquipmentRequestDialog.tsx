@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -69,40 +69,69 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
   const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Request Equipment</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="overflow-y-auto"
+        style={{
+          width: '90vw',
+          height: '90vh',
+          maxWidth: '90vw',
+          backgroundColor: 'oklch(0.98 0.01 210)',
+          color: 'oklch(0.28 0.005 240)',
+          border: 'none',
+          padding: '2rem'
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle style={{ color: 'oklch(0.28 0.005 240)', fontSize: '1.5rem', fontWeight: '600' }}>
+            Request Equipment
+          </DialogTitle>
+          <DialogDescription style={{ color: 'oklch(0.45 0.02 240)' }}>
             Submit a request for equipment for your team
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name" style={{ color: 'oklch(0.28 0.005 240)' }}>Name *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
+              <Label htmlFor="phone" style={{ color: 'oklch(0.28 0.005 240)' }}>Phone *</Label>
               <Input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Teams * (select at least one)</Label>
-            <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
+            <Label style={{ color: 'oklch(0.28 0.005 240)' }}>Teams * (select at least one)</Label>
+            <div 
+              className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-40 overflow-y-auto"
+              style={{
+                border: '1px solid #248bcc',
+                backgroundColor: 'white'
+              }}
+            >
               {activeTeams.map(team => (
                 <div key={team.id} className="flex items-center space-x-2">
                   <Checkbox
@@ -113,6 +142,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
                   <label
                     htmlFor={`team-${team.id}`}
                     className="text-sm cursor-pointer"
+                    style={{ color: 'oklch(0.28 0.005 240)' }}
                   >
                     {team.name}
                   </label>
@@ -122,18 +152,23 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Date Needed *</Label>
+            <Label htmlFor="date" style={{ color: 'oklch(0.28 0.005 240)' }}>Date Needed *</Label>
             <Input
               id="date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
+              style={{
+                borderColor: '#248bcc',
+                backgroundColor: 'white',
+                color: 'oklch(0.28 0.005 240)'
+              }}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="equipment">Equipment Description *</Label>
+            <Label htmlFor="equipment" style={{ color: 'oklch(0.28 0.005 240)' }}>Equipment Description *</Label>
             <Textarea
               id="equipment"
               value={equipmentDescription}
@@ -141,22 +176,42 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
               placeholder="Describe what equipment you need and why..."
               rows={4}
               required
+              style={{
+                borderColor: '#248bcc',
+                backgroundColor: 'white',
+                color: 'oklch(0.28 0.005 240)'
+              }}
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} style={{
-              borderColor: '#3e4347',
-              color: '#2c3e50'
-            }}>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              style={{
+                borderColor: '#3e4347',
+                backgroundColor: 'white',
+                color: '#3e4347'
+              }}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-[#3e4347] hover:opacity-90 text-white">
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              style={{
+                backgroundColor: 'oklch(0.28 0.005 240)',
+                color: 'white',
+                border: 'none'
+              }}
+              className="hover:opacity-90"
+            >
               {isLoading ? 'Submitting...' : 'Submit Request'}
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
