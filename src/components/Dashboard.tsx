@@ -53,17 +53,20 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     { 
       value: 'All Sports', 
       label: 'All Sports', 
-      icon: <Football size={32} weight="duotone" />
+      icon: <Football size={32} weight="duotone" />,
+      mobileIcon: <Football size={32} weight="duotone" />
     },
     { 
       value: 'Tackle Football', 
       label: 'Tackle Football', 
-      icon: <FootballHelmetIcon size={32} /> 
+      icon: <FootballHelmetIcon size={32} />,
+      mobileIcon: <FootballHelmetIcon size={32} />
     },
     { 
       value: 'Flag Football', 
       label: 'Flag Football', 
-      icon: <Football size={32} weight="duotone" /> 
+      icon: <Football size={32} weight="duotone" />,
+      mobileIcon: <Football size={32} weight="duotone" />
     }
   ]
 
@@ -105,8 +108,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                   >
                     <div className="flex flex-col items-center gap-0.5 group-hover:scale-110 transition-transform duration-200">
-                      <span>{option.icon}</span>
-                      <span className="text-sm font-bold tracking-tight">{option.label}</span>
+                      <span>{option.mobileIcon}</span>
+                      <span className="text-sm font-bold tracking-tight hidden md:inline">{option.label}</span>
                     </div>
                   </button>
                 ))}
@@ -170,20 +173,20 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               <Button onClick={() => setShowFacilityDialog(true)} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
                 <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
                   <Plus className="mr-2" size={18} weight="bold" />
-                  <MapPin className="mr-2" size={18} weight="duotone" />
+                  <MapPin className="mr-2 hidden md:inline" size={18} weight="duotone" />
                   <span>Facility</span>
                 </div>
               </Button>
               <Button onClick={() => setShowEquipmentDialog(true)} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
                 <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
                   <Plus className="mr-2" size={18} weight="bold" />
-                  <Cube className="mr-2" size={18} weight="duotone" />
+                  <Cube className="mr-2 hidden md:inline" size={18} weight="duotone" />
                   <span>Equipment</span>
                 </div>
               </Button>
               <Button onClick={handleOfficeClick} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
                 <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                  <Briefcase className="mr-2" size={18} weight="duotone" />
+                  <Briefcase className="mr-2 hidden md:inline" size={18} weight="duotone" />
                   <span>Office</span>
                 </div>
               </Button>
