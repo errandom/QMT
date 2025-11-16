@@ -118,14 +118,14 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
-                <SelectItem value="all" className="text-foreground hover:opacity-90 hover:scale-105 transition-all duration-300">All Teams</SelectItem>
+                <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
                 {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
                   <>
                     <SelectItem value="divider" disabled className="text-xs font-semibold text-muted-foreground">
                       {sportFilter}
                     </SelectItem>
                     {filteredTeams.map((team: any) => (
-                      <SelectItem key={team.id} value={team.id} className="text-foreground hover:opacity-90 hover:scale-105 transition-all duration-300">
+                      <SelectItem key={team.id} value={team.id} className="text-foreground">
                         {team.name}
                       </SelectItem>
                     ))}
@@ -139,7 +139,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                           Tackle Football
                         </SelectItem>
                         {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
-                          <SelectItem key={team.id} value={team.id} className="text-foreground hover:opacity-90 hover:scale-105 transition-all duration-300">
+                          <SelectItem key={team.id} value={team.id} className="text-foreground">
                             {team.name}
                           </SelectItem>
                         ))}
@@ -151,7 +151,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                           Flag Football
                         </SelectItem>
                         {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
-                          <SelectItem key={team.id} value={team.id} className="text-foreground hover:opacity-90 hover:scale-105 transition-all duration-300">
+                          <SelectItem key={team.id} value={team.id} className="text-foreground">
                             {team.name}
                           </SelectItem>
                         ))}
@@ -163,17 +163,17 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] hover:opacity-90 hover:scale-105 duration-300" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] hover:opacity-90 hover:scale-105 duration-300" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] hover:opacity-90 hover:scale-105 duration-300" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)' }}>
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
