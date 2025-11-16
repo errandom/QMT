@@ -1,53 +1,43 @@
 interface FootballHelmetIconProps {
-  className?: string
   size?: number
+  className?: string
+  filled?: boolean
 }
 
-export default function FootballHelmetIcon({ className, size = 18 }: FootballHelmetIconProps) {
+export default function FootballHelmetIcon({ size = 24, className = '', filled = false }: FootballHelmetIconProps) {
+  if (filled) {
+    return (
+      <svg 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        className={className}
+      >
+        <path d="M12 3C7.58 3 4 6.58 4 11v5c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-4.5c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5V16c0 .55.45 1 1 1H19c.55 0 1-.45 1-1v-5c0-4.42-3.58-8-8-8z"/>
+        <rect x="8" y="11" width="8" height="5" rx="1.5" fill="currentColor" opacity="0.75"/>
+        <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
+        <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
+      </svg>
+    )
+  }
+  
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round" 
+      strokeLinejoin="round"
       className={className}
     >
-      <path
-        d="M8 16C8 11 11 7 16 7C20.5 7 24 10 25 14C25.5 16 25.5 18 25 20"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      
-      <path
-        d="M8 16L8 20C8 22 8.5 24 10 26C11 27 12.5 28 14 28.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      
-      <rect
-        x="19"
-        y="12"
-        width="7"
-        height="10"
-        rx="1"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      
-      <line
-        x1="22.5"
-        y1="14"
-        x2="22.5"
-        y2="20"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M12 3C7.58 3 4 6.58 4 11v5c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-4.5c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5V16c0 .55.45 1 1 1H19c.55 0 1-.45 1-1v-5c0-4.42-3.58-8-8-8z"/>
+      <rect x="8" y="11" width="8" height="5" rx="1.5"/>
+      <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
+      <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
     </svg>
   )
 }
