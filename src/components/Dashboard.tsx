@@ -73,14 +73,14 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-24 rounded-2xl p-1.5">
+          <div className="relative w-full h-24 rounded-md p-1.5">
             
-            <div className="relative h-full rounded-xl backdrop-blur-sm p-2 shadow-inner" style={{
+            <div className="relative h-full rounded backdrop-blur-sm p-2 shadow-inner" style={{
               background: '#3e4347'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute rounded shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + 0.5rem)`,
                     top: '0.25rem',
@@ -95,7 +95,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <button
                     key={option.value}
                     onClick={() => setSportFilter(option.value as any)}
-                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-md transition-all duration-300 ${
+                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
