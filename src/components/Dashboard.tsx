@@ -180,15 +180,15 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-[260px] h-10 rounded-lg glass-card p-1">
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
+            <div className="relative w-full sm:w-[260px] h-10 rounded-md glass-card p-1">
+              <div className="absolute inset-0 rounded-md bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
               
-              <div className="relative h-full rounded-lg backdrop-blur-sm p-0.5 shadow-inner" style={{
+              <div className="relative h-full rounded-md backdrop-blur-sm p-0.5 shadow-inner" style={{
                 background: '#001f3f'
               }}>
                 <div className="relative w-full h-full flex gap-1">
                   <div 
-                    className="absolute top-0 bottom-0 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                    className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                     style={{
                       left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
                       width: 'calc(50% - 4px)',
@@ -199,7 +199,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
+                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
                       viewMode === 'list' 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -212,7 +212,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   
                   <button
                     onClick={() => setViewMode('schedule')}
-                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
+                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
                       viewMode === 'schedule' 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
