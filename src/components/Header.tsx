@@ -54,7 +54,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-white/30 backdrop-blur-sm" style={{
-        background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+        background: '#001f3f',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
       }}>
         <div className="container mx-auto px-4 py-5 max-w-7xl">
