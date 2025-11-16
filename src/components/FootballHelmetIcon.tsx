@@ -14,61 +14,54 @@ export default function FootballHelmetIcon({ className, size = 18 }: FootballHel
       className={className}
     >
       <path
-        d="M7 14C7 9 10 5 16 5C20.5 5 24 7.5 25 11.5C25.5 13.5 25.5 15.5 25 17.5"
+        d="M8 15C8 10 11 6 16 6C21 6 24 9 25 13C25.5 15 25.5 17 25 19"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.9"
       />
       
       <path
-        d="M7 14C6.5 15 6 16.5 6 18.5C6 20.5 6.5 22 7.5 23.5C8.5 25 10 26 12 27"
+        d="M8 15C7.5 16 7 17.5 7 19.5C7 21.5 7.5 23 8.5 24.5C9.5 26 11 27 13 28"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.9"
+      />
+      
+      <path
+        d="M8 21C7 22.5 6.5 24 6.5 26C6.5 27 7 28 8 28.5C9 29 10 29 11 29"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      
+      <path
+        d="M10 13L11 16M12 11L13 14M14 9L15 12M16 8L17 11"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
       />
       
       <rect
-        x="18"
+        x="19"
         y="11"
-        width="8"
+        width="7"
         height="10"
-        rx="2"
+        rx="1.5"
         stroke="currentColor"
-        strokeWidth="1.8"
-        fill="currentColor"
-        fillOpacity="0.15"
+        strokeWidth="2"
       />
       
       <line
-        x1="22"
+        x1="22.5"
         y1="13"
-        x2="22"
+        x2="22.5"
         y2="19"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
-        opacity="0.6"
-      />
-      
-      <path
-        d="M8 16L10 20M10 14L12 18M12 12L14 16M14 10L16 14"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        opacity="0.7"
-      />
-      
-      <path
-        d="M7 20C6 21.5 5.5 23 5.5 25C5.5 26.5 6.5 28 8.5 28.5C9.5 28.8 10.5 29 11.5 29"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.9"
       />
     </svg>
   )
