@@ -83,9 +83,9 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <div 
                   className="absolute top-0 bottom-0 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
-                    left: `calc(${activeIndex * 33.333}% + ${activeIndex === 0 ? 0 : activeIndex * 0.5}rem)`,
+                    left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
                     width: 'calc(33.333% - 0.5rem)',
-                    background: '#248bcc',
+                    background: 'rgba(36, 139, 204, 0.75)',
                     boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
                 />
