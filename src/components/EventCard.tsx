@@ -80,8 +80,8 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                   className="group h-7 px-3 text-xs border-2 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
                   onClick={() => setCancellationDialogOpen(true)}
                 >
-                  <Prohibit className="mr-1.5 transition-transform group-hover:scale-110" size={14} weight="bold" />
-                  <span className="transition-transform group-hover:scale-110 inline-block">Request Cancellation</span>
+                  <Prohibit className="mr-1.5" size={14} weight="bold" />
+                  <span>Request Cancellation</span>
                 </Button>
               )}
             </div>

@@ -171,11 +171,9 @@
     0 8px 28px rgba(36, 139, 204, 0.35),
     0 4px 12px rgba(0, 31, 63, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transform: translateY(-2px);
 }
 
 .glass-button:active {
-  transform: translateY(0);
   box-shadow: 
     0 4px 16px rgba(36, 139, 204, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
