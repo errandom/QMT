@@ -112,7 +112,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full lg:w-[240px] h-10 border-white/20 text-white bg-[#3e4347] text-sm" style={{ borderRadius: '1px' }}>
+              <SelectTrigger className="w-full lg:w-[240px] border-white/20 text-white bg-[#3e4347] text-sm" style={{ borderRadius: '1px', height: '40px', minHeight: '40px', maxHeight: '40px' }}>
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
