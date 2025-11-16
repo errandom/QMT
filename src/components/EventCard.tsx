@@ -89,7 +89,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div style={{ color: '#001f3f' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-xl font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
+              <CardTitle className="text-xl font-semibold border-2 border-[oklch(0.85_0.015_210)] rounded-md px-3 py-1" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && (
