@@ -85,7 +85,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   variant="ghost"
                   size="sm"
                   onClick={handleOfficeClick}
-                  className="text-white hover:bg-white/15 transition-all rounded-lg"
+                  className="text-white hover:bg-[#001f3f]/80 transition-all rounded-lg bg-[#001f3f]"
                 >
                   <SignIn className="mr-2" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
                   Office
