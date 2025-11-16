@@ -163,17 +163,17 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '8pt' }}>
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm" style={{ borderRadius: '8pt', background: '#001f3f' }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '8pt' }}>
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 transition-all text-white text-sm" style={{ borderRadius: '8pt', background: '#001f3f' }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '8pt' }}>
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 transition-all text-white text-sm" style={{ borderRadius: '8pt', background: '#001f3f' }}>
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
