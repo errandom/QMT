@@ -73,14 +73,14 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-24 rounded-md p-1.5">
+          <div className="relative w-full h-24 rounded-xl p-1.5">
             
-            <div className="relative h-full rounded backdrop-blur-sm p-2 shadow-inner" style={{
+            <div className="relative h-full rounded-lg backdrop-blur-sm p-2 shadow-inner" style={{
               background: '#3e4347'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute rounded shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + 0.5rem)`,
                     top: '0.25rem',
@@ -95,7 +95,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <button
                     key={option.value}
                     onClick={() => setSportFilter(option.value as any)}
-                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded transition-all duration-300 ${
+                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -110,9 +110,9 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full sm:w-[240px] h-10 border-white/20 text-white bg-[#248bcc] text-sm">
+              <SelectTrigger className="w-full lg:w-[240px] h-10 border-white/20 text-white bg-[#248bcc] text-sm">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
@@ -160,29 +160,29 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </SelectContent>
             </Select>
 
-            <div className="flex gap-2 flex-1 sm:flex-none">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
+            <div className="flex gap-2 flex-1">
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 bg-[#3e4347] hover:bg-[#3e4347]/90 transition-all text-white text-sm">
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#3e4347] hover:bg-[#3e4347]/90 transition-all text-white text-sm">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-[260px] h-10 rounded-md p-0.5" style={{
+            <div className="relative w-full lg:w-[260px] h-10 rounded-xl p-0.5" style={{
               background: '#3e4347'
             }}>
               <div className="relative w-full h-full flex gap-1">
                 <div 
-                  className="absolute top-0.5 bottom-0.5 rounded shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-0.5 bottom-0.5 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
                     width: 'calc(50% - 4px)',
@@ -193,7 +193,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
                     viewMode === 'list' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -206,7 +206,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
                     viewMode === 'schedule' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
