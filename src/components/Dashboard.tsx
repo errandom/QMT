@@ -115,7 +115,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full sm:w-[240px] h-10 border-white/20 text-white bg-[#248bcc]">
+              <SelectTrigger className="w-full sm:w-[240px] h-10 border-white/20 text-white bg-[#248bcc] text-sm">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
@@ -164,34 +164,34 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1 sm:flex-none">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white">
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white">
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 bg-[#001f3f] hover:opacity-90 transition-all text-white">
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 bg-[#001f3f] hover:opacity-90 transition-all text-white text-sm">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-auto h-16 rounded-xl glass-card p-1.5">
+            <div className="relative w-full sm:w-[260px] h-10 rounded-xl glass-card p-1">
               <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
               
-              <div className="relative h-full rounded-lg backdrop-blur-sm p-1 shadow-inner" style={{
+              <div className="relative h-full rounded-lg backdrop-blur-sm p-0.5 shadow-inner" style={{
                 background: '#001f3f'
               }}>
-                <div className="relative w-full h-full flex gap-1.5">
+                <div className="relative w-full h-full flex gap-1">
                   <div 
                     className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                     style={{
-                      left: viewMode === 'list' ? '0' : 'calc(50% + 0.375rem)',
-                      width: 'calc(50% - 0.375rem)',
+                      left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
+                      width: 'calc(50% - 4px)',
                       background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
                       boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
                     }}
@@ -206,8 +206,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     }`}
                     style={{ color: '#f5f5f5' }}
                   >
-                    <ListBullets size={20} weight="duotone" />
-                    <span className="font-bold">List</span>
+                    <ListBullets size={18} weight="duotone" />
+                    <span className="font-bold text-sm">List</span>
                   </button>
                   
                   <button
@@ -219,8 +219,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     }`}
                     style={{ color: '#f5f5f5' }}
                   >
-                    <Calendar size={20} weight="duotone" />
-                    <span className="font-bold">Schedule</span>
+                    <Calendar size={18} weight="duotone" />
+                    <span className="font-bold text-sm">Schedule</span>
                   </button>
                 </div>
               </div>
