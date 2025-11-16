@@ -85,7 +85,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-1">
               <div style={{ color: '#001f3f' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
