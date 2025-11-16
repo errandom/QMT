@@ -58,28 +58,42 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
       }}>
         <div className="container mx-auto px-4 py-5 max-w-7xl">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between sm:items-center">
+            <div className="flex-1 pr-3">
               <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
               <p className="text-sm text-white/95 tracking-[0.095em] font-medium">ZURICH RENEGADES FOOTBALL</p>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 sm:flex-row">
               {currentUser ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    {getRoleIcon(currentUser.role)}
-                    <span className="text-sm font-medium hidden sm:inline text-white drop-shadow-sm">{currentUser.username}</span>
+                <>
+                  <div className="hidden sm:flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      {getRoleIcon(currentUser.role)}
+                      <span className="text-sm font-medium text-white drop-shadow-sm">{currentUser.username}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onLogout}
+                      className="group text-white hover:bg-white/15 transition-all rounded-lg"
+                    >
+                      <SignOut size={18} weight="bold" style={{ color: '#f5f5f5' }} />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLogout}
-                    className="group text-white hover:bg-white/15 transition-all rounded-lg"
-                  >
-                    <SignOut size={18} weight="bold" style={{ color: '#f5f5f5' }} />
-                  </Button>
-                </div>
+                  
+                  <div className="flex sm:hidden flex-col items-center gap-2">
+                    {getRoleIcon(currentUser.role)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onLogout}
+                      className="group text-white hover:bg-white/15 transition-all rounded-lg h-7 px-2"
+                    >
+                      <SignOut size={16} weight="bold" style={{ color: '#f5f5f5' }} />
+                    </Button>
+                  </div>
+                </>
               ) : (
                 <Button
                   variant="ghost"
