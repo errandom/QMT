@@ -61,7 +61,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
       }}>
         <div className="container mx-auto px-4 py-3 sm:py-5 max-w-7xl">
-          <div className="flex items-start justify-between sm:items-center">
+          <div className="flex items-center justify-between">
             <div className="flex-1 pr-3">
               <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
               <p className="text-sm text-white/95 tracking-[0.095em] font-medium">ZURICH RENEGADES FOOTBALL</p>
