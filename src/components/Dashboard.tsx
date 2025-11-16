@@ -77,7 +77,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
             <div className="relative h-full rounded-xl backdrop-blur-sm p-1.5 shadow-inner" style={{
-              background: '#248bcc'
+              background: '#3e4347'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
@@ -85,8 +85,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   style={{
                     left: `calc(${activeIndex * 33.333}% + ${activeIndex === 0 ? 0 : activeIndex * 0.5}rem)`,
                     width: 'calc(33.333% - 0.5rem)',
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
+                    background: '#248bcc',
+                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
                 />
                 
