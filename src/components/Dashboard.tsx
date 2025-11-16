@@ -184,7 +184,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <span>Equipment</span>
                 </div>
               </Button>
-              <Button onClick={handleOfficeClick} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
+              <Button onClick={handleOfficeClick} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(62,67,71,0.8)]" style={{ borderRadius: '8pt', background: '#3e4347', boxShadow: '0 0 15px rgba(62, 67, 71, 0.6)', fontSize: '0.875rem' }}>
                 <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
                   <Briefcase className="mr-2 hidden md:inline" size={18} weight="duotone" />
                   <span>Office</span>
