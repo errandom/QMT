@@ -177,12 +177,13 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </Button>
             </div>
 
-            <div className="relative w-full lg:w-[260px] h-10 rounded-lg p-1" style={{
-              background: '#3e4347'
+            <div className="relative w-full lg:w-[260px] h-10 rounded-lg p-1 backdrop-blur-sm" style={{
+              background: '#3e4347',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
             }}>
               <div className="relative w-full h-full flex gap-1">
                 <div 
-                  className="absolute top-1 bottom-1 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-1 bottom-1 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
                     width: 'calc(50% - 8px)',
@@ -193,7 +194,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
                     viewMode === 'list' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -206,7 +207,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
                     viewMode === 'schedule' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
