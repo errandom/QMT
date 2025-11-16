@@ -74,7 +74,6 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="relative w-full h-24 rounded-2xl glass-card p-1.5">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
             <div className="relative h-full rounded-xl backdrop-blur-sm p-2 shadow-inner" style={{
               background: '#3e4347'
@@ -83,10 +82,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <div 
                   className="absolute rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
-                    left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
-                    top: '0',
-                    bottom: '0',
-                    width: 'calc(33.333% - 0.5rem)',
+                    left: `calc(${activeIndex * 33.333}% + 0.5rem)`,
+                    top: '0.5rem',
+                    bottom: '0.5rem',
+                    width: 'calc(33.333% - 1rem)',
                     background: 'rgba(36, 139, 204, 0.75)',
                     boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
@@ -172,7 +171,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm">
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 bg-[#3e4347] hover:bg-[#3e4347]/90 transition-all text-white text-sm">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
