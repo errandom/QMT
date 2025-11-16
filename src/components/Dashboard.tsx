@@ -112,7 +112,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full lg:w-[240px] h-10 border-white/20 text-white bg-[#248bcc] text-sm">
+              <SelectTrigger className="w-full lg:w-[240px] h-10 rounded-lg border-white/20 text-white bg-[#248bcc] text-sm">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
@@ -161,23 +161,23 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 rounded-lg border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 rounded-lg border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm">
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 rounded-lg border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
-            <div className="relative w-full lg:w-[260px] h-10 rounded p-1 backdrop-blur-sm" style={{
+            <div className="relative w-full lg:w-[260px] h-10 rounded-lg p-1 backdrop-blur-sm" style={{
               background: '#001f3f',
               boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
             }}>
@@ -194,7 +194,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
                     viewMode === 'list' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -207,7 +207,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 
                 <button
                   onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded transition-all duration-300 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-300 ${
                     viewMode === 'schedule' 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'

@@ -44,32 +44,32 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 border-white/20 bg-[#248bcc]">
-          <TabsTrigger value="schedule" className="data-[state=active]:bg-white/20 text-white">
+        <TabsList className="grid w-full grid-cols-7 border-white/20 bg-[#248bcc] rounded-lg">
+          <TabsTrigger value="schedule" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <CalendarBlank className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="requests" className="data-[state=active]:bg-white/20 text-white">
+          <TabsTrigger value="requests" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <ClipboardText className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Requests</span>
           </TabsTrigger>
-          <TabsTrigger value="teams" className="data-[state=active]:bg-white/20 text-white">
+          <TabsTrigger value="teams" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <Users className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Teams</span>
           </TabsTrigger>
-          <TabsTrigger value="equipment" className="data-[state=active]:bg-white/20 text-white">
+          <TabsTrigger value="equipment" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <Cube className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Equipment</span>
           </TabsTrigger>
-          <TabsTrigger value="fields" className="data-[state=active]:bg-white/20 text-white">
+          <TabsTrigger value="fields" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <GridFour className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Fields</span>
           </TabsTrigger>
-          <TabsTrigger value="sites" className="data-[state=active]:bg-white/20 text-white">
+          <TabsTrigger value="sites" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <MapPin className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Sites</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="data-[state=active]:bg-white/20 text-white">
+          <TabsTrigger value="settings" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <Gear className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>
