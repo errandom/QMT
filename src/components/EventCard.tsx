@@ -70,7 +70,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
               {canRequestCancellation && (
@@ -85,7 +85,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-2 my-1.5">
+            <div className="flex items-center gap-2 mb-3">
               <div style={{ color: '#001f3f' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
