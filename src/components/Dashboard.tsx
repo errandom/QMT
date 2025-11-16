@@ -73,21 +73,23 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-20 rounded-xl px-1.5 py-0.5">
+          <div className="relative w-full h-20 px-1.5 py-0.5" style={{ borderRadius: '1pt' }}>
             
-            <div className="relative h-full rounded-lg backdrop-blur-sm px-2 py-1 shadow-inner" style={{
-              background: '#3e4347'
+            <div className="relative h-full backdrop-blur-sm px-2 py-1 shadow-inner" style={{
+              background: '#3e4347',
+              borderRadius: '1pt'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + 0.5rem)`,
                     top: '0.125rem',
                     bottom: '0.125rem',
                     width: 'calc(33.333% - 1rem)',
                     background: 'rgba(36, 139, 204, 0.75)',
-                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
+                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    borderRadius: '1pt'
                   }}
                 />
                 
@@ -95,12 +97,12 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <button
                     key={option.value}
                     onClick={() => setSportFilter(option.value as any)}
-                    className={`relative z-10 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all duration-300 ${
+                    className={`relative z-10 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
                     }`}
-                    style={{ color: '#f5f5f5' }}
+                    style={{ color: '#f5f5f5', borderRadius: '1pt' }}
                   >
                     {option.icon}
                     <span className="text-sm font-bold tracking-tight">{option.label}</span>
