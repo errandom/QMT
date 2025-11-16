@@ -114,7 +114,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full lg:w-[240px] border-white/20 text-white bg-[#001f3f] text-sm hover:shadow-[0_0_20px_rgba(36,139,204,0.5)] transition-all" style={{ borderRadius: '8pt', height: '40px', minHeight: '40px', maxHeight: '40px', boxShadow: '0 0 15px rgba(36, 139, 204, 0.5)' }}>
+              <SelectTrigger className="w-full lg:w-[240px] border-white/20 text-white text-sm hover:shadow-[0_0_20px_rgba(36,139,204,0.5)] transition-all" style={{ borderRadius: '8pt', height: '40px', minHeight: '40px', maxHeight: '40px', background: '#001f3f', boxShadow: '0 0 15px rgba(36, 139, 204, 0.5)' }}>
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
