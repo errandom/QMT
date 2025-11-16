@@ -61,7 +61,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const eventDate = new Date(event.date + ' ' + event.startTime)
   const now = new Date()
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-  const canRequestCancellation = hoursUntilEvent > 36 && (event.status === 'Confirmed' || event.status === 'Planned')
+  const canRequestCancellation = hoursUntilEvent > 24 && (event.status === 'Confirmed' || event.status === 'Planned')
 
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
