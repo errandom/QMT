@@ -33,18 +33,21 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
     }
   }
 
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = (role: string, isMobile = false) => {
+    const sizeClass = isMobile ? 'w-8 h-8' : 'w-10 h-10'
+    const iconSize = isMobile ? 20 : 24
+    
     if (role === 'admin') {
       return (
-        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <Crown size={24} weight="duotone" style={{ color: '#248bcc' }} />
+        <div className={`${sizeClass} rounded-full bg-white flex items-center justify-center`}>
+          <Crown size={iconSize} weight="duotone" style={{ color: '#248bcc' }} />
         </div>
       )
     }
     if (role === 'mgmt') {
       return (
-        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <Detective size={24} weight="duotone" style={{ color: '#248bcc' }} />
+        <div className={`${sizeClass} rounded-full bg-white flex items-center justify-center`}>
+          <Detective size={iconSize} weight="duotone" style={{ color: '#248bcc' }} />
         </div>
       )
     }
@@ -57,7 +60,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
         background: '#001f3f',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
       }}>
-        <div className="container mx-auto px-4 py-5 max-w-7xl">
+        <div className="container mx-auto px-4 py-3 sm:py-5 max-w-7xl">
           <div className="flex items-start justify-between sm:items-center">
             <div className="flex-1 pr-3">
               <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
@@ -83,7 +86,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   </div>
                   
                   <div className="flex sm:hidden flex-col items-center gap-2">
-                    {getRoleIcon(currentUser.role)}
+                    {getRoleIcon(currentUser.role, true)}
                     <Button
                       variant="ghost"
                       size="sm"
