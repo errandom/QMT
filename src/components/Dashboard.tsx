@@ -72,7 +72,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
   return (
     <>
       <div className="space-y-6">
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="relative w-full h-20 px-1.5 py-0.5" style={{ borderRadius: '8pt' }}>
             
             <div className="relative h-full backdrop-blur-sm px-2 py-1 shadow-inner" style={{
