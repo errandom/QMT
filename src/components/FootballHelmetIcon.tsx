@@ -14,18 +14,14 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
         fill="currentColor"
         className={className}
       >
-        <path d="M18.5 4.5C17.2 3.2 15.2 2.5 12.8 3.2L4.2 6.3C2.8 6.8 2 8.3 2.5 9.7L7.8 23.5C8.3 24.9 9.8 25.7 11.2 25.2L19.8 22.1C21.2 21.6 22 20.1 21.5 18.7L16.2 4.9C16 4.6 15.8 4.3 15.5 4.1L18.5 4.5Z" transform="translate(0.5, -1.5)" />
-        <path d="M19.3 7.8L17.5 7.2M18.5 10.5L16.7 9.9M17.7 13.2L15.9 12.6M16.9 15.9L15.1 15.3M16.1 18.6L14.3 18" 
-          stroke="white" 
-          strokeWidth="2" 
-          strokeLinecap="round"
-          fill="none"
-          transform="translate(0.5, -1.5)"
-        />
+        <path d="M12 3C7.58 3 4 6.58 4 11v5c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-4.5c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5V16c0 .55.45 1 1 1H19c.55 0 1-.45 1-1v-5c0-4.42-3.58-8-8-8z"/>
+        <rect x="8" y="11" width="8" height="5" rx="1.5" fill="currentColor" opacity="0.75"/>
+        <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
+        <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
       </svg>
     )
   }
-
+  
   return (
     <svg 
       width={size} 
@@ -38,8 +34,10 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M6.5 4.5L4 6C3.2 6.5 2.5 7.5 2.8 8.8L6 19C6.3 20.3 7.3 21 8.5 20.5L18 16.5C19.2 16 20 15 19.7 13.7L16.5 3.5C16.2 2.2 15.2 1.5 14 2L6.5 4.5Z" transform="translate(1, 1)" />
-      <path d="M4.5 8L6.5 7.3M5 11L7 10.3M5.5 14L7.5 13.3M6 17L8 16.3M6.5 20L8.5 19.3" transform="translate(5, -1)" />
+      <path d="M12 3C7.58 3 4 6.58 4 11v5c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-4.5c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5V16c0 .55.45 1 1 1H19c.55 0 1-.45 1-1v-5c0-4.42-3.58-8-8-8z"/>
+      <rect x="8" y="11" width="8" height="5" rx="1.5"/>
+      <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
+      <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
     </svg>
   )
 }
