@@ -85,11 +85,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-0">
               <div style={{ color: '#001f3f' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-xl font-semibold border-2 border-[oklch(0.85_0.015_210)] rounded-md px-3 py-1" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
+              <CardTitle className="text-xl font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && (
@@ -101,7 +101,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-2.5 pt-0">
+      <CardContent className="space-y-2.5 pt-2">
         <div className="flex items-center gap-2 text-base" style={{ color: '#001f3f' }}>
           <CalendarBlank style={{ color: '#248bcc' }} size={22} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>

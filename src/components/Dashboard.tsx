@@ -104,8 +104,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     }`}
                     style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                   >
-                    <span>{option.icon}</span>
-                    <span className="text-sm font-bold tracking-tight">{option.label}</span>
+                    <div className="flex flex-col items-center gap-0.5 group-hover:scale-110 transition-transform duration-200">
+                      <span>{option.icon}</span>
+                      <span className="text-sm font-bold tracking-tight">{option.label}</span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -114,8 +116,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full lg:w-[240px] border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" style={{ borderRadius: '8pt', height: '40px', minHeight: '40px', maxHeight: '40px', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
-                <SelectValue placeholder="All Teams" />
+              <SelectTrigger className="group w-full lg:w-[240px] border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" style={{ borderRadius: '8pt', height: '40px', minHeight: '40px', maxHeight: '40px', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
+                <div className="group-hover:scale-110 transition-transform duration-200">
+                  <SelectValue placeholder="All Teams" />
+                </div>
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
                 <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
@@ -164,18 +168,24 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
             <div className="flex gap-2 flex-1">
               <Button onClick={() => setShowFacilityDialog(true)} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
-                <Plus className="mr-2" size={18} weight="bold" />
-                <MapPin className="mr-2" size={18} weight="duotone" />
-                <span>Facility</span>
+                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
+                  <Plus className="mr-2" size={18} weight="bold" />
+                  <MapPin className="mr-2" size={18} weight="duotone" />
+                  <span>Facility</span>
+                </div>
               </Button>
               <Button onClick={() => setShowEquipmentDialog(true)} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
-                <Plus className="mr-2" size={18} weight="bold" />
-                <Cube className="mr-2" size={18} weight="duotone" />
-                <span>Equipment</span>
+                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
+                  <Plus className="mr-2" size={18} weight="bold" />
+                  <Cube className="mr-2" size={18} weight="duotone" />
+                  <span>Equipment</span>
+                </div>
               </Button>
               <Button onClick={handleOfficeClick} className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" style={{ borderRadius: '8pt', background: '#001f3f', boxShadow: '0 0 15px rgba(0, 31, 63, 0.6)', fontSize: '0.875rem' }}>
-                <Briefcase className="mr-2" size={18} weight="duotone" />
-                <span>Office</span>
+                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
+                  <Briefcase className="mr-2" size={18} weight="duotone" />
+                  <span>Office</span>
+                </div>
               </Button>
             </div>
 
@@ -208,8 +218,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   }`}
                   style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                 >
-                  <ListBullets size={18} weight="duotone" />
-                  <span className="font-bold text-sm">List</span>
+                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
+                    <ListBullets size={18} weight="duotone" />
+                    <span className="font-bold text-sm">List</span>
+                  </div>
                 </button>
                 
                 <button
@@ -221,8 +233,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   }`}
                   style={{ color: '#f5f5f5', borderRadius: '8pt' }}
                 >
-                  <Calendar size={18} weight="duotone" />
-                  <span className="font-bold text-sm">Schedule</span>
+                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
+                    <Calendar size={18} weight="duotone" />
+                    <span className="font-bold text-sm">Schedule</span>
+                  </div>
                 </button>
               </div>
             </div>
