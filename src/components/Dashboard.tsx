@@ -183,7 +183,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             }}>
               <div className="relative w-full h-full flex gap-1">
                 <div 
-                  className="absolute top-1 bottom-1 rounded shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute top-1 bottom-1 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
                     width: 'calc(50% - 8px)',
