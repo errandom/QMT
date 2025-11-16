@@ -37,14 +37,14 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
     if (role === 'admin') {
       return (
         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <Crown size={24} weight="thin" style={{ color: '#2c3e50' }} />
+          <Crown size={24} weight="thin" style={{ color: '#248bcc' }} />
         </div>
       )
     }
     if (role === 'mgmt') {
       return (
         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <Detective size={24} weight="thin" style={{ color: '#2c3e50' }} />
+          <Detective size={24} weight="thin" style={{ color: '#248bcc' }} />
         </div>
       )
     }
