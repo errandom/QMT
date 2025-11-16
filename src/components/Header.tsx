@@ -37,14 +37,14 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
     if (role === 'admin') {
       return (
         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <Crown size={24} weight="thin" className="text-foreground" />
+          <Crown size={24} weight="thin" style={{ color: '#2c3e50' }} />
         </div>
       )
     }
     if (role === 'mgmt') {
       return (
         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <Detective size={24} weight="thin" className="text-foreground" />
+          <Detective size={24} weight="thin" style={{ color: '#2c3e50' }} />
         </div>
       )
     }
@@ -54,8 +54,8 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-white/20" style={{
-        background: 'linear-gradient(135deg, oklch(0.45 0.18 240) 0%, oklch(0.55 0.20 220) 25%, oklch(0.60 0.18 210) 50%, oklch(0.50 0.22 200) 75%, oklch(0.52 0.20 210) 100%)',
-        boxShadow: '0 4px 16px oklch(0.30 0.10 220 / 0.2)'
+        background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
       }}>
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
@@ -77,7 +77,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                     onClick={onLogout}
                     className="text-white hover:bg-white/10 transition-all"
                   >
-                    <SignOut size={18} weight="bold" />
+                    <SignOut size={18} weight="bold" style={{ color: '#f5f5f5' }} />
                   </Button>
                 </div>
               ) : (
@@ -87,7 +87,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   onClick={handleOfficeClick}
                   className="text-white hover:bg-white/10 transition-all"
                 >
-                  <SignIn className="mr-2" size={18} weight="bold" />
+                  <SignIn className="mr-2" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
                   Office
                 </Button>
               )}

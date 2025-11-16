@@ -20,10 +20,10 @@
 
 :root {
   --background: oklch(0.94 0.025 210);
-  --foreground: oklch(0.25 0.01 240);
+  --foreground: oklch(0.24 0.01 240);
 
   --card: oklch(0.98 0.01 210);
-  --card-foreground: oklch(0.25 0.01 240);
+  --card-foreground: oklch(0.24 0.01 240);
   
   --popover: oklch(0.98 0.01 210);
   --popover-foreground: oklch(0.25 0.01 240);
