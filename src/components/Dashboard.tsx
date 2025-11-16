@@ -78,7 +78,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
             <div className="relative h-full rounded-xl backdrop-blur-sm p-1.5 shadow-inner" style={{
-              background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)'
+              background: '#248bcc'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
@@ -115,9 +115,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full sm:w-[240px] h-10 border-white/20 text-white" style={{
-                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)'
-              }}>
+              <SelectTrigger className="w-full sm:w-[240px] h-10 border-white/20 text-white bg-[#248bcc]">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
@@ -166,50 +164,66 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1 sm:flex-none">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 hover:opacity-90 transition-all" style={{
-                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
-                color: '#f5f5f5'
-              }}>
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 hover:opacity-90 transition-all" style={{
-                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
-                color: '#f5f5f5'
-              }}>
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 sm:min-w-[140px] border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 hover:opacity-90 transition-all" style={{
-                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
-                color: '#f5f5f5'
-              }}>
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 sm:min-w-[160px] border-white/20 bg-[#001f3f] hover:opacity-90 transition-all text-white">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full sm:w-auto">
-              <TabsList className="w-full sm:w-auto h-10 border-white/20" style={{
-                background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)'
-              }}>
-                <TabsTrigger value="list" className="flex-1 sm:flex-none h-9 data-[state=active]:bg-white/20 text-white">
-                  <ListBullets className="mr-2" size={18} weight="duotone" />
-                  List
-                </TabsTrigger>
-                <TabsTrigger value="schedule" className="flex-1 sm:flex-none h-9 data-[state=active]:bg-white/20 text-white">
-                  <Calendar className="mr-2" size={18} weight="duotone" />
-                  Schedule
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="relative w-full sm:w-auto h-12 rounded-lg p-1" style={{
+              background: '#001f3f'
+            }}>
+              <div className="relative w-full h-full flex gap-1">
+                <div 
+                  className="absolute top-1 bottom-1 rounded-md shadow-lg transition-all duration-300 ease-out"
+                  style={{
+                    left: viewMode === 'list' ? '0.25rem' : 'calc(50% + 0.125rem)',
+                    width: 'calc(50% - 0.375rem)',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(8px)'
+                  }}
+                />
+                
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                    viewMode === 'list' 
+                      ? 'text-white' 
+                      : 'text-white/60 hover:text-white/80'
+                  }`}
+                >
+                  <ListBullets size={18} weight="duotone" />
+                  <span className="font-medium">List</span>
+                </button>
+                
+                <button
+                  onClick={() => setViewMode('schedule')}
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                    viewMode === 'schedule' 
+                      ? 'text-white' 
+                      : 'text-white/60 hover:text-white/80'
+                  }`}
+                >
+                  <Calendar size={18} weight="duotone" />
+                  <span className="font-medium">Schedule</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4 text-white drop-shadow-lg">Upcoming Events</h2>
+          <h2 className="text-xl font-semibold mb-4 drop-shadow-lg" style={{ color: '#001f3f' }}>Upcoming Events</h2>
           {viewMode === 'list' ? (
             <EventList sportFilter={sportFilter} teamFilter={teamFilter} />
           ) : (
