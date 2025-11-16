@@ -53,11 +53,11 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/20" style={{
-        background: '#001f3f',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+      <header className="sticky top-0 z-50 border-b border-white/30 backdrop-blur-sm" style={{
+        background: 'linear-gradient(90deg, #001f3f 0%, #248bcc 100%)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
       }}>
-        <div className="container mx-auto px-4 py-4 max-w-7xl">
+        <div className="container mx-auto px-4 py-5 max-w-7xl">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
@@ -69,13 +69,13 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     {getRoleIcon(currentUser.role)}
-                    <span className="text-sm font-medium hidden sm:inline text-white">{currentUser.username}</span>
+                    <span className="text-sm font-medium hidden sm:inline text-white drop-shadow-sm">{currentUser.username}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={onLogout}
-                    className="text-white hover:bg-white/10 transition-all"
+                    className="text-white hover:bg-white/15 transition-all rounded-lg"
                   >
                     <SignOut size={18} weight="bold" style={{ color: '#f5f5f5' }} />
                   </Button>
@@ -85,7 +85,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   variant="ghost"
                   size="sm"
                   onClick={handleOfficeClick}
-                  className="text-white hover:bg-white/10 transition-all"
+                  className="text-white hover:bg-white/15 transition-all rounded-lg"
                 >
                   <SignIn className="mr-2" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
                   Office

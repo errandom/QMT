@@ -66,7 +66,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
   return (
-    <Card className="overflow-hidden hover:shadow-xl transition-all glass-card border-white/20">
+    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 hover:scale-[1.02]">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
@@ -86,38 +86,38 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div style={{ color: '#2c3e50' }}>
+              <div style={{ color: '#001f3f' }}>
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-lg" style={{ color: '#2c3e50' }}>{event.title}</CardTitle>
+              <CardTitle className="text-lg font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && (
             <div className="text-right text-sm">
               <div style={{ color: '#6b7280' }}>Weather</div>
-              <div className="font-medium" style={{ color: '#2c3e50' }}>18°C ⛅</div>
+              <div className="font-medium" style={{ color: '#001f3f' }}>18°C ⛅</div>
             </div>
           )}
         </div>
       </CardHeader>
       
       <CardContent className="space-y-2.5 pt-0">
-        <div className="flex items-center gap-2 text-sm" style={{ color: '#2c3e50' }}>
-          <CalendarBlank style={{ color: '#6b7280' }} size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-sm" style={{ color: '#001f3f' }}>
+          <CalendarBlank style={{ color: '#248bcc' }} size={18} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm" style={{ color: '#2c3e50' }}>
-          <Clock style={{ color: '#6b7280' }} size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-sm" style={{ color: '#001f3f' }}>
+          <Clock style={{ color: '#248bcc' }} size={18} weight="duotone" />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
         {site && field && (
           <>
-            <Separator className="bg-white/20" />
+            <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-start gap-2 text-sm" style={{ color: '#2c3e50' }}>
-                <MapPin style={{ color: '#6b7280' }} className="mt-0.5" size={18} weight="duotone" />
+              <div className="flex items-start gap-2 text-sm" style={{ color: '#001f3f' }}>
+                <MapPin style={{ color: '#248bcc' }} className="mt-0.5" size={18} weight="duotone" />
                 <div>
                   <div className="font-semibold">{site.name} - {field.name}</div>
                   <div className="text-xs" style={{ color: '#6b7280' }}>
@@ -165,7 +165,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: '#2c3e50' }}>
+              <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: '#001f3f' }}>
                 <span className="flex items-center gap-1">
                   {field.turfType === 'Artificial Turf' ? (
                     <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
@@ -211,15 +211,15 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
         {eventTeams && eventTeams.length > 0 && (
           <>
-            <Separator className="bg-white/20" />
+            <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#2c3e50' }}>
-                <Users style={{ color: '#6b7280' }} size={18} weight="duotone" />
+              <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#001f3f' }}>
+                <Users style={{ color: '#248bcc' }} size={18} weight="duotone" />
                 <span>Teams</span>
               </div>
               <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
-                  <div key={team.id} className="text-sm" style={{ color: '#2c3e50' }}>
+                  <div key={team.id} className="text-sm" style={{ color: '#001f3f' }}>
                     <div className="font-medium">{team.name}</div>
                     {(event.eventType === 'Game' || event.eventType === 'Practice') && (
                       <div className="text-xs space-y-0.5" style={{ color: '#6b7280' }}>
@@ -239,7 +239,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         )}
 
         {event.otherParticipants && (
-          <div className="text-sm" style={{ color: '#2c3e50' }}>
+          <div className="text-sm" style={{ color: '#001f3f' }}>
             <span style={{ color: '#6b7280' }}>Participants: </span>
             <span>{event.otherParticipants}</span>
           </div>
