@@ -84,8 +84,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <div 
                   className="absolute top-0 bottom-0 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
-                    left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
-                    width: 'calc(33.333% - 0.333rem)',
+                    left: `calc(${activeIndex * 33.333}% + ${activeIndex === 0 ? 0 : activeIndex * 0.5}rem)`,
+                    width: 'calc(33.333% - 0.5rem)',
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
                   }}
@@ -180,43 +180,49 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-auto h-12 rounded-lg p-1" style={{
-              background: '#001f3f'
-            }}>
-              <div className="relative w-full h-full flex gap-1">
-                <div 
-                  className="absolute top-1 bottom-1 rounded-md shadow-lg transition-all duration-300 ease-out"
-                  style={{
-                    left: viewMode === 'list' ? '0.25rem' : 'calc(50% + 0.125rem)',
-                    width: 'calc(50% - 0.375rem)',
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    backdropFilter: 'blur(8px)'
-                  }}
-                />
-                
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
-                    viewMode === 'list' 
-                      ? 'text-white' 
-                      : 'text-white/60 hover:text-white/80'
-                  }`}
-                >
-                  <ListBullets size={18} weight="duotone" />
-                  <span className="font-medium">List</span>
-                </button>
-                
-                <button
-                  onClick={() => setViewMode('schedule')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
-                    viewMode === 'schedule' 
-                      ? 'text-white' 
-                      : 'text-white/60 hover:text-white/80'
-                  }`}
-                >
-                  <Calendar size={18} weight="duotone" />
-                  <span className="font-medium">Schedule</span>
-                </button>
+            <div className="relative w-full sm:w-auto h-16 rounded-xl glass-card p-1.5">
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
+              
+              <div className="relative h-full rounded-lg backdrop-blur-sm p-1 shadow-inner" style={{
+                background: '#001f3f'
+              }}>
+                <div className="relative w-full h-full flex gap-1.5">
+                  <div 
+                    className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                    style={{
+                      left: viewMode === 'list' ? '0' : 'calc(50% + 0.375rem)',
+                      width: 'calc(50% - 0.375rem)',
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
+                    }}
+                  />
+                  
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                      viewMode === 'list' 
+                        ? 'drop-shadow-lg' 
+                        : 'opacity-70 hover:opacity-90 hover:scale-105'
+                    }`}
+                    style={{ color: '#f5f5f5' }}
+                  >
+                    <ListBullets size={20} weight="duotone" />
+                    <span className="font-bold">List</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setViewMode('schedule')}
+                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                      viewMode === 'schedule' 
+                        ? 'drop-shadow-lg' 
+                        : 'opacity-70 hover:opacity-90 hover:scale-105'
+                    }`}
+                    style={{ color: '#f5f5f5' }}
+                  >
+                    <Calendar size={20} weight="duotone" />
+                    <span className="font-bold">Schedule</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
