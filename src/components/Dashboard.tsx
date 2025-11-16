@@ -73,7 +73,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-24 rounded-2xl glass-card p-1.5">
+          <div className="relative w-full h-24 rounded-2xl p-1.5">
             
             <div className="relative h-full rounded-xl backdrop-blur-sm p-2 shadow-inner" style={{
               background: '#3e4347'
