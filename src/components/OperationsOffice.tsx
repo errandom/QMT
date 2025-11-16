@@ -25,8 +25,8 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
   if (!currentUser || !hasAccess(currentUser)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Alert className="max-w-md">
-          <AlertDescription>
+        <Alert className="max-w-md glass-card border-white/20">
+          <AlertDescription className="text-white">
             Access denied. You need admin or management privileges to access the Operations Office.
           </AlertDescription>
         </Alert>
@@ -38,38 +38,38 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Operations Office</h1>
-          <p className="text-muted-foreground">Manage schedules, requests, teams, and facilities</p>
+          <h1 className="text-2xl font-bold text-white drop-shadow-lg">Operations Office</h1>
+          <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="schedule">
+        <TabsList className="glass-button grid w-full grid-cols-7 border-white/20">
+          <TabsTrigger value="schedule" className="data-[state=active]:bg-white/20 text-white">
             <CalendarBlank className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="requests">
+          <TabsTrigger value="requests" className="data-[state=active]:bg-white/20 text-white">
             <ClipboardText className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Requests</span>
           </TabsTrigger>
-          <TabsTrigger value="teams">
+          <TabsTrigger value="teams" className="data-[state=active]:bg-white/20 text-white">
             <Users className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Teams</span>
           </TabsTrigger>
-          <TabsTrigger value="equipment">
+          <TabsTrigger value="equipment" className="data-[state=active]:bg-white/20 text-white">
             <Cube className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Equipment</span>
           </TabsTrigger>
-          <TabsTrigger value="fields">
+          <TabsTrigger value="fields" className="data-[state=active]:bg-white/20 text-white">
             <GridFour className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Fields</span>
           </TabsTrigger>
-          <TabsTrigger value="sites">
+          <TabsTrigger value="sites" className="data-[state=active]:bg-white/20 text-white">
             <MapPin className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Sites</span>
           </TabsTrigger>
-          <TabsTrigger value="settings">
+          <TabsTrigger value="settings" className="data-[state=active]:bg-white/20 text-white">
             <Gear className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>

@@ -61,16 +61,17 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-24 rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 p-1.5 shadow-lg shadow-slate-800/20">
+          <div className="relative w-full h-24 rounded-2xl glass-card p-1.5">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
-            <div className="relative h-full rounded-xl bg-gradient-to-br from-slate-800/30 to-slate-800/40 backdrop-blur-sm p-1.5">
+            <div className="relative h-full rounded-xl bg-gradient-to-br from-[oklch(0.35_0.12_250)] to-[oklch(0.28_0.10_250)] backdrop-blur-sm p-1.5 shadow-inner">
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute top-0 bottom-0 bg-white rounded-lg shadow-lg shadow-black/20 transition-all duration-300 ease-out"
+                  className="absolute top-0 bottom-0 bg-gradient-to-br from-[oklch(0.60_0.15_220)] to-[oklch(0.50_0.12_230)] rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
                     left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
                     width: 'calc(33.333% - 0.333rem)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
                 />
                 
@@ -80,8 +81,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     onClick={() => setSportFilter(option.value as any)}
                     className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
                       sportFilter === option.value 
-                        ? 'text-slate-900' 
-                        : 'text-white/80 hover:text-white hover:scale-105'
+                        ? 'text-white drop-shadow-lg' 
+                        : 'text-white/70 hover:text-white/90 hover:scale-105'
                     }`}
                   >
                     <div className="flex items-center gap-1">
@@ -97,10 +98,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full sm:w-[240px] h-10">
+              <SelectTrigger className="glass-button w-full sm:w-[240px] h-10 text-white border-white/20">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="glass-card border-white/20">
                 <SelectItem value="all">All Teams</SelectItem>
                 {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
                   <>
@@ -146,29 +147,29 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1 sm:flex-none">
-              <Button onClick={() => setShowFacilityDialog(true)} variant="outline" className="flex-1 h-10 sm:min-w-[140px]">
+              <Button onClick={() => setShowFacilityDialog(true)} className="glass-button flex-1 h-10 sm:min-w-[140px] text-white hover:text-white border-white/20">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} variant="outline" className="flex-1 h-10 sm:min-w-[140px]">
+              <Button onClick={() => setShowEquipmentDialog(true)} className="glass-button flex-1 h-10 sm:min-w-[140px] text-white hover:text-white border-white/20">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} variant="outline" className="flex-1 h-10 sm:min-w-[160px]">
+              <Button onClick={handleOfficeClick} className="glass-button flex-1 h-10 sm:min-w-[160px] text-white hover:text-white border-white/20">
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full sm:w-auto">
-              <TabsList className="w-full sm:w-auto h-10">
-                <TabsTrigger value="list" className="flex-1 sm:flex-none h-9">
+              <TabsList className="glass-button w-full sm:w-auto h-10 border-white/20">
+                <TabsTrigger value="list" className="flex-1 sm:flex-none h-9 data-[state=active]:bg-white/20 text-white">
                   <ListBullets className="mr-2" size={18} weight="duotone" />
                   List
                 </TabsTrigger>
-                <TabsTrigger value="schedule" className="flex-1 sm:flex-none h-9">
+                <TabsTrigger value="schedule" className="flex-1 sm:flex-none h-9 data-[state=active]:bg-white/20 text-white">
                   <Calendar className="mr-2" size={18} weight="duotone" />
                   Schedule
                 </TabsTrigger>
@@ -178,7 +179,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">Upcoming Events</h2>
+          <h2 className="text-xl font-semibold mb-4 text-white drop-shadow-lg">Upcoming Events</h2>
           {viewMode === 'list' ? (
             <EventList sportFilter={sportFilter} teamFilter={teamFilter} />
           ) : (

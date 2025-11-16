@@ -32,10 +32,10 @@ interface EventCardProps {
 }
 
 const eventTypeColors = {
-  'Game': 'border-2 border-slate-700 text-slate-700 bg-transparent',
-  'Practice': 'border-2 border-slate-700 text-slate-700 bg-transparent',
-  'Meeting': 'border-2 border-slate-700 text-slate-700 bg-transparent',
-  'Other': 'border-2 border-slate-700 text-slate-700 bg-transparent'
+  'Game': 'border-2 border-[oklch(0.35_0.10_250)] text-[oklch(0.35_0.10_250)] bg-transparent',
+  'Practice': 'border-2 border-[oklch(0.35_0.10_250)] text-[oklch(0.35_0.10_250)] bg-transparent',
+  'Meeting': 'border-2 border-[oklch(0.35_0.10_250)] text-[oklch(0.35_0.10_250)] bg-transparent',
+  'Other': 'border-2 border-[oklch(0.35_0.10_250)] text-[oklch(0.35_0.10_250)] bg-transparent'
 }
 
 const eventTypeIcons: Record<EventType, React.ReactNode> = {
@@ -66,7 +66,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="overflow-hidden hover:shadow-xl transition-all glass-card border-white/20">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
@@ -86,41 +86,41 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="text-slate-700">
+              <div className="text-[oklch(0.35_0.10_250)]">
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-lg">{event.title}</CardTitle>
+              <CardTitle className="text-lg text-white">{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && (
             <div className="text-right text-sm">
-              <div className="text-muted-foreground">Weather</div>
-              <div className="font-medium">18°C ⛅</div>
+              <div className="text-white/70">Weather</div>
+              <div className="font-medium text-white">18°C ⛅</div>
             </div>
           )}
         </div>
       </CardHeader>
       
       <CardContent className="space-y-2.5 pt-0">
-        <div className="flex items-center gap-2 text-sm">
-          <CalendarBlank className="text-muted-foreground" size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-sm text-white">
+          <CalendarBlank className="text-white/70" size={18} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="text-muted-foreground" size={18} weight="duotone" />
+        <div className="flex items-center gap-2 text-sm text-white">
+          <Clock className="text-white/70" size={18} weight="duotone" />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
         {site && field && (
           <>
-            <Separator />
+            <Separator className="bg-white/20" />
             <div className="space-y-1.5">
-              <div className="flex items-start gap-2 text-sm">
-                <MapPin className="text-muted-foreground mt-0.5" size={18} weight="duotone" />
+              <div className="flex items-start gap-2 text-sm text-white">
+                <MapPin className="text-white/70 mt-0.5" size={18} weight="duotone" />
                 <div>
                   <div className="font-semibold">{site.name} - {field.name}</div>
-                  <div className="text-muted-foreground text-xs">
+                  <div className="text-white/70 text-xs">
                     {site.address}, {site.zipCode} {site.city}
                   </div>
                 </div>
@@ -128,44 +128,44 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
               <div className="flex flex-wrap gap-2 ml-6">
                 {site.amenities.parking && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-white/70">
                     <CarSimple size={16} weight="duotone" />
                     <span>Parking</span>
                   </div>
                 )}
                 {site.amenities.toilets && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-white/70">
                     <Toilet size={16} weight="duotone" />
                     <span>Toilets</span>
                   </div>
                 )}
                 {site.amenities.lockerRooms && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-white/70">
                     <Lockers size={16} weight="duotone" />
                     <span>Lockers</span>
                   </div>
                 )}
                 {site.amenities.shower && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-white/70">
                     <Shower size={16} weight="duotone" />
                     <span>Shower</span>
                   </div>
                 )}
                 {site.amenities.restaurant && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-white/70">
                     <ForkKnife size={16} weight="duotone" />
                     <span>Restaurant</span>
                   </div>
                 )}
                 {site.amenities.equipmentStash && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-white/70">
                     <Package size={16} weight="duotone" />
                     <span>Equipment</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2 ml-6 text-xs">
+              <div className="flex flex-wrap gap-2 ml-6 text-xs text-white">
                 <span className="flex items-center gap-1">
                   {field.turfType === 'Artificial Turf' ? (
                     <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
@@ -211,18 +211,18 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
         {eventTeams && eventTeams.length > 0 && (
           <>
-            <Separator />
+            <Separator className="bg-white/20" />
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Users className="text-muted-foreground" size={18} weight="duotone" />
+              <div className="flex items-center gap-2 text-sm font-medium text-white">
+                <Users className="text-white/70" size={18} weight="duotone" />
                 <span>Teams</span>
               </div>
               <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
-                  <div key={team.id} className="text-sm">
+                  <div key={team.id} className="text-sm text-white">
                     <div className="font-medium">{team.name}</div>
                     {(event.eventType === 'Game' || event.eventType === 'Practice') && (
-                      <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div className="text-xs text-white/70 space-y-0.5">
                         {team.headCoach && (
                           <div>Coach: {team.headCoach.firstName} {team.headCoach.lastName}</div>
                         )}
@@ -239,8 +239,8 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         )}
 
         {event.otherParticipants && (
-          <div className="text-sm">
-            <span className="text-muted-foreground">Participants: </span>
+          <div className="text-sm text-white">
+            <span className="text-white/70">Participants: </span>
             <span>{event.otherParticipants}</span>
           </div>
         )}
