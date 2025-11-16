@@ -8,45 +8,50 @@
   
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, oklch(0.25 0.08 250) 0%, oklch(0.18 0.06 250) 100%);
+    background: linear-gradient(135deg, 
+      oklch(0.92 0.03 220) 0%, 
+      oklch(0.96 0.02 210) 25%,
+      oklch(0.94 0.025 200) 50%,
+      oklch(0.95 0.02 190) 75%,
+      oklch(0.93 0.03 200) 100%);
     min-height: 100vh;
   }
 }
 
 :root {
-  --background: oklch(0.20 0.06 250);
-  --foreground: oklch(0.98 0.01 250);
+  --background: oklch(0.94 0.025 210);
+  --foreground: oklch(0.20 0.04 220);
 
-  --card: linear-gradient(145deg, oklch(0.28 0.08 250), oklch(0.22 0.06 250));
-  --card-foreground: oklch(0.98 0.01 250);
+  --card: oklch(0.98 0.01 210);
+  --card-foreground: oklch(0.20 0.04 220);
   
-  --popover: oklch(0.24 0.07 250);
-  --popover-foreground: oklch(0.98 0.01 250);
+  --popover: oklch(0.98 0.01 210);
+  --popover-foreground: oklch(0.20 0.04 220);
 
-  --primary: oklch(0.35 0.10 250);
+  --primary: oklch(0.35 0.12 230);
   --primary-foreground: oklch(0.98 0 0);
 
-  --secondary: oklch(0.45 0.12 230);
+  --secondary: oklch(0.65 0.10 210);
   --secondary-foreground: oklch(0.98 0 0);
 
-  --muted: oklch(0.30 0.06 250);
-  --muted-foreground: oklch(0.70 0.04 250);
+  --muted: oklch(0.88 0.02 210);
+  --muted-foreground: oklch(0.50 0.04 220);
 
-  --accent: oklch(0.55 0.15 220);
+  --accent: oklch(0.55 0.15 200);
   --accent-foreground: oklch(0.98 0 0);
 
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
 
-  --border: oklch(0.40 0.08 250);
-  --input: oklch(0.32 0.08 250);
-  --ring: oklch(0.55 0.15 220);
+  --border: oklch(0.82 0.03 210);
+  --input: oklch(0.90 0.02 210);
+  --ring: oklch(0.55 0.15 200);
 
   --radius: 0.75rem;
   
-  --glass-bg: oklch(0.30 0.08 250 / 0.4);
-  --glass-border: oklch(0.60 0.12 240 / 0.3);
-  --glass-shine: oklch(0.80 0.08 240 / 0.15);
+  --glass-bg: oklch(0.96 0.02 210 / 0.6);
+  --glass-border: oklch(0.70 0.08 200 / 0.25);
+  --glass-shine: oklch(0.98 0.02 200 / 0.4);
 }
 
 @theme {
@@ -80,33 +85,33 @@
 
 .glass-card {
   background: linear-gradient(145deg, 
-    oklch(0.28 0.08 250 / 0.6), 
-    oklch(0.22 0.06 250 / 0.4));
+    oklch(0.98 0.015 210 / 0.8), 
+    oklch(0.96 0.02 200 / 0.7));
   backdrop-filter: blur(12px);
-  border: 1px solid oklch(0.60 0.12 240 / 0.3);
+  border: 1px solid oklch(0.70 0.08 200 / 0.3);
   box-shadow: 
-    0 8px 32px oklch(0 0 0 / 0.3),
-    inset 0 1px 0 oklch(0.80 0.08 240 / 0.15);
+    0 8px 32px oklch(0.30 0.10 220 / 0.12),
+    inset 0 1px 0 oklch(0.98 0.02 200 / 0.5);
 }
 
 .glass-button {
   background: linear-gradient(145deg, 
-    oklch(0.38 0.12 250 / 0.8), 
-    oklch(0.30 0.10 250 / 0.6));
+    oklch(0.40 0.14 230 / 0.95), 
+    oklch(0.35 0.12 230 / 0.9));
   backdrop-filter: blur(8px);
-  border: 1px solid oklch(0.60 0.12 240 / 0.4);
+  border: 1px solid oklch(0.50 0.12 220 / 0.4);
   box-shadow: 
-    0 4px 16px oklch(0 0 0 / 0.2),
-    inset 0 1px 0 oklch(0.80 0.08 240 / 0.2);
+    0 4px 16px oklch(0.30 0.10 220 / 0.15),
+    inset 0 1px 0 oklch(0.98 0.02 200 / 0.3);
   transition: all 0.3s ease;
 }
 
 .glass-button:hover {
   background: linear-gradient(145deg, 
-    oklch(0.42 0.14 250 / 0.9), 
-    oklch(0.34 0.12 250 / 0.7));
+    oklch(0.45 0.16 230 / 0.98), 
+    oklch(0.38 0.14 230 / 0.95));
   box-shadow: 
-    0 6px 24px oklch(0 0 0 / 0.3),
-    inset 0 1px 0 oklch(0.80 0.08 240 / 0.25);
+    0 6px 24px oklch(0.30 0.10 220 / 0.2),
+    inset 0 1px 0 oklch(0.98 0.02 200 / 0.4);
   transform: translateY(-1px);
 }
