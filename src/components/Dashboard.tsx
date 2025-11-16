@@ -76,15 +76,17 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
           <div className="relative w-full h-24 rounded-2xl glass-card p-1.5">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
             
-            <div className="relative h-full rounded-xl backdrop-blur-sm p-1.5 shadow-inner" style={{
+            <div className="relative h-full rounded-xl backdrop-blur-sm p-2 shadow-inner" style={{
               background: '#3e4347'
             }}>
               <div className="relative grid grid-cols-3 gap-2 h-full">
                 <div 
-                  className="absolute top-0 bottom-0 rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  className="absolute rounded-lg shadow-xl shadow-black/30 transition-all duration-300 ease-out"
                   style={{
-                    left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem)`,
-                    width: 'calc(33.333% - 0.5rem)',
+                    left: `calc(${activeIndex * 33.333}% + ${activeIndex * 0.5}rem + 0.5rem)`,
+                    top: '0.5rem',
+                    bottom: '0.5rem',
+                    width: 'calc(33.333% - 1rem)',
                     background: 'rgba(36, 139, 204, 0.75)',
                     boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
@@ -176,49 +178,45 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-[260px] h-10 rounded-md glass-card p-1">
-              <div className="absolute inset-0 rounded-md bg-gradient-to-br from-white/10 to-transparent opacity-40" style={{ mixBlendMode: 'overlay' }} />
-              
-              <div className="relative h-full rounded-md backdrop-blur-sm p-0.5 shadow-inner" style={{
-                background: '#001f3f'
-              }}>
-                <div className="relative w-full h-full flex gap-1">
-                  <div 
-                    className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
-                    style={{
-                      left: viewMode === 'list' ? '2px' : 'calc(50% + 2px)',
-                      width: 'calc(50% - 4px)',
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
-                    }}
-                  />
-                  
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
-                      viewMode === 'list' 
-                        ? 'drop-shadow-lg' 
-                        : 'opacity-70 hover:opacity-90 hover:scale-105'
-                    }`}
-                    style={{ color: '#f5f5f5' }}
-                  >
-                    <ListBullets size={18} weight="duotone" />
-                    <span className="font-bold text-sm">List</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setViewMode('schedule')}
-                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
-                      viewMode === 'schedule' 
-                        ? 'drop-shadow-lg' 
-                        : 'opacity-70 hover:opacity-90 hover:scale-105'
-                    }`}
-                    style={{ color: '#f5f5f5' }}
-                  >
-                    <Calendar size={18} weight="duotone" />
-                    <span className="font-bold text-sm">Schedule</span>
-                  </button>
-                </div>
+            <div className="relative w-full sm:w-[260px] h-10 rounded-md p-1" style={{
+              background: '#001f3f'
+            }}>
+              <div className="relative w-full h-full flex gap-1">
+                <div 
+                  className="absolute top-0 bottom-0 rounded-md shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  style={{
+                    left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
+                    width: 'calc(50% - 8px)',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)'
+                  }}
+                />
+                
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                    viewMode === 'list' 
+                      ? 'drop-shadow-lg' 
+                      : 'opacity-70 hover:opacity-90 hover:scale-105'
+                  }`}
+                  style={{ color: '#f5f5f5' }}
+                >
+                  <ListBullets size={18} weight="duotone" />
+                  <span className="font-bold text-sm">List</span>
+                </button>
+                
+                <button
+                  onClick={() => setViewMode('schedule')}
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 rounded-md transition-all duration-300 ${
+                    viewMode === 'schedule' 
+                      ? 'drop-shadow-lg' 
+                      : 'opacity-70 hover:opacity-90 hover:scale-105'
+                  }`}
+                  style={{ color: '#f5f5f5' }}
+                >
+                  <Calendar size={18} weight="duotone" />
+                  <span className="font-bold text-sm">Schedule</span>
+                </button>
               </div>
             </div>
           </div>
