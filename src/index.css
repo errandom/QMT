@@ -7,7 +7,7 @@
   }
   
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: linear-gradient(135deg, 
       oklch(0.97 0.005 220) 0%, 
       oklch(0.98 0.003 210) 35%,

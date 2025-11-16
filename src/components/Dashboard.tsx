@@ -73,7 +73,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     <>
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="relative w-full h-32 rounded-xl px-1.5 py-0.5">
+          <div className="relative w-full h-20 rounded-xl px-1.5 py-0.5">
             
             <div className="relative h-full rounded-lg backdrop-blur-sm px-2 py-1 shadow-inner" style={{
               background: '#3e4347'
@@ -95,7 +95,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <button
                     key={option.value}
                     onClick={() => setSportFilter(option.value as any)}
-                    className={`relative z-10 flex flex-col items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
+                    className={`relative z-10 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all duration-300 ${
                       sportFilter === option.value 
                         ? 'drop-shadow-lg' 
                         : 'opacity-70 hover:opacity-90 hover:scale-105'
@@ -103,7 +103,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     style={{ color: '#f5f5f5' }}
                   >
                     {option.icon}
-                    <span className="text-base font-bold tracking-tight">{option.label}</span>
+                    <span className="text-sm font-bold tracking-tight">{option.label}</span>
                   </button>
                 ))}
               </div>
