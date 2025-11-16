@@ -66,7 +66,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
 
   return (
-    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 hover:scale-[1.02]">
+    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 hover:scale-[1.02] rounded-[8pt]">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
