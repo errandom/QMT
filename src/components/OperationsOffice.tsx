@@ -44,7 +44,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 border-white/20 bg-[#248bcc] rounded-lg">
+        <TabsList className="grid w-full grid-cols-7 border-white/20 bg-[#3e4347] rounded-lg">
           <TabsTrigger value="schedule" className="data-[state=active]:bg-white/20 text-white rounded-lg">
             <CalendarBlank className="mr-2" size={18} weight="duotone" />
             <span className="hidden sm:inline">Schedule</span>

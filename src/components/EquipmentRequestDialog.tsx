@@ -146,12 +146,12 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} style={{
-              borderColor: '#248bcc',
+              borderColor: '#3e4347',
               color: '#2c3e50'
             }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-[#248bcc] hover:opacity-90 text-white">
+            <Button type="submit" disabled={isLoading} className="bg-[#3e4347] hover:opacity-90 text-white">
               {isLoading ? 'Submitting...' : 'Submit Request'}
             </Button>
           </div>

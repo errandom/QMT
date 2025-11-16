@@ -112,7 +112,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full lg:w-[240px] h-10 rounded-lg border-white/20 text-white bg-[#248bcc] text-sm">
+              <SelectTrigger className="w-full lg:w-[240px] h-10 rounded-lg border-white/20 text-white bg-[#3e4347] text-sm">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
@@ -161,12 +161,12 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 rounded-lg border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 rounded-lg border-white/20 bg-[#3e4347] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 rounded-lg border-white/20 bg-[#248bcc] hover:opacity-90 transition-all text-white text-sm">
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 rounded-lg border-white/20 bg-[#3e4347] hover:opacity-90 transition-all text-white text-sm">
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
