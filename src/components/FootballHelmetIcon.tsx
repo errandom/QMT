@@ -14,19 +14,18 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
         fill="currentColor"
         className={className}
       >
-        <ellipse cx="12" cy="5" rx="2.5" ry="2" opacity="0.9"/>
-        <path d="M12 7C9.5 7 8 8 7 9L6 11H8L9 9.5C9.5 9 10.5 8.5 12 8.5C13.5 8.5 14.5 9 15 9.5L16 11H18L17 9C16 8 14.5 7 12 7Z"/>
-        <rect x="8" y="10" width="8" height="7" rx="1" opacity="0.9"/>
-        <path d="M7 11L5 13V16L7 17V11Z" opacity="0.8"/>
-        <path d="M17 11V17L19 16V13L17 11Z" opacity="0.8"/>
-        <rect x="9.5" y="16.5" width="2" height="5.5" rx="0.5"/>
-        <rect x="12.5" y="16.5" width="2" height="5.5" rx="0.5"/>
-        <rect x="8.5" y="21" width="3" height="1.5" rx="0.5" opacity="0.7"/>
-        <rect x="11.5" y="21" width="3" height="1.5" rx="0.5" opacity="0.7"/>
+        <path d="M18.5 4.5C17.2 3.2 15.2 2.5 12.8 3.2L4.2 6.3C2.8 6.8 2 8.3 2.5 9.7L7.8 23.5C8.3 24.9 9.8 25.7 11.2 25.2L19.8 22.1C21.2 21.6 22 20.1 21.5 18.7L16.2 4.9C16 4.6 15.8 4.3 15.5 4.1L18.5 4.5Z" transform="translate(0.5, -1.5)" />
+        <path d="M19.3 7.8L17.5 7.2M18.5 10.5L16.7 9.9M17.7 13.2L15.9 12.6M16.9 15.9L15.1 15.3M16.1 18.6L14.3 18" 
+          stroke="white" 
+          strokeWidth="2" 
+          strokeLinecap="round"
+          fill="none"
+          transform="translate(0.5, -1.5)"
+        />
       </svg>
     )
   }
-  
+
   return (
     <svg 
       width={size} 
@@ -34,20 +33,13 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
       viewBox="0 0 24 24" 
       fill="none"
       stroke="currentColor" 
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round" 
       strokeLinejoin="round"
       className={className}
     >
-      <ellipse cx="12" cy="5" rx="2.5" ry="2"/>
-      <path d="M12 7C9.5 7 8 8 7 9L6 11H8L9 9.5C9.5 9 10.5 8.5 12 8.5C13.5 8.5 14.5 9 15 9.5L16 11H18L17 9C16 8 14.5 7 12 7Z"/>
-      <rect x="8" y="10" width="8" height="7" rx="1"/>
-      <path d="M7 11L5 13V16L7 17"/>
-      <path d="M17 11L19 13V16L17 17"/>
-      <rect x="9.5" y="16.5" width="2" height="5.5" rx="0.5"/>
-      <rect x="12.5" y="16.5" width="2" height="5.5" rx="0.5"/>
-      <rect x="8.5" y="21" width="3" height="1.5" rx="0.5"/>
-      <rect x="11.5" y="21" width="3" height="1.5" rx="0.5"/>
+      <path d="M6.5 4.5L4 6C3.2 6.5 2.5 7.5 2.8 8.8L6 19C6.3 20.3 7.3 21 8.5 20.5L18 16.5C19.2 16 20 15 19.7 13.7L16.5 3.5C16.2 2.2 15.2 1.5 14 2L6.5 4.5Z" transform="translate(1, 1)" />
+      <path d="M4.5 8L6.5 7.3M5 11L7 10.3M5.5 14L7.5 13.3M6 17L8 16.3M6.5 20L8.5 19.3" transform="translate(5, -1)" />
     </svg>
   )
 }
