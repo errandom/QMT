@@ -14,10 +14,15 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
         fill="currentColor"
         className={className}
       >
-        <path d="M12 3C7.58 3 4 6.58 4 11v5c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-4.5c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5V16c0 .55.45 1 1 1H19c.55 0 1-.45 1-1v-5c0-4.42-3.58-8-8-8z"/>
-        <rect x="8" y="11" width="8" height="5" rx="1.5" fill="currentColor" opacity="0.75"/>
-        <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
-        <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
+        <ellipse cx="12" cy="5" rx="2.5" ry="2" opacity="0.9"/>
+        <path d="M12 7C9.5 7 8 8 7 9L6 11H8L9 9.5C9.5 9 10.5 8.5 12 8.5C13.5 8.5 14.5 9 15 9.5L16 11H18L17 9C16 8 14.5 7 12 7Z"/>
+        <rect x="8" y="10" width="8" height="7" rx="1" opacity="0.9"/>
+        <path d="M7 11L5 13V16L7 17V11Z" opacity="0.8"/>
+        <path d="M17 11V17L19 16V13L17 11Z" opacity="0.8"/>
+        <rect x="9.5" y="16.5" width="2" height="5.5" rx="0.5"/>
+        <rect x="12.5" y="16.5" width="2" height="5.5" rx="0.5"/>
+        <rect x="8.5" y="21" width="3" height="1.5" rx="0.5" opacity="0.7"/>
+        <rect x="11.5" y="21" width="3" height="1.5" rx="0.5" opacity="0.7"/>
       </svg>
     )
   }
@@ -29,15 +34,20 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
       viewBox="0 0 24 24" 
       fill="none"
       stroke="currentColor" 
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round" 
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M12 3C7.58 3 4 6.58 4 11v5c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-4.5c0-2.49 2.01-4.5 4.5-4.5s4.5 2.01 4.5 4.5V16c0 .55.45 1 1 1H19c.55 0 1-.45 1-1v-5c0-4.42-3.58-8-8-8z"/>
-      <rect x="8" y="11" width="8" height="5" rx="1.5"/>
-      <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
-      <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
+      <ellipse cx="12" cy="5" rx="2.5" ry="2"/>
+      <path d="M12 7C9.5 7 8 8 7 9L6 11H8L9 9.5C9.5 9 10.5 8.5 12 8.5C13.5 8.5 14.5 9 15 9.5L16 11H18L17 9C16 8 14.5 7 12 7Z"/>
+      <rect x="8" y="10" width="8" height="7" rx="1"/>
+      <path d="M7 11L5 13V16L7 17"/>
+      <path d="M17 11L19 13V16L17 17"/>
+      <rect x="9.5" y="16.5" width="2" height="5.5" rx="0.5"/>
+      <rect x="12.5" y="16.5" width="2" height="5.5" rx="0.5"/>
+      <rect x="8.5" y="21" width="3" height="1.5" rx="0.5"/>
+      <rect x="11.5" y="21" width="3" height="1.5" rx="0.5"/>
     </svg>
   )
 }
