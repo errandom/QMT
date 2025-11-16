@@ -112,7 +112,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full lg:w-[240px] border-white/20 text-white bg-[#3e4347] text-sm" style={{ borderRadius: '1px', height: '40px', minHeight: '40px', maxHeight: '40px' }}>
+              <SelectTrigger className="w-full lg:w-[240px] border-white/20 text-white bg-[#001f3f] text-sm" style={{ borderRadius: '2px', height: '40px', minHeight: '40px', maxHeight: '40px' }}>
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent className="glass-card border-white/20">
@@ -161,25 +161,25 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <div className="flex gap-2 flex-1">
-              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 bg-[#3e4347] hover:opacity-90 transition-all text-white text-sm" style={{ borderRadius: '1px' }}>
+              <Button onClick={() => setShowFacilityDialog(true)} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '2px' }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <MapPin className="mr-2" size={18} weight="duotone" />
                 Facility
               </Button>
-              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 bg-[#3e4347] hover:opacity-90 transition-all text-white text-sm" style={{ borderRadius: '1px' }}>
+              <Button onClick={() => setShowEquipmentDialog(true)} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '2px' }}>
                 <Plus className="mr-2" size={18} weight="bold" />
                 <Cube className="mr-2" size={18} weight="duotone" />
                 Equipment
               </Button>
-              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '1px' }}>
+              <Button onClick={handleOfficeClick} className="flex-1 h-10 border-white/20 bg-[#001f3f] hover:bg-[#001f3f]/90 transition-all text-white text-sm" style={{ borderRadius: '2px' }}>
                 <Briefcase className="mr-2" size={18} weight="duotone" />
                 Office
               </Button>
             </div>
 
             <div className="relative w-full lg:w-[260px] h-10 backdrop-blur-sm" style={{
-              borderRadius: '1px',
-              background: '#3e4347',
+              borderRadius: '2px',
+              background: '#001f3f',
               boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
               padding: '2px 4px'
             }}>
@@ -191,7 +191,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     top: '2px',
                     bottom: '2px',
                     width: 'calc(50% - 8px)',
-                    borderRadius: '1.2px',
+                    borderRadius: '2px',
                     background: 'rgba(36, 139, 204, 0.75)',
                     boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
                   }}
@@ -204,7 +204,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
                   }`}
-                  style={{ color: '#f5f5f5', borderRadius: '1.2px' }}
+                  style={{ color: '#f5f5f5', borderRadius: '2px' }}
                 >
                   <ListBullets size={18} weight="duotone" />
                   <span className="font-bold text-sm">List</span>
@@ -217,7 +217,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90 hover:scale-105'
                   }`}
-                  style={{ color: '#f5f5f5', borderRadius: '1.2px' }}
+                  style={{ color: '#f5f5f5', borderRadius: '2px' }}
                 >
                   <Calendar size={18} weight="duotone" />
                   <span className="font-bold text-sm">Schedule</span>
