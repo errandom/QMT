@@ -42,6 +42,11 @@
   backdrop-filter: blur(12px) !important;
 }
 
+.request-dialog-overlay {
+  background-color: rgba(0, 31, 63, 0.37) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
 :root {
   --background: oklch(0.97 0.005 210);
   --foreground: oklch(0.24 0.01 240);
