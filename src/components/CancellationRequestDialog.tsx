@@ -71,10 +71,10 @@ export default function CancellationRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-white top-[10%]" style={{ color: '#001f3f' }}>
+      <DialogContent className="sm:max-w-[500px] top-[10%] !bg-white text-[#001f3f]">
         <DialogHeader>
-          <DialogTitle style={{ color: '#001f3f' }}>Request Event Cancellation</DialogTitle>
-          <DialogDescription style={{ color: '#001f3f' }}>
+          <DialogTitle className="text-[#001f3f]">Request Event Cancellation</DialogTitle>
+          <DialogDescription className="text-[#001f3f]">
             Submit a request to cancel: <strong>{eventTitle}</strong> on {eventDate} at {eventTime}
           </DialogDescription>
         </DialogHeader>
@@ -82,20 +82,19 @@ export default function CancellationRequestDialog({
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: '#001f3f' }}>Full Name *</Label>
+              <Label htmlFor="name" className="text-[#001f3f]">Full Name *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your full name"
                 required
-                className="bg-white"
-                style={{ borderColor: '#248bcc', color: '#001f3f' }}
+                className="bg-white border-[#248bcc] text-[#001f3f]"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phone" style={{ color: '#001f3f' }}>Phone Number *</Label>
+              <Label htmlFor="phone" className="text-[#001f3f]">Phone Number *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -103,13 +102,12 @@ export default function CancellationRequestDialog({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+41 XX XXX XX XX"
                 required
-                className="bg-white"
-                style={{ borderColor: '#248bcc', color: '#001f3f' }}
+                className="bg-white border-[#248bcc] text-[#001f3f]"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="justification" style={{ color: '#001f3f' }}>Justification *</Label>
+              <Label htmlFor="justification" className="text-[#001f3f]">Justification *</Label>
               <Textarea
                 id="justification"
                 value={justification}
@@ -117,8 +115,7 @@ export default function CancellationRequestDialog({
                 placeholder="Please provide a detailed reason for the cancellation request..."
                 rows={4}
                 required
-                className="bg-white"
-                style={{ borderColor: '#248bcc', color: '#001f3f' }}
+                className="bg-white border-[#248bcc] text-[#001f3f]"
               />
             </div>
           </div>

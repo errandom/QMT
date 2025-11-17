@@ -38,7 +38,7 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-6">
+      <DialogContent className="sm:max-w-[425px] p-6 !bg-[rgba(0,31,63,0.98)]">
         <DialogHeader>
           <DialogTitle className="text-white">Operations Office Login</DialogTitle>
           <DialogDescription className="text-white/80">

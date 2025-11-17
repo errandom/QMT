@@ -99,13 +99,13 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8"
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8 !bg-[rgba(0,31,63,0.98)]"
       >
         <DialogHeader>
-          <DialogTitle style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
+          <DialogTitle className="text-white text-2xl font-semibold">
             Request Facility
           </DialogTitle>
-          <DialogDescription style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+          <DialogDescription className="text-white/80">
             Submit a request to book a facility for your team or event
           </DialogDescription>
         </DialogHeader>
