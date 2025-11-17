@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { toast } from 'sonner'
 import { authenticateUser } from '@/lib/auth'
 import { User } from '@/lib/types'
+import { CheckCircle, XCircle } from '@phosphor-icons/react'
 
 interface LoginDialogProps {
   open: boolean
@@ -17,23 +17,27 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setFeedback(null)
 
     const user = authenticateUser(username, password)
     
     if (user) {
-      toast.success('Login successful')
-      onLoginSuccess(user)
-      setUsername('')
-      setPassword('')
+      setFeedback({ type: 'success', message: 'Login successful' })
+      setTimeout(() => {
+        onLoginSuccess(user)
+        setUsername('')
+        setPassword('')
+        setFeedback(null)
+      }, 800)
     } else {
-      toast.error('Invalid credentials')
+      setFeedback({ type: 'error', message: 'Invalid credentials' })
+      setIsLoading(false)
     }
-    
-    setIsLoading(false)
   }
 
   return (
@@ -51,7 +55,28 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
             Enter your credentials to access the operations office
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        
+        {feedback && (
+          <div 
+            className="flex items-center gap-2 p-3 rounded-md mt-4"
+            style={{
+              backgroundColor: feedback.type === 'success' 
+                ? 'oklch(0.85 0.15 150)' 
+                : 'oklch(0.45 0.22 25)',
+              color: 'white',
+              border: `1px solid ${feedback.type === 'success' ? 'oklch(0.75 0.18 150)' : 'oklch(0.35 0.25 25)'}`
+            }}
+          >
+            {feedback.type === 'success' ? (
+              <CheckCircle size={20} weight="fill" />
+            ) : (
+              <XCircle size={20} weight="fill" />
+            )}
+            <span className="font-medium">{feedback.message}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
