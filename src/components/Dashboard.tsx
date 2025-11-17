@@ -120,21 +120,81 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowFacilityDialog(true)} 
-              className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
-              style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
-            >
-              <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
-                <MapPin className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                <span>Facility</span>
-              </div>
-            </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">
+            <div className="flex gap-2 sm:contents">
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger 
+                  className="group w-2/3 sm:w-auto sm:flex-1 border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" 
+                  style={{ 
+                    ...STYLES.BUTTON_BASE, 
+                    ...STYLES.NAVY_BUTTON 
+                  }}
+                >
+                  <div className="group-hover:scale-110 transition-transform duration-200">
+                    <SelectValue placeholder="All Teams" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="glass-card border-white/20">
+                  <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
+                  {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
+                    <>
+                      <SelectItem value="divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
+                        {sportFilter}
+                      </SelectItem>
+                      {filteredTeams.map((team: any) => (
+                        <SelectItem key={team.id} value={team.id} className="text-foreground">
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {sportFilter === 'All Sports' && (
+                    <>
+                      {tackleTeams.length > 0 && (
+                        <>
+                          <SelectItem value="tackle-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
+                            Tackle Football
+                          </SelectItem>
+                          {tackleTeams.map((team: any) => (
+                            <SelectItem key={team.id} value={team.id} className="text-foreground">
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                      {flagTeams.length > 0 && (
+                        <>
+                          <SelectItem value="flag-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
+                            Flag Football
+                          </SelectItem>
+                          {flagTeams.map((team: any) => (
+                            <SelectItem key={team.id} value={team.id} className="text-foreground">
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Button 
+                onClick={() => setShowFacilityDialog(true)} 
+                className="group flex-1 sm:flex-initial h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
+                style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
+              >
+                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
+                  <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
+                  <MapPin className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
+                  <span>Facility</span>
+                </div>
+              </Button>
+            </div>
+
             <Button 
               onClick={() => setShowEquipmentDialog(true)} 
-              className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
+              className="group hidden sm:inline-flex h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
               style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
             >
               <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
@@ -143,9 +203,10 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <span>Equipment</span>
               </div>
             </Button>
+
             <Button 
               onClick={handleOfficeClick} 
-              className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(62,67,71,0.8)]" 
+              className="group hidden sm:inline-flex h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(62,67,71,0.8)]" 
               style={{ ...STYLES.BUTTON_BASE, ...STYLES.CHARCOAL_BUTTON }}
             >
               <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
@@ -153,67 +214,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <span>Office</span>
               </div>
             </Button>
-          </div>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center w-full">
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger 
-                className="group w-full md:flex-1 border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" 
-                style={{ 
-                  ...STYLES.BUTTON_BASE, 
-                  ...STYLES.NAVY_BUTTON 
-                }}
-              >
-                <div className="group-hover:scale-110 transition-transform duration-200">
-                  <SelectValue placeholder="All Teams" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="glass-card border-white/20">
-                <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
-                {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
-                  <>
-                    <SelectItem value="divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                      {sportFilter}
-                    </SelectItem>
-                    {filteredTeams.map((team: any) => (
-                      <SelectItem key={team.id} value={team.id} className="text-foreground">
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </>
-                )}
-                {sportFilter === 'All Sports' && (
-                  <>
-                    {tackleTeams.length > 0 && (
-                      <>
-                        <SelectItem value="tackle-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                          Tackle Football
-                        </SelectItem>
-                        {tackleTeams.map((team: any) => (
-                          <SelectItem key={team.id} value={team.id} className="text-foreground">
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                    {flagTeams.length > 0 && (
-                      <>
-                        <SelectItem value="flag-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                          Flag Football
-                        </SelectItem>
-                        {flagTeams.map((team: any) => (
-                          <SelectItem key={team.id} value={team.id} className="text-foreground">
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-
-            <div className="relative w-full md:flex-1 h-10 backdrop-blur-sm" style={{
+            <div className="relative w-1/3 sm:w-auto sm:flex-1 h-10 backdrop-blur-sm" style={{
               borderRadius: SIZES.BORDER_RADIUS,
               background: COLORS.NAVY,
               boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
@@ -244,7 +246,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 >
                   <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
                     <ListBullets size={SIZES.ICON_SIZE} weight="duotone" />
-                    <span className="font-bold text-sm">List</span>
+                    <span className="font-bold text-sm hidden sm:inline">List</span>
                   </div>
                 </button>
                 
@@ -259,11 +261,36 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 >
                   <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
                     <Calendar size={SIZES.ICON_SIZE} weight="duotone" />
-                    <span className="font-bold text-sm">Schedule</span>
+                    <span className="font-bold text-sm hidden sm:inline">Schedule</span>
                   </div>
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="flex gap-2 sm:hidden">
+            <Button 
+              onClick={() => setShowEquipmentDialog(true)} 
+              className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
+              style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
+            >
+              <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
+                <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
+                <Cube className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
+                <span>Equipment</span>
+              </div>
+            </Button>
+
+            <Button 
+              onClick={handleOfficeClick} 
+              className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(62,67,71,0.8)]" 
+              style={{ ...STYLES.BUTTON_BASE, ...STYLES.CHARCOAL_BUTTON }}
+            >
+              <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
+                <Briefcase className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
+                <span>Office</span>
+              </div>
+            </Button>
           </div>
         </div>
 
