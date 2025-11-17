@@ -38,10 +38,10 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] p-6">
         <DialogHeader>
-          <DialogTitle>Operations Office Login</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white">Operations Office Login</DialogTitle>
+          <DialogDescription className="text-white/80">
             Enter your credentials to access the operations office
           </DialogDescription>
         </DialogHeader>

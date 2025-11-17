@@ -99,13 +99,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl"
-        style={{
-          backgroundColor: 'rgba(0, 31, 63, 0.31)',
-          color: 'white',
-          border: 'none',
-          padding: '2rem'
-        }}
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8"
       >
         <DialogHeader>
           <DialogTitle style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
