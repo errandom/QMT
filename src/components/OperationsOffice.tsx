@@ -78,8 +78,8 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
               className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
               style={{
                 left: `calc(${activeIndex * 14.286}% + 0.5rem)`,
-                top: '0.35rem',
-                bottom: '0.35rem',
+                top: '2px',
+                bottom: '2px',
                 width: 'calc(14.286% - 1rem)',
                 background: 'rgba(36, 139, 204, 0.75)',
                 boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
