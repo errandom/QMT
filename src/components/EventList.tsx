@@ -38,8 +38,13 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
     }
   }, [events, setEvents])
 
+  const now = new Date()
+  
   const filteredEvents = events.filter((event) => {
     if (event.status === 'Cancelled') return false
+
+    const eventDateTime = new Date(event.date + ' ' + event.startTime)
+    if (eventDateTime < now) return false
 
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
