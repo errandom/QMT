@@ -273,7 +273,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
         {event.otherParticipants && (
           <div className="text-base" style={{ color: COLORS.NAVY }}>
-            <span style={{ color: '#6b7280' }}>Participants: </span>
+            <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
             <span>{event.otherParticipants}</span>
           </div>
         )}
