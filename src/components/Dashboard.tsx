@@ -155,10 +155,62 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Button>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:w-[260px] h-10 backdrop-blur-sm order-2 lg:order-1" style={{
+              borderRadius: SIZES.BORDER_RADIUS,
+              background: COLORS.NAVY,
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
+              padding: '2px 4px'
+            }}>
+              <div className="relative w-full h-full flex gap-1">
+                <div 
+                  className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+                  style={{
+                    left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
+                    top: '2px',
+                    bottom: '2px',
+                    width: 'calc(50% - 8px)',
+                    borderRadius: SIZES.BORDER_RADIUS,
+                    background: 'rgba(36, 139, 204, 0.75)',
+                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
+                  }}
+                />
+                
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
+                    viewMode === 'list' 
+                      ? 'drop-shadow-lg' 
+                      : 'opacity-70 hover:opacity-90'
+                  }`}
+                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
+                >
+                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
+                    <ListBullets size={SIZES.ICON_SIZE} weight="duotone" />
+                    <span className="font-bold text-sm">List</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setViewMode('schedule')}
+                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
+                    viewMode === 'schedule' 
+                      ? 'drop-shadow-lg' 
+                      : 'opacity-70 hover:opacity-90'
+                  }`}
+                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
+                >
+                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
+                    <Calendar size={SIZES.ICON_SIZE} weight="duotone" />
+                    <span className="font-bold text-sm">Schedule</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <Select value={teamFilter} onValueChange={setTeamFilter}>
               <SelectTrigger 
-                className="group w-full lg:w-[240px] border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" 
+                className="group w-full lg:w-[240px] border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all order-1 lg:order-2" 
                 style={{ 
                   ...STYLES.BUTTON_BASE, 
                   ...STYLES.NAVY_BUTTON 
@@ -212,58 +264,6 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 )}
               </SelectContent>
             </Select>
-
-            <div className="relative w-full lg:w-[260px] h-10 backdrop-blur-sm" style={{
-              borderRadius: SIZES.BORDER_RADIUS,
-              background: COLORS.NAVY,
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
-              padding: '2px 4px'
-            }}>
-              <div className="relative w-full h-full flex gap-1">
-                <div 
-                  className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
-                  style={{
-                    left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
-                    top: '2px',
-                    bottom: '2px',
-                    width: 'calc(50% - 8px)',
-                    borderRadius: SIZES.BORDER_RADIUS,
-                    background: 'rgba(36, 139, 204, 0.75)',
-                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
-                  }}
-                />
-                
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
-                    viewMode === 'list' 
-                      ? 'drop-shadow-lg' 
-                      : 'opacity-70 hover:opacity-90'
-                  }`}
-                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                >
-                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                    <ListBullets size={SIZES.ICON_SIZE} weight="duotone" />
-                    <span className="font-bold text-sm">List</span>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => setViewMode('schedule')}
-                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
-                    viewMode === 'schedule' 
-                      ? 'drop-shadow-lg' 
-                      : 'opacity-70 hover:opacity-90'
-                  }`}
-                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                >
-                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                    <Calendar size={SIZES.ICON_SIZE} weight="duotone" />
-                    <span className="font-bold text-sm">Schedule</span>
-                  </div>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
