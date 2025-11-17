@@ -22,6 +22,18 @@ interface OperationsOfficeProps {
 export default function OperationsOffice({ currentUser, onNavigateToDashboard }: OperationsOfficeProps) {
   const [activeTab, setActiveTab] = useState('schedule')
 
+  const tabOptions = [
+    { value: 'schedule', icon: CalendarBlank, label: 'Schedule' },
+    { value: 'requests', icon: ClipboardText, label: 'Requests' },
+    { value: 'teams', icon: Users, label: 'Teams' },
+    { value: 'equipment', icon: Cube, label: 'Equipment' },
+    { value: 'fields', icon: GridFour, label: 'Fields' },
+    { value: 'sites', icon: MapPin, label: 'Sites' },
+    { value: 'settings', icon: Gear, label: 'Settings' }
+  ]
+
+  const activeIndex = tabOptions.findIndex(opt => opt.value === activeTab)
+
   if (!currentUser || !hasAccess(currentUser)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -39,48 +51,60 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-[oklch(0.28_0.08_240)] drop-shadow-lg">Operations Office</h1>
-          <Button 
+          <button 
             onClick={onNavigateToDashboard}
-            variant="outline"
-            className="glass-button text-white border-white/30 hover:bg-white/20 shrink-0"
+            className="group flex items-center gap-2 text-[#248bcc] hover:text-[#1a6a9a] transition-colors shrink-0 font-medium"
           >
-            <ArrowLeft className="mr-2" size={18} weight="bold" />
+            <ArrowLeft className="group-hover:-translate-x-0.5 transition-transform duration-200" size={18} weight="bold" />
             Return to Dashboard
-          </Button>
+          </button>
         </div>
         <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 border-white/20 bg-[#3e4347] rounded-lg">
-          <TabsTrigger value="schedule" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <CalendarBlank className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Schedule</span>
-          </TabsTrigger>
-          <TabsTrigger value="requests" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <ClipboardText className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Requests</span>
-          </TabsTrigger>
-          <TabsTrigger value="teams" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <Users className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Teams</span>
-          </TabsTrigger>
-          <TabsTrigger value="equipment" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <Cube className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Equipment</span>
-          </TabsTrigger>
-          <TabsTrigger value="fields" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <GridFour className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Fields</span>
-          </TabsTrigger>
-          <TabsTrigger value="sites" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <MapPin className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Sites</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="group data-[state=active]:bg-white/20 text-white rounded-lg">
-            <Gear className="mr-2" size={18} weight="duotone" />
-            <span className="hidden sm:inline">Settings</span>
-          </TabsTrigger>
+        <div className="relative w-full backdrop-blur-sm px-2 py-1 shadow-inner bg-[#3e4347] rounded-lg">
+          <div className="relative grid w-full grid-cols-7 gap-2 h-full">
+            <div 
+              className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
+              style={{
+                left: `calc(${activeIndex * 14.286}% + 0.5rem)`,
+                top: '0.25rem',
+                bottom: '0.25rem',
+                width: 'calc(14.286% - 1rem)',
+                background: 'rgba(36, 139, 204, 0.75)',
+                boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+                borderRadius: '0.5rem'
+              }}
+            />
+            
+            {tabOptions.map((option) => {
+              const Icon = option.icon
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setActiveTab(option.value)}
+                  className={`group relative z-10 flex items-center justify-center gap-2 py-2 transition-all duration-300 ${
+                    activeTab === option.value 
+                      ? 'drop-shadow-lg' 
+                      : 'opacity-70 hover:opacity-90'
+                  }`}
+                  style={{ color: '#ffffff', borderRadius: '0.5rem' }}
+                >
+                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
+                    <Icon size={18} weight="duotone" />
+                    <span className="hidden sm:inline font-medium text-sm">{option.label}</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <TabsList className="hidden">
+          {tabOptions.map(option => (
+            <TabsTrigger key={option.value} value={option.value} />
+          ))}
         </TabsList>
 
         <TabsContent value="schedule">
