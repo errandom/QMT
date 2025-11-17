@@ -23,7 +23,7 @@ function SheetClose({
 function SheetPortal({
   ...props
 }: ComponentProps<typeof SheetPrimitive.Portal>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
+  return <SheetPrimitive.Portal {...props} />
 }
 
 function SheetOverlay({
