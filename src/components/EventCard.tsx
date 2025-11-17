@@ -86,7 +86,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
   return (
     <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40" style={{ borderRadius: SIZES.BORDER_RADIUS }}>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -111,7 +111,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <CardTitle className="text-xl font-semibold" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
             </div>
             {event.otherParticipants && (
-              <div className="text-base mt-1" style={{ color: COLORS.NAVY }}>
+              <div className="text-base mt-0.5" style={{ color: COLORS.NAVY }}>
                 <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
                 <span>{event.otherParticipants}</span>
               </div>
