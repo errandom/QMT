@@ -61,7 +61,7 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
   }).sort((a, b) => {
     const dateA = new Date(a.date + ' ' + a.startTime).getTime()
     const dateB = new Date(b.date + ' ' + b.startTime).getTime()
-    return dateB - dateA
+    return dateA - dateB
   })
 
   if (filteredEvents.length === 0) {
