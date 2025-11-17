@@ -38,10 +38,16 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-6 !bg-[rgba(0,31,63,0.98)]">
+      <DialogContent 
+        className="sm:max-w-[425px] p-6"
+        style={{
+          background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
+          backdropFilter: 'blur(16px)'
+        }}
+      >
         <DialogHeader>
-          <DialogTitle className="text-white">Operations Office Login</DialogTitle>
-          <DialogDescription className="text-white/80">
+          <DialogTitle style={{ color: '#001f3f' }}>Operations Office Login</DialogTitle>
+          <DialogDescription style={{ color: '#001f3f', opacity: 0.8 }}>
             Enter your credentials to access the operations office
           </DialogDescription>
         </DialogHeader>

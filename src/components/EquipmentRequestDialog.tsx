@@ -71,20 +71,24 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8 !bg-[rgba(0,31,63,0.55)]"
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8"
+        style={{
+          background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
+          backdropFilter: 'blur(16px)'
+        }}
       >
         <DialogHeader>
-          <DialogTitle className="text-white text-2xl font-semibold">
+          <DialogTitle className="text-2xl font-semibold" style={{ color: '#001f3f' }}>
             Request Equipment
           </DialogTitle>
-          <DialogDescription className="text-white/80">
+          <DialogDescription style={{ color: '#001f3f', opacity: 0.8 }}>
             Submit a request for equipment for your team
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: 'white' }}>Name *</Label>
+              <Label htmlFor="name" style={{ color: '#001f3f' }}>Name *</Label>
               <Input
                 id="name"
                 value={name}
@@ -98,7 +102,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" style={{ color: 'white' }}>Phone *</Label>
+              <Label htmlFor="phone" style={{ color: '#001f3f' }}>Phone *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -115,7 +119,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label style={{ color: 'white' }}>Teams * (select at least one)</Label>
+            <Label style={{ color: '#001f3f' }}>Teams * (select at least one)</Label>
             <div 
               className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-40 overflow-y-auto"
               style={{
@@ -143,7 +147,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date" style={{ color: 'white' }}>Date Needed *</Label>
+            <Label htmlFor="date" style={{ color: '#001f3f' }}>Date Needed *</Label>
             <Input
               id="date"
               type="date"
@@ -159,7 +163,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="equipment" style={{ color: 'white' }}>Equipment Description *</Label>
+            <Label htmlFor="equipment" style={{ color: '#001f3f' }}>Equipment Description *</Label>
             <Textarea
               id="equipment"
               value={equipmentDescription}

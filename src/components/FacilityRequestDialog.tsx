@@ -99,20 +99,24 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8 !bg-[rgba(0,31,63,0.55)]"
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8"
+        style={{
+          background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
+          backdropFilter: 'blur(16px)'
+        }}
       >
         <DialogHeader>
-          <DialogTitle className="text-white text-2xl font-semibold">
+          <DialogTitle className="text-2xl font-semibold" style={{ color: '#001f3f' }}>
             Request Facility
           </DialogTitle>
-          <DialogDescription className="text-white/80">
+          <DialogDescription style={{ color: '#001f3f', opacity: 0.8 }}>
             Submit a request to book a facility for your team or event
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: 'white' }}>Name *</Label>
+              <Label htmlFor="name" style={{ color: '#001f3f' }}>Name *</Label>
               <Input
                 id="name"
                 value={name}
@@ -126,7 +130,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" style={{ color: 'white' }}>Phone *</Label>
+              <Label htmlFor="phone" style={{ color: '#001f3f' }}>Phone *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -143,7 +147,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="event-type" style={{ color: 'white' }}>Event Type *</Label>
+            <Label htmlFor="event-type" style={{ color: '#001f3f' }}>Event Type *</Label>
             <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
               <SelectTrigger 
                 id="event-type"
@@ -172,7 +176,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           {(eventType === 'Game' || eventType === 'Practice') && (
             <div className="space-y-2">
-              <Label style={{ color: 'white' }}>Teams * (select at least one)</Label>
+              <Label style={{ color: '#001f3f' }}>Teams * (select at least one)</Label>
               <div 
                 className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-32 overflow-y-auto"
                 style={{
@@ -202,7 +206,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           {eventType === 'Game' && (
             <div className="space-y-2">
-              <Label htmlFor="opponent" style={{ color: 'white' }}>Opponent (optional)</Label>
+              <Label htmlFor="opponent" style={{ color: '#001f3f' }}>Opponent (optional)</Label>
               <Input
                 id="opponent"
                 value={opponent}
@@ -219,7 +223,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           {eventType && eventType !== 'Game' && eventType !== 'Practice' && (
             <div className="space-y-2">
-              <Label htmlFor="purpose" style={{ color: 'white' }}>Purpose *</Label>
+              <Label htmlFor="purpose" style={{ color: '#001f3f' }}>Purpose *</Label>
               <Input
                 id="purpose"
                 value={purpose}
@@ -237,7 +241,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           {(eventType === 'Meeting' || eventType === 'Other') && activeTeams.length > 0 && (
             <div className="space-y-2">
-              <Label style={{ color: 'white' }}>Teams (optional)</Label>
+              <Label style={{ color: '#001f3f' }}>Teams (optional)</Label>
               <div 
                 className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-32 overflow-y-auto"
                 style={{
@@ -267,7 +271,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date" style={{ color: 'white' }}>Date *</Label>
+              <Label htmlFor="date" style={{ color: '#001f3f' }}>Date *</Label>
               <Input
                 id="date"
                 type="date"
@@ -282,7 +286,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-time" style={{ color: 'white' }}>Start Time *</Label>
+              <Label htmlFor="start-time" style={{ color: '#001f3f' }}>Start Time *</Label>
               <Input
                 id="start-time"
                 type="time"
@@ -297,7 +301,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="duration" style={{ color: 'white' }}>Duration (min) *</Label>
+              <Label htmlFor="duration" style={{ color: '#001f3f' }}>Duration (min) *</Label>
               <Input
                 id="duration"
                 type="number"
@@ -316,7 +320,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" style={{ color: 'white' }}>Additional Details</Label>
+            <Label htmlFor="description" style={{ color: '#001f3f' }}>Additional Details</Label>
             <Textarea
               id="description"
               value={description}
