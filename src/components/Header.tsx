@@ -17,6 +17,10 @@ interface HeaderProps {
 export default function Header({ currentUser, onLogin, onLogout, onNavigate, currentView }: HeaderProps) {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
 
+  const handleLoginClick = () => {
+    setShowLoginDialog(true)
+  }
+
   const handleOfficeClick = () => {
     if (currentUser && hasAccess(currentUser)) {
       onNavigate('office')
@@ -28,9 +32,6 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
   const handleLoginSuccess = (user: User) => {
     onLogin(user)
     setShowLoginDialog(false)
-    if (hasAccess(user)) {
-      onNavigate('office')
-    }
   }
 
   const getRoleIcon = (role: string, isMobile = false) => {
@@ -101,7 +102,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleOfficeClick}
+                  onClick={handleLoginClick}
                   className="group text-white hover:bg-[#001f3f]/80 transition-all rounded-lg bg-[#001f3f]"
                 >
                   <SignIn className="mr-2" size={SIZES.ICON_SIZE} weight="bold" style={{ color: COLORS.WHITE }} />
