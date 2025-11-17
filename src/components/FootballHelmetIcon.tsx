@@ -1,10 +1,10 @@
 interface FootballHelmetIconProps {
-  size?: number
-  className?: string
-  filled?: boolean
+  size?: number;
+  className?: string;
+  filled?: boolean;
 }
 
-export default function FootballHelmetIcon({ size = 24, className = '', filled = false }: FootballHelmetIconProps) {
+export function FootballHelmetIcon({ size = 24, className = '', filled = false }: FootballHelmetIconProps) {
   if (filled) {
     return (
       <svg 
@@ -19,9 +19,9 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
         <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
         <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
       </svg>
-    )
+    );
   }
-  
+
   return (
     <svg 
       width={size} 
@@ -39,5 +39,5 @@ export default function FootballHelmetIcon({ size = 24, className = '', filled =
       <path d="M6 16h1.5v2.5c0 .83-.67 1.5-1.5 1.5h-.5c-.83 0-1.5-.67-1.5-1.5v-1c0-.83.67-1.5 1.5-1.5h.5z"/>
       <path d="M18 16h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H19c-.83 0-1.5-.67-1.5-1.5V16h.5z"/>
     </svg>
-  )
+  );
 }
