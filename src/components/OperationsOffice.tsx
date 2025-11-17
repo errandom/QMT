@@ -36,19 +36,19 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-[oklch(0.28_0.08_240)] drop-shadow-lg">Operations Office</h1>
-          <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
+          <Button 
+            onClick={onNavigateToDashboard}
+            variant="outline"
+            className="glass-button text-white border-white/30 hover:bg-white/20 shrink-0"
+          >
+            <ArrowLeft className="mr-2" size={18} weight="bold" />
+            Return to Dashboard
+          </Button>
         </div>
-        <Button 
-          onClick={onNavigateToDashboard}
-          variant="outline"
-          className="glass-button text-white border-white/30 hover:bg-white/20"
-        >
-          <ArrowLeft className="mr-2" size={18} weight="bold" />
-          Return to Dashboard
-        </Button>
+        <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
