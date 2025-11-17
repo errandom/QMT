@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear, ArrowLeft } from '@phosphor-icons/react'
-import { User } from '@/lib/types'
+import { User, FacilityRequest, EquipmentRequest, CancellationRequest } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
+import { useKV } from '@github/spark/hooks'
 import ScheduleManager from './OperationsOffice/ScheduleManager'
 import RequestsManager from './OperationsOffice/RequestsManager'
 import TeamsManager from './OperationsOffice/TeamsManager'
@@ -21,10 +22,18 @@ interface OperationsOfficeProps {
 
 export default function OperationsOffice({ currentUser, onNavigateToDashboard }: OperationsOfficeProps) {
   const [activeTab, setActiveTab] = useState('schedule')
+  const [facilityRequests = []] = useKV<FacilityRequest[]>('facility-requests', [])
+  const [equipmentRequests = []] = useKV<EquipmentRequest[]>('equipment-requests', [])
+  const [cancellationRequests = []] = useKV<CancellationRequest[]>('cancellation-requests', [])
+
+  const pendingRequestsCount = 
+    facilityRequests.filter(r => r.status === 'Pending').length +
+    equipmentRequests.filter(r => r.status === 'Pending').length +
+    cancellationRequests.filter(r => r.status === 'Pending').length
 
   const tabOptions = [
     { value: 'schedule', icon: CalendarBlank, label: 'Schedule' },
-    { value: 'requests', icon: ClipboardText, label: 'Requests' },
+    { value: 'requests', icon: ClipboardText, label: 'Requests', badge: pendingRequestsCount },
     { value: 'teams', icon: Users, label: 'Teams' },
     { value: 'equipment', icon: Cube, label: 'Equipment' },
     { value: 'fields', icon: GridFour, label: 'Fields' },
@@ -80,6 +89,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
             
             {tabOptions.map((option) => {
               const Icon = option.icon
+              const hasBadge = option.badge && option.badge > 0
               return (
                 <button
                   key={option.value}
@@ -92,7 +102,14 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
                   style={{ color: '#ffffff', borderRadius: '0.5rem' }}
                 >
                   <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                    <Icon size={18} weight="duotone" />
+                    <div className="relative">
+                      <Icon size={18} weight="duotone" />
+                      {hasBadge && (
+                        <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-[#3e4347] shadow-lg">
+                          {option.badge}
+                        </div>
+                      )}
+                    </div>
                     <span className="hidden sm:inline font-medium text-sm">{option.label}</span>
                   </div>
                 </button>
