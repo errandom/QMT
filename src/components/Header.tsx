@@ -105,7 +105,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   className="group text-white hover:bg-[#001f3f]/80 transition-all rounded-lg bg-[#001f3f]"
                 >
                   <SignIn className="mr-2" size={SIZES.ICON_SIZE} weight="bold" style={{ color: COLORS.WHITE }} />
-                  <span>Office</span>
+                  <span>Login</span>
                 </Button>
               )}
             </div>
