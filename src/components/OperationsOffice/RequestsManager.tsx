@@ -1,5 +1,5 @@
 import { useKV } from '@github/spark/hooks'
-import { FacilityRequest, EquipmentRequest, CancellationRequest, User } from '@/lib/types'
+import { FacilityRequest, EquipmentRequest, CancellationRequest, User, Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,8 +16,35 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [equipmentRequests = [], setEquipmentRequests] = useKV<EquipmentRequest[]>('equipment-requests', [])
   const [cancellationRequests = [], setCancellationRequests] = useKV<CancellationRequest[]>('cancellation-requests', [])
   const [teams = []] = useKV<any[]>('teams', [])
+  const [events = [], setEvents] = useKV<Event[]>('events', [])
 
   const handleApproveFacility = (requestId: string) => {
+    const request = facilityRequests.find(r => r.id === requestId)
+    
+    if (request) {
+      const endTime = calculateEndTime(request.startTime, request.duration)
+      
+      const newEvent: Event = {
+        id: `event-${Date.now()}`,
+        title: request.opponent 
+          ? `${request.eventType} vs ${request.opponent}` 
+          : request.purpose 
+            ? `${request.eventType} - ${request.purpose}`
+            : request.eventType,
+        eventType: request.eventType,
+        status: 'Planned',
+        date: request.date,
+        startTime: request.startTime,
+        endTime: endTime,
+        teamIds: request.teamIds || [],
+        otherParticipants: request.opponent || undefined,
+        notes: request.description || undefined,
+        isRecurring: false
+      }
+      
+      setEvents((current = []) => [...current, newEvent])
+    }
+    
     setFacilityRequests((current = []) =>
       current.map(r =>
         r.id === requestId
@@ -25,7 +52,15 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
           : r
       )
     )
-    toast.success('Facility request approved')
+    toast.success('Facility request approved and event created')
+  }
+  
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const totalMinutes = hours * 60 + minutes + durationMinutes
+    const endHours = Math.floor(totalMinutes / 60) % 24
+    const endMinutes = totalMinutes % 60
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
   }
 
   const handleRejectFacility = (requestId: string) => {
