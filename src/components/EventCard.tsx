@@ -111,7 +111,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <CardTitle className="text-xl font-semibold" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
             </div>
             {event.otherParticipants && (
-              <div className="text-base mt-2" style={{ color: COLORS.NAVY }}>
+              <div className="text-base mt-1" style={{ color: COLORS.NAVY }}>
                 <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
                 <span>{event.otherParticipants}</span>
               </div>
@@ -140,7 +140,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-2.5 pt-2">
+      <CardContent className="space-y-2.5 pt-1">
         <div className="flex items-center gap-2 text-base" style={{ color: COLORS.NAVY }}>
           <CalendarBlank style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
