@@ -38,19 +38,7 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
     }
   }, [events, setEvents])
 
-  const now = new Date()
-  
   const filteredEvents = events.filter((event) => {
-    if (event.isRecurring) {
-      if (event.recurringEndDate) {
-        const endDate = new Date(event.recurringEndDate)
-        if (endDate < now) return false
-      }
-    } else {
-      const eventDateTime = new Date(event.date + ' ' + event.startTime)
-      if (eventDateTime < now) return false
-    }
-
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
     }

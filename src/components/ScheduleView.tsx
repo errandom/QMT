@@ -21,9 +21,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
   const activeSites = sites.filter(s => s.isActive && s.isSportsFacility)
   
-  const recurringEvents = events.filter((event) => {
-    if (!event.isRecurring) return false
-
+  const allEvents = events.filter((event) => {
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
     }
@@ -37,6 +35,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
     return true
   })
+
+  const recurringEvents = allEvents.filter(event => event.isRecurring)
 
   const getEventPosition = (startTime: string, endTime: string) => {
     const start = timeToMinutes(startTime)
