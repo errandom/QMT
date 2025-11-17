@@ -74,7 +74,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
         side="right"
         className="overflow-y-auto w-full sm:max-w-2xl"
         style={{
-          backgroundColor: 'rgba(0, 31, 63, 0.85)',
+          backgroundColor: 'rgba(0, 31, 63, 0.31)',
           color: 'white',
           border: 'none',
           padding: '2rem'

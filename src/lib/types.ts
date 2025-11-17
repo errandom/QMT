@@ -87,6 +87,7 @@ export interface FacilityRequest {
   eventType: EventType
   teamIds?: string[]
   purpose?: string
+  opponent?: string
   date: string
   startTime: string
   duration: number

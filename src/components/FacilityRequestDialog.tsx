@@ -24,6 +24,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   const [eventType, setEventType] = useState<EventType | ''>('')
   const [selectedTeams, setSelectedTeams] = useState<string[]>([])
   const [purpose, setPurpose] = useState('')
+  const [opponent, setOpponent] = useState('')
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [duration, setDuration] = useState('90')
@@ -59,6 +60,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
       eventType: eventType as EventType,
       teamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
       purpose: purpose || undefined,
+      opponent: opponent || undefined,
       date,
       startTime,
       duration: parseInt(duration),
@@ -75,6 +77,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
     setEventType('')
     setSelectedTeams([])
     setPurpose('')
+    setOpponent('')
     setDate('')
     setStartTime('')
     setDuration('90')
@@ -99,7 +102,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
         side="right"
         className="overflow-y-auto w-full sm:max-w-2xl"
         style={{
-          backgroundColor: 'rgba(0, 31, 63, 0.85)',
+          backgroundColor: 'rgba(0, 31, 63, 0.31)',
           color: 'white',
           border: 'none',
           padding: '2rem'
@@ -201,6 +204,23 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {eventType === 'Game' && (
+            <div className="space-y-2">
+              <Label htmlFor="opponent" style={{ color: 'white' }}>Opponent (optional)</Label>
+              <Input
+                id="opponent"
+                value={opponent}
+                onChange={(e) => setOpponent(e.target.value)}
+                placeholder="Enter opponent team name"
+                style={{
+                  borderColor: '#248bcc',
+                  backgroundColor: 'white',
+                  color: 'oklch(0.28 0.005 240)'
+                }}
+              />
             </div>
           )}
 
