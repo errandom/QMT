@@ -52,20 +52,50 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     { 
       value: 'All Sports', 
       label: 'All Sports', 
-      icon: <Football size={32} weight="duotone" />,
-      mobileIcon: <Football size={32} weight="duotone" />
+      icon: (
+        <div className="flex items-center gap-1">
+          <FootballHelmet size={28} weight="duotone" />
+          <Football size={28} weight="duotone" />
+        </div>
+      ),
+      mobileIcon: (
+        <div className="flex items-center gap-1">
+          <FootballHelmet size={28} weight="duotone" />
+          <Football size={28} weight="duotone" />
+        </div>
+      )
     },
     { 
       value: 'Tackle Football', 
       label: 'Tackle Football', 
-      icon: <FootballHelmet size={32} weight="duotone" />,
-      mobileIcon: <FootballHelmet size={32} weight="duotone" />
+      icon: (
+        <div className="flex items-center gap-1">
+          <FootballHelmet size={28} weight="duotone" />
+          <Football size={28} weight="duotone" />
+        </div>
+      ),
+      mobileIcon: (
+        <div className="flex items-center gap-1">
+          <FootballHelmet size={28} weight="duotone" />
+          <Football size={28} weight="duotone" />
+        </div>
+      )
     },
     { 
       value: 'Flag Football', 
       label: 'Flag Football', 
-      icon: <Football size={32} weight="duotone" />,
-      mobileIcon: <Football size={32} weight="duotone" />
+      icon: (
+        <div className="flex items-center gap-1">
+          <FootballHelmet size={28} weight="duotone" />
+          <Football size={28} weight="duotone" />
+        </div>
+      ),
+      mobileIcon: (
+        <div className="flex items-center gap-1">
+          <FootballHelmet size={28} weight="duotone" />
+          <Football size={28} weight="duotone" />
+        </div>
+      )
     }
   ]
 
