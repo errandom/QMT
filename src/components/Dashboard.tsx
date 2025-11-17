@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Cube, MapPin, ListBullets, Calendar, Football, Plus, Briefcase } from '@phosphor-icons/react'
+import { Cube, MapPin, ListBullets, Calendar, Football, FootballHelmet, Plus, Briefcase } from '@phosphor-icons/react'
 import EventList from './EventList'
 import ScheduleView from './ScheduleView'
 import FacilityRequestDialog from './FacilityRequestDialog'
@@ -58,8 +58,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     { 
       value: 'Tackle Football', 
       label: 'Tackle Football', 
-      icon: <Football size={32} weight="duotone" />,
-      mobileIcon: <Football size={32} weight="duotone" />
+      icon: <FootballHelmet size={32} weight="duotone" />,
+      mobileIcon: <FootballHelmet size={32} weight="duotone" />
     },
     { 
       value: 'Flag Football', 
