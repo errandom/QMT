@@ -151,19 +151,25 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
               <SelectTrigger 
                 id="event-type"
+                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] hover:!bg-white focus:!bg-white data-[placeholder]:!text-[oklch(0.45_0.02_240)] [&_svg]:!text-[oklch(0.45_0.02_240)]"
                 style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
+                  boxShadow: 'none',
+                  backdropFilter: 'none'
                 }}
               >
                 <SelectValue placeholder="Select event type" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Game">Game</SelectItem>
-                <SelectItem value="Practice">Practice</SelectItem>
-                <SelectItem value="Meeting">Meeting</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+              <SelectContent 
+                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc]"
+                style={{
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                  backdropFilter: 'none'
+                }}
+              >
+                <SelectItem value="Game" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Game</SelectItem>
+                <SelectItem value="Practice" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Practice</SelectItem>
+                <SelectItem value="Meeting" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Meeting</SelectItem>
+                <SelectItem value="Other" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
