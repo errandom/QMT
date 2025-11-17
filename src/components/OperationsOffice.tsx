@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear } from '@phosphor-icons/react'
+import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear, ArrowLeft } from '@phosphor-icons/react'
 import { User } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
 import ScheduleManager from './OperationsOffice/ScheduleManager'
@@ -41,6 +41,14 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
           <h1 className="text-2xl font-bold text-[oklch(0.28_0.08_240)] drop-shadow-lg">Operations Office</h1>
           <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
         </div>
+        <Button 
+          onClick={onNavigateToDashboard}
+          variant="outline"
+          className="glass-button text-white border-white/30 hover:bg-white/20"
+        >
+          <ArrowLeft className="mr-2" size={18} weight="bold" />
+          Return to Dashboard
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
