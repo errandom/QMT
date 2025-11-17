@@ -181,7 +181,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
               <Button 
                 onClick={() => setShowFacilityDialog(true)} 
-                className="group flex-1 sm:flex-initial h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
+                className="group flex-1 sm:w-[140px] h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
                 style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
               >
                 <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
@@ -194,7 +194,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
             <Button 
               onClick={() => setShowEquipmentDialog(true)} 
-              className="group hidden sm:inline-flex h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
+              className="group hidden sm:inline-flex w-[140px] h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
               style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
             >
               <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
