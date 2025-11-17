@@ -68,34 +68,14 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
     { 
       value: 'Tackle Football', 
       label: 'Tackle Football', 
-      icon: (
-        <div className="flex items-center gap-1">
-          <FootballHelmet size={28} weight="duotone" />
-          <Football size={28} weight="duotone" />
-        </div>
-      ),
-      mobileIcon: (
-        <div className="flex items-center gap-1">
-          <FootballHelmet size={28} weight="duotone" />
-          <Football size={28} weight="duotone" />
-        </div>
-      )
+      icon: <FootballHelmet size={28} weight="duotone" />,
+      mobileIcon: <FootballHelmet size={28} weight="duotone" />
     },
     { 
       value: 'Flag Football', 
       label: 'Flag Football', 
-      icon: (
-        <div className="flex items-center gap-1">
-          <FootballHelmet size={28} weight="duotone" />
-          <Football size={28} weight="duotone" />
-        </div>
-      ),
-      mobileIcon: (
-        <div className="flex items-center gap-1">
-          <FootballHelmet size={28} weight="duotone" />
-          <Football size={28} weight="duotone" />
-        </div>
-      )
+      icon: <Football size={28} weight="duotone" />,
+      mobileIcon: <Football size={28} weight="duotone" />
     }
   ]
 
