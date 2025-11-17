@@ -24,6 +24,7 @@ import {
 import { Event, Team, Field, Site, EventType, WeatherForecast } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
 import { getWeatherForecast } from '@/lib/weatherService'
+import { COLORS, SIZES } from '@/lib/constants'
 
 interface EventCardProps {
   event: Event
@@ -40,10 +41,10 @@ const eventTypeColors = {
 }
 
 const eventTypeIcons: Record<EventType, React.ReactNode> = {
-  'Game': <Trophy size={28} weight="duotone" />,
-  'Practice': <Barbell size={28} weight="duotone" />,
-  'Meeting': <Strategy size={28} weight="duotone" />,
-  'Other': <CalendarCheck size={28} weight="duotone" />
+  'Game': <Trophy size={SIZES.ICON_SIZE_LARGE} weight="duotone" />,
+  'Practice': <Barbell size={SIZES.ICON_SIZE_LARGE} weight="duotone" />,
+  'Meeting': <Strategy size={SIZES.ICON_SIZE_LARGE} weight="duotone" />,
+  'Other': <CalendarCheck size={SIZES.ICON_SIZE_LARGE} weight="duotone" />
 }
 
 const statusColors = {
@@ -84,7 +85,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   }, [showWeather, site, event.date, event.startTime, weather, loadingWeather])
 
   return (
-    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 rounded-[8pt]">
+    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40" style={{ borderRadius: SIZES.BORDER_RADIUS }}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
@@ -98,16 +99,16 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                   className="group h-7 px-3 text-xs border-2 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
                   onClick={() => setCancellationDialogOpen(true)}
                 >
-                  <Prohibit className="mr-1.5" size={14} weight="bold" />
+                  <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
                   <span>Request Cancellation</span>
                 </Button>
               )}
             </div>
             <div className="flex items-center gap-2 mb-0">
-              <div style={{ color: '#001f3f' }}>
+              <div style={{ color: COLORS.NAVY }}>
                 {eventTypeIcons[event.eventType]}
               </div>
-              <CardTitle className="text-xl font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
+              <CardTitle className="text-xl font-semibold" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
             </div>
           </div>
           {showWeather && weather && (
@@ -116,7 +117,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div className="flex items-center justify-end gap-1.5">
                 <span className="text-2xl leading-none">{weather.icon}</span>
                 <div className="text-left">
-                  <div className="font-bold text-lg leading-tight" style={{ color: '#001f3f' }}>{weather.temperature}°C</div>
+                  <div className="font-bold text-lg leading-tight" style={{ color: COLORS.NAVY }}>{weather.temperature}°C</div>
                   <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
                 </div>
               </div>
@@ -134,13 +135,13 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       </CardHeader>
       
       <CardContent className="space-y-2.5 pt-2">
-        <div className="flex items-center gap-2 text-base" style={{ color: '#001f3f' }}>
-          <CalendarBlank style={{ color: '#248bcc' }} size={22} weight="duotone" />
+        <div className="flex items-center gap-2 text-base" style={{ color: COLORS.NAVY }}>
+          <CalendarBlank style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-base" style={{ color: '#001f3f' }}>
-          <Clock style={{ color: '#248bcc' }} size={22} weight="duotone" />
+        <div className="flex items-center gap-2 text-base" style={{ color: COLORS.NAVY }}>
+          <Clock style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
@@ -148,8 +149,8 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <>
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-start gap-2 text-base" style={{ color: '#001f3f' }}>
-                <MapPin style={{ color: '#248bcc' }} className="mt-0.5" size={22} weight="duotone" />
+              <div className="flex items-start gap-2 text-base" style={{ color: COLORS.NAVY }}>
+                <MapPin style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
                 <div>
                   <div className="font-semibold">{site.name} - {field.name}</div>
                   <div className="text-sm" style={{ color: '#6b7280' }}>
@@ -161,43 +162,43 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div className="flex flex-wrap gap-2 ml-6">
                 {site.amenities.parking && (
                   <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
-                    <CarSimple size={16} weight="duotone" />
+                    <CarSimple size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     <span>Parking</span>
                   </div>
                 )}
                 {site.amenities.toilets && (
                   <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
-                    <Toilet size={16} weight="duotone" />
+                    <Toilet size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     <span>Toilets</span>
                   </div>
                 )}
                 {site.amenities.lockerRooms && (
                   <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
-                    <Lockers size={16} weight="duotone" />
+                    <Lockers size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     <span>Lockers</span>
                   </div>
                 )}
                 {site.amenities.shower && (
                   <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
-                    <Shower size={16} weight="duotone" />
+                    <Shower size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     <span>Shower</span>
                   </div>
                 )}
                 {site.amenities.restaurant && (
                   <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
-                    <ForkKnife size={16} weight="duotone" />
+                    <ForkKnife size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     <span>Restaurant</span>
                   </div>
                 )}
                 {site.amenities.equipmentStash && (
                   <div className="flex items-center gap-1 text-xs" style={{ color: '#6b7280' }}>
-                    <Package size={16} weight="duotone" />
+                    <Package size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     <span>Equipment</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: '#001f3f' }}>
+              <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: COLORS.NAVY }}>
                 <span className="flex items-center gap-1">
                   {field.turfType === 'Artificial Turf' ? (
                     <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
@@ -216,7 +217,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 </span>
                 {field.hasLights && (
                   <span className="flex items-center gap-1">
-                    <Lightbulb size={16} weight="duotone" />
+                    <Lightbulb size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     Lights
                   </span>
                 )}
@@ -245,13 +246,13 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <>
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-base font-medium" style={{ color: '#001f3f' }}>
-                <Users style={{ color: '#248bcc' }} size={22} weight="duotone" />
+              <div className="flex items-center gap-2 text-base font-medium" style={{ color: COLORS.NAVY }}>
+                <Users style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
                 <span>Teams</span>
               </div>
               <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
-                  <div key={team.id} className="text-base" style={{ color: '#001f3f' }}>
+                  <div key={team.id} className="text-base" style={{ color: COLORS.NAVY }}>
                     <div className="font-medium">{team.name}</div>
                     {(event.eventType === 'Game' || event.eventType === 'Practice') && (
                       <div className="text-sm space-y-0.5" style={{ color: '#6b7280' }}>
@@ -271,7 +272,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         )}
 
         {event.otherParticipants && (
-          <div className="text-base" style={{ color: '#001f3f' }}>
+          <div className="text-base" style={{ color: COLORS.NAVY }}>
             <span style={{ color: '#6b7280' }}>Participants: </span>
             <span>{event.otherParticipants}</span>
           </div>

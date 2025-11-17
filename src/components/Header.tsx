@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { SignIn, SignOut, Crown, Detective } from '@phosphor-icons/react'
 import LoginDialog from './LoginDialog'
 import { User } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
+import { COLORS, SIZES } from '@/lib/constants'
 
 interface HeaderProps {
   currentUser: User | null
@@ -40,14 +40,14 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
     if (role === 'admin') {
       return (
         <div className={`${sizeClass} rounded-full bg-white flex items-center justify-center`}>
-          <Crown size={iconSize} weight="duotone" style={{ color: '#248bcc' }} />
+          <Crown size={iconSize} weight="duotone" style={{ color: COLORS.ACCENT }} />
         </div>
       )
     }
     if (role === 'mgmt') {
       return (
         <div className={`${sizeClass} rounded-full bg-white flex items-center justify-center`}>
-          <Detective size={iconSize} weight="duotone" style={{ color: '#248bcc' }} />
+          <Detective size={iconSize} weight="duotone" style={{ color: COLORS.ACCENT }} />
         </div>
       )
     }
@@ -57,7 +57,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-white/30 backdrop-blur-sm" style={{
-        background: '#001f3f',
+        background: COLORS.NAVY,
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
       }}>
         <div className="container mx-auto px-4 py-3 sm:py-5 max-w-7xl">
@@ -81,7 +81,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                       onClick={onLogout}
                       className="group text-white hover:bg-white/15 transition-all rounded-lg"
                     >
-                      <SignOut size={18} weight="bold" style={{ color: '#f5f5f5' }} />
+                      <SignOut size={SIZES.ICON_SIZE} weight="bold" style={{ color: COLORS.WHITE }} />
                     </Button>
                   </div>
                   
@@ -93,7 +93,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                       onClick={onLogout}
                       className="group text-white hover:bg-white/15 transition-all rounded-lg h-7 px-2"
                     >
-                      <SignOut size={16} weight="bold" style={{ color: '#f5f5f5' }} />
+                      <SignOut size={SIZES.ICON_SIZE_SMALL} weight="bold" style={{ color: COLORS.WHITE }} />
                     </Button>
                   </div>
                 </>
@@ -104,7 +104,7 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
                   onClick={handleOfficeClick}
                   className="group text-white hover:bg-[#001f3f]/80 transition-all rounded-lg bg-[#001f3f]"
                 >
-                  <SignIn className="mr-2" size={18} weight="bold" style={{ color: '#f5f5f5' }} />
+                  <SignIn className="mr-2" size={SIZES.ICON_SIZE} weight="bold" style={{ color: COLORS.WHITE }} />
                   <span>Office</span>
                 </Button>
               )}
