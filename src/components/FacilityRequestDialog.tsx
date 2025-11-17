@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -97,10 +97,9 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right"
-        className="overflow-y-auto w-full sm:max-w-2xl"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl"
         style={{
           backgroundColor: 'rgba(0, 31, 63, 0.31)',
           color: 'white',
@@ -108,14 +107,14 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
           padding: '2rem'
         }}
       >
-        <SheetHeader>
-          <SheetTitle style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
+        <DialogHeader>
+          <DialogTitle style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
             Request Facility
-          </SheetTitle>
-          <SheetDescription style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+          </DialogTitle>
+          <DialogDescription style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
             Submit a request to book a facility for your team or event
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -365,7 +364,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
