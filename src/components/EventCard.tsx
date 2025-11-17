@@ -110,6 +110,12 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
               <CardTitle className="text-xl font-semibold" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
             </div>
+            {event.otherParticipants && (
+              <div className="text-base mt-2" style={{ color: COLORS.NAVY }}>
+                <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
+                <span>{event.otherParticipants}</span>
+              </div>
+            )}
           </div>
           {showWeather && weather && (
             <div className="text-right text-sm min-w-[80px]">
@@ -269,13 +275,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
             </div>
           </>
-        )}
-
-        {event.otherParticipants && (
-          <div className="text-base" style={{ color: COLORS.NAVY }}>
-            <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
-            <span>{event.otherParticipants}</span>
-          </div>
         )}
       </CardContent>
       
