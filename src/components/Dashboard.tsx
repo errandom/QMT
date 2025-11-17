@@ -137,7 +137,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                 <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
                 {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
                   <>
-                    <SelectItem value="divider" disabled className="text-xs font-semibold text-muted-foreground">
+                    <SelectItem value="divider" disabled className="text-xs font-semibold" style={{ color: '#248bbc' }}>
                       {sportFilter}
                     </SelectItem>
                     {filteredTeams.map((team: any) => (
@@ -151,7 +151,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                   <>
                     {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').length > 0 && (
                       <>
-                        <SelectItem value="tackle-divider" disabled className="text-xs font-semibold text-muted-foreground">
+                        <SelectItem value="tackle-divider" disabled className="text-xs font-semibold" style={{ color: '#248bbc' }}>
                           Tackle Football
                         </SelectItem>
                         {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Tackle Football').map((team: any) => (
@@ -163,7 +163,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
                     )}
                     {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').length > 0 && (
                       <>
-                        <SelectItem value="flag-divider" disabled className="text-xs font-semibold text-muted-foreground">
+                        <SelectItem value="flag-divider" disabled className="text-xs font-semibold" style={{ color: '#248bbc' }}>
                           Flag Football
                         </SelectItem>
                         {(teams || []).filter((t: any) => t.isActive && t.sportType === 'Flag Football').map((team: any) => (
