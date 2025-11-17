@@ -99,7 +99,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8 !bg-[rgba(0,31,63,0.98)]"
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8 !bg-[rgba(0,31,63,0.55)]"
       >
         <DialogHeader>
           <DialogTitle className="text-white text-2xl font-semibold">
@@ -147,7 +147,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
               <SelectTrigger 
                 id="event-type"
-                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] hover:!bg-white focus:!bg-white data-[placeholder]:!text-[oklch(0.28_0.005_240)] [&_svg]:!text-[oklch(0.28_0.005_240)]"
+                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] hover:!bg-white focus:!bg-white data-[placeholder]:!text-[oklch(0.28_0.005_240)] [&_svg]:!text-[oklch(0.28_0.005_240)] w-full"
                 style={{
                   boxShadow: 'none',
                   backdropFilter: 'none'
@@ -156,7 +156,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                 <SelectValue placeholder="Select event type" />
               </SelectTrigger>
               <SelectContent 
-                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc]"
+                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] !z-[10000]"
                 style={{
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                   backdropFilter: 'none'

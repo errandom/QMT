@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -69,25 +69,18 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
   const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right"
-        className="overflow-y-auto w-full sm:max-w-2xl"
-        style={{
-          backgroundColor: 'rgba(0, 31, 63, 0.31)',
-          color: 'white',
-          border: 'none',
-          padding: '2rem'
-        }}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8 !bg-[rgba(0,31,63,0.55)]"
       >
-        <SheetHeader>
-          <SheetTitle style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
+        <DialogHeader>
+          <DialogTitle className="text-white text-2xl font-semibold">
             Request Equipment
-          </SheetTitle>
-          <SheetDescription style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+          </DialogTitle>
+          <DialogDescription className="text-white/80">
             Submit a request for equipment for your team
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -209,7 +202,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
