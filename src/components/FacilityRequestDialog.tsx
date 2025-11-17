@@ -151,7 +151,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
               <SelectTrigger 
                 id="event-type"
-                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] hover:!bg-white focus:!bg-white data-[placeholder]:!text-[oklch(0.45_0.02_240)] [&_svg]:!text-[oklch(0.45_0.02_240)]"
+                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] hover:!bg-white focus:!bg-white data-[placeholder]:!text-[oklch(0.28_0.005_240)] [&_svg]:!text-[oklch(0.28_0.005_240)]"
                 style={{
                   boxShadow: 'none',
                   backdropFilter: 'none'
@@ -166,10 +166,10 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                   backdropFilter: 'none'
                 }}
               >
-                <SelectItem value="Game" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Game</SelectItem>
-                <SelectItem value="Practice" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Practice</SelectItem>
-                <SelectItem value="Meeting" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Meeting</SelectItem>
-                <SelectItem value="Other" className="!text-[oklch(0.28_0.005_240)] focus:!bg-[#248bcc] focus:!text-white">Other</SelectItem>
+                <SelectItem value="Game" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Game</SelectItem>
+                <SelectItem value="Practice" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Practice</SelectItem>
+                <SelectItem value="Meeting" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Meeting</SelectItem>
+                <SelectItem value="Other" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
