@@ -41,8 +41,6 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
   const now = new Date()
   
   const filteredEvents = events.filter((event) => {
-    if (event.status === 'Cancelled') return false
-
     if (event.isRecurring) {
       if (event.recurringEndDate) {
         const endDate = new Date(event.recurringEndDate)

@@ -23,7 +23,6 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   
   const recurringEvents = events.filter((event) => {
     if (!event.isRecurring) return false
-    if (event.status === 'Cancelled') return false
 
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
@@ -136,12 +135,13 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                 
                                 const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
                                 const teamColor = getTeamColor(event.teamIds || [])
+                                const isCancelled = event.status === 'Cancelled'
                                 
                                 return (
                                   <Tooltip key={event.id}>
                                     <TooltipTrigger asChild>
                                       <div
-                                        className={`absolute top-1 bottom-1 ${teamColor} rounded px-1 flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity overflow-hidden shadow-md`}
+                                        className={`absolute top-1 bottom-1 ${isCancelled ? 'bg-gray-400 opacity-60' : teamColor} rounded px-1 flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity overflow-hidden shadow-md ${isCancelled ? 'line-through' : ''}`}
                                         style={position}
                                       >
                                         <span className="truncate">
@@ -154,6 +154,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                         <div className="font-semibold">{event.title}</div>
                                         <div>{event.startTime} - {event.endTime}</div>
                                         <div>{eventTeams.map(t => t.name).join(', ')}</div>
+                                        <div className="text-muted-foreground">Status: {event.status}</div>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>

@@ -92,6 +92,11 @@ export default function ScheduleManager() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (formData.status === 'Confirmed' && !formData.fieldId) {
+      toast.error('Cannot confirm an event without a field location')
+      return
+    }
+    
     if (editingEvent) {
       setEvents((current = []) =>
         current.map(ev => ev.id === editingEvent.id ? { ...formData, id: editingEvent.id } as Event : ev)
