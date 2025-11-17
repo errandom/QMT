@@ -1,7 +1,7 @@
 import { WeatherForecast } from './types'
 
-interface WeatherCache {
-  [key: string]: {
+    forecast: WeatherFor
+  }
     forecast: WeatherForecast
     timestamp: number
   }
@@ -9,11 +9,6 @@ interface WeatherCache {
 
 const weatherCache: WeatherCache = {}
 const CACHE_DURATION = 30 * 60 * 1000
-
-declare const spark: {
-  llmPrompt: (strings: TemplateStringsArray, ...values: any[]) => string
-  llm: (prompt: string, modelName?: string, jsonMode?: boolean) => Promise<string>
-}
 
 export async function getWeatherForecast(
   date: string,
@@ -39,13 +34,13 @@ export async function getWeatherForecast(
 
 Event date and time: ${eventDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} at ${time}
 Days until event: ${daysUntil} days
-Month: ${monthName}
+  if (month >= 2 &&
 Season: ${season}
 
 Based on typical weather patterns for Switzerland in ${monthName}, provide a realistic forecast. Consider:
 - Switzerland's climate patterns for this season
 - Typical temperature ranges for ${season} in Switzerland
-- Common weather conditions for this time of year
+  }
 
 Return ONLY a valid JSON object (no markdown, no code blocks) with these exact properties:
 {
@@ -57,9 +52,9 @@ Return ONLY a valid JSON object (no markdown, no code blocks) with these exact p
     const response = await spark.llm(prompt, 'gpt-4o-mini', true)
     const forecast = JSON.parse(response) as WeatherForecast
 
-    weatherCache[cacheKey] = {
+
       forecast,
-      timestamp: Date.now()
+
     }
 
     return forecast
@@ -67,13 +62,13 @@ Return ONLY a valid JSON object (no markdown, no code blocks) with these exact p
     console.error('Weather forecast error:', error)
     return getFallbackWeather(season)
   }
-}
+
 
 function getSeasonForMonth(month: number): string {
   if (month >= 2 && month <= 4) return 'Spring'
-  if (month >= 5 && month <= 7) return 'Summer'
+
   if (month >= 8 && month <= 10) return 'Autumn'
-  return 'Winter'
+
 }
 
 function getFallbackWeather(season: string): WeatherForecast {
@@ -81,7 +76,7 @@ function getFallbackWeather(season: string): WeatherForecast {
     'Spring': { temperature: 15, condition: 'Partly Cloudy', icon: '⛅' },
     'Summer': { temperature: 22, condition: 'Sunny', icon: '☀️' },
     'Autumn': { temperature: 12, condition: 'Cloudy', icon: '☁️' },
-    'Winter': { temperature: 3, condition: 'Cloudy', icon: '☁️' }
+
   }
   return fallbacks[season] || fallbacks['Spring']
 }
