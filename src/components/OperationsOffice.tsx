@@ -7,6 +7,7 @@ import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear, Arro
 import { User, FacilityRequest, EquipmentRequest, CancellationRequest } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
 import { useKV } from '@github/spark/hooks'
+import { COLORS, SIZES } from '@/lib/constants'
 import ScheduleManager from './OperationsOffice/ScheduleManager'
 import RequestsManager from './OperationsOffice/RequestsManager'
 import TeamsManager from './OperationsOffice/TeamsManager'
@@ -72,18 +73,23 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="relative w-full backdrop-blur-sm px-2 py-2 shadow-inner bg-[#3e4347] rounded-lg">
-          <div className="relative grid w-full grid-cols-7 gap-2 h-full">
+        <div className="relative w-full h-10 backdrop-blur-sm" style={{
+          borderRadius: SIZES.BORDER_RADIUS,
+          background: COLORS.NAVY,
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
+          padding: '2px 4px'
+        }}>
+          <div className="relative w-full h-full flex gap-1">
             <div 
               className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
               style={{
-                left: `calc(${activeIndex * 14.286}% + 0.5rem)`,
+                left: `calc(${activeIndex * 14.286}% + 4px)`,
                 top: '2px',
                 bottom: '2px',
-                width: 'calc(14.286% - 1rem)',
+                width: 'calc(14.286% - 8px)',
+                borderRadius: SIZES.BORDER_RADIUS,
                 background: 'rgba(36, 139, 204, 0.75)',
-                boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-                borderRadius: '0.5rem'
+                boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
               }}
             />
             
@@ -94,21 +100,21 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
                 <button
                   key={option.value}
                   onClick={() => setActiveTab(option.value)}
-                  className={`group relative z-10 flex items-center justify-center gap-2 py-2 transition-all duration-300 ${
+                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
                     activeTab === option.value 
                       ? 'drop-shadow-lg' 
                       : 'opacity-70 hover:opacity-90'
                   }`}
-                  style={{ color: '#ffffff', borderRadius: '0.5rem' }}
+                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
                 >
                   <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
                     <div className="relative">
-                      <Icon size={18} weight="duotone" />
+                      <Icon size={SIZES.ICON_SIZE} weight="duotone" />
                       {hasNotification && (
-                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-[#3e4347] shadow-lg" />
+                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border shadow-lg" style={{ borderColor: COLORS.NAVY }} />
                       )}
                     </div>
-                    <span className="hidden sm:inline font-medium text-sm">{option.label}</span>
+                    <span className="hidden sm:inline font-bold text-sm">{option.label}</span>
                   </div>
                 </button>
               )
