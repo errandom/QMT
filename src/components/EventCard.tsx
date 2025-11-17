@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,8 +21,9 @@ import {
   Strategy,
   CalendarCheck
 } from '@phosphor-icons/react'
-import { Event, Team, Field, Site, EventType } from '@/lib/types'
+import { Event, Team, Field, Site, EventType, WeatherForecast } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
+import { getWeatherForecast } from '@/lib/weatherService'
 
 interface EventCardProps {
   event: Event
@@ -53,6 +54,8 @@ const statusColors = {
 
 export default function EventCard({ event, teams, fields, sites }: EventCardProps) {
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false)
+  const [weather, setWeather] = useState<WeatherForecast | null>(null)
+  const [loadingWeather, setLoadingWeather] = useState(false)
   
   const field = fields.find(f => f.id === event.fieldId)
   const site = field ? sites.find(s => s.id === field.siteId) : undefined
@@ -63,7 +66,22 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
   const canRequestCancellation = hoursUntilEvent > 24 && (event.status === 'Confirmed' || event.status === 'Planned')
 
-  const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 120
+  const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 72
+
+  useEffect(() => {
+    if (showWeather && site && !weather && !loadingWeather) {
+      setLoadingWeather(true)
+      getWeatherForecast(event.date, event.startTime, site.city, site.zipCode)
+        .then(forecast => {
+          setWeather(forecast)
+          setLoadingWeather(false)
+        })
+        .catch(err => {
+          console.error('Failed to load weather:', err)
+          setLoadingWeather(false)
+        })
+    }
+  }, [showWeather, site, event.date, event.startTime, weather, loadingWeather])
 
   return (
     <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 rounded-[8pt]">
@@ -92,10 +110,24 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <CardTitle className="text-xl font-semibold" style={{ color: '#001f3f' }}>{event.title}</CardTitle>
             </div>
           </div>
-          {showWeather && (
-            <div className="text-right text-sm">
-              <div style={{ color: '#6b7280' }}>Weather</div>
-              <div className="font-medium" style={{ color: '#001f3f' }}>18°C ⛅</div>
+          {showWeather && weather && (
+            <div className="text-right text-sm min-w-[80px]">
+              <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-2xl leading-none">{weather.icon}</span>
+                <div className="text-left">
+                  <div className="font-bold text-lg leading-tight" style={{ color: '#001f3f' }}>{weather.temperature}°C</div>
+                  <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {showWeather && !weather && loadingWeather && (
+            <div className="text-right text-sm min-w-[80px]">
+              <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
+              <div className="flex items-center justify-end gap-1.5">
+                <div className="animate-pulse text-base" style={{ color: '#6b7280' }}>Loading...</div>
+              </div>
             </div>
           )}
         </div>
