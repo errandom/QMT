@@ -71,7 +71,7 @@ export default function CancellationRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-white" style={{ color: '#001f3f' }}>
+      <DialogContent className="sm:max-w-[500px] bg-white top-[10%]" style={{ color: '#001f3f' }}>
         <DialogHeader>
           <DialogTitle style={{ color: '#001f3f' }}>Request Event Cancellation</DialogTitle>
           <DialogDescription style={{ color: '#001f3f' }}>
