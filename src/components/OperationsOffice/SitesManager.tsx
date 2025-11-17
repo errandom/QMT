@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, MapPin } from '@phosphor-icons/react'
+import { Plus, PencilSimple, MapPin, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 export default function SitesManager() {
@@ -72,6 +72,14 @@ export default function SitesManager() {
     setEditingSite(site)
     setFormData(site)
     setShowDialog(true)
+  }
+
+  const handleDelete = (siteId: string) => {
+    if (confirm('Are you sure you want to delete this site?')) {
+      setSites((current) => (current || []).filter(s => s.id !== siteId))
+      setFields((current: any) => (current || []).filter((f: any) => f.siteId !== siteId))
+      toast.success('Site deleted successfully')
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -143,13 +151,22 @@ export default function SitesManager() {
                     </Badge>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(site)}
-                >
-                  <PencilSimple size={16} />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(site)}
+                  >
+                    <PencilSimple size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(site.id)}
+                  >
+                    <Trash size={16} />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-2">

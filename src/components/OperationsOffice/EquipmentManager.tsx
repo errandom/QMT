@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, Cube } from '@phosphor-icons/react'
+import { Plus, PencilSimple, Cube, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 export default function EquipmentManager() {
@@ -40,6 +40,13 @@ export default function EquipmentManager() {
     setEditingEquipment(eq)
     setFormData(eq)
     setShowDialog(true)
+  }
+
+  const handleDelete = (equipmentId: string) => {
+    if (confirm('Are you sure you want to delete this equipment?')) {
+      setEquipment((current = []) => current.filter(eq => eq.id !== equipmentId))
+      toast.success('Equipment deleted successfully')
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -90,13 +97,22 @@ export default function EquipmentManager() {
                   </CardTitle>
                   <Badge variant="outline">Qty: {eq.quantity}</Badge>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(eq)}
-                >
-                  <PencilSimple size={16} />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(eq)}
+                  >
+                    <PencilSimple size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(eq.id)}
+                  >
+                    <Trash size={16} />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-2">

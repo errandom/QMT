@@ -56,7 +56,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-[oklch(0.28_0.08_240)] drop-shadow-lg">Operations Office</h1>
@@ -72,14 +72,14 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="relative w-full backdrop-blur-sm px-2 py-1 shadow-inner bg-[#3e4347] rounded-lg">
+        <div className="relative w-full backdrop-blur-sm px-2 py-2 shadow-inner bg-[#3e4347] rounded-lg">
           <div className="relative grid w-full grid-cols-7 gap-2 h-full">
             <div 
               className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
               style={{
                 left: `calc(${activeIndex * 14.286}% + 0.5rem)`,
-                top: '0.25rem',
-                bottom: '0.25rem',
+                top: '0.375rem',
+                bottom: '0.375rem',
                 width: 'calc(14.286% - 1rem)',
                 background: 'rgba(36, 139, 204, 0.75)',
                 boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',

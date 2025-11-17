@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, GridFour } from '@phosphor-icons/react'
+import { Plus, PencilSimple, GridFour, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 export default function FieldsManager() {
@@ -48,6 +48,13 @@ export default function FieldsManager() {
     setEditingField(field)
     setFormData(field)
     setShowDialog(true)
+  }
+
+  const handleDelete = (fieldId: string) => {
+    if (confirm('Are you sure you want to delete this field?')) {
+      setFields((current = []) => current.filter(f => f.id !== fieldId))
+      toast.success('Field deleted successfully')
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -106,13 +113,22 @@ export default function FieldsManager() {
                     {field.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(field)}
-                >
-                  <PencilSimple size={16} />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(field)}
+                  >
+                    <PencilSimple size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(field.id)}
+                  >
+                    <Trash size={16} />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-2">

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Plus, PencilSimple, Users } from '@phosphor-icons/react'
+import { Plus, PencilSimple, Users, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 export default function TeamsManager() {
@@ -44,6 +44,13 @@ export default function TeamsManager() {
     setEditingTeam(team)
     setFormData(team)
     setShowDialog(true)
+  }
+
+  const handleDelete = (teamId: string) => {
+    if (confirm('Are you sure you want to delete this team?')) {
+      setTeams((current = []) => current.filter(t => t.id !== teamId))
+      toast.success('Team deleted successfully')
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -97,13 +104,22 @@ export default function TeamsManager() {
                         {team.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(team)}
-                    >
-                      <PencilSimple size={16} />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(team)}
+                      >
+                        <PencilSimple size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(team.id)}
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
@@ -149,13 +165,22 @@ export default function TeamsManager() {
                         {team.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(team)}
-                    >
-                      <PencilSimple size={16} />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(team)}
+                      >
+                        <PencilSimple size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(team.id)}
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 const WEEKDAYS = [
@@ -82,6 +82,13 @@ export default function ScheduleManager() {
     setShowDialog(true)
   }
 
+  const handleDelete = (eventId: string) => {
+    if (confirm('Are you sure you want to delete this event?')) {
+      setEvents((current = []) => current.filter(ev => ev.id !== eventId))
+      toast.success('Event deleted successfully')
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -144,13 +151,22 @@ export default function ScheduleManager() {
                     {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(event)}
-                >
-                  <PencilSimple size={16} />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(event)}
+                  >
+                    <PencilSimple size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(event.id)}
+                  >
+                    <Trash size={16} />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
