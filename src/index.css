@@ -29,9 +29,16 @@
 
 [data-radix-dialog-overlay],
 [data-slot="sheet-overlay"],
+[data-slot="dialog-overlay"],
 .request-dialog-overlay {
   background-color: rgba(0, 31, 63, 0.37) !important;
   backdrop-filter: blur(20px) !important;
+  z-index: 100 !important;
+}
+
+[data-slot="sheet-content"],
+[data-slot="dialog-content"] {
+  z-index: 101 !important;
 }
 
 :root {
