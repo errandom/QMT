@@ -335,7 +335,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               type="submit" 
               disabled={isLoading}
               style={{
-                backgroundColor: 'oklch(0.28 0.005 240)',
+                backgroundColor: '#248bcc',
                 color: 'white',
                 border: 'none'
               }}
