@@ -39,7 +39,7 @@
 
 [data-radix-dialog-overlay] {
   background-color: rgba(0, 31, 63, 0.37) !important;
-  backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(20px) !important;
 }
 
 [data-slot="sheet-overlay"] {

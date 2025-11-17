@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -94,25 +94,27 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   const activeTeams = (teams || []).filter(t => t.isActive)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right"
-        className="overflow-y-auto w-full sm:max-w-2xl"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="overflow-y-auto"
         style={{
+          width: '90vw',
+          height: '90vh',
+          maxWidth: '90vw',
           backgroundColor: 'oklch(0.98 0.01 210)',
           color: 'oklch(0.28 0.005 240)',
           border: 'none',
           padding: '2rem'
         }}
       >
-        <SheetHeader>
-          <SheetTitle style={{ color: 'oklch(0.28 0.005 240)', fontSize: '1.5rem', fontWeight: '600' }}>
+        <DialogHeader>
+          <DialogTitle style={{ color: 'oklch(0.28 0.005 240)', fontSize: '1.5rem', fontWeight: '600' }}>
             Request Facility
-          </SheetTitle>
-          <SheetDescription style={{ color: 'oklch(0.45 0.02 240)' }}>
+          </DialogTitle>
+          <DialogDescription style={{ color: 'oklch(0.45 0.02 240)' }}>
             Submit a request to book a facility for your team or event
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -339,7 +341,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
