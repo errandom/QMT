@@ -74,24 +74,24 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
         side="right"
         className="overflow-y-auto w-full sm:max-w-2xl"
         style={{
-          backgroundColor: 'oklch(0.98 0.01 210)',
-          color: 'oklch(0.28 0.005 240)',
+          backgroundColor: 'rgba(0, 31, 63, 0.85)',
+          color: 'white',
           border: 'none',
           padding: '2rem'
         }}
       >
         <SheetHeader>
-          <SheetTitle style={{ color: 'oklch(0.28 0.005 240)', fontSize: '1.5rem', fontWeight: '600' }}>
+          <SheetTitle style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
             Request Equipment
           </SheetTitle>
-          <SheetDescription style={{ color: 'oklch(0.45 0.02 240)' }}>
+          <SheetDescription style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
             Submit a request for equipment for your team
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: 'oklch(0.28 0.005 240)' }}>Name *</Label>
+              <Label htmlFor="name" style={{ color: 'white' }}>Name *</Label>
               <Input
                 id="name"
                 value={name}
@@ -105,7 +105,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" style={{ color: 'oklch(0.28 0.005 240)' }}>Phone *</Label>
+              <Label htmlFor="phone" style={{ color: 'white' }}>Phone *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -122,7 +122,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label style={{ color: 'oklch(0.28 0.005 240)' }}>Teams * (select at least one)</Label>
+            <Label style={{ color: 'white' }}>Teams * (select at least one)</Label>
             <div 
               className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-40 overflow-y-auto"
               style={{
@@ -150,7 +150,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date" style={{ color: 'oklch(0.28 0.005 240)' }}>Date Needed *</Label>
+            <Label htmlFor="date" style={{ color: 'white' }}>Date Needed *</Label>
             <Input
               id="date"
               type="date"
@@ -166,7 +166,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="equipment" style={{ color: 'oklch(0.28 0.005 240)' }}>Equipment Description *</Label>
+            <Label htmlFor="equipment" style={{ color: 'white' }}>Equipment Description *</Label>
             <Textarea
               id="equipment"
               value={equipmentDescription}
