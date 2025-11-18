@@ -1,23 +1,28 @@
+import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Event, SportType, Team, Field, Site } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CalendarBlank } from '@phosphor-icons/react'
+import { Button } from '@/components/ui/button'
+import { CalendarBlank, PencilSimple, Trash } from '@phosphor-icons/react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
 
 interface ScheduleViewProps {
   sportFilter: 'All Sports' | SportType
   teamFilter: string
+  onEditEvent?: (event: Event) => void
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const TIME_SLOTS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30']
 
-export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewProps) {
-  const [events = []] = useKV<Event[]>('events', [])
+export default function ScheduleView({ sportFilter, teamFilter, onEditEvent }: ScheduleViewProps) {
+  const [events = [], setEvents] = useKV<Event[]>('events', [])
   const [teams = []] = useKV<Team[]>('teams', [])
   const [fields = []] = useKV<Field[]>('fields', [])
   const [sites = []] = useKV<Site[]>('sites', [])
+  const [hoveredEvent, setHoveredEvent] = useState<string | null>(null)
 
   const activeSites = sites.filter(s => s.isActive && s.isSportsFacility)
   
@@ -78,6 +83,21 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     ]
     const hash = teamIds[0]?.charCodeAt(0) || 0
     return colors[hash % colors.length]
+  }
+
+  const handleDeleteEvent = (eventId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (confirm('Are you sure you want to delete this event?')) {
+      setEvents((current = []) => current.filter(ev => ev.id !== eventId))
+      toast.success('Event deleted successfully')
+    }
+  }
+
+  const handleEditEvent = (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onEditEvent) {
+      onEditEvent(event)
+    }
   }
 
   if (recurringEvents.length === 0) {
@@ -141,12 +161,32 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                   <Tooltip key={event.id}>
                                     <TooltipTrigger asChild>
                                       <div
-                                        className={`absolute top-1 bottom-1 ${isCancelled ? 'bg-gray-400 opacity-60' : teamColor} rounded px-1 flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity overflow-hidden shadow-md ${isCancelled ? 'line-through' : ''}`}
+                                        className={`group absolute top-1 bottom-1 ${isCancelled ? 'bg-gray-400 opacity-60' : teamColor} rounded px-1 flex items-center justify-between text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-all overflow-hidden shadow-md ${isCancelled ? 'line-through' : ''}`}
                                         style={position}
+                                        onMouseEnter={() => setHoveredEvent(event.id)}
+                                        onMouseLeave={() => setHoveredEvent(null)}
                                       >
-                                        <span className="truncate">
+                                        <span className="truncate flex-1">
                                           {eventTeams.map(t => t.name).join(', ')}
                                         </span>
+                                        {hoveredEvent === event.id && (
+                                          <div className="flex items-center gap-0.5 ml-1 shrink-0">
+                                            <button
+                                              onClick={(e) => handleEditEvent(event, e)}
+                                              className="h-5 w-5 flex items-center justify-center rounded hover:bg-white/20 transition-colors"
+                                              title="Edit event"
+                                            >
+                                              <PencilSimple size={12} weight="bold" />
+                                            </button>
+                                            <button
+                                              onClick={(e) => handleDeleteEvent(event.id, e)}
+                                              className="h-5 w-5 flex items-center justify-center rounded hover:bg-white/20 transition-colors"
+                                              title="Delete event"
+                                            >
+                                              <Trash size={12} weight="bold" />
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent className="glass-card border-white/30">

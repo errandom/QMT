@@ -156,24 +156,26 @@ export default function ScheduleManager() {
                     {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-2 shrink-0">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-[#248bcc]/10 hover:text-[#248bcc]"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 border-[#248bcc] text-[#248bcc] hover:bg-[#248bcc] hover:text-white transition-colors"
                     onClick={() => handleEdit(event)}
                     title="Edit event"
                   >
-                    <PencilSimple size={18} weight="duotone" />
+                    <PencilSimple size={16} weight="bold" className="mr-1.5" />
+                    Edit
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
                     onClick={() => handleDelete(event.id)}
                     title="Delete event"
                   >
-                    <Trash size={18} weight="duotone" />
+                    <Trash size={16} weight="bold" className="mr-1.5" />
+                    Delete
                   </Button>
                 </div>
               </div>
