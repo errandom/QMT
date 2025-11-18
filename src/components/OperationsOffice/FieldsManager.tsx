@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Plus, PencilSimple, GridFour, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { COLORS } from '@/lib/constants'
 
 interface FieldsManagerProps {
   currentUser: User | null
@@ -86,6 +87,13 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
     return sites.find(s => s.id === siteId)?.name || 'Unknown Site'
   }
 
+  const handleToggleActive = (fieldId: string, currentActive: boolean) => {
+    setFields((current = []) =>
+      current.map(f => f.id === fieldId ? { ...f, isActive: !currentActive } : f)
+    )
+    toast.success(`Field ${currentActive ? 'deactivated' : 'activated'} successfully`)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -108,7 +116,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
                     <GridFour size={16} />
                     {field.name}
                   </CardTitle>
@@ -148,31 +156,62 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 {field.hasLights && <Badge variant="outline" className="text-xs">Lights</Badge>}
                 {field.capacity && <Badge variant="outline" className="text-xs">Cap: {field.capacity}</Badge>}
               </div>
+              {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-xs font-medium" style={{ color: COLORS.CHARCOAL }}>Status</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                      {field.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                    <Switch
+                      checked={field.isActive}
+                      onCheckedChange={() => handleToggleActive(field.id, field.isActive)}
+                      style={{
+                        backgroundColor: field.isActive ? COLORS.NAVY : undefined
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent 
+          className="max-w-lg operations-dialog"
+          style={{
+            background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
+            border: `3px solid ${COLORS.NAVY}`,
+            boxShadow: '0 20px 60px rgba(0, 31, 63, 0.3)'
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>{editingField ? 'Edit Field' : 'Create Field'}</DialogTitle>
+            <DialogTitle style={{ color: COLORS.NAVY }}>
+              {editingField ? 'Edit Field' : 'Create Field'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Field Name *</Label>
+              <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>Field Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="site">Site *</Label>
-              <Select value={formData.siteId} onValueChange={(v) => setFormData({ ...formData, siteId: v })}>
-                <SelectTrigger id="site">
+              <Label htmlFor="site" style={{ color: COLORS.CHARCOAL }}>Site *</Label>
+              <Select 
+                value={formData.siteId || ''} 
+                onValueChange={(v) => setFormData({ ...formData, siteId: v })}
+                required
+              >
+                <SelectTrigger id="site" style={{ color: COLORS.CHARCOAL }}>
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,9 +224,13 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="turfType">Turf Type *</Label>
-                <Select value={formData.turfType} onValueChange={(v) => setFormData({ ...formData, turfType: v as TurfType })}>
-                  <SelectTrigger id="turfType">
+                <Label htmlFor="turfType" style={{ color: COLORS.CHARCOAL }}>Turf Type *</Label>
+                <Select 
+                  value={formData.turfType || 'Natural Turf'} 
+                  onValueChange={(v) => setFormData({ ...formData, turfType: v as TurfType })}
+                  required
+                >
+                  <SelectTrigger id="turfType" style={{ color: COLORS.CHARCOAL }}>
                     <SelectValue placeholder="Select turf type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -197,9 +240,13 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fieldSize">Field Size *</Label>
-                <Select value={formData.fieldSize} onValueChange={(v) => setFormData({ ...formData, fieldSize: v as FieldSize })}>
-                  <SelectTrigger id="fieldSize">
+                <Label htmlFor="fieldSize" style={{ color: COLORS.CHARCOAL }}>Field Size *</Label>
+                <Select 
+                  value={formData.fieldSize || 'Full'} 
+                  onValueChange={(v) => setFormData({ ...formData, fieldSize: v as FieldSize })}
+                  required
+                >
+                  <SelectTrigger id="fieldSize" style={{ color: COLORS.CHARCOAL }}>
                     <SelectValue placeholder="Select field size" />
                   </SelectTrigger>
                   <SelectContent>
@@ -211,12 +258,13 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="capacity">Capacity (optional)</Label>
+              <Label htmlFor="capacity" style={{ color: COLORS.CHARCOAL }}>Capacity (optional)</Label>
               <Input
                 id="capacity"
                 type="number"
                 value={formData.capacity || ''}
                 onChange={(e) => setFormData({ ...formData, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
@@ -226,25 +274,47 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                   id="hasLights"
                   checked={formData.hasLights}
                   onCheckedChange={(checked) => setFormData({ ...formData, hasLights: checked })}
+                  style={{
+                    backgroundColor: formData.hasLights ? COLORS.NAVY : undefined
+                  }}
                 />
-                <Label htmlFor="hasLights">Has Lights</Label>
+                <Label htmlFor="hasLights" style={{ color: COLORS.CHARCOAL }}>Has Lights</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  style={{
+                    backgroundColor: formData.isActive ? COLORS.NAVY : undefined
+                  }}
                 />
-                <Label htmlFor="isActive">Active</Label>
+                <Label htmlFor="isActive" style={{ color: COLORS.CHARCOAL }}>Active</Label>
               </div>
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowDialog(false)}
+                style={{
+                  backgroundColor: COLORS.CHARCOAL,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingField ? 'Update' : 'Create'}
+              <Button 
+                type="submit"
+                style={{
+                  backgroundColor: COLORS.ACCENT,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                {editingField ? 'Save' : 'Create'}
               </Button>
             </div>
           </form>

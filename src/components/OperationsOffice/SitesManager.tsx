@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, PencilSimple, MapPin, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { COLORS } from '@/lib/constants'
 
 interface SitesManagerProps {
   currentUser: User | null
@@ -126,6 +127,13 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
     }))
   }
 
+  const handleToggleActive = (siteId: string, currentActive: boolean) => {
+    setSites((current) =>
+      (current || []).map(s => s.id === siteId ? { ...s, isActive: !currentActive } : s)
+    )
+    toast.success(`Site ${currentActive ? 'deactivated' : 'activated'} successfully`)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -142,7 +150,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
                     <MapPin size={16} />
                     {site.name}
                   </CardTitle>
@@ -180,7 +188,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <div>
+              <div style={{ color: COLORS.CHARCOAL }}>
                 <div className="font-medium">{site.address}</div>
                 <div className="text-muted-foreground">{site.zipCode} {site.city}</div>
               </div>
@@ -195,60 +203,90 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 {site.amenities.restaurant && <Badge variant="outline" className="text-xs">Restaurant</Badge>}
                 {site.amenities.equipmentStash && <Badge variant="outline" className="text-xs">Equipment</Badge>}
               </div>
+              {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-xs font-medium" style={{ color: COLORS.CHARCOAL }}>Status</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                      {site.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                    <Switch
+                      checked={site.isActive}
+                      onCheckedChange={() => handleToggleActive(site.id, site.isActive)}
+                      style={{
+                        backgroundColor: site.isActive ? COLORS.NAVY : undefined
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto operations-dialog"
+          style={{
+            background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
+            border: `3px solid ${COLORS.NAVY}`,
+            boxShadow: '0 20px 60px rgba(0, 31, 63, 0.3)'
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>{editingSite ? 'Edit Site' : 'Create Site'}</DialogTitle>
+            <DialogTitle style={{ color: COLORS.NAVY }}>
+              {editingSite ? 'Edit Site' : 'Create Site'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Site Name *</Label>
+              <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>Site Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="address">Address *</Label>
+                <Label htmlFor="address" style={{ color: COLORS.CHARCOAL }}>Address *</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city" style={{ color: COLORS.CHARCOAL }}>City *</Label>
                 <Input
                   id="city"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="zipCode">Zip Code *</Label>
+                <Label htmlFor="zipCode" style={{ color: COLORS.CHARCOAL }}>Zip Code *</Label>
                 <Input
                   id="zipCode"
                   value={formData.zipCode}
                   onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude *</Label>
+                <Label htmlFor="latitude" style={{ color: COLORS.CHARCOAL }}>Latitude *</Label>
                 <Input
                   id="latitude"
                   type="number"
@@ -256,10 +294,11 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                   value={formData.latitude}
                   onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude *</Label>
+                <Label htmlFor="longitude" style={{ color: COLORS.CHARCOAL }}>Longitude *</Label>
                 <Input
                   id="longitude"
                   type="number"
@@ -267,56 +306,61 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                   value={formData.longitude}
                   onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contactFirstName">Contact First Name *</Label>
+                <Label htmlFor="contactFirstName" style={{ color: COLORS.CHARCOAL }}>Contact First Name *</Label>
                 <Input
                   id="contactFirstName"
                   value={formData.contactFirstName}
                   onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contactLastName">Contact Last Name *</Label>
+                <Label htmlFor="contactLastName" style={{ color: COLORS.CHARCOAL }}>Contact Last Name *</Label>
                 <Input
                   id="contactLastName"
                   value={formData.contactLastName}
                   onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contactPhone">Contact Phone *</Label>
+                <Label htmlFor="contactPhone" style={{ color: COLORS.CHARCOAL }}>Contact Phone *</Label>
                 <Input
                   id="contactPhone"
                   type="tel"
                   value={formData.contactPhone}
                   onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contactEmail">Contact Email *</Label>
+                <Label htmlFor="contactEmail" style={{ color: COLORS.CHARCOAL }}>Contact Email *</Label>
                 <Input
                   id="contactEmail"
                   type="email"
                   value={formData.contactEmail}
                   onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label>Amenities</Label>
+              <Label style={{ color: COLORS.CHARCOAL }}>Amenities</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -324,7 +368,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                     checked={formData.amenities?.parking}
                     onCheckedChange={() => handleAmenityChange('parking')}
                   />
-                  <label htmlFor="parking" className="text-sm cursor-pointer">Parking</label>
+                  <label htmlFor="parking" className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>Parking</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -332,7 +376,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                     checked={formData.amenities?.toilets}
                     onCheckedChange={() => handleAmenityChange('toilets')}
                   />
-                  <label htmlFor="toilets" className="text-sm cursor-pointer">Toilets</label>
+                  <label htmlFor="toilets" className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>Toilets</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -340,7 +384,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                     checked={formData.amenities?.lockerRooms}
                     onCheckedChange={() => handleAmenityChange('lockerRooms')}
                   />
-                  <label htmlFor="lockerRooms" className="text-sm cursor-pointer">Locker Rooms</label>
+                  <label htmlFor="lockerRooms" className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>Locker Rooms</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -348,7 +392,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                     checked={formData.amenities?.shower}
                     onCheckedChange={() => handleAmenityChange('shower')}
                   />
-                  <label htmlFor="shower" className="text-sm cursor-pointer">Shower</label>
+                  <label htmlFor="shower" className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>Shower</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -356,7 +400,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                     checked={formData.amenities?.restaurant}
                     onCheckedChange={() => handleAmenityChange('restaurant')}
                   />
-                  <label htmlFor="restaurant" className="text-sm cursor-pointer">Restaurant</label>
+                  <label htmlFor="restaurant" className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>Restaurant</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -364,7 +408,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                     checked={formData.amenities?.equipmentStash}
                     onCheckedChange={() => handleAmenityChange('equipmentStash')}
                   />
-                  <label htmlFor="equipmentStash" className="text-sm cursor-pointer">Equipment Stash</label>
+                  <label htmlFor="equipmentStash" className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>Equipment Stash</label>
                 </div>
               </div>
             </div>
@@ -375,25 +419,47 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                   id="isSportsFacility"
                   checked={formData.isSportsFacility}
                   onCheckedChange={(checked) => setFormData({ ...formData, isSportsFacility: checked })}
+                  style={{
+                    backgroundColor: formData.isSportsFacility ? COLORS.NAVY : undefined
+                  }}
                 />
-                <Label htmlFor="isSportsFacility">Sports Facility</Label>
+                <Label htmlFor="isSportsFacility" style={{ color: COLORS.CHARCOAL }}>Sports Facility</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  style={{
+                    backgroundColor: formData.isActive ? COLORS.NAVY : undefined
+                  }}
                 />
-                <Label htmlFor="isActive">Active</Label>
+                <Label htmlFor="isActive" style={{ color: COLORS.CHARCOAL }}>Active</Label>
               </div>
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowDialog(false)}
+                style={{
+                  backgroundColor: COLORS.CHARCOAL,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingSite ? 'Update' : 'Create'}
+              <Button 
+                type="submit"
+                style={{
+                  backgroundColor: COLORS.ACCENT,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                {editingSite ? 'Save' : 'Create'}
               </Button>
             </div>
           </form>

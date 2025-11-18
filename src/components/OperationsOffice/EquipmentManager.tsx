@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Plus, PencilSimple, Cube, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { COLORS } from '@/lib/constants'
 
 interface EquipmentManagerProps {
   currentUser: User | null
@@ -95,7 +96,7 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
                     <Cube size={16} />
                     {eq.name}
                   </CardTitle>
@@ -127,9 +128,9 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               {eq.description && (
-                <div className="text-muted-foreground text-xs">{eq.description}</div>
+                <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>{eq.description}</div>
               )}
-              <div className="text-xs">
+              <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
                 <span className="text-muted-foreground">Assigned to:</span> {getTeamName(eq.assignedTeamId)}
               </div>
             </CardContent>
@@ -138,33 +139,44 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent 
+          className="max-w-lg operations-dialog"
+          style={{
+            background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
+            border: `3px solid ${COLORS.NAVY}`,
+            boxShadow: '0 20px 60px rgba(0, 31, 63, 0.3)'
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>{editingEquipment ? 'Edit Equipment' : 'Add Equipment'}</DialogTitle>
+            <DialogTitle style={{ color: COLORS.NAVY }}>
+              {editingEquipment ? 'Edit Equipment' : 'Add Equipment'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Equipment Name *</Label>
+              <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>Equipment Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" style={{ color: COLORS.CHARCOAL }}>Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity *</Label>
+              <Label htmlFor="quantity" style={{ color: COLORS.CHARCOAL }}>Quantity *</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -172,13 +184,17 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
                 required
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assignedTeam">Assigned Team</Label>
-              <Select value={formData.assignedTeamId} onValueChange={(v) => setFormData({ ...formData, assignedTeamId: v })}>
-                <SelectTrigger id="assignedTeam">
+              <Label htmlFor="assignedTeam" style={{ color: COLORS.CHARCOAL }}>Assigned Team</Label>
+              <Select 
+                value={formData.assignedTeamId || ''} 
+                onValueChange={(v) => setFormData({ ...formData, assignedTeamId: v })}
+              >
+                <SelectTrigger id="assignedTeam" style={{ color: COLORS.CHARCOAL }}>
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,11 +207,27 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowDialog(false)}
+                style={{
+                  backgroundColor: COLORS.CHARCOAL,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingEquipment ? 'Update' : 'Create'}
+              <Button 
+                type="submit"
+                style={{
+                  backgroundColor: COLORS.ACCENT,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                {editingEquipment ? 'Save' : 'Create'}
               </Button>
             </div>
           </form>

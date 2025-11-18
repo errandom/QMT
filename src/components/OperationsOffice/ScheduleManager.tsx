@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, PencilSimple, CalendarBlank, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { COLORS } from '@/lib/constants'
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -200,26 +201,40 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="max-w-3xl max-h-[90vh] overflow-y-auto operations-dialog"
+          style={{
+            background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
+            border: `3px solid ${COLORS.NAVY}`,
+            boxShadow: '0 20px 60px rgba(0, 31, 63, 0.3)'
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>{editingEvent ? 'Edit Event' : 'Create Event'}</DialogTitle>
+            <DialogTitle style={{ color: COLORS.NAVY }}>
+              {editingEvent ? 'Edit Event' : 'Create Event'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Event Title *</Label>
+              <Label htmlFor="title" style={{ color: COLORS.CHARCOAL }}>Event Title *</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="eventType">Event Type *</Label>
-                <Select value={formData.eventType} onValueChange={(v) => setFormData({ ...formData, eventType: v as EventType })}>
-                  <SelectTrigger id="eventType">
+                <Label htmlFor="eventType" style={{ color: COLORS.CHARCOAL }}>Event Type *</Label>
+                <Select 
+                  value={formData.eventType || 'Practice'} 
+                  onValueChange={(v) => setFormData({ ...formData, eventType: v as EventType })}
+                  required
+                >
+                  <SelectTrigger id="eventType" style={{ color: COLORS.CHARCOAL }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -231,9 +246,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as EventStatus })}>
-                  <SelectTrigger id="status">
+                <Label htmlFor="status" style={{ color: COLORS.CHARCOAL }}>Status *</Label>
+                <Select 
+                  value={formData.status || 'Planned'} 
+                  onValueChange={(v) => setFormData({ ...formData, status: v as EventStatus })}
+                  required
+                >
+                  <SelectTrigger id="status" style={{ color: COLORS.CHARCOAL }}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -247,41 +266,47 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
+                <Label htmlFor="date" style={{ color: COLORS.CHARCOAL }}>Date *</Label>
                 <Input
                   id="date"
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time *</Label>
+                <Label htmlFor="startTime" style={{ color: COLORS.CHARCOAL }}>Start Time *</Label>
                 <Input
                   id="startTime"
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endTime">End Time *</Label>
+                <Label htmlFor="endTime" style={{ color: COLORS.CHARCOAL }}>End Time *</Label>
                 <Input
                   id="endTime"
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                   required
+                  style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="field">Field</Label>
-              <Select value={formData.fieldId} onValueChange={(v) => setFormData({ ...formData, fieldId: v })}>
-                <SelectTrigger id="field">
+              <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>Field</Label>
+              <Select 
+                value={formData.fieldId || ''} 
+                onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
+              >
+                <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
                   <SelectValue placeholder="Select field" />
                 </SelectTrigger>
                 <SelectContent>
@@ -295,7 +320,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Teams</Label>
+              <Label style={{ color: COLORS.CHARCOAL }}>Teams</Label>
               <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-32 overflow-y-auto">
                 {activeTeams.map(team => (
                   <div key={team.id} className="flex items-center space-x-2">
@@ -304,7 +329,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                       checked={formData.teamIds?.includes(team.id)}
                       onCheckedChange={() => handleTeamToggle(team.id)}
                     />
-                    <label htmlFor={`event-team-${team.id}`} className="text-sm cursor-pointer">
+                    <label htmlFor={`event-team-${team.id}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
                       {team.name}
                     </label>
                   </div>
@@ -313,32 +338,35 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="otherParticipants">Other Participants</Label>
+              <Label htmlFor="otherParticipants" style={{ color: COLORS.CHARCOAL }}>Other Participants</Label>
               <Input
                 id="otherParticipants"
                 value={formData.otherParticipants}
                 onChange={(e) => setFormData({ ...formData, otherParticipants: e.target.value })}
                 placeholder="Specify other participants..."
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="attendance">Estimated Attendance</Label>
+              <Label htmlFor="attendance" style={{ color: COLORS.CHARCOAL }}>Estimated Attendance</Label>
               <Input
                 id="attendance"
                 type="number"
                 value={formData.estimatedAttendance || ''}
                 onChange={(e) => setFormData({ ...formData, estimatedAttendance: e.target.value ? parseInt(e.target.value) : undefined })}
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes" style={{ color: COLORS.CHARCOAL }}>Notes</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
+                style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
@@ -348,14 +376,17 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   id="isRecurring"
                   checked={formData.isRecurring}
                   onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
+                  style={{
+                    backgroundColor: formData.isRecurring ? COLORS.NAVY : undefined
+                  }}
                 />
-                <Label htmlFor="isRecurring">Recurring Event</Label>
+                <Label htmlFor="isRecurring" style={{ color: COLORS.CHARCOAL }}>Recurring Event</Label>
               </div>
 
               {formData.isRecurring && (
                 <div className="space-y-3 pl-6 border-l-2">
                   <div className="space-y-2">
-                    <Label>Weekdays</Label>
+                    <Label style={{ color: COLORS.CHARCOAL }}>Weekdays</Label>
                     <div className="grid grid-cols-4 gap-2">
                       {WEEKDAYS.map(day => (
                         <div key={day.value} className="flex items-center space-x-2">
@@ -364,7 +395,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                             checked={formData.recurringDays?.includes(day.value)}
                             onCheckedChange={() => handleDayToggle(day.value)}
                           />
-                          <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer">
+                          <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
                             {day.label}
                           </label>
                         </div>
@@ -372,13 +403,14 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="recurringEndDate">End Date *</Label>
+                    <Label htmlFor="recurringEndDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
                     <Input
                       id="recurringEndDate"
                       type="date"
                       value={formData.recurringEndDate}
                       onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
                       required={formData.isRecurring}
+                      style={{ color: COLORS.CHARCOAL }}
                     />
                   </div>
                 </div>
@@ -386,11 +418,27 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowDialog(false)}
+                style={{
+                  backgroundColor: COLORS.CHARCOAL,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingEvent ? 'Update' : 'Create'}
+              <Button 
+                type="submit"
+                style={{
+                  backgroundColor: COLORS.ACCENT,
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                {editingEvent ? 'Save' : 'Create'}
               </Button>
             </div>
           </form>
