@@ -188,7 +188,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 <Label htmlFor="turfType">Turf Type *</Label>
                 <Select value={formData.turfType} onValueChange={(v) => setFormData({ ...formData, turfType: v as TurfType })}>
                   <SelectTrigger id="turfType">
-                    <SelectValue />
+                    <SelectValue placeholder="Select turf type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Natural Turf">Natural Turf</SelectItem>
@@ -200,7 +200,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 <Label htmlFor="fieldSize">Field Size *</Label>
                 <Select value={formData.fieldSize} onValueChange={(v) => setFormData({ ...formData, fieldSize: v as FieldSize })}>
                   <SelectTrigger id="fieldSize">
-                    <SelectValue />
+                    <SelectValue placeholder="Select field size" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Full">Full</SelectItem>
