@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Field, Site, TurfType, FieldSize } from '@/lib/types'
+import { Field, Site, TurfType, FieldSize, User } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -12,7 +12,11 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, PencilSimple, GridFour, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
-export default function FieldsManager() {
+interface FieldsManagerProps {
+  currentUser: User | null
+}
+
+export default function FieldsManager({ currentUser }: FieldsManagerProps) {
   const [fields = [], setFields] = useKV<Field[]>('fields', [])
   const [sites = []] = useKV<Site[]>('sites', [])
   const [showDialog, setShowDialog] = useState(false)
@@ -113,22 +117,28 @@ export default function FieldsManager() {
                     {field.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(field)}
-                  >
-                    <PencilSimple size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(field.id)}
-                  >
-                    <Trash size={16} />
-                  </Button>
-                </div>
+                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                      onClick={() => handleEdit(field)}
+                      title="Edit field"
+                    >
+                      <PencilSimple size={18} weight="bold" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(field.id)}
+                      title="Delete field"
+                    >
+                      <Trash size={18} weight="bold" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-2">

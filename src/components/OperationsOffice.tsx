@@ -129,7 +129,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
         </TabsList>
 
         <TabsContent value="schedule">
-          <ScheduleManager />
+          <ScheduleManager currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="requests">
@@ -137,19 +137,19 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
         </TabsContent>
 
         <TabsContent value="teams">
-          <TeamsManager />
+          <TeamsManager currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="equipment">
-          <EquipmentManager />
+          <EquipmentManager currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="fields">
-          <FieldsManager />
+          <FieldsManager currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="sites">
-          <SitesManager />
+          <SitesManager currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="settings">

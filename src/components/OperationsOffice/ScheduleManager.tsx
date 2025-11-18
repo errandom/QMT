@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Event, EventType, EventStatus, Team, Field } from '@/lib/types'
+import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -24,7 +24,11 @@ const WEEKDAYS = [
   { value: 7, label: 'Sunday' }
 ]
 
-export default function ScheduleManager() {
+interface ScheduleManagerProps {
+  currentUser: User | null
+}
+
+export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [events = [], setEvents] = useKV<Event[]>('events', [])
   const [teams = []] = useKV<Team[]>('teams', [])
   const [fields = []] = useKV<Field[]>('fields', [])
@@ -156,28 +160,28 @@ export default function ScheduleManager() {
                     {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
                   </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 px-3 border-[#248bcc] text-[#248bcc] hover:bg-[#248bcc] hover:text-white transition-colors"
-                    onClick={() => handleEdit(event)}
-                    title="Edit event"
-                  >
-                    <PencilSimple size={16} weight="bold" className="mr-1.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 px-3 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
-                    onClick={() => handleDelete(event.id)}
-                    title="Delete event"
-                  >
-                    <Trash size={16} weight="bold" className="mr-1.5" />
-                    Delete
-                  </Button>
-                </div>
+                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                      onClick={() => handleEdit(event)}
+                      title="Edit event"
+                    >
+                      <PencilSimple size={18} weight="bold" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(event.id)}
+                      title="Delete event"
+                    >
+                      <Trash size={18} weight="bold" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-1">

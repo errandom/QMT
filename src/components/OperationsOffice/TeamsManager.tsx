@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Team, SportType, RosterSize } from '@/lib/types'
+import { Team, SportType, RosterSize, User } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -13,7 +13,11 @@ import { Separator } from '@/components/ui/separator'
 import { Plus, PencilSimple, Users, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
-export default function TeamsManager() {
+interface TeamsManagerProps {
+  currentUser: User | null
+}
+
+export default function TeamsManager({ currentUser }: TeamsManagerProps) {
   const [teams = [], setTeams] = useKV<Team[]>('teams', [])
   const [showDialog, setShowDialog] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
@@ -104,22 +108,28 @@ export default function TeamsManager() {
                         {team.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(team)}
-                      >
-                        <PencilSimple size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(team.id)}
-                      >
-                        <Trash size={16} />
-                      </Button>
-                    </div>
+                    {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                          onClick={() => handleEdit(team)}
+                          title="Edit team"
+                        >
+                          <PencilSimple size={18} weight="bold" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(team.id)}
+                          title="Delete team"
+                        >
+                          <Trash size={18} weight="bold" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
@@ -165,22 +175,28 @@ export default function TeamsManager() {
                         {team.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(team)}
-                      >
-                        <PencilSimple size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(team.id)}
-                      >
-                        <Trash size={16} />
-                      </Button>
-                    </div>
+                    {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                          onClick={() => handleEdit(team)}
+                          title="Edit team"
+                        >
+                          <PencilSimple size={18} weight="bold" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(team.id)}
+                          title="Delete team"
+                        >
+                          <Trash size={18} weight="bold" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">

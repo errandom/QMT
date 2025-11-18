@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Equipment, Team } from '@/lib/types'
+import { Equipment, Team, User } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -12,7 +12,11 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, PencilSimple, Cube, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
-export default function EquipmentManager() {
+interface EquipmentManagerProps {
+  currentUser: User | null
+}
+
+export default function EquipmentManager({ currentUser }: EquipmentManagerProps) {
   const [equipment = [], setEquipment] = useKV<Equipment[]>('equipment', [])
   const [teams = []] = useKV<Team[]>('teams', [])
   const [showDialog, setShowDialog] = useState(false)
@@ -97,22 +101,28 @@ export default function EquipmentManager() {
                   </CardTitle>
                   <Badge variant="outline">Qty: {eq.quantity}</Badge>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(eq)}
-                  >
-                    <PencilSimple size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(eq.id)}
-                  >
-                    <Trash size={16} />
-                  </Button>
-                </div>
+                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                      onClick={() => handleEdit(eq)}
+                      title="Edit equipment"
+                    >
+                      <PencilSimple size={18} weight="bold" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(eq.id)}
+                      title="Delete equipment"
+                    >
+                      <Trash size={18} weight="bold" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
