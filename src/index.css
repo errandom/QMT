@@ -68,6 +68,23 @@
   color: #003366 !important;
 }
 
+[data-slot="dialog-content"].operations-dialog {
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%) !important;
+  border: 3px solid #001f3f !important;
+  box-shadow: 0 20px 60px rgba(0, 31, 63, 0.3) !important;
+  backdrop-filter: none !important;
+}
+
+[data-slot="dialog-content"].operations-dialog button[aria-label="Close"],
+[data-slot="dialog-content"].operations-dialog button.absolute.right-4.top-4 {
+  color: #001f3f !important;
+}
+
+[data-slot="dialog-content"].operations-dialog button[aria-label="Close"]:hover,
+[data-slot="dialog-content"].operations-dialog button.absolute.right-4.top-4:hover {
+  color: #003366 !important;
+}
+
 :root {
   --background: oklch(0.97 0.005 210);
   --foreground: oklch(0.24 0.01 240);
