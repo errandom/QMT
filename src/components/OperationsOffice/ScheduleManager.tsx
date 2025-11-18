@@ -145,31 +145,35 @@ export default function ScheduleManager() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {events.map((event) => (
-          <Card key={event.id}>
+          <Card key={event.id} className="glass-card">
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2 flex-1">
                   <CardTitle className="text-base">{event.title}</CardTitle>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Badge variant="secondary">{event.eventType}</Badge>
                     <Badge>{event.status}</Badge>
                     {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 shrink-0">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-[#248bcc]/10 hover:text-[#248bcc]"
                     onClick={() => handleEdit(event)}
+                    title="Edit event"
                   >
-                    <PencilSimple size={16} />
+                    <PencilSimple size={18} weight="duotone" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => handleDelete(event.id)}
+                    title="Delete event"
                   >
-                    <Trash size={16} />
+                    <Trash size={18} weight="duotone" />
                   </Button>
                 </div>
               </div>
