@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { authenticateUser } from '@/lib/auth'
+import { api, setToken, setStoredUser } from '@/lib/api'
 import { User } from '@/lib/types'
 import { CheckCircle, XCircle } from '@phosphor-icons/react'
 
@@ -24,18 +24,32 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
     setIsLoading(true)
     setFeedback(null)
 
-    const user = authenticateUser(username, password)
-    
-    if (user) {
+    try {
+      const response = await api.login(username, password)
+      
+      // Store token and user data
+      setToken(response.token)
+      setStoredUser(response.user)
+      
       setFeedback({ type: 'success', message: 'Login successful' })
+      
+      // Convert API user to app User type
+      const user: User = {
+        id: response.user.id.toString(),
+        username: response.user.username,
+        password: '', // Don't store password
+        role: response.user.role,
+        isActive: true
+      }
+      
       setTimeout(() => {
         onLoginSuccess(user)
         setUsername('')
         setPassword('')
         setFeedback(null)
       }, 800)
-    } else {
-      setFeedback({ type: 'error', message: 'Invalid credentials' })
+    } catch (error: any) {
+      setFeedback({ type: 'error', message: error.message || 'Invalid credentials' })
       setIsLoading(false)
     }
   }
