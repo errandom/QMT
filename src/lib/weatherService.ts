@@ -31,7 +31,8 @@ export async function getWeatherForecast(
   const season = getSeasonForMonth(eventDateTime.getMonth())
 
   try {
-    const prompt = spark.llmPrompt`You are a weather forecasting service. Generate a realistic weather forecast for ${city}, Switzerland (postal code: ${zipCode}).
+    const llmPrompt = window.spark.llmPrompt as any
+    const prompt = llmPrompt`You are a weather forecasting service. Generate a realistic weather forecast for ${city}, Switzerland (postal code: ${zipCode}).
 
 Event date and time: ${eventDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} at ${time}
 Days until event: ${daysUntil} days
@@ -48,7 +49,7 @@ Return ONLY a valid JSON object (no markdown, no code blocks) with these exact p
   "icon": "<single weather emoji like ☀️, ⛅, ☁️, 🌧️, ⛈️, 🌨️, 🌦️, etc.>"
 }`
 
-    const response = await spark.llm(prompt, 'gpt-4o-mini', true)
+    const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
     const forecast = JSON.parse(response) as WeatherForecast
 
     weatherCache[cacheKey] = {

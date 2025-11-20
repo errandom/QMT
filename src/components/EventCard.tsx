@@ -66,6 +66,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const now = new Date()
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
   const canRequestCancellation = hoursUntilEvent > 24 && (event.status === 'Confirmed' || event.status === 'Planned')
+  const isPastEvent = hoursUntilEvent < 0
 
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 72
 
@@ -85,24 +86,13 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   }, [showWeather, site, event.date, event.startTime, weather, loadingWeather])
 
   return (
-    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40" style={{ borderRadius: SIZES.BORDER_RADIUS }}>
+    <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 ${isPastEvent ? 'opacity-40' : ''}`} style={{ borderRadius: SIZES.BORDER_RADIUS }}>
       <CardHeader className="pb-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
-              {canRequestCancellation && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="group h-7 px-3 text-xs border-2 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
-                  onClick={() => setCancellationDialogOpen(true)}
-                >
-                  <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
-                  <span>Request Cancellation</span>
-                </Button>
-              )}
             </div>
             <div className="flex items-center gap-2 mb-0">
               <div style={{ color: COLORS.NAVY }}>
@@ -117,26 +107,44 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
             )}
           </div>
-          {showWeather && weather && (
-            <div className="text-right text-sm min-w-[80px]">
-              <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
-              <div className="flex items-center justify-end gap-1.5">
-                <span className="text-2xl leading-none">{weather.icon}</span>
-                <div className="text-left">
-                  <div className="font-bold text-lg leading-tight" style={{ color: COLORS.NAVY }}>{weather.temperature}°C</div>
-                  <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
+          <div className="flex flex-col items-end gap-2">
+            {canRequestCancellation && (
+              <Button 
+                variant="ghost"
+                size="sm" 
+                className="h-[26px] px-3 text-xs transition-all hover:bg-transparent"
+                style={{
+                  backgroundColor: 'rgba(220, 38, 38, 0.15)',
+                  color: 'rgb(220, 38, 38)',
+                  border: 'none'
+                }}
+                onClick={() => setCancellationDialogOpen(true)}
+              >
+                <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
+                <span>Request Cancellation</span>
+              </Button>
+            )}
+            {showWeather && weather && (
+              <div className="text-right text-sm min-w-[80px]">
+                <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="text-2xl leading-none">{weather.icon}</span>
+                  <div className="text-left">
+                    <div className="font-bold text-lg leading-tight" style={{ color: COLORS.NAVY }}>{weather.temperature}°C</div>
+                    <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          {showWeather && !weather && loadingWeather && (
-            <div className="text-right text-sm min-w-[80px]">
-              <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
-              <div className="flex items-center justify-end gap-1.5">
-                <div className="animate-pulse text-base" style={{ color: '#6b7280' }}>Loading...</div>
+            )}
+            {showWeather && !weather && loadingWeather && (
+              <div className="text-right text-sm min-w-[80px]">
+                <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <div className="animate-pulse text-base" style={{ color: '#6b7280' }}>Loading...</div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </CardHeader>
       

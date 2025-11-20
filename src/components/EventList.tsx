@@ -38,7 +38,14 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
     }
   }, [events, setEvents])
 
+  const now = new Date()
+  
   const filteredEvents = events.filter((event) => {
+    const eventDate = new Date(event.date + ' ' + event.startTime)
+    const hoursFromNow = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursFromNow < -12) return false
+    
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
     }
