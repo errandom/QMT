@@ -84,8 +84,8 @@ app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 // Static Files & SPA Fallback
 // --------------------
 if (process.env.NODE_ENV === 'production') {
-  // ✅ Corrected path: serve from compiled dist folder
-  const distPath = path.resolve(__dirname); // Points to /home/site/wwwroot/dist
+  // ✅ Corrected path: one level up from /server to /dist
+  const distPath = path.resolve(__dirname, '..'); // Points to /home/site/wwwroot/dist
   app.use(express.static(distPath));
 
   // ✅ SPA fallback using regex for all non-API routes
@@ -121,7 +121,8 @@ async function startServer() {
       console.log(`✓ API available at http://localhost:${PORT}/api`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
+
