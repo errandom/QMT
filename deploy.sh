@@ -1,14 +1,26 @@
 #!/bin/bash
+set -e
 
-# Install dependencies
+echo "Installing dependencies..."
 npm install
 
-# Build frontend
+echo "Building frontend..."
 npm run build
 
-# Build backend
+echo "Building backend..."
 npm run build:server
 
-# Copy necessary files
-cp package.json dist/
-cp -r node_modules dist/
+echo "Preparing deployment folder..."
+# Create a deployment folder (e.g., site)
+mkdir -p site
+
+# Copy backend build
+cp -r dist/server site/
+
+# Copy frontend build (Vite output)
+cp -r dist site/public
+
+# Copy package.json and node_modules for runtime
+cp package.json site/
+cp -r node_modules site/
+
