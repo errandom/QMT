@@ -32,7 +32,11 @@ jobs:
           npm run build
           npm run build:server
 
-      # ✅ Optional: Verify compiled code does not contain old wildcard route
+      # ✅ Debug compiled route (first 20 lines)
+      - name: Debug compiled route
+        run: head -n 20 dist/server/index.js
+
+      # ✅ Verify compiled code does not contain old wildcard route
       - name: Verify compiled code
         run: |
           if grep "/*" dist/server/index.js; then
@@ -64,7 +68,7 @@ jobs:
       # Download build artifacts
       - name: Download build artifacts
         uses: actions/download-artifact@v4
-        with:
+               with:
           name: node-app
 
       # Login to Azure
