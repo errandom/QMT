@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getPool } from './db.js';
 
-// Import routes
+// Routers
 import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import teamsRouter from './routes/teams.js';
@@ -14,44 +14,59 @@ import fieldsRouter from './routes/fields.js';
 import equipmentRouter from './routes/equipment.js';
 import requestsRouter from './routes/requests.js';
 
-// Import middleware
+// Middleware
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
+// Load environment variables
 dotenv.config();
 
+// Resolve __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// --------------------
+// Global Middleware
+// --------------------
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging
 app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Health check endpoint
-app.get('/api/health', async (req: Request, res: Response) => {
+// --------------------
+// Health Check
+// --------------------
+app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
     await pool.request().query('SELECT 1 as healthy');
-    res.json({ status: 'ok', database: 'connected', timestamp: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Health check failed:', error);
-    res.status(503).json({ status: 'error', database: 'disconnected', error: (error as Error).message });
+    res.status(503).json({
+      status: 'error',
+      database: 'disconnected',
+      error: (error as Error).message
+    });
   }
 });
 
+// --------------------
 // API Routes
+// --------------------
 app.use('/api/auth', authRouter);
-
-// Public read-only routes
 app.use('/api/events', eventsRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/sites', sitesRouter);
@@ -64,39 +79,44 @@ app.post('/api/requests', requestsRouter);
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
-// Serve static files in production
+// --------------------
+// Static Files & SPA Fallback
+// --------------------
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
 
-  // SPA fallback route (fixed wildcard)
-  app.get('/:path(*)', (req: Request, res: Response) => {
+  // SPA fallback for non-API routes
+  app.get('*', (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
     } else {
       res.status(404).json({ error: 'API endpoint not found' });
     }
   });
-
 }
 
-// Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err.stack);
+// --------------------
+// Error Handling
+// --------------------
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Unhandled Error:', err.stack);
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-// Initialize database connection and start server
+// --------------------
+// Start Server
+// --------------------
 async function startServer() {
   try {
-    await getPool();
+    await getPool(); // Ensure DB connection before starting
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
       console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
-           console.log(`✓ API available at http://localhost:${PORT}/api`);
+      console.log(`✓ API available at http://localhost:${PORT}/api`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
