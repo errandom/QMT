@@ -70,13 +70,14 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(distPath));
 
   // SPA fallback route (fixed wildcard)
-  app.get('/*', (req: Request, res: Response) => {
+  app.get('/:path(*)', (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
     } else {
       res.status(404).json({ error: 'API endpoint not found' });
     }
   });
+
 }
 
 // Error handling middleware
