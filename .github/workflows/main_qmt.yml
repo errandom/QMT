@@ -1,3 +1,4 @@
+
 name: Build and deploy Node.js app to Azure Web App - QMT
 
 on:
@@ -23,9 +24,10 @@ jobs:
           node-version: '20.x'
 
       # Install dependencies and build
+      # ✅ Changed npm ci → npm install to avoid lock file mismatch errors
       - name: Install dependencies and build
         run: |
-          npm ci
+          npm install
           npm run build
           npm run build:server
 
@@ -60,9 +62,10 @@ jobs:
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_14FCFD877DFD43E98F3625F910DCD3EA }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5BC7800D449E4D1387345A55C90C5D2D }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_641C0CE361064A4E87E90FD3E890DF19 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBS          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_641C0CE361064A4E87E90FD3E890DF19 }}
 
       # Deploy to Azure Web App
+      # ✅ Deploy from artifact root so package.json is included
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
