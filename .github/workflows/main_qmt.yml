@@ -14,36 +14,32 @@ jobs:
       contents: read
 
     steps:
-      # Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      # ✅ Install dependencies and build with dev tools (Vite)
       - name: Install dependencies and clean build
         env:
           NODE_ENV: development
         run: |
           rm -rf dist
-          npm install
-          # ✅ Primary build step
+          npm install --include=dev
+          echo "Starting full build..."
           if npm run build; then
             echo "✅ Full build completed"
           else
-            echo "⚠️ Build failed, running fallback (server only)"
+            echo "⚠️ Full build failed, running fallback (server only)"
+            npm install --save-dev @types/node @types/express @types/jsonwebtoken @types/bcryptjs
             npm run build:server
           fi
 
-      # ✅ Debug compiled route (first 20 lines)
       - name: Debug compiled route
         run: head -n 20 dist/server/index.js || echo "⚠️ No server build found"
 
-      # ✅ Verify compiled code does not contain old wildcard route
       - name: Verify compiled code
         run: |
           if [ -f dist/server/index.js ]; then
@@ -57,7 +53,6 @@ jobs:
             echo "⚠️ No server build found, skipping verification"
           fi
 
-      # Upload build artifacts for deployment
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -76,13 +71,11 @@ jobs:
       contents: read
 
     steps:
-      # Download build artifacts
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses        uses: actions/download-artifact@v4
         with:
           name: node-app
 
-      # Login to Azure
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -90,10 +83,8 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5BC7800D449E4D1387345A55C90C5D2D }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_641C0CE361064A4E87E90FD3E890DF19 }}
 
-      # Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
           slot-name: 'Production'
-
