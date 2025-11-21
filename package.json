@@ -9,22 +9,11 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:full": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "kill": "fuser -k 5000/tcp",
-
-    // ✅ Combined build for client + server
     "build": "npm run build:client && npm run build:server && npm run copy-client",
-
-    // ✅ Client build (Vite SPA)
     "build:client": "vite build",
-
-    // ✅ Server build (TypeScript)
     "build:server": "tsc server/*.ts server/routes/*.ts server/middleware/*.ts server/utils/*.ts --outDir dist/server --module ES2022 --moduleResolution bundler --target ES2022 --esModuleInterop --skipLibCheck",
-
-    // ✅ Copy client output into dist for Express to serve
     "copy-client": "mkdir -p dist && cp -r dist/* dist/",
-
-    // ✅ Start command for Azure
     "start": "NODE_ENV=production node dist/server/index.js",
-
     "lint": "eslint .",
     "optimize": "vite optimize",
     "preview": "vite preview",
