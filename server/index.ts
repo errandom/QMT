@@ -84,10 +84,11 @@ app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 // Static Files & SPA Fallback
 // --------------------
 if (process.env.NODE_ENV === 'production') {
-  const distPath = path.join(__dirname, '../dist');
+  // ✅ Corrected path: serve from compiled dist folder
+  const distPath = path.resolve(__dirname); // Points to /home/site/wwwroot/dist
   app.use(express.static(distPath));
 
-  // ✅ SPA fallback using regex to match all non-API routes
+  // ✅ SPA fallback using regex for all non-API routes
   app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -124,6 +125,3 @@ async function startServer() {
     process.exit(1);
   }
 }
-
-startServer();
-``
