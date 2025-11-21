@@ -15,7 +15,8 @@ jobs:
 
     steps:
       # Checkout source code
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # Set up Node.js
       - name: Set up Node.js
@@ -24,12 +25,22 @@ jobs:
           node-version: '20.x'
 
       # Install dependencies and build
-      # ✅ Changed npm ci → npm install to avoid lock file mismatch errors
+      # ✅ Using npm install instead of npm ci to avoid lock file mismatch
       - name: Install dependencies and build
         run: |
           npm install
           npm run build
           npm run build:server
+
+      # ✅ Optional: Verify compiled code does not contain old wildcard route
+      - name: Verify compiled code
+        run: |
+          if grep "/*" dist/server/index.js; then
+            echo "❌ Old wildcard route found in compiled code"
+            exit 1
+          else
+            echo "✅ Route verified"
+          fi
 
       # Upload build artifacts for deployment
       - name: Upload build artifacts
@@ -62,12 +73,12 @@ jobs:
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_14FCFD877DFD43E98F3625F910DCD3EA }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5BC7800D449E4D1387345A55C90C5D2D }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBS          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_641C0CE361064A4E87E90FD3E890DF19 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_641C0CE361064A4E87E90FD3E890DF19 }}
 
       # Deploy to Azure Web App
-      # ✅ Deploy from artifact root so package.json is included
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
           slot-name: 'Production'
+          package: '.'
