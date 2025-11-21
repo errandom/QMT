@@ -39,12 +39,12 @@ jobs:
       # ✅ Verify compiled code does not contain old wildcard route
       - name: Verify compiled code
         run: |
-          if grep "/*" dist/server/index.js; then
-            echo "❌ Old wildcard route found in compiled code"
-            exit 1
-          else
-            echo "✅ Route verified"
-          fi
+            if grep "app.get('/*'" dist/server/index.js;    if grep "app.get('/*'" dist/server/index.js; then
+              echo "❌ Old wildcard route found in compiled code"
+              exit 1
+            else
+              echo "✅ Route verified"
+            fi
 
       # Upload build artifacts for deployment
       - name: Upload build artifacts
@@ -86,3 +86,4 @@ jobs:
           app-name: 'QMT'
           slot-name: 'Production'
           package: '.'
+
