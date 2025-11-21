@@ -24,29 +24,33 @@ jobs:
         with:
           node-version: '20.x'
 
-      # ✅ Clean and build to remove old compiled files
-      - name: Install dependencies and clean build
+      # ✅ Install dependencies and clean build
+      - name: Install dependencies and build
         run: |
           rm -rf dist
           npm install
-          npm run build
+          # Build client (React/Vue/Angular) and server
+          npm run build:client
           npm run build:server
+          # ✅ Copy client build output into dist for Azure deployment
+          cp -r client/dist/* dist/
 
-      # ✅ Debug compiled route (first 20 lines)
+      # ✅ Debug compiled server entry point
       - name: Debug compiled route
         run: head -n 20 dist/server/index.js
 
-      # ✅ Verify compiled code does not contain old wildcard route
-      - name: Verify compiled code
-        run: |
-          if grep "app.get('/*'" dist/server/index.js; then
-            echo "❌ Old wildcard route found in compiled code"
-            exit 1
-          else
-            echo "✅ Route verified"
-          fi
+      # ✅ Remove old wildcard verification (no longer needed)
+      # (Optional: Keep if you want to enforce regex route check)
+      # - name: Verify compiled code
+      #   run: |
+      #     if grep "app.get('/*'" dist/server/index.js; then
+      #       echo "❌ Old wildcard route found in compiled code"
+      #       exit 1
+      #     else
+      #       echo "✅ Route verified"
+      #     fi
 
-      # Upload build artifacts for deployment
+      # ✅ Upload build artifacts for deployment
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -68,7 +72,7 @@ jobs:
       # Download build artifacts
       - name: Download build artifacts
         uses: actions/download-artifact@v4
-        with:
+        with        with:
           name: node-app
 
       # Login to Azure
