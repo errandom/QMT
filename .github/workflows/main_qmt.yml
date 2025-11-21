@@ -14,17 +14,14 @@ jobs:
       contents: read
 
     steps:
-      # Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      # ✅ Clean and build to remove old compiled files
       - name: Install dependencies and clean build
         run: |
           rm -rf dist
@@ -32,11 +29,9 @@ jobs:
           npm run build
           npm run build:server
 
-      # ✅ Debug compiled route (first 20 lines)
       - name: Debug compiled route
         run: head -n 20 dist/server/index.js
 
-      # ✅ Verify compiled code does not contain old wildcard route
       - name: Verify compiled code
         run: |
           if grep "/*" dist/server/index.js; then
@@ -46,7 +41,6 @@ jobs:
             echo "✅ Route verified"
           fi
 
-      # Upload build artifacts for deployment
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -65,13 +59,11 @@ jobs:
       contents: read
 
     steps:
-      # Download build artifacts
       - name: Download build artifacts
         uses: actions/download-artifact@v4
-               with:
+        with:
           name: node-app
 
-      # Login to Azure
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -79,9 +71,8 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5BC7800D449E4D1387345A55C90C5D2D }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_641C0CE361064A4E87E90FD3E890DF19 }}
 
-      # Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'QMT'
+          app          app-name: 'QMT'
           slot-name: 'Production'
