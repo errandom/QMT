@@ -13,7 +13,7 @@ const CACHE_DURATION = 30 * 60 * 1000
 
 export async function getWeatherForecast(
   date: string,
-  zipCode: stri
+  time: string,
   city: string,
   zipCode: string
 ): Promise<WeatherForecast> {
@@ -30,27 +30,26 @@ export async function getWeatherForecast(
   const monthName = eventDateTime.toLocaleDateString('en-US', { month: 'long' })
   const season = getSeasonForMonth(eventDateTime.getMonth())
 
-  try {st prompt = llmPrompt`You are a weather forecasting service. Generate a realistic weather forecast for ${city}, Switzerland (postal code: ${zipCode}).
+  try {
     const prompt = window.spark.llmPrompt`You are a weather forecasting service. Generate a realistic weather forecast for ${city}, Switzerland (postal code: ${zipCode}).
-time: ${eventDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} at ${time}
+
 Event date and time: ${eventDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} at ${time}
 Days until event: ${daysUntil} days
 Season: ${season}
- patterns for Switzerland in ${monthName}, provide a realistic forecast. Consider:
-Based on typical weather patterns for Switzerland in ${monthName}, provide a realistic forecast. Consider:
-- Switzerland's climate patterns for this seasonitzerland
-- Typical temperature ranges for ${season} in Switzerland
-bject (no markdown, no code blocks) with these exact properties:
-Return ONLY a valid JSON object (no markdown, no code blocks) with these exact properties:
-{ "temperature": <number in Celsius>,
-  "temperature": <number in Celsius>,y', etc.>",
-  "condition": "<brief condition like 'Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy', 'Snowy', etc.>",
 
-}`  const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
-    const forecast = JSON.parse(response) as WeatherForecast
+Based on typical weather patterns for Switzerland in ${monthName}, provide a realistic forecast. Consider:
+- Switzerland's climate patterns for this season
+- Typical temperature ranges for ${season} in Switzerland
+
+Return ONLY a valid JSON object (no markdown, no code blocks) with these exact properties:
+{
+  "temperature": <number in Celsius>,
+  "condition": "<brief condition like 'Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy', 'Snowy', etc.>",
+  "icon": "<weather emoji>"
+}`
     const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
     const forecast = JSON.parse(response) as WeatherForecast
-      forecast,
+    
     weatherCache[cacheKey] = {
       forecast,
       timestamp: Date.now()
@@ -58,18 +57,21 @@ Return ONLY a valid JSON object (no markdown, no code blocks) with these exact p
 
     return forecast
   } catch (error) {
-  }
     return getFallbackWeather(season)
   }
-}unction getSeasonForMonth(month: number): string {
+}
 
 function getSeasonForMonth(month: number): string {
   if (month >= 2 && month <= 4) return 'Spring'
   if (month >= 5 && month <= 7) return 'Summer'
   if (month >= 8 && month <= 10) return 'Autumn'
+  return 'Winter'
+}
 
-f
-
+function getFallbackWeather(season: string): WeatherForecast {
+  const fallbacks: { [key: string]: WeatherForecast } = {
+    'Spring': { temperature: 15, condition: 'Partly Cloudy', icon: '⛅' },
+    'Summer': { temperature: 25, condition: 'Sunny', icon: '☀️' },
     'Autumn': { temperature: 12, condition: 'Cloudy', icon: '☁️' },
     'Winter': { temperature: 3, condition: 'Snowy', icon: '🌨️' }
   }
