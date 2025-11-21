@@ -23,7 +23,7 @@
     "copy-client": "mkdir -p dist && cp -r dist/* dist/",
 
     // ✅ Start command for Azure
-    "start": "NODE_ENV=production node dist/server/index    "start": "NODE_ENV=production node dist/server/index.js",
+    "start": "NODE_ENV=production node dist/server/index.js",
 
     "lint": "eslint .",
     "optimize": "vite optimize",
@@ -35,9 +35,5 @@
   },
   "devDependencies": {
     // (unchanged devDependencies)
-  },
-  "workspaces": {
-    "packages": [
-      "packages/*"
-    ]
   }
+}
