@@ -20,9 +20,7 @@
     "hash-password": "tsx server/utils/hashPassword.ts"
   },
   "dependencies": {
-    // (unchanged dependencies)
   },
   "devDependencies": {
-    // (unchanged devDependencies)
   }
 }
