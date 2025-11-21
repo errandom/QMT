@@ -72,7 +72,7 @@ jobs:
 
     steps:
       - name: Download build artifacts
-        uses        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4
         with:
           name: node-app
 
@@ -88,3 +88,4 @@ jobs:
         with:
           app-name: 'QMT'
           slot-name: 'Production'
+
