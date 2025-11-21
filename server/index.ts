@@ -1,3 +1,4 @@
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -86,8 +87,8 @@ if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
 
-  // SPA fallback for non-API routes
-  app.get('*', (req: Request, res: Response) => {
+  // ✅ SPA fallback using regex to match all non-API routes
+  app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
     } else {
@@ -124,3 +125,5 @@ async function startServer() {
   }
 }
 
+startServer();
+``
