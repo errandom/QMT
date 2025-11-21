@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies and build
         run: |
           rm -rf dist
-          npm install
+          npm install --include=dev
           npm run build   # Runs client + server build and copies SPA files into dist
 
       # ✅ Debug compiled server entry point
@@ -74,4 +74,5 @@ jobs:
         with:
           app-name: 'QMT'
           slot-name: 'Production'
+
 
