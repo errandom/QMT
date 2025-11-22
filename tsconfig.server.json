@@ -6,8 +6,8 @@
     "target": "ES2022",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "strict": true,
+    "    "strict": true,
     "resolveJsonModule": true,
     "sourceMap": false
   },
-  "include": ["server/**/*.ts"  "include": ["server/**/*.ts"]
+  "include": ["server/**/*.ts"]
