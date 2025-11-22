@@ -1,4 +1,3 @@
-
 name: Build and deploy Node.js app to Azure Web App - QMT
 
 on:
@@ -11,10 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate package.json (fail fast)
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')) || process.exit(1)"
+          echo "✅ package.json OK"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20.x'
           cache: 'npm'
@@ -22,6 +29,7 @@ jobs:
       - name: Install dependencies and clean build
         env:
           NODE_ENV: development
+        shell: bash
         run: |
           rm -rf dist
           npm ci --include=dev
@@ -38,6 +46,7 @@ jobs:
         run: sed -n '1,30p' dist/server/index.js || echo "⚠️ No server build found"
 
       - name: Verify compiled code (wildcard route guard)
+        shell: bash
         run: |
           if [ -f dist/server/index.js ]; then
             if grep -E "app\\.get\\(\\/.\\*/" dist/server/index.js; then
@@ -53,8 +62,11 @@ jobs:
           fi
 
       - name: Prepare artifact (dist + runtime manifest)
+        shell: bash
         run: |
+          # Ensure client assets landed in dist/
           test -f dist/index.html || (echo "❌ dist/index.html missing; did copy-client run?" && exit 1)
+          echo "Final dist tree (depth 2):"
           find dist -maxdepth 2 -type f | sed 's/^/  /'
 
       - name: Upload build artifacts (lightweight)
@@ -65,6 +77,8 @@ jobs:
             dist/
             package.json
             package-lock.json
+          # Intentionally exclude node_modules to keep artifacts small.
+          # Azure App Service (Oryx) will run `npm install --production` on the server.
 
   deploy:
     runs-on: ubuntu-latest
@@ -72,12 +86,13 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: .   # flatten into CWD
+          path: .  # flatten so package '.' points at the downloaded content
 
       - name: Login to Azure (OIDC)
         uses: azure/login@v2
@@ -89,6 +104,5 @@ jobs:
       - name: Deploy to Azure Web App (Linux)
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'QMT'
+          app          app-name: 'QMT'
           package: '.'
-          startup-command: 'npm start'
