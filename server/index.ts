@@ -49,18 +49,15 @@ app.use('/api/teams', teamsRouter);
 app.use('/api/sites', sitesRouter);
 app.use('/api/fields', fieldsRouter);
 
-// Protect equipment and requests APIs
+// Protected APIs
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
-
-// If you intend public endpoints for /api/requests, define them *inside* requestsRouter with appropriate middleware.
 
 // Static SPA fallback in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
 
-  // Serve index.html for all non-API routes
   app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -70,7 +67,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Correct error middleware
+// Error middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({
     error: 'Internal server error',
@@ -85,6 +82,6 @@ async function startServer() {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    process    process.exit(1);
+    process.exit(1);
   }
 }
