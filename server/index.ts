@@ -3,7 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { getPool } from './db.js';
+
 import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import teamsRouter from './routes/teams.js';
@@ -11,12 +13,14 @@ import sitesRouter from './routes/sites.js';
 import fieldsRouter from './routes/fields.js';
 import equipmentRouter from './routes/equipment.js';
 import requestsRouter from './routes/requests.js';
+
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -45,17 +49,19 @@ app.use('/api/teams', teamsRouter);
 app.use('/api/sites', sitesRouter);
 app.use('/api/fields', fieldsRouter);
 
-// ❗ Either protect all /api/requests endpoints:
+// Protect equipment and requests APIs
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
-// If you need a public POST only, define it within requestsRouter and remove the protected mount above.
-// Do NOT use app.post('/api/requests', requestsRouter) since Router expects to handle multiple verbs/paths.
+// ⚠️ If you intended a public POST /api/requests, define it inside requestsRouter and adjust auth there.
+// Do not use: app.post('/api/requests', requestsRouter)
 
 // Static SPA fallback in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
+
+  // Serve index.html for all non-API routes
   app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -65,7 +71,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// ✅ Correct error middleware
+// Correct error middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({
     error: 'Internal server error',
@@ -83,5 +89,3 @@ async function startServer() {
     process.exit(1);
   }
 }
-
-startServer();
