@@ -55,14 +55,14 @@ jobs:
             echo "⚠️ No server build found, skipping verification"
           fi
 
-      - name: Prepare artifact (dist + runtime files)
+      - name: Prepare artifact (dist + runtime manifest)
         run: |
           # Ensure client assets landed in dist/
           test -f dist/index.html || (echo "❌ dist/index.html missing; did copy-client run?" && exit 1)
           # Show final tree for sanity
           find dist -maxdepth 2 -type f | sed 's/^/  /'
 
-      - name: Upload build artifacts
+      - name: Upload build artifacts (lightweight)
         uses: actions/upload-artifact@v4
         with:
           name: node-app
@@ -70,7 +70,7 @@ jobs:
             dist/
             package.json
             package-lock.json
-            node_modules/
+          # ✨ Intentionally exclude node_modules for smaller zip (Oryx will run npm install --production server-side)
 
   deploy:
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: .    # flatten, so package '.' points at the downloaded content
+          path: .  # flatten into CWD so package '.' is correct
 
       - name: Login to Azure (OIDC)
         uses: azure/login@v2
@@ -97,6 +97,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
-          # slot-name: 'production'   # optional; omit if deploying to the main slot
           package: '.'
-          startup-command: 'npm start'  #
