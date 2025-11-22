@@ -53,8 +53,7 @@ app.use('/api/fields', fieldsRouter);
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
-// ⚠️ If you intended a public POST /api/requests, define it inside requestsRouter and adjust auth there.
-// Do not use: app.post('/api/requests', requestsRouter)
+// If you intend public endpoints for /api/requests, define them *inside* requestsRouter with appropriate middleware.
 
 // Static SPA fallback in production
 if (process.env.NODE_ENV === 'production') {
@@ -86,6 +85,6 @@ async function startServer() {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    process.exit(1);
+    process    process.exit(1);
   }
 }
