@@ -1,0 +1,7 @@
+# Normalize line endings and keep JSON/YAML consistent
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.ts   text eol=lf
+*.js   text eol=lf
+*.tsx*.tsx  text eol=lf
