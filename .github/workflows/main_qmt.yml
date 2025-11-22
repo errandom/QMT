@@ -1,3 +1,4 @@
+
 name: Build and deploy Node.js app to Azure Web App - QMT
 
 on:
@@ -15,80 +16,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show original package.json (visible control chars)
+      - name: Validate package.json (fail fast)
         shell: bash
         run: |
-          echo "--- package.json as read by runner ---"
-          sed -n '1,200p' package.json | sed -e 's/\t/<TAB>/g'
-          echo "-------------------------------------"
-
-      - name: Sanitize + validate package.json (with canonical fallback)
-        shell: bash
-        run: |
-          node <<'EOF'
-          const fs = require('fs');
-          function sanitize(s) {
-            // strip BOM
-            s = s.replace(/^\uFEFF/, '');
-            // replace common HTML entities
-            s = s.replace(/&gt;/g, '>')
-                 .replace(/&lt;/g, '<')
-                 .replace(/&amp;/g, '&');
-            // normalize smart quotes to ASCII
-            s = s.replace(/[\u201C\u201D]/g, '"')
-                 .replace(/[\u2018\u2019]/g, "'");
-            // remove accidental extra quotes/spaces before keys:  "  "engines":
-            s = s.replace(/"\s+"([A-Za-z0-9_.-]+)"\s*:/g, '"$1":');
-            return s;
-          }
-
-          let txt = fs.readFileSync('package.json', 'utf8');
-          let sanitized = sanitize(txt);
-          try {
-            JSON.parse(sanitized);
-            fs.writeFileSync('package.json', sanitized, 'utf8');
-            console.log('✅ package.json sanitized and valid');
-          } catch (e) {
-            console.error('❌ package.json invalid even after sanitize. Applying canonical fallback.');
-            const canonical = `{
-  "name": "spark-template",
-  "version": "0.0.0",
-  "type": "module",
-  "main": "dist/server/index.js",
-  "scripts": {
-    "start": "node dist/server/index.js",
-    "build": "npm run build:client && npm run build:server && npm run copy-client",
-    "build:client": "vite build",
-    "build:server": "tsc -p tsconfig.server.json",
-    "copy-client": "cp -r client/dist/* dist/",
-    "verify": "node -e \\"JSON.parse(require('fs').readFileSync('package.json','utf8'))\\" && echo \\"package.json OK\\""
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "mssql": "^9.1.1",
-    "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3"
-  },
-  "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/node": "^20.10.5",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.2",
-    "@types/bcryptjs": "^2.4.2",
-    "vite": "^5.0.0"
-  },
-  "engines": {
-    "node": ">=20 <21"
-  }
-}`;
-            fs.writeFileSync('package.json', canonical, 'utf8');
-            // validate canonical
-            JSON.parse(fs.readFileSync('package.json','utf8'));
-            console.log('✅ canonical package.json written and valid');
-          }
-          EOF
+          if ! jq -e . package.json >/dev/null 2>&1; then
+            echo "❌ package.json is not valid JSON"
+            exit 1
+          fi
+          echo "✅ package.json OK"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -146,7 +81,8 @@ jobs:
             dist/
             package.json
             package-lock.json
-          # Lighter artifacts: exclude node_modules. Oryx will install production deps on App Service.
+          # Intentionally exclude node_modules to keep artifacts small.
+          # Azure App Service (Oryx) will run `npm install --production` on the server.
 
   deploy:
     runs-on: ubuntu-latest
@@ -160,7 +96,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: .  # flatten so package '.' is correct
+          path: .  # flatten so package '.' points at the downloaded content
 
       - name: Login to Azure (OIDC)
         uses: azure/login@v2
@@ -171,6 +107,6 @@ jobs:
 
       - name: Deploy to Azure Web App (Linux)
         uses: azure/webapps-deploy@v3
-        with:
+          with:
           app-name: 'QMT'
           package: '.'
