@@ -1,4 +1,3 @@
-
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -25,7 +24,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
@@ -45,10 +44,15 @@ app.use('/api/events', eventsRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/sites', sitesRouter);
 app.use('/api/fields', fieldsRouter);
-app.post('/api/requests', requestsRouter);
+
+// ❗ Either protect all /api/requests endpoints:
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
+// If you need a public POST only, define it within requestsRouter and remove the protected mount above.
+// Do NOT use app.post('/api/requests', requestsRouter) since Router expects to handle multiple verbs/paths.
+
+// Static SPA fallback in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
@@ -61,8 +65,12 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// ✅ Correct error middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  res.status(500).json({ error: 'Internal server error', message: process.env.NODE_ENV === 'development' ? err.message  res.status(500).json({ error: 'Internal server error', message: process.env.NODE_ENV === 'development' ? err.message : undefined });
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 async function startServer() {
@@ -76,3 +84,4 @@ async function startServer() {
   }
 }
 
+startServer();
