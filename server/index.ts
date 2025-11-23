@@ -3,40 +3,58 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
-import { Request, Response, NextFunction } from 'express';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
+
+/* ----------------------------- Middleware ----------------------------- */
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-app.get('/api/health', async (_req, res) => {
+/* ----------------------------- Health Check --------------------------- */
+
+app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
     await pool.request().query('SELECT 1 as healthy');
     res.json({ status: 'ok', database: 'connected' });
   } catch (error) {
-    res.status(503).json({ status: 'error', database: 'disconnected', error: (error as Error).message });
+    res.status(503).json({
+      status: 'error',
+      database: 'disconnected',
+      error: (error as Error).message
+    });
   }
 });
 
+/* ----------------------------- Static / SPA --------------------------- */
+/**
+ * In production, compiled code runs from:
+ *   /home/site/wwwroot/dist/server
+ * Web root with index.html is:
+ *   /home/site/wwwroot  → two levels up from __dirname
+ */
 if (process.env.NODE_ENV === 'production') {
-  const webRoot = path.join(__dirname, '../../');
+  const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
   app.use(express.static(webRoot));
-  app.get(/.*/, (req, res) => {
+
+  app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(webRoot, 'index.html'));
     } else {
@@ -45,25 +63,25 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+/* ----------------------------- Error Handling ------------------------- */
+
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
+// Crash visibility for unexpected failures
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
 process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 
-async function startServer() {
-  console.log('🚀 Bootstrapping server...');
-  try {
-    await getPool();
-    console.log('✅ Database connected');
-  } catch (error) {
-    console.error('⚠️ Database connection failed:', error);
-  }
+/* ----------------------------- Startup ------------------------------- */
 
+async function registerRoutes(): Promise<void> {
+  console.log('🔧 Registering routes...');
   try {
-    console.log('🔧 Registering routes...');
     const [
       { default: authRouter },
       { default: eventsRouter },
@@ -93,10 +111,32 @@ async function startServer() {
     console.log('✅ Routes registered');
   } catch (error) {
     console.error('⚠️ Route registration failed:', error);
+    console.error('Continuing startup without API routes (SPA/static will still serve).');
   }
-
-  app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 }
 
-startServer();
-``
+async function initDatabase(): Promise<void> {
+  console.log('🔌 Connecting to database...');
+  try {
+    await getPool();
+    console.log('✅ Database connected');
+  } catch (error) {
+    console.error('⚠️ Database connection failed:', error);
+    console.error('Continuing startup without DB connection.');
+  }
+}
+
+async function startServer() {
+  try {
+    console.log('🚀 Bootstrapping server...');
+    await initDatabase();
+    await registerRoutes();
+
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Fatal startup error:', error);
+    // Do not exit; allow platform to restart if needed
+  }
+}
