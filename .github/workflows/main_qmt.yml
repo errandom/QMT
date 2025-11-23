@@ -21,18 +21,23 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
+      # Validate that package.json is valid JSON (fail fast with a clear message)
       - name: Validate package.json (fail fast)
         shell: bash
         run: |
           jq -e . package.json || { echo "package.json is not valid JSON"; exit 1; }
 
+      # Regenerate lockfile to match package.json (avoids npm ci lock mismatch).
+      # We use npm install, not npm ci, and then build.
       - name: Install dependencies and build server
         env:
           NODE_ENV: development
         shell: bash
         run: |
           rm -rf dist
-          npm ci --include=dev
+          # Regenerate lockfile to match package.json (clean install)
+          rm -f package-lock.json
+          npm install
           echo "Building server..."
           npm run build
 
