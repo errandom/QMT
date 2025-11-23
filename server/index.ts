@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 
 import { getPool } from './db.js';
 
+// Import routers
 import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import teamsRouter from './routes/teams.js';
@@ -24,15 +25,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Logging middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
+// Health check endpoint
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
@@ -43,44 +47,58 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
+// API routes
 app.use('/api/auth', authRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/sites', sitesRouter);
 app.use('/api/fields', fieldsRouter);
-
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
+// Serve SPA in production
 if (process.env.NODE_ENV === 'production') {
-  const rootPath = path.join(__dirname, '../'); // root of the repo
-  app.use(express.static(rootPath));
+  // __dirname in compiled code = /home/site/wwwroot/dist/server
+  // Root web folder = /home/site/wwwroot
+  const webRoot = path.join(__dirname, '../../');
+
+  app.use(express.static(webRoot));
 
   app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(rootPath, 'index.html'));
+      res.sendFile(path.join(webRoot, 'index.html'));
     } else {
       res.status(404).json({ error: 'API endpoint not found' });
     }
   });
 }
 
+// Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
+// Crash visibility
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED_REJECTION:', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT_EXCEPTION:', err);
+});
+
+//// Start server
 async function startServer() {
   try {
     await getPool();
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`✅ Server running on port ${PORT}`);
     });
-  } catch (_error) {
+  } catch (error) {
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
-
-startServer();
