@@ -29,7 +29,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     database,
     options: {
       encrypt: true,
-      trustServerCertificate: false
+           trustServerCertificate: false
     },
     pool: {
       max: 10,
@@ -40,4 +40,3 @@ export async function getPool(): Promise<sql.ConnectionPool> {
 
   cachedPool = await sql.connect(config);
   return cachedPool;
-}
