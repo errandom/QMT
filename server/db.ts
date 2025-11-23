@@ -1,41 +1,16 @@
-import { connect, ConnectionPool, config as SqlConfig } from 'mssql';
+let cachedPool: any = null;
 
-let cachedPool: ConnectionPool | null = null;
-
-export async function getPool(): Promise<ConnectionPool> {
+exportexport async function getPool() {
   if (cachedPool) return cachedPool;
 
-  const server = process.env.DB_SERVER ?? '';
-  const user = process.env.DB_USER ?? '';
-  const password = process.env.DB_PASSWORD ?? '';
-  const database = process.env.DB_DATABASE ?? '';
-
-  const missing: string[] = [];
-  if (!server) missing.push('DB_SERVER');
-  if (!user) missing.push('DB_USER');
-  if (!password) missing.push('DB_PASSWORD');
-  if (!database) missing.push('DB_DATABASE');
-
-  if (missing.length) {
-    throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
-  }
-
-  const config: SqlConfig = {
-    server,
-    user,
-    password,
-    database,
-    options: {
-      encrypt: true,
-      trustServerCertificate: false
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      idleTimeoutMillis: 30000
-    }
+  const sql = await import('mssql'); // dynamic import
+  const config = {
+    server: process.env.DB_SERVER!,
+    user: process.env.DB_USER!,
+    password: process.env.DB_PASSWORD!,
+    database: process.env.DB_DATABASE!,
+    options: { encrypt: true, trustServerCertificate: false }
   };
 
-  cachedPool = await connect(config);
+  cachedPool = await sql.connect(config);
   return cachedPool;
-}
