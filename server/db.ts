@@ -1,8 +1,8 @@
-import * as sql from 'mssql';
+import { connect, ConnectionPool, config as SqlConfig } from 'mssql';
 
-let cachedPool: sql.ConnectionPool | null = null;
+let cachedPool: ConnectionPool | null = null;
 
-export async function getPool(): Promise<sql.ConnectionPool> {
+export async function getPool(): Promise<ConnectionPool> {
   if (cachedPool) return cachedPool;
 
   const server = process.env.DB_SERVER ?? '';
@@ -20,7 +20,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
   }
 
-  const config: sql.config = {
+  const config: SqlConfig = {
     server,
     user,
     password,
@@ -36,7 +36,6 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     }
   };
 
-  //  // ✅ Correct usage for ESM
-  cachedPool = await sql.connect(config);
+  cachedPool = await connect(config);
   return cachedPool;
 }
