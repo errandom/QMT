@@ -1,4 +1,4 @@
-name: Build and deploy Node.js app to Azure Web App --- QMT
+name: Build and deploy Node.js app to Azure Web App - QMT
 
 on:
   push:
@@ -26,24 +26,35 @@ jobs:
         run: |
           jq -e . package.json || { echo "package.json is not valid JSON"; exit 1; }
 
-      - name: Install dependencies and build server
+      - name: Install dependencies and build
         env:
           NODE_ENV: development
         shell: bash
         run: |
+          # Clean build artifacts and regenerate lockfile to match package.json
           rm -rf dist
-          # Regenerate lockfile to match package.json (avoids npm ci lock mismatch)
           rm -f package-lock.json
           npm install
+
           echo "Building server..."
           npm run build
 
-      - name: Verify outputs (server and index.html in root)
+          # Try client build if present; continue if it doesn't exist or fails
+          echo "Building client (optional)..."
+          npm run build:client || echo "ℹ️ No client build or build:client failed — continuing"
+
+      - name: Verify build outputs
         shell: bash
         run: |
           test -f dist/server/index.js || { echo "❌ dist/server/index.js not found"; exit 1; }
           test -f index.html || { echo "❌ index.html not found in repo root"; exit 1; }
           echo "✅ Build artifacts verified"
+
+      - name: Show tree (top 2 levels)
+        shell: bash
+        run: |
+          echo "Workspace tree:"
+          find . -maxdepth 2 -type f | sed 's/^/  /'
 
       - name: Upload build artifacts (lightweight)
         uses: actions/upload-artifact@v4
@@ -54,12 +65,17 @@ jobs:
             dist/
             package.json
             package-lock.json
+            src/
+            public/
+            assets/
+          if-no-files-found: ignore
+          # Intentionally exclude node_modules; App Service Oryx will run `npm install --production` at deploy time.
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
 
-    # 🔑 Step 5: OIDC requires id-token permission on the job that performs azure/login
+    # OIDC token permission required for azure/login@v2
     permissions:
       id-token: write
       contents: read
@@ -71,8 +87,6 @@ jobs:
           name: node-app
           path: .
 
-      # ✅ Step 6: Login to Azure using OIDC (no client secret). Requires the three secrets set in your repo:
-      # AZUREAPPSERVICE_CLIENTID, AZUREAPPSERVICE_TENANTID, AZUREAPPSERVICE_SUBSCRIPTIONID
       - name: Login to Azure (OIDC)
         uses: azure/login@v2
         with:
@@ -91,3 +105,24 @@ jobs:
           package: '.'
           startup-command: 'npm start'
 
+      - name: Post-deploy health check (/api/health)
+        shell: bash
+        run: |
+          echo "Waiting for app to become healthy..."
+          for i in {1..12}; do
+            RESP=$(curl -sS --max-time 5 https://qmt.azurewebsites.net/api/health || true)
+            STATUS=$(echo "$RESP" | jq -r '.status' 2>/dev/null || echo "unknown")
+            DB=$(echo "$RESP" | jq -r '.database' 2>/dev/null || echo "unknown")
+
+            if [ "$STATUS" = "ok" ] && [ "$DB" = "connected" ]; then
+              echo "✅ Health check passed: $RESP"
+              exit 0
+            fi
+
+            echo "Attempt $i/12: STATUS=$STATUS, DB=$DB"
+            sleep 10
+          done
+
+          echo "❌ Health check failed. Last response:"
+          echo "$RESP"
+          exit 1
