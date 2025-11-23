@@ -40,3 +40,4 @@ export async function getPool(): Promise<sql.ConnectionPool> {
 
   cachedPool = await sql.connect(config);
   return cachedPool;
+}
