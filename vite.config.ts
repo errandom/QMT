@@ -1,34 +1,12 @@
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react-swc";
-import { defineConfig, PluginOption } from "vite";
+// vite.config.ts
+import { defineConfig } from 'vite';
+import path from 'path';
 
-import sparkPlugin from "@github/spark/spark-vite-plugin";
-import createIconImportProxy from "@github/spark/vitePhosphorIconProxyPlugin";
-import { resolve } from 'path'
-
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    // DO NOT REMOVE
-    createIconImportProxy() as PluginOption,
-    sparkPlugin() as PluginOption,
-  ],
-  resolve: {
-    alias: {
-      '@': resolve(projectRoot, 'src')
-    }
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      }
-    }
+// Build the client from /client and emit into /client/dist.
+// Your package.json script `copy-client` moves these assets into /dist/.
+export defaultexport default defineConfig({
+  root: path.resolve(__dirname, 'client'),
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true
   }
-});
