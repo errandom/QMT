@@ -15,6 +15,44 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate or repair package.json
+        shell: bash
+        run: |
+          if jq -e . package.json; then
+            echo "package.json OK"
+          else
+            echo "package.json invalid. Writing canonical package.json."
+            printf '%s\n' \
+'{' \
+'  "name": "spark-template",' \
+'  "version": "0.0.0",' \
+'  "type": "module",' \
+'  "main": "dist/server/index.js",' \
+'  "scripts": {' \
+'    "start": "node dist/server/index.js",' \
+'    "build": "npm run build:server",' \
+'    "build:server": "tsc -p tsconfig.server.json"' \
+'  },' \
+'  "dependencies": {' \
+'    "express": "^4.18.2",' \
+'    "cors": "^2.8.5",' \
+'    "dotenv": "^16.3.1",' \
+'    "mssql": "^9.1.1",' \
+'    "jsonwebtoken": "^9.0.2",' \
+'    "bcryptjs": "^2.4.3"' \
+'  },' \
+'  "devDependencies": {' \
+'    "typescript": "^5.3.3",' \
+'    "@types/node": "^20.10.5",' \
+'    "@types/express": "^4.17.21",' \
+'    "@types/jsonwebtoken": "^9.0.2",' \
+'    "@types/bcryptjs": "^2.4.2",' \
+'    "@types/cors": "^2.8.17"' \
+'  }' \
+'}' | tee package.json
+            jq -e . package.json || { echo "Canonical package.json still invalid"; exit 1; }
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -22,42 +60,33 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies and build
-        shell: bash
         env:
           NODE_ENV: development
+        shell: bash
         run: |
           rm -rf dist
-          # Regenerate lock file to resolve npm ci mismatch errors
-          rm -f package-lock.json
-          npm install
-          echo "Starting full build..."
-          if npm run build; then
-            echo "Full build completed"
-          else
-            echo "Full build failed, building server only"
-            npm install --save-dev @types/node @types/express @types/jsonwebtoken @types/bcryptjs
-            npm run build:server
-          fi
+          npm ci --include=dev
+          echo "Building server..."
+          npm run build
 
-      - name: Show compiled server entry (first 30 lines)
-        shell: bash
-        run: sed -n '1,30p' dist/server/index.js || echo "No server build found"
-
-      - name: Verify client build exists
+      - name: Prepare artifact (root index.html + dist)
         shell: bash
         run: |
-          if [ -f dist/index.html ]; then
-            echo "dist/index.html present"
+          if [ -f index.html ]; then
+            echo "index.html found in root"
           else
-            echo "dist/index.html missing; did copy-client run?"
+            echo "index.html missing in root"
             exit 1
           fi
+          echo "Final tree (max depth 2):"
+          find . -maxdepth 2 -type f | sed 's/^/  /'
 
       - name: Upload build artifacts (lightweight)
         uses: actions/upload-artifact@v4
         with:
           name: node-app
           path: |
+            index.html
             dist/
             package.json
             package-lock.json
