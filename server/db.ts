@@ -1,6 +1,6 @@
 let cachedPool: any = null;
 
-exportexport async function getPool() {
+export async function getPool() {
   if (cachedPool) return cachedPool;
 
   const sql = await import('mssql'); // dynamic import
