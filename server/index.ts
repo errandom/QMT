@@ -1,9 +1,9 @@
-// server/index.ts
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { getPool } from './db.js';
 
 import authRouter from './routes/auth.js';
@@ -53,11 +53,12 @@ app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
 if (process.env.NODE_ENV === 'production') {
-  const distPath = path.join(__dirname, '../dist');
-  app.use(express.static(distPath));
+  const rootPath = path.join(__dirname, '../'); // root of the repo
+  app.use(express.static(rootPath));
+
   app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(distPath, 'index.html'));
+      res.sendFile(path.join(rootPath, 'index.html'));
     } else {
       res.status(404).json({ error: 'API endpoint not found' });
     }
