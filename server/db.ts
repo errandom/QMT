@@ -32,7 +32,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
       trustServerCertificate: false
     },
     pool: {
-      max      max: 10,
+      max: 10,
       min: 0,
       idleTimeoutMillis: 30000
     }
@@ -40,3 +40,4 @@ export async function getPool(): Promise<sql.ConnectionPool> {
 
   cachedPool = await sql.connect(config);
   return cachedPool;
+}
