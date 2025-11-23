@@ -8,6 +8,6 @@
     "skipLibCheck": true,
     "strict": true,
     "resolveJsonModule": true,
-    "    "sourceMap": false
+    "sourceMap": false
   },
   "include": ["server/**/*.ts"]
