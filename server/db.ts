@@ -1,4 +1,4 @@
-import sql from 'mssql';
+import * as sql from 'mssql';
 
 let cachedPool: sql.ConnectionPool | null = null;
 
@@ -23,8 +23,8 @@ export async function getPool(): Promise<sql.ConnectionPool> {
   }
 
   const config: sql.config = {
-    server,      // shorthand for server: server
-    user,        // shorthand for user: user
+    server,
+    user,
     password,
     database,
     options: {
@@ -32,7 +32,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
       trustServerCertificate: false
     },
     pool: {
-      max: 10,
+      max      max: 10,
       min: 0,
       idleTimeoutMillis: 30000
     }
@@ -40,4 +40,3 @@ export async function getPool(): Promise<sql.ConnectionPool> {
 
   cachedPool = await sql.connect(config);
   return cachedPool;
-}
