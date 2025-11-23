@@ -94,7 +94,7 @@ async function startServer() {
     await getPool();
     console.log('✅ Database connected');
   } catch (error) {
-    console    console.error('⚠️ Database connection failed:', error);
+    console.error('⚠️ Database connection failed:', error);
     console.error('Starting server without DB connection...');
   }
 
