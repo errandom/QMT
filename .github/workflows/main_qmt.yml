@@ -1,3 +1,4 @@
+
 name: Build and deploy Node.js app to Azure Web App - QMT
 
 on:
@@ -15,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Fail fast: validate package.json. If invalid, overwrite with a canonical file and revalidate.
+      # Validate package.json; if invalid, overwrite with a canonical file and revalidate
       - name: Validate or repair package.json
         shell: bash
         run: |
@@ -87,17 +88,6 @@ JSON
         shell: bash
         run: sed -n '1,30p' dist/server/index.js || echo "⚠️ No server build found"
 
-      - name: Verify SPA fallback presence (optional)
-        shell: bash
-        run: |
-          if [ -f dist/server/index.js ]; then
-            if grep -E "app\\.get\\(\\/.\\*/" dist/server/index.js; then
-              echo "✅ Regex wildcard route present"
-            else
-              echo "ℹ️ If you rely on SPA fallback, confirm your static + wildcard route is in server code."
-            fi
-          fi
-
       - name: Prepare artifact (dist + runtime manifest)
         shell: bash
         run: |
@@ -113,8 +103,7 @@ JSON
             dist/
             package.json
             package-lock.json
-          # Intentionally exclude node_modules to keep artifacts small.
-          # Oryx on App Service will run `npm install --production`.
+          # Intentionally exclude node_modules; Oryx on App Service will run `npm install --production`.
 
   deploy:
     runs-on: ubuntu-latest
@@ -131,3 +120,14 @@ JSON
           path: .  # flatten so package '.' points at the downloaded content
 
       - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+
+      - name: Deploy to Azure Web App (Linux)
+               uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'QMT'
+          package: '.'
