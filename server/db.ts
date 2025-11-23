@@ -23,8 +23,8 @@ export async function getPool(): Promise<sql.ConnectionPool> {
   }
 
   const config: sql.config = {
-    server    server,
-    user,
+    server,      // shorthand for server: server
+    user,        // shorthand for user: user
     password,
     database,
     options: {
@@ -40,3 +40,4 @@ export async function getPool(): Promise<sql.ConnectionPool> {
 
   cachedPool = await sql.connect(config);
   return cachedPool;
+}
