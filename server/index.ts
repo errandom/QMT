@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 
 import { getPool } from './db.js';
 
-// Import routers
+// Routers
 import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import teamsRouter from './routes/teams.js';
@@ -30,13 +30,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logging middleware
+// Request logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Health check endpoint
+// Health check
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
@@ -58,10 +58,8 @@ app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
 // Serve SPA in production
 if (process.env.NODE_ENV === 'production') {
-  // __dirname in compiled code = /home/site/wwwroot/dist/server
-  // Root web folder = /home/site/wwwroot
-  const webRoot = path.join(__dirname, '../../');
-
+  // Compiled code runs from /home/site/wwwroot/dist/server
+  const webRoot = path.join(__dirname, '../../'); // → /home/site/wwwroot
   app.use(express.static(webRoot));
 
   app.get(/.*/, (req: Request, res: Response) => {
@@ -90,15 +88,17 @@ process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT_EXCEPTION:', err);
 });
 
-//// Start server
+// Resilient startup logic
 async function startServer() {
   try {
     await getPool();
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-    });
+    console.log('✅ Database connected');
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    console    console.error('⚠️ Database connection failed:', error);
+    console.error('Starting server without DB connection...');
   }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+  });
 }
