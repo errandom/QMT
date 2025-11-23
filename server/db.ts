@@ -4,7 +4,9 @@ import sql from 'mssql';
 let cachedPool: sql.ConnectionPool | null = null;
 
 export async function getPool(): Promise<sql.ConnectionPool> {
-  if (cachedPool) return cachedPool;
+  if (cachedPool) {
+    return cachedPool;
+  }
 
   const server = process.env.DB_SERVER ?? '';
   const user = process.env.DB_USER ?? '';
@@ -16,6 +18,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
   if (!user) missing.push('DB_USER');
   if (!password) missing.push('DB_PASSWORD');
   if (!database) missing.push('DB_DATABASE');
+
   if (missing.length) {
     throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
   }
@@ -32,7 +35,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     pool: {
       max: 10,
       min: 0,
-      idle      idleTimeoutMillis: 30000
+      idleTimeoutMillis: 30000
     }
   };
 
