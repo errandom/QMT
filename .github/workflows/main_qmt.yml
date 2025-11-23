@@ -39,7 +39,7 @@ jobs:
           echo "Building server..."
           npm run build
 
-          # Try client build if present; continue if it doesn't exist or fails
+          # Optional client build: if present, try to build and continue if it fails
           echo "Building client (optional)..."
           npm run build:client || echo "ℹ️ No client build or build:client failed — continuing"
 
@@ -53,7 +53,7 @@ jobs:
       - name: Show tree (top 2 levels)
         shell: bash
         run: |
-          echo "Workspace tree:"
+          echo "Workspace tree (top 2 levels):"
           find . -maxdepth 2 -type f | sed 's/^/  /'
 
       - name: Upload build artifacts (lightweight)
@@ -65,10 +65,7 @@ jobs:
             dist/
             package.json
             package-lock.json
-            src/
-            public/
-            assets/
-          if-no-files-found: ignore
+          if-no-files-found: error
           # Intentionally exclude node_modules; App Service Oryx will run `npm install --production` at deploy time.
 
   deploy:
@@ -105,24 +102,48 @@ jobs:
           package: '.'
           startup-command: 'npm start'
 
+      # ---- Warm up the app before health check ----
+      - name: Warm up application (homepage probe)
+        shell: bash
+        run: |
+          BASE="https://qmt.azurewebsites.net"
+          echo "Warming up $BASE ..."
+          for i in {1..20}; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/")
+            echo "Warm-up attempt $i: http=$CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "✅ Warm-up complete (homepage 200)"
+              break
+            fi
+            sleep 10
+          done
+
+      # ---- Robust health check with longer timeout/retries ----
       - name: Post-deploy health check (/api/health)
         shell: bash
         run: |
-          echo "Waiting for app to become healthy..."
-          for i in {1..12}; do
-            RESP=$(curl -sS --max-time 5 https://qmt.azurewebsites.net/api/health || true)
-            STATUS=$(echo "$RESP" | jq -r '.status' 2>/dev/null || echo "unknown")
-            DB=$(echo "$RESP" | jq -r '.database' 2>/dev/null || echo "unknown")
+          BASE="https://qmt.azurewebsites.net"
+          echo "Waiting for app to become healthy (up to ~5 minutes)..."
+          LAST=""
+          for i in {1..24}; do
+            # Collect HTTP code first
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/api/health" || echo "0")
+            # Collect body (if any)
+            RESP=$(curl -sS --connect-timeout 10 --max-time 15 -H "Accept: application/json" "$BASE/api/health" || true)
+            STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
+            DB=$(echo "$RESP" | jq -r '.database // empty' 2>/dev/null || echo "")
 
-            if [ "$STATUS" = "ok" ] && [ "$DB" = "connected" ]; then
+            echo "Attempt $i: http=$CODE status=${STATUS:-unknown} db=${DB:-unknown}"
+
+            if [ "$CODE" = "200" ] && [ "$STATUS" = "ok" ] && [ "$DB" = "connected" ]; then
               echo "✅ Health check passed: $RESP"
               exit 0
             fi
 
-            echo "Attempt $i/12: STATUS=$STATUS, DB=$DB"
+            LAST="$RESP"
             sleep 10
           done
 
           echo "❌ Health check failed. Last response:"
-          echo "$RESP"
+          echo "$LAST"
           exit 1
