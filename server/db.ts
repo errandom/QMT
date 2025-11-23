@@ -3,9 +3,7 @@ import * as sql from 'mssql';
 let cachedPool: sql.ConnectionPool | null = null;
 
 export async function getPool(): Promise<sql.ConnectionPool> {
-  if (cachedPool) {
-    return cachedPool;
-  }
+  if (cachedPool) return cachedPool;
 
   const server = process.env.DB_SERVER ?? '';
   const user = process.env.DB_USER ?? '';
@@ -29,7 +27,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     database,
     options: {
       encrypt: true,
-           trustServerCertificate: false
+      trustServerCertificate: false
     },
     pool: {
       max: 10,
@@ -38,6 +36,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     }
   };
 
+  //  // ✅ Correct usage for ESM
   cachedPool = await sql.connect(config);
   return cachedPool;
 }
