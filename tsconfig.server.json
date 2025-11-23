@@ -12,3 +12,4 @@
     "types": ["node"]
   },
   "include": ["server/**/*.ts"]
+}
