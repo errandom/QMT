@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, Router } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -13,7 +13,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// Azure sets $PORT; Oryx defaults to 8080 if missing
 const PORT = Number(process.env.PORT) || 8080;
 
 /* ----------------------------- Middleware ----------------------------- */
@@ -44,41 +43,15 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- Teams Fallback ------------------------- */
+/* ----------------------------- Static (assets) ------------------------ */
 /**
- * Ensure GET /api/teams responds even if routes/teams.js fails to load
- * or doesn’t define router.get('/').
- */
-app.get('/api/teams', async (_req: Request, res: Response) => {
-  try {
-    const pool = await getPool();
-    // TODO: adjust to your actual table/view name
-    const result = await pool.request().query('SELECT * FROM Teams');
-    return res.json(result.recordset);
-  } catch (error) {
-    return res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-/* ----------------------------- Static / SPA --------------------------- */
-/**
- * In production, compiled code runs from:
- *   /home/site/wwwroot/dist/server
- * Web root with index.html is:
- *   /home/site/wwwroot  → two levels up from __dirname
+ * NOTE: Only static assets middleware is added here.
+ * The SPA catch‑all route is added AFTER routers are registered,
+ * so API endpoints don't get short‑circuited to 404.
  */
 if (process.env.NODE_ENV === 'production') {
   const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
   app.use(express.static(webRoot));
-
-  // SPA fallback for non-API routes
-  app.get(/.*/, (req: Request, res: Response) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(webRoot, 'index.html'));
-    } else {
-      res.status(404).json({ error: 'API endpoint not found' });
-    }
-  });
 }
 
 /* ----------------------------- Error Handling ------------------------- */
@@ -95,43 +68,51 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
 process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 
-/* ----------------------------- Startup ------------------------------- */
+/* ----------------------------- Helpers -------------------------------- */
+
+/**
+ * Safely load an Express router from a module path.
+ * Avoids TypeScript “default” property issues on dynamic import.
+ */
+async function loadRouter(modulePath: string): Promise<Router | null> {
+  try {
+    const mod = await import(modulePath);
+    // At runtime, CJS modules are often under "default"; ESM routers may be direct.
+    const router = (mod as any).default ?? mod;
+    // Best-effort runtime narrow:
+    if (typeof router === 'function') {
+      return router as Router;
+    }
+    console.error(`Module at ${modulePath} did not export a Router function.`);
+    return null;
+  } catch (error) {
+    console.error(`Failed to load router at ${modulePath}:`, error);
+    return null;
+  }
+}
+
+/* ----------------------------- Startup -------------------------------- */
 
 async function registerRoutes(): Promise<void> {
   console.log('🔧 Registering routes...');
-  try {
-    const [
-      { default: authRouter },
-      { default: eventsRouter },
-      { default: teamsRouter },
-      { default: sitesRouter },
-      { default: fieldsRouter },
-      { default: equipmentRouter },
-      { default: requestsRouter }
-    ] = await Promise.all([
-      import('./routes/auth.js'),
-      import('./routes/events.js'),
-      import('./routes/teams.js'),   // if this fails, the fallback above still serves /api/teams
-      import('./routes/sites.js'),
-      import('./routes/fields.js'),
-      import('./routes/equipment.js'),
-      import('./routes/requests.js')
-    ]);
 
-    app.use('/api/auth', authRouter);
-    app.use('/api/events', eventsRouter);
-    // NOTE: teamsRouter may override or complement the fallback for subroutes (e.g., /api/teams/:id)
-    app.use('/api/teams', teamsRouter);
-    app.use('/api/sites', sitesRouter);
-    app.use('/api/fields', fieldsRouter);
-    app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
-    app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
+  const authRouter     = await loadRouter('./routes/auth.js');
+  const eventsRouter   = await loadRouter('./routes/events.js');
+  const teamsRouter    = await loadRouter('./routes/teams.js');
+  const sitesRouter    = await loadRouter('./routes/sites.js');
+  const fieldsRouter   = await loadRouter('./routes/fields.js');
+  const equipmentRouter= await loadRouter('./routes/equipment.js');
+  const requestsRouter = await loadRouter('./routes/requests.js');
 
-    console.log('✅ Routes registered');
-  } catch (error) {
-    console.error('⚠️ Route registration failed:', error);
-    console.error('Continuing startup without API routers (fallbacks/SPAs still served).');
-  }
+  if (authRouter)      app.use('/api/auth', authRouter);
+  if (eventsRouter)    app.use('/api/events', eventsRouter);
+  if (teamsRouter)     app.use('/api/teams', teamsRouter);
+  if (sitesRouter)     app.use('/api/sites', sitesRouter);
+  if (fieldsRouter)    app.use('/api/fields', fieldsRouter);
+  if (equipmentRouter) app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
+  if (requestsRouter)  app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
+
+  console.log('✅ Routes registered');
 }
 
 async function initDatabase(): Promise<void> {
@@ -148,8 +129,21 @@ async function initDatabase(): Promise<void> {
 async function startServer() {
   try {
     console.log('🚀 Bootstrapping server...');
+
     await initDatabase();
     await registerRoutes();
+
+    // SPA catch‑all AFTER routers, so /api/* is not short-circuited to 404
+    if (process.env.NODE_ENV === 'production') {
+      const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
+      app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
+        if (!req.path.startsWith('/api')) {
+          res.sendFile(path.join(webRoot, 'index.html'));
+        } else {
+          next(); // let API routers handle /api/* paths
+        }
+      });
+    }
 
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
