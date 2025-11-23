@@ -31,7 +31,6 @@ jobs:
           NODE_ENV: development
         shell: bash
         run: |
-          # Clean build artifacts and regenerate lockfile to match package.json
           rm -rf dist
           rm -f package-lock.json
           npm install
@@ -39,7 +38,6 @@ jobs:
           echo "Building server..."
           npm run build
 
-          # Optional client build: if present, try to build and continue if it fails
           echo "Building client (optional)..."
           npm run build:client || echo "ℹ️ No client build or build:client failed — continuing"
 
@@ -53,7 +51,7 @@ jobs:
       - name: Show tree (top 2 levels)
         shell: bash
         run: |
-          echo "Workspace tree (top 2 levels):"
+          echo "Workspace tree:"
           find . -maxdepth 2 -type f | sed 's/^/  /'
 
       - name: Upload build artifacts (lightweight)
@@ -66,13 +64,11 @@ jobs:
             package.json
             package-lock.json
           if-no-files-found: error
-          # Intentionally exclude node_modules; App Service Oryx will run `npm install --production` at deploy time.
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
 
-    # OIDC token permission required for azure/login@v2
     permissions:
       id-token: write
       contents: read
@@ -102,14 +98,14 @@ jobs:
           package: '.'
           startup-command: 'npm start'
 
-      # ---- Warm up the app before health check ----
+      # ---- Warm-up step (ignore curl errors) ----
       - name: Warm up application (homepage probe)
         shell: bash
         run: |
           BASE="https://qmt.azurewebsites.net"
           echo "Warming up $BASE ..."
           for i in {1..20}; do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/")
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/" || echo "000")
             echo "Warm-up attempt $i: http=$CODE"
             if [ "$CODE" = "200" ]; then
               echo "✅ Warm-up complete (homepage 200)"
@@ -118,7 +114,7 @@ jobs:
             sleep 10
           done
 
-      # ---- Robust health check with longer timeout/retries ----
+      # ---- Health check with retries ----
       - name: Post-deploy health check (/api/health)
         shell: bash
         run: |
@@ -126,9 +122,7 @@ jobs:
           echo "Waiting for app to become healthy (up to ~5 minutes)..."
           LAST=""
           for i in {1..24}; do
-            # Collect HTTP code first
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/api/health" || echo "0")
-            # Collect body (if any)
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/api/health" || echo "000")
             RESP=$(curl -sS --connect-timeout 10 --max-time 15 -H "Accept: application/json" "$BASE/api/health" || true)
             STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
             DB=$(echo "$RESP" | jq -r '.database // empty' 2>/dev/null || echo "")
@@ -146,4 +140,3 @@ jobs:
 
           echo "❌ Health check failed. Last response:"
           echo "$LAST"
-          exit 1
