@@ -1,117 +1,172 @@
 import { Router, Request, Response } from 'express';
+import * as sql from 'mssql';
 import { getPool } from '../db.js';
-import sql from 'mssql';
 
 const router = Router();
 
-// GET all sites with their fields
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT 
-        s.*,
-        (SELECT COUNT(*) FROM fields WHERE site_id = s.id) as field_count
-      FROM sites s
-      ORDER BY s.name
-    `);
-    res.json(result.recordset);
-  } catch (error) {
-    console.error('Error fetching sites:', error);
-    res.status(500).json({ error: 'Failed to fetch sites' });
-  }
-});
+/** Optional payload shape for create/update requests */
+interface SitePayload {
+  name?: string;
+  address?: string | null;
+  amenities?: string | null;
+  active?: boolean;
+}
 
-// GET single site by ID
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .query('SELECT * FROM sites WHERE id = @id');
-    
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Site not found' });
-    }
-    
-    res.json(result.recordset[0]);
-  } catch (error) {
-    console.error('Error fetching site:', error);
-    res.status(500).json({ error: 'Failed to fetch site' });
-  }
-});
+/** Utility: consistent error responses + logging */
+function sendError(res: Response, status: number, message: string, err?: unknown) {
+  if (err) console.error(message, err);
+  return res.status(status).json({ error: message });
+}
 
-// POST create new site
-router.post('/', async (req: Request, res: Response) => {
+/* ------------------------------------------------------
+ * GET /api/sites
+ * Returns all sites with a computed field count (per site)
+ * ------------------------------------------------------ */
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const { name, address, amenities } = req.body;
-    
     const pool = await getPool();
-    const result = await pool.request()
-      .input('name', sql.NVarChar, name)
-      .input('address', sql.NVarChar, address)
-      .input('amenities', sql.NVarChar, amenities || null)
+    const result = await pool
+      .request()
       .query(`
-        INSERT INTO sites (name, address, amenities)
-        OUTPUT INSERTED.*
-        VALUES (@name, @address, @amenities)
+        SELECT 
+          s.*,
+          (SELECT COUNT(*) FROM fields f WHERE f.site_id = s.id) AS field_count
+        FROM sites s
+        ORDER BY s.name
       `);
-    
-    res.status(201).json(result.recordset[0]);
+
+    return res.json(result.recordset);
   } catch (error) {
-    console.error('Error creating site:', error);
-    res.status(500).json({ error: 'Failed to create site' });
+    return sendError(res, 500, 'Failed to fetch sites', error);
   }
 });
 
-// PUT update site
-router.put('/:id', async (req: Request, res: Response) => {
+/* ------------------------------------------------------
+ * GET /api/sites/:id
+ * Returns a single site by id
+ * ------------------------------------------------------ */
+router.get('/:id', async (req: Request, res: Response) => {
+  const id = Number.parseInt(req.params.id, 10);
+  if (Number.isNaN(id) || id < 1) {
+    return sendError(res, 400, 'Invalid site id');
+  }
+
   try {
-    const { name, address, amenities } = req.body;
-    
     const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
+    const result = await pool
+      .request()
+      .input('id', sql.Int, id)
+      .query('SELECT * FROM sites WHERE id = @id');
+
+    if (result.recordset.length === 0) {
+      return sendError(res, 404, 'Site not found');
+    }
+
+    return res.json(result.recordset[0]);
+  } catch (error) {
+    return sendError(res, 500, 'Failed to fetch site', error);
+  }
+});
+
+/* ------------------------------------------------------
+ * POST /api/sites
+ * Creates a new site and returns the inserted row
+ * ------------------------------------------------------ */
+router.post('/', async (req: Request<unknown, unknown, SitePayload>, res: Response) => {
+  const { name, address, amenities, active } = req.body || {};
+
+  // Basic required validation
+  if (!name || !address) {
+    return sendError(res, 400, 'Missing required fields: name, address');
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool
+      .request()
       .input('name', sql.NVarChar, name)
       .input('address', sql.NVarChar, address)
-      .input('amenities', sql.NVarChar, amenities)
+      .input('amenities', sql.NVarChar, amenities ?? null)
+      .input('active', sql.Bit, active !== false) // default true
       .query(`
-        UPDATE sites 
+        INSERT INTO sites (name, address, amenities, active)
+        OUTPUT INSERTED.*
+        VALUES (@name, @address, @amenities, @active)
+      `);
+
+    return res.status(201).json(result.recordset[0]);
+  } catch (error) {
+    return sendError(res, 500, 'Failed to create site', error);
+  }
+});
+
+/* ------------------------------------------------------
+ * PUT /api/sites/:id
+ * Updates a site and returns the updated row
+ * ------------------------------------------------------ */
+router.put('/:id', async (req: Request<{ id: string }, unknown, SitePayload>, res: Response) => {
+  const id = Number.parseInt(req.params.id, 10);
+  if (Number.isNaN(id) || id < 1) {
+    return sendError(res, 400, 'Invalid site id');
+  }
+
+  const { name, address, amenities, active } = req.body || {};
+  if (!name || !address || typeof active === 'undefined') {
+    return sendError(res, 400, 'Missing required fields: name, address, active');
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .input('id', sql.Int, id)
+      .input('name', sql.NVarChar, name)
+      .input('address', sql.NVarChar, address)
+      .input('amenities', sql.NVarChar, amenities ?? null)
+      .input('active', sql.Bit, !!active)
+      .query(`
+        UPDATE sites
         SET name = @name,
             address = @address,
-            amenities = @amenities
+            amenities = @amenities,
+            active = @active
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
-    
+
     if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Site not found' });
+      return sendError(res, 404, 'Site not found');
     }
-    
-    res.json(result.recordset[0]);
+
+    return res.json(result.recordset[0]);
   } catch (error) {
-    console.error('Error updating site:', error);
-    res.status(500).json({ error: 'Failed to update site' });
+    return sendError(res, 500, 'Failed to update site', error);
   }
 });
 
-// DELETE site
+/* ------------------------------------------------------
+ * DELETE /api/sites/:id
+ * Deletes a site by id
+ * ------------------------------------------------------ */
 router.delete('/:id', async (req: Request, res: Response) => {
+  const id = Number.parseInt(req.params.id, 10);
+  if (Number.isNaN(id) || id < 1) {
+    return sendError(res, 400, 'Invalid site id');
+  }
+
   try {
     const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
+    const result = await pool
+      .request()
+      .input('id', sql.Int, id)
       .query('DELETE FROM sites WHERE id = @id');
-    
-    if (result.rowsAffected[0] === 0) {
-      return res.status(404).json({ error: 'Site not found' });
+
+    if (!result.rowsAffected || result.rowsAffected[0] === 0) {
+           return sendError(res, 404, 'Site not found');
     }
-    
-    res.json({ message: 'Site deleted successfully' });
+
+    return res.json({ message: 'Site deleted successfully' });
   } catch (error) {
-    console.error('Error deleting site:', error);
-    res.status(500).json({ error: 'Failed to delete site' });
+    return sendError(res, 500, 'Failed to delete site', error);
   }
 });
-
-export default router;
