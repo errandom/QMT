@@ -20,13 +20,14 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'npm'
-      
+
       - name: Install dependencies and build
         shell: bash
         env:
           NODE_ENV: development
         run: |
           rm -rf dist
+          # Regenerate lock file to resolve npm ci mismatch errors
           rm -f package-lock.json
           npm install
           echo "Starting full build..."
@@ -87,4 +88,3 @@ jobs:
         with:
           app-name: 'QMT'
           package: '.'
-
