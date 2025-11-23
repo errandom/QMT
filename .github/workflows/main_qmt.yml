@@ -18,44 +18,41 @@ jobs:
       - name: Validate or repair package.json
         shell: bash
         run: |
-          if ! jq -e . package.json >/dev/null 2>&1; then
-            echo "❌ package.json invalid. Writing canonical package.json."
-            echo '{' > package.json
-            echo '  "name": "spark-template",' >> package.json
-            echo '  "version": "0.0.0",' >> package.json
-            echo '  "type": "module",' >> package.json
-            echo '  "main": "dist/server/index.js",' >> package.json
-            echo '  "scripts": {' >> package.json
-            echo '    "start": "node dist/server/index.js",' >> package.json
-            echo '    "build": "npm run build:client && npm run build:server && npm run copy-client",' >> package.json
-            echo '    "build:client": "vite build",' >> package.json
-            echo '    "build:server": "tsc -p tsconfig.server.json",' >> package.json
-            echo '    "copy-client": "cp -r client/dist/* dist/",' >> package.json
-            echo '    "verify": "node -e \\"JSON.parse(require('\''fs'\'').readFileSync('\''package.json'\'','\''utf8'\''))\\" && echo \\"package.json OK\\"" ' >> package.json
-            echo '  },' >> package.json
-            echo '  "dependencies": {' >> package.json
-            echo '    "express": "^4.18.2",' >> package.json
-            echo '    "cors": "^2.8.5",' >> package.json
-            echo '    "dotenv": "^16.3.1",' >> package.json
-            echo '    "mssql": "^9.1.1",' >> package.json
-            echo '    "jsonwebtoken": "^9.0.2",' >> package.json
-            echo '    "bcryptjs": "^2.4.3"' >> package.json
-            echo '  },' >> package.json
-            echo '  "devDependencies": {' >> package.json
-            echo '    "typescript": "^5.3.3",' >> package.json
-            echo '    "@types/node": "^20.10.5",' >> package.json
-            echo '    "@types/express": "^4.17.21",' >> package.json
-            echo '    "@types/jsonwebtoken": "^9.0.2",' >> package.json
-            echo '    "@types/bcryptjs": "^2.4.2",' >> package.json
-            echo '    "vite": "^5.0.0"' >> package.json
-            echo '  },' >> package.json
-            echo '  "engines": {' >> package.json
-            echo '    "node": ">=20 <21"' >> package.json
-            echo '  }' >> package.json
-            echo '}' >> package.json
-            jq -e . package.json >/dev/null 2>&1 || { echo "Canonical package.json still invalid"; exit 1; }
+          if jq -e . package.json; then
+            echo "package.json OK"
           else
-            echo "✅ package.json OK"
+            echo "package.json invalid. Writing canonical package.json."
+            printf '%s\n' \
+'{' \
+'  "name": "spark-template",' \
+'  "version": "0.0.0",' \
+'  "type": "module",' \
+'  "main": "dist/server/index.js",' \
+'  "scripts": {' \
+'    "start": "node dist/server/index.js",' \
+'    "build": "npm run build:client ; npm run build:server ; npm run copy-client",' \
+'    "build:client": "vite build",' \
+'    "build:server": "tsc -p tsconfig.server.json",' \
+'    "copy-client": "cp -r client/dist/* dist/"' \
+'  },' \
+'  "dependencies": {' \
+'    "express": "^4.18.2",' \
+'    "cors": "^2.8.5",' \
+'    "dotenv": "^16.3.1",' \
+'    "mssql": "^9.1.1",' \
+'    "jsonwebtoken": "^9.0.2",' \
+'    "bcryptjs": "^2.4.3"' \
+'  },' \
+'  "devDependencies": {' \
+'    "typescript": "^5.3.3",' \
+'    "@types/node": "^20.10.5",' \
+'    "@types/express": "^4.17.21",' \
+'    "@types/jsonwebtoken": "^9.0.2",' \
+'    "@types/bcryptjs": "^2.4.2",' \
+'    "vite": "^5.0.0"' \
+'  }' \
+'}' | tee package.json
+            jq -e . package.json || { echo "Canonical package.json still invalid"; exit 1; }
           fi
 
       - name: Set up Node.js
@@ -73,21 +70,26 @@ jobs:
           npm ci --include=dev
           echo "Starting full build..."
           if npm run build; then
-            echo "✅ Full build completed"
+            echo "Full build completed"
           else
-            echo "⚠️ Full build failed, building server only"
+            echo "Full build failed, building server only"
             npm install --save-dev @types/node @types/express @types/jsonwebtoken @types/bcryptjs
             npm run build:server
           fi
 
       - name: Show compiled server entry (first 30 lines)
         shell: bash
-        run: sed -n '1,30p' dist/server/index.js || echo "⚠️ No server build found"
+        run: sed -n '1,30p' dist/server/index.js || echo "No server build found"
 
       - name: Prepare artifact (dist + runtime manifest)
         shell: bash
         run: |
-          test -f dist/index.html || (echo "❌ dist/index.html missing; did copy-client run?" && exit 1)
+          if [ -f dist/index.html ]; then
+            echo "dist/index.html present"
+          else
+            echo "dist/index.html missing; did copy-client run?"
+            exit 1
+          fi
           echo "Final dist tree (max depth 2):"
           find dist -maxdepth 2 -type f | sed 's/^/  /'
 
@@ -99,7 +101,6 @@ jobs:
             dist/
             package.json
             package-lock.json
-          # Intentionally exclude node_modules; Oryx on App Service will run `npm install --production`.
 
   deploy:
     runs-on: ubuntu-latest
@@ -113,7 +114,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: .  # flatten so package '.' points at the downloaded content
+          path: .
 
       - name: Login to Azure (OIDC)
         uses: azure/login@v2
@@ -123,8 +124,7 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
       - name: Deploy to Azure Web App (Linux)
-        uses: azure/webapps-deploy@v3
+               uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
           package: '.'
-          startup-command: 'npm start'
