@@ -23,10 +23,10 @@ export async function getPool(): Promise<sql.ConnectionPool> {
   }
 
   const config: sql.config = {
-    server,
+    server    server,
     user,
     password,
-       database,
+    database,
     options: {
       encrypt: true,
       trustServerCertificate: false
