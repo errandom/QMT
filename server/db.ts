@@ -1,4 +1,3 @@
-// server/db.ts
 import sql from 'mssql';
 
 let cachedPool: sql.ConnectionPool | null = null;
@@ -27,7 +26,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     server,
     user,
     password,
-    database,
+       database,
     options: {
       encrypt: true,
       trustServerCertificate: false
@@ -40,4 +39,4 @@ export async function getPool(): Promise<sql.ConnectionPool> {
   };
 
   cachedPool = await sql.connect(config);
-   return cachedPool;
+  return cachedPool;
