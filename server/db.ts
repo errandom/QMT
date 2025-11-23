@@ -6,11 +6,25 @@ let cachedPool: sql.ConnectionPool | null = null;
 export async function getPool(): Promise<sql.ConnectionPool> {
   if (cachedPool) return cachedPool;
 
+  const server = process.env.DB_SERVER ?? '';
+  const user = process.env.DB_USER ?? '';
+  const password = process.env.DB_PASSWORD ?? '';
+  const database = process.env.DB_DATABASE ?? '';
+
+  const missing: string[] = [];
+  if (!server) missing.push('DB_SERVER');
+  if (!user) missing.push('DB_USER');
+  if (!password) missing.push('DB_PASSWORD');
+  if (!database) missing.push('DB_DATABASE');
+  if (missing.length) {
+    throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
+  }
+
   const config: sql.config = {
-    server: process.env.DB_SERVER ?? '',
-    user: process.env.DB_USER ?? '',
-    password: process.env.DB_PASSWORD ?? '',
-    database: process.env.DB_DATABASE ?? '',
+    server,
+    user,
+    password,
+    database,
     options: {
       encrypt: true,
       trustServerCertificate: false
@@ -18,16 +32,9 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     pool: {
       max: 10,
       min: 0,
-      idleTimeoutMillis: 30000
+      idle      idleTimeoutMillis: 30000
     }
   };
-
-  // Basic validation to surface missing env quickly
-   const required = ['DB_SERVER', 'DB_USER', 'DB_PASSWORD', 'DB_DATABASE'];
-  const missing = required.filter(k => !process.env[k]);
-  if (missing.length) {
-    throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
-  }
 
   cachedPool = await sql.connect(config);
   return cachedPool;
