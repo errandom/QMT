@@ -1,9 +1,9 @@
+// server/index.ts
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 import { getPool } from './db.js';
 
 import authRouter from './routes/auth.js';
@@ -49,15 +49,12 @@ app.use('/api/teams', teamsRouter);
 app.use('/api/sites', sitesRouter);
 app.use('/api/fields', fieldsRouter);
 
-// Protected APIs
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
-// Static SPA fallback in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
-
   app.get(/.*/, (req: Request, res: Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -67,7 +64,6 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Error middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({
     error: 'Internal server error',
@@ -81,7 +77,9 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
-  } catch (error) {
-    process    process.exit(1);
+  } catch (_error) {
+    process.exit(1);
   }
 }
+
+startServer();
