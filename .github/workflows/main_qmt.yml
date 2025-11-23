@@ -1,3 +1,4 @@
+
 name: Build and deploy Node.js app to Azure Web App - QMT
 
 on:
@@ -15,47 +16,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate or repair package.json
-        shell: bash
-        run: |
-          if jq -e . package.json >/dev/null 2>&1; then
-            echo "✅ package.json OK"
-          else
-            echo "❌ package.json invalid. Writing canonical package.json."
-            cat <<EOF > package.json
-{
-  "name": "spark-template",
-  "version": "0.0.0",
-  "type": "module",
-  "main": "dist/server/index.js",
-  "scripts": {
-    "start": "node dist/server/index.js",
-    "build": "npm run build:client && npm run build:server && npm run copy-client",
-    "build:client": "vite build",
-    "build:server": "tsc -p tsconfig.server.json",
-    "copy-client": "cp -r client/dist/* dist/"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "mssql": "^9.1.1",
-    "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3"
-  },
-  "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/node": "^20.10.5",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.2",
-    "@types/bcryptjs": "^2.4.2",
-    "vite": "^5.0.0"
-  }
-}
-EOF
-            jq -e . package.json || { echo "Canonical package.json still invalid"; exit 1; }
-          fi
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -71,25 +31,27 @@ EOF
           npm ci --include=dev
           echo "Starting full build..."
           if npm run build; then
-            echo "✅ Full build completed"
+            echo "Full build completed"
           else
-            echo "⚠️ Full build failed, building server only"
+            echo "Full build failed, building server only"
             npm install --save-dev @types/node @types/express @types/jsonwebtoken @types/bcryptjs
             npm run build:server
           fi
 
       - name: Show compiled server entry (first 30 lines)
         shell: bash
-        run: sed -n '1,30p' dist/server/index.js || echo "⚠️ No server build found"
+        run: sed -n '1,30p' dist/server/index.js || echo "No server build found"
 
       - name: Prepare artifact (dist + runtime manifest)
         shell: bash
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "❌ dist/index.html missing; did copy-client run?"
+          if [ -f dist/index.html ]; then
+            echo "dist/index.html present"
+          else
+            echo "dist/index.html missing; did copy-client run?"
             exit 1
           fi
-          echo "Final dist tree:"
+          echo "Final dist tree (max depth 2):"
           find dist -maxdepth 2 -type f | sed 's/^/  /'
 
       - name: Upload build artifacts (lightweight)
@@ -100,6 +62,8 @@ EOF
             dist/
             package.json
             package-lock.json
+          # NOTE: intentionally exclude node_modules to keep artifacts small.
+          # Azure App Service (Oryx) will run `npm install --production` at deploy time.
 
   deploy:
     runs-on: ubuntu-latest
@@ -113,16 +77,16 @@ EOF
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: .
+          path: .  # flatten so package '.' points at the downloaded content
 
-      - name: Login to Azure
+      - name: Login to Azure (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+                   tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure Web App (Linux)
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
