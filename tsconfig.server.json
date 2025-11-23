@@ -1,15 +1,17 @@
 {
   "compilerOptions": {
     "outDir": "dist/server",
-    "module": "node16",
-    "moduleResolution": "node16",
-    "target": "ES2022",
-    "esModuleInterop": true,
-       "skipLibCheck": true,
-    "strict": true,
-    "resolveJsonModule": true,
-    "sourceMap": false,
-    "types": ["node"]
+    "module": "Node16",                // ESM-compatible for Node 16+
+    "moduleResolution": "Node16",      // Matches module setting
+    "target": "ES2022",                // Modern JS features for Node 20
+    "esModuleInterop": true,           // Allows default imports for CommonJS modules
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,              // Speeds up build, safe for prod
+    "strict": true,                    // Enforces type safety
+    "resolveJsonModule": true,         // Enables importing JSON configs
+    "sourceMap": false,                // Disable source maps for production
+    "types": ["node"],                 // Includes Node.js types
+    "allowSyntheticDefaultImports": true
   },
   "include": ["server/**/*.ts"]
 }
