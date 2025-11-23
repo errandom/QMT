@@ -23,14 +23,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging
+// Logging
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -58,8 +58,7 @@ app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
 // Serve SPA in production
 if (process.env.NODE_ENV === 'production') {
-  // Compiled code runs from /home/site/wwwroot/dist/server
-  const webRoot = path.join(__dirname, '../../'); // → /home/site/wwwroot
+  const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
   app.use(express.static(webRoot));
 
   app.get(/.*/, (req: Request, res: Response) => {
@@ -74,21 +73,14 @@ if (process.env.NODE_ENV === 'production') {
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Crash visibility
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED_REJECTION:', err);
-});
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT_EXCEPTION:', err);
-});
+process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
+process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 
-// Resilient startup logic
+// ✅ Resilient startup
 async function startServer() {
   try {
     await getPool();
