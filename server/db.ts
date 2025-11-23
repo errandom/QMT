@@ -1,46 +1,33 @@
-
+// server/db.ts
 import sql from 'mssql';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-const requiredEnvVars = ['DB_USER', 'DB_PASSWORD', 'DB_SERVER', 'DB_NAME'];
-const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
-if (missingEnvVars.length > 0) throw new Error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
-
-const config: sql.config = {
-  user: process.env.DB_USER!,
-  password: process.env.DB_PASSWORD!,
-  server: process.env.DB_SERVER!,
-  database: process.env.DB_NAME!,
-  options: { encrypt: true, trustServerCertificate: false, enableArithAbort: true, connectTimeout: 30000, requestTimeout: 30000 },
-  pool: { max: 10, min: 0, idleTimeoutMillis: 30000 }
-};
-
-let pool: sql.ConnectionPool | null = null;
+let cachedPool: sql.ConnectionPool | null = null;
 
 export async function getPool(): Promise<sql.ConnectionPool> {
-  if (!pool) {
-    pool = await sql.connect(config);
-    console.log('Connected to Azure SQL Database');
+  if (cachedPool) return cachedPool;
+
+  const config: sql.config = {
+    server: process.env.DB_SERVER ?? '',
+    user: process.env.DB_USER ?? '',
+    password: process.env.DB_PASSWORD ?? '',
+    database: process.env.DB_DATABASE ?? '',
+    options: {
+      encrypt: true,
+      trustServerCertificate: false
+    },
+    pool: {
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 30000
+    }
+  };
+
+  // Basic validation to surface missing env quickly
+   const required = ['DB_SERVER', 'DB_USER', 'DB_PASSWORD', 'DB_DATABASE'];
+  const missing = required.filter(k => !process.env[k]);
+  if (missing.length) {
+    throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
   }
-  return pool;
-}
 
-export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.close();
-    pool = null;
-  }
-}
-
-process.on('SIGINT', async () => {
-  await closePool();
-  process  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await closePool();
-  process.exit(0);
-});
-
+  cachedPool = await sql.connect(config);
+  return cachedPool;
