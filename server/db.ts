@@ -14,3 +14,4 @@ exportexport async function getPool() {
 
   cachedPool = await sql.connect(config);
   return cachedPool;
+}
