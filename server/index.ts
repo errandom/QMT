@@ -13,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+// Azure sets $PORT (Oryx defaults to 8080 if missing)
 const PORT = Number(process.env.PORT) || 8080;
 
 /* ----------------------------- Middleware ----------------------------- */
@@ -28,12 +29,11 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 /* ----------------------------- Health Check --------------------------- */
-
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
     await pool.request().query('SELECT 1 as healthy');
-    res.json({ status: 'ok', database: 'connected' });
+    res.json({ status: 'ok', database: 'connected', timestamp: new Date().toISOString() });
   } catch (error) {
     res.status(503).json({
       status: 'error',
@@ -140,3 +140,5 @@ async function startServer() {
     // Do not exit; allow platform to restart if needed
   }
 }
+
+startServer();
