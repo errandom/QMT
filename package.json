@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/server/index.js",
     "build": "npm run build:server",
-    "build:server": "tsc -p tsconfig.server.json"
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:client": "vite build"
   },
   "dependencies": {
     "express": "^4.18.2",
