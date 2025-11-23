@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
+import { Request, Response, NextFunction } from 'express';
 
 dotenv.config();
 
@@ -44,7 +45,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.use((err: Error, _req, res, _next) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
