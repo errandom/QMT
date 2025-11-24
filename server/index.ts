@@ -116,7 +116,7 @@ async function initDatabase() {
   }
 }
 
-asyncasync function startServer() {
+async function startServer() {
   console.log('🚀 Bootstrapping server...');
   await initDatabase();
   await registerRoutes();
