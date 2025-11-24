@@ -22,9 +22,11 @@ jobs:
           cache: 'npm'
 
       - name: Validate package.json
+        shell: bash
         run: jq -e . package.json || { echo "Invalid package.json"; exit 1; }
 
       - name: Install dependencies and build
+        shell: bash
         run: |
           rm -rf dist
           rm -f package-lock.json
@@ -33,6 +35,7 @@ jobs:
           npm run build:client || echo "ℹ️ No client build script found"
 
       - name: Verify build outputs
+        shell: bash
         run: |
           test -f dist/server/index.js || { echo "❌ Missing dist/server/index.js"; exit 1; }
           test -f index.html || { echo "❌ Missing index.html"; exit 1; }
@@ -47,6 +50,7 @@ jobs:
             dist/
             package.json
             package-lock.json
+          if-no-files-found: error
 
   deploy:
     runs-on: ubuntu-latest
@@ -76,20 +80,25 @@ jobs:
           package: '.'
           startup-command: 'npm start'
 
-      # Short warm-up
+      # Short warm-up (ignore curl errors, retry up to ~50s)
       - name: Warm up homepage
+        shell: bash
         run: |
           BASE="https://qmt.azurewebsites.net"
           echo "Warming up $BASE ..."
           for i in {1..5}; do
             CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/" || echo "000")
             echo "Warm-up attempt $i: http=$CODE"
-            [ "$CODE" = "200" ] && break
+            if [ "$CODE" = "200" ]; then
+              echo "✅ Homepage responded with 200"
+              break
+            fi
             sleep 10
           done
 
-      # Health check
+      # Fail-fast health check (5 attempts, ~50s total)
       - name: Health check
+        shell: bash
         run: |
           BASE="https://qmt.azurewebsites.net/api/health"
           echo "Checking health endpoint..."
@@ -100,11 +109,14 @@ jobs:
             STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
             DB=$(echo "$RESP" | jq -r '.database // empty' 2>/dev/null || echo "")
             echo "Attempt $i: http=$CODE status=${STATUS:-unknown} db=${DB:-unknown}"
+
             if [ "$CODE" = "200" ] && [ "$STATUS" = "ok" ]; then
               echo "✅ Health check passed: $RESP"
               exit 0
             fi
+
             LAST="$RESP"
-            sleep            sleep 10
-          done
+            sleep 10
+                   done
+
           echo "❌ Health check failed. Last response: $LAST"
