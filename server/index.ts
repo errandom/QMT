@@ -50,7 +50,7 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(webRoot, 'index.html'));
   });
 
-  // SPA fallback AFTER routers
+  // SPA fallback AFTER API routes
   app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(webRoot, 'index.html'));
@@ -112,10 +112,11 @@ async function initDatabase() {
     console.log('✅ Database connected');
   } catch (error) {
     console.error('⚠️ Database connection failed:', error);
+    console.error('Starting without DB...');
   }
 }
 
-async function startServer() {
+asyncasync function startServer() {
   console.log('🚀 Bootstrapping server...');
   await initDatabase();
   await registerRoutes();
