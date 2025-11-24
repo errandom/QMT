@@ -32,24 +32,30 @@ app.get('/api/health', async (_req: Request, res: Response) => {
     await pool.request().query('SELECT 1 as healthy');
     res.json({ status: 'ok', database: 'connected', timestamp: new Date().toISOString() });
   } catch (error) {
-    res.status(503).json({ status: 'error', database: 'disconnected', error: (error as Error).message });
+    res.status(503).json({
+      status: 'error',
+      database: 'disconnected',
+      error: (error as Error).message
+    });
   }
 });
 
 /* ----------------------------- Static / SPA --------------------------- */
 if (process.env.NODE_ENV === 'production') {
-  const webRoot = path.join(__dirname, '../../');
+  const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
   app.use(express.static(webRoot));
 
   // Explicit homepage route
-  app.get('/', (_req, res) => res.sendFile(path.join(webRoot, 'index.html')));
+  app.get('/', (_req: Request, res: Response) => {
+    res.sendFile(path.join(webRoot, 'index.html'));
+  });
 
-  // SPA fallback AFTER API routes
+  // SPA fallback AFTER routers
   app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(webRoot, 'index.html'));
     } else {
-      next();
+      next(); // allow API routers to handle /api/*
     }
   });
 }
@@ -57,7 +63,10 @@ if (process.env.NODE_ENV === 'production') {
 /* ----------------------------- Error Handling ------------------------- */
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error', message: process.env.NODE_ENV === 'development' ? err.message : undefined });
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
@@ -77,21 +86,21 @@ async function loadRouter(modulePath: string): Promise<Router | null> {
 /* ----------------------------- Startup -------------------------------- */
 async function registerRoutes() {
   console.log('🔧 Registering routes...');
-  const authRouter = await loadRouter('./routes/auth.js');
-  const eventsRouter = await loadRouter('./routes/events.js');
-  const teamsRouter = await loadRouter('./routes/teams.js');
-  const sitesRouter = await loadRouter('./routes/sites.js');
-  const fieldsRouter = await loadRouter('./routes/fields.js');
+  const authRouter      = await loadRouter('./routes/auth.js');
+  const eventsRouter    = await loadRouter('./routes/events.js');
+  const teamsRouter     = await loadRouter('./routes/teams.js');
+  const sitesRouter     = await loadRouter('./routes/sites.js');
+  const fieldsRouter    = await loadRouter('./routes/fields.js');
   const equipmentRouter = await loadRouter('./routes/equipment.js');
-  const requestsRouter = await loadRouter('./routes/requests.js');
+  const requestsRouter  = await loadRouter('./routes/requests.js');
 
-  if (authRouter) app.use('/api/auth', authRouter);
-  if (eventsRouter) app.use('/api/events', eventsRouter);
-  if (teamsRouter) app.use('/api/teams', teamsRouter);
-  if (sitesRouter) app.use('/api/sites', sitesRouter);
-  if (fieldsRouter) app.use('/api/fields', fieldsRouter);
+  if (authRouter)      app.use('/api/auth', authRouter);
+  if (eventsRouter)    app.use('/api/events', eventsRouter);
+  if (teamsRouter)     app.use('/api/teams', teamsRouter);
+  if (sitesRouter)     app.use('/api/sites', sitesRouter);
+  if (fieldsRouter)    app.use('/api/fields', fieldsRouter);
   if (equipmentRouter) app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
-  if (requestsRouter) app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
+  if (requestsRouter)  app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
   console.log('✅ Routes registered');
 }
@@ -110,7 +119,7 @@ async function startServer() {
   console.log('🚀 Bootstrapping server...');
   await initDatabase();
   await registerRoutes();
-  app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+  });
 }
-
-startServer();
