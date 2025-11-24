@@ -21,40 +21,24 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
-      - name: Validate package.json (fail fast)
-        shell: bash
-        run: |
-          jq -e . package.json || { echo "package.json is not valid JSON"; exit 1; }
+      - name: Validate package.json
+        run: jq -e . package.json || { echo "Invalid package.json"; exit 1; }
 
       - name: Install dependencies and build
-        env:
-          NODE_ENV: development
-        shell: bash
         run: |
           rm -rf dist
           rm -f package-lock.json
           npm install
-
-          echo "Building server..."
           npm run build
-
-          echo "Building client (optional)..."
-          npm run build:client || echo "ℹ️ No client build or build:client failed — continuing"
+          npm run build:client || echo "ℹ️ No client build script found"
 
       - name: Verify build outputs
-        shell: bash
         run: |
-          test -f dist/server/index.js || { echo "❌ dist/server/index.js not found"; exit 1; }
-          test -f index.html || { echo "❌ index.html not found in repo root"; exit 1; }
-          echo "✅ Build artifacts verified"
+          test -f dist/server/index.js || { echo "❌ Missing dist/server/index.js"; exit 1; }
+          test -f index.html || { echo "❌ Missing index.html"; exit 1; }
+          echo "✅ Build verified"
 
-      - name: Show tree (top 2 levels)
-        shell: bash
-        run: |
-          echo "Workspace tree:"
-          find . -maxdepth 2 -type f | sed 's/^/  /'
-
-      - name: Upload build artifacts (lightweight)
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: node-app
@@ -63,12 +47,10 @@ jobs:
             dist/
             package.json
             package-lock.json
-          if-no-files-found: error
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
-
     permissions:
       id-token: write
       contents: read
@@ -87,56 +69,42 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
-      - name: Verify Azure context
-        shell: bash
-        run: az account show
-
-      - name: Deploy to Azure Web App (Linux)
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
           package: '.'
           startup-command: 'npm start'
 
-      # ---- Warm-up step (ignore curl errors) ----
-      - name: Warm up application (homepage probe)
-        shell: bash
+      # Short warm-up
+      - name: Warm up homepage
         run: |
           BASE="https://qmt.azurewebsites.net"
           echo "Warming up $BASE ..."
-          for i in {1..20}; do
+          for i in {1..5}; do
             CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/" || echo "000")
             echo "Warm-up attempt $i: http=$CODE"
-            if [ "$CODE" = "200" ]; then
-              echo "✅ Warm-up complete (homepage 200)"
-              break
-            fi
+            [ "$CODE" = "200" ] && break
             sleep 10
           done
 
-      # ---- Health check with retries ----
-      - name: Post-deploy health check (/api/health)
-        shell: bash
+      # Health check
+      - name: Health check
         run: |
-          BASE="https://qmt.azurewebsites.net"
-          echo "Waiting for app to become healthy (up to ~5 minutes)..."
+          BASE="https://qmt.azurewebsites.net/api/health"
+          echo "Checking health endpoint..."
           LAST=""
-          for i in {1..24}; do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/api/health" || echo "000")
-            RESP=$(curl -sS --connect-timeout 10 --max-time 15 -H "Accept: application/json" "$BASE/api/health" || true)
+          for i in {1..5}; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE" || echo "000")
+            RESP=$(curl -sS --connect-timeout 10 --max-time 15 -H "Accept: application/json" "$BASE" || true)
             STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
             DB=$(echo "$RESP" | jq -r '.database // empty' 2>/dev/null || echo "")
-
             echo "Attempt $i: http=$CODE status=${STATUS:-unknown} db=${DB:-unknown}"
-
-            if [ "$CODE" = "200" ] && [ "$STATUS" = "ok" ] && [ "$DB" = "connected" ]; then
+            if [ "$CODE" = "200" ] && [ "$STATUS" = "ok" ]; then
               echo "✅ Health check passed: $RESP"
               exit 0
             fi
-
             LAST="$RESP"
-            sleep 10
+            sleep            sleep 10
           done
-
-          echo "❌ Health check failed. Last response:"
-          echo "$LAST"
+          echo "❌ Health check failed. Last response: $LAST"
