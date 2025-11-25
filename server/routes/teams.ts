@@ -4,7 +4,7 @@ import { getPool } from '../db.js';
 
 const router = Router();
 
-/* ----------------------------- GET all teams ----------------------------- */
+/* GET all teams */
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
@@ -20,7 +20,7 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- GET team by ID ---------------------------- */
+/* GET team by ID */
 router.get('/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid team ID' });
@@ -42,7 +42,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- POST create team -------------------------- */
+/* POST create team */
 router.post('/', async (req: Request, res: Response) => {
   const { name, sport, age_group, coaches, active } = req.body;
   if (!name || !sport) return res.status(400).json({ error: 'Missing required fields: name, sport' });
@@ -68,7 +68,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- PUT update team --------------------------- */
+/* PUT update team */
 router.put('/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid team ID' });
@@ -107,7 +107,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- DELETE team ------------------------------- */
+/* DELETE team */
 router.delete('/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid team ID' });
@@ -119,12 +119,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
       .query('DELETE FROM teams WHERE id = @id');
 
     if (result.rowsAffected[0] === 0) {
-           return res.status(404).json({ error: 'Team not found' });
+      return res.status(404).json({ error: 'Team not found' });
     }
 
     res.json({ message: 'Team deleted successfully' });
   } catch (error) {
-    console.error('Error deleting team:', error);
+    console    console.error('Error deleting team:', error);
     res.status(500).json({ error: 'Failed to delete team' });
   }
 });
