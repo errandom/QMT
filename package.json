@@ -7,7 +7,8 @@
     "start": "node dist/server/index.js",
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.server.json",
-    "build:client": "vite build"
+    "build:client": "vite build",
+    "dev": "vite" 
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -15,7 +16,9 @@
     "dotenv": "^16.3.1",
     "mssql": "^9.1.1",
     "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "vite": "^5.0.0",
@@ -25,6 +28,9 @@
     "@types/jsonwebtoken": "^9.0.2",
     "@types/bcryptjs": "^2.4.2",
     "@types/cors": "^2.8.17",
-    "@types/mssql": "^9.1.2"
+    "@types/mssql": "^9.1.2",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
   }
 }
+  
