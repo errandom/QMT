@@ -82,17 +82,26 @@ process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', er
 process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
 /* ----------------------------- Helpers ----------------------------- */
+/**
+ * Load an Express Router from a module path.
+ * Accepts both:
+ *  - default export: export default router
+ *  - named export:  export const router = ...
+ */
 async function loadRouter(modulePath: string): Promise<Router | null> {
   try {
     const mod = await import(modulePath);
-    const router = (mod as any).default ?? null;
-    if (!router) {
-      console.error(`Router ${modulePath} has no default export`);
-      return null;
+    const candidate = (mod as any).default ?? (mod as any).router ?? mod;
+
+    // If module itself is a function (Router), or we found default/named router
+    if (typeof candidate === 'function') {
+      return candidate as Router;
     }
-    return router as Router;
+
+    console.error(`Module at ${modulePath} did not export an Express Router (default or named 'router').`);
+    return null;
   } catch (error) {
-    console.error(`Failed to load router ${modulePath}:`, error);
+    console.error(`Failed to load router at ${modulePath}:`, error);
     return null;
   }
 }
