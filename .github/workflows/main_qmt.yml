@@ -78,7 +78,7 @@ jobs:
         with:
           app-name: 'QMT'
           package: '.'
-          startup-command: 'npm start'
+          startup-command: 'node --trace-uncaught dist/server/index.js'
 
       # Short warm-up (ignore curl errors, retry up to ~50s)
       - name: Warm up homepage
@@ -120,3 +120,4 @@ jobs:
                    done
 
           echo "❌ Health check failed. Last response: $LAST"
+
