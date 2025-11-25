@@ -1,3 +1,5 @@
+
+// server/index.ts
 import express, { Request, Response, NextFunction, Router } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -9,6 +11,7 @@ console.log('🟢 index module loaded');
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
+/* ----------------------------- Env ----------------------------- */
 try {
   dotenv.config();
   console.log('🔧 dotenv configured');
@@ -47,41 +50,32 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- Static / SPA ------------------------ */
+/* ----------------------------- Static / SPA ----------------------------- */
+/**
+ * Production serving:
+ * - Vite builds to dist/client
+ * - Express serves static assets from dist/client
+ * - Non-/api routes fall back to dist/client/index.html (SPA)
+ */
 if (process.env.NODE_ENV === 'production') {
-  // Serve Vite build output from dist/client
-  const clientPath = path.join(__dirname, '../client');
+  const clientPath = path.join(__dirname, '../client'); // dist/server/../client -> dist/client
   app.use(express.static(clientPath));
-
-  // SPA fallback for non-API routes
-  app.get('*', (req: Request, res: Response, next: NextFunction) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(clientPath, 'index.html'));
-    } else {
-      next();
-    }
-  });
 }
 
-/* ----------------------------- Error Handling ---------------------- */
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
-process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
-process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
-
-/* ----------------------------- Helpers ----------------------------- */
+/* ----------------------------- Helper: Safe router loader ----------------------------- */
+/**
+ * Dynamic import of route modules compiled to JS in dist/server/routes/*.js.
+ * Accepts default export or named 'router'. Returns null if not a Router.
+ */
 async function loadRouter(modulePath: string): Promise<Router | null> {
   try {
-    const mod = await import(modulePath);
-    const candidate = (mod as any).default ?? (mod as any).router ?? mod;
-    if (typeof candidate === 'function') return candidate as Router;
+    const mod: any = await import(modulePath);
+    const candidate = mod?.default ?? mod?.router;
+
+    // Express Router instances are callable functions; guard accordingly
+    if (candidate && typeof candidate === 'function') {
+      return candidate as Router;
+    }
 
     console.error(`Module at ${modulePath} did not export an Express Router (default or named 'router').`);
     return null;
@@ -94,6 +88,7 @@ async function loadRouter(modulePath: string): Promise<Router | null> {
 /* ----------------------------- Startup ----------------------------- */
 async function registerRoutes() {
   console.log('🔧 Registering routes...');
+
   const authRouter      = await loadRouter('./routes/auth.js');
   const eventsRouter    = await loadRouter('./routes/events.js');
   const teamsRouter     = await loadRouter('./routes/teams.js');
@@ -124,20 +119,46 @@ async function initDatabase() {
   }
 }
 
+/**
+ * SPA fallback AFTER routers so /api/* is handled by the API and
+ * non-API routes serve index.html (client-side routing).
+ */
+function installSpaFallback() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const clientPath = path.join(__dirname, '../client');
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(clientPath, 'index.html'));
+  });
+}
+
 async function startServer() {
   try {
     console.log('🚀 Bootstrapping server...');
     await initDatabase();
     await registerRoutes();
+    installSpaFallback();
   } catch (err) {
     console.error('❌ Startup error before listen:', err);
   }
 
-  try {
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-    });
-  }  } catch (err) {
-    console.error('❌ app.listen error:', err);
-  }
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+  });
 }
+
+/* ----------------------------- Global error handling ----------------------------- */
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
+process.onprocess.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
+
+/* ----------------------------- Go ----------------------------- */
