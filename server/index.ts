@@ -4,10 +4,17 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+console.log('🟢 index module loaded');
+
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
-dotenv.config();
+try {
+  dotenv.config();
+  console.log('🔧 dotenv configured');
+} catch (err) {
+  console.error('dotenv.config failed:', err);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,7 +22,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
-/* ----------------------------- Middleware ----------------------------- */
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +31,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-/* ----------------------------- Health Check --------------------------- */
+/* ----------------------------- Health ----------------------------- */
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
@@ -40,7 +46,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- Static / SPA --------------------------- */
+/* ----------------------------- Static / SPA ------------------------ */
 if (process.env.NODE_ENV === 'production') {
   const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
   app.use(express.static(webRoot));
@@ -50,17 +56,17 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(webRoot, 'index.html'));
   });
 
-  // SPA fallback AFTER API routes
+  // SPA fallback AFTER routers
   app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(webRoot, 'index.html'));
     } else {
-      next(); // allow API routers to handle /api/*
+      next(); // let API routers handle /api/*
     }
   });
 }
 
-/* ----------------------------- Error Handling ------------------------- */
+/* ----------------------------- Error Handling ---------------------- */
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
@@ -69,21 +75,28 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
+// Crash visibility
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
 process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
-/* ----------------------------- Helpers -------------------------------- */
+/* ----------------------------- Helpers ----------------------------- */
 async function loadRouter(modulePath: string): Promise<Router | null> {
   try {
     const mod = await import(modulePath);
-    return (mod as any).default ?? null;
+    const router = (mod as any).default ?? null;
+    if (!router) {
+      console.error(`Router ${modulePath} has no default export`);
+      return null;
+    }
+    return router as Router;
   } catch (error) {
     console.error(`Failed to load router ${modulePath}:`, error);
     return null;
   }
 }
 
-/* ----------------------------- Startup -------------------------------- */
+/* ----------------------------- Startup ----------------------------- */
 async function registerRoutes() {
   console.log('🔧 Registering routes...');
   const authRouter      = await loadRouter('./routes/auth.js');
@@ -117,10 +130,19 @@ async function initDatabase() {
 }
 
 async function startServer() {
-  console.log('🚀 Bootstrapping server...');
-  await initDatabase();
-  await registerRoutes();
-  app.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
-  });
+  try {
+    console.log('🚀 Bootstrapping server...');
+    await initDatabase();
+    await registerRoutes();
+  } catch (err) {
+    console.error('❌ Startup error before listen:', err);
+  }
+
+  try {
+    app.listen(PORT, () => {
+           console.log(`✅ Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ app.listen error:', err);
+  }
 }
