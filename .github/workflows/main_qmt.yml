@@ -22,18 +22,38 @@ jobs:
           cache: 'npm'
 
       - name: Validate package.json
+        shell: bash
         run: jq -e . package.json || { echo "Invalid package.json"; exit 1; }
 
-      - name: Install dependencies
-        run: npm ci
+      # Try npm ci; if it fails due to lock mismatch, fall back to npm install
+      - name: Install dependencies (ci with fallback)
+        shell: bash
+        run: |
+          # Avoid engine-strict failures (we only want a warning for EBADENGINE)
+          npm config set engine-strict false
+
+          echo "Attempting npm ci..."
+          if npm ci --prefer-offline --no-audit; then
+            echo "✅ npm ci succeeded"
+          else
+            echo "⚠️ npm ci failed; falling back to npm install"
+            rm -rf node_modules
+            npm install --prefer-offline --no-audit
+            echo "✅ npm install succeeded"
+          fi
 
       - name: Build backend
-        run: npm run build:server || echo "ℹ️ No backend build script found"
+        shell: bash
+        run: |
+          npm run build:server || { echo "❌ Missing or failing build:server script"; exit 1; }
 
       - name: Build frontend
-        run: npm run build:client || echo "ℹ️ No client build script found"
+        shell: bash
+        run: |
+          npm run build:client || { echo "❌ Missing or failing build:client script"; exit 1; }
 
       - name: Verify build outputs
+        shell: bash
         run: |
           test -f dist/server/index.js || { echo "❌ Missing dist/server/index.js"; exit 1; }
           test -f dist/client/index.html || { echo "❌ Missing dist/client/index.html"; exit 1; }
@@ -75,14 +95,16 @@ jobs:
         with:
           app-name: 'QMT'
           package: '.'
-          startup-command: 'node dist/server/index.js'
+          startup-command: 'NODE_ENV=production node --trace-uncaught dist/server/index.js'
 
+      # Short warm-up (ignore curl errors, retry up to ~50s)
       - name: Warm up homepage
+        shell: bash
         run: |
           BASE="https://qmt.azurewebsites.net"
           echo "Warming up $BASE ..."
           for i in {1..5}; do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "$BASE/" || echo "000")
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE/" || echo "000")
             echo "Warm-up attempt $i: http=$CODE"
             if [ "$CODE" = "200" ]; then
               echo "✅ Homepage responded with 200"
@@ -91,14 +113,16 @@ jobs:
             sleep 10
           done
 
+      # Fail-fast health check (5 attempts, ~50s total)
       - name: Health check
+        shell: bash
         run: |
           BASE="https://qmt.azurewebsites.net/api/health"
           echo "Checking health endpoint..."
           LAST=""
           for i in {1..5}; do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "$BASE" || echo "000")
-            RESP=$(curl -sS -H "Accept: application/json" "$BASE" || true)
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 15 "$BASE" || echo "000")
+            RESP=$(curl -sS --connect-timeout 10 --max-time 15 -H "Accept: application/json" "$BASE" || true)
             STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
             DB=$(echo "$RESP" | jq -r '.database // empty' 2>/dev/null || echo "")
             echo "Attempt $i: http=$CODE status=${STATUS:-unknown} db=${DB:-unknown}"
@@ -111,3 +135,5 @@ jobs:
             LAST="$RESP"
             sleep 10
           done
+
+          echo "❌ Health check failed. Last
