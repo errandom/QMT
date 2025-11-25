@@ -49,20 +49,16 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 
 /* ----------------------------- Static / SPA ------------------------ */
 if (process.env.NODE_ENV === 'production') {
-  const webRoot = path.join(__dirname, '../../'); // /home/site/wwwroot
-  app.use(express.static(webRoot));
+  // Serve Vite build output from dist/client
+  const clientPath = path.join(__dirname, '../client');
+  app.use(express.static(clientPath));
 
-  // Explicit homepage route
-  app.get('/', (_req: Request, res: Response) => {
-    res.sendFile(path.join(webRoot, 'index.html'));
-  });
-
-  // SPA fallback AFTER routers
-  app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
+  // SPA fallback for non-API routes
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
     if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(webRoot, 'index.html'));
+      res.sendFile(path.join(clientPath, 'index.html'));
     } else {
-      next(); // let API routers handle /api/*
+      next();
     }
   });
 }
@@ -76,27 +72,16 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Crash visibility
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
 process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
 /* ----------------------------- Helpers ----------------------------- */
-/**
- * Load an Express Router from a module path.
- * Accepts both:
- *  - default export: export default router
- *  - named export:  export const router = ...
- */
 async function loadRouter(modulePath: string): Promise<Router | null> {
   try {
     const mod = await import(modulePath);
     const candidate = (mod as any).default ?? (mod as any).router ?? mod;
-
-    // If module itself is a function (Router), or we found default/named router
-    if (typeof candidate === 'function') {
-      return candidate as Router;
-    }
+    if (typeof candidate === 'function') return candidate as Router;
 
     console.error(`Module at ${modulePath} did not export an Express Router (default or named 'router').`);
     return null;
@@ -152,9 +137,7 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
     });
-  } catch (err) {
+  }  } catch (err) {
     console.error('❌ app.listen error:', err);
   }
 }
-
-startServer();
