@@ -25,5 +25,5 @@
     "@types/jsonwebtoken": "^9.0.2",
     "@types/bcryptjs": "^2.4.2",
     "@types/cors": "^2.8.17",
-    "@types    "@types/mssql": "^9.1.2"
+    "@types/mssql": "^9.1.2"
   }
