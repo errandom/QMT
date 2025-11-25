@@ -124,7 +124,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     res.json({ message: 'Team deleted successfully' });
   } catch (error) {
-    console.error('Error deleting team:', error);
+       console.error('Error deleting team:', error);
     res.status(500).json({ error: 'Failed to delete team' });
   }
 });
