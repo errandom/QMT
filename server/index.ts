@@ -147,3 +147,5 @@ async function startServer() {
     console.error('❌ app.listen error:', err);
   }
 }
+
+startServer();
