@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-  // Root points to your client source folder
-  root: path.resolve(__dirname, 'client'),
+  // Root points to the directory containing index.html (your repo root)
+  root: path.resolve(__dirname, '.'),
 
   build: {
     // Output built assets to dist/client for clarity
@@ -12,12 +12,11 @@ export default defineConfig({
     sourcemap: false, // Disable source maps for production
     manifest: true,   // Generate manifest.json for server-side integration
     rollupOptions: {
-      input: path.resolve(__dirname, 'client/index.html')
+      input: path.resolve(__dirname, 'index.html') // Correct entry point
     }
   },
 
   server: {
-    port: 5173, // Dev server port
+    port: 5173,
     open: true
   }
-});
