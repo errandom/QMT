@@ -130,5 +130,3 @@ jobs:
             LAST="$RESP"
             sleep 10
           done
-
-          echo
