@@ -138,12 +138,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
-process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.onprocess.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
 /* ----------------------------- Go ----------------------------- */
