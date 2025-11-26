@@ -143,7 +143,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
-process.onprocess.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
 /* ----------------------------- Go ----------------------------- */
