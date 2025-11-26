@@ -152,7 +152,5 @@ router.delete('/:id', async (req: Request, res: Response) => {
     return res.json({ message: 'Site deleted successfully' });
   } catch (error) {
     return sendError(res, 500, 'Failed to delete site', error);
-  }
+   }
 });
-
-export default
