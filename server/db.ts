@@ -1,4 +1,4 @@
-
+// server/db.ts
 let cachedPool: any = null;
 
 export async function getPool(): Promise<any> {
@@ -21,7 +21,7 @@ export async function getPool(): Promise<any> {
 
   // Robust ESM <-> CJS interop for 'mssql'
   const sqlNs: any = await import('mssql');
-  // Prefer the namespace when it has connect; otherwise fall back to default
+  // Prefer the namespace when it exposes connect; otherwise fall back to default
   const sql: any = (sqlNs && typeof sqlNs.connect === 'function') ? sqlNs : sqlNs?.default;
   if (!sql || typeof sql.connect !== 'function') {
     throw new Error('Failed to load mssql: "connect" function not found on module/default export');
@@ -41,7 +41,8 @@ export async function getPool(): Promise<any> {
       min: 0,
       idleTimeoutMillis: 30000
     }
-   };
+  };
 
   cachedPool = await sql.connect(config);
   return cachedPool;
+}
