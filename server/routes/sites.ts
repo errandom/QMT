@@ -18,10 +18,7 @@ function sendError(res: Response, status: number, message: string, err?: unknown
   return res.status(status).json({ error: message });
 }
 
-/* ------------------------------------------------------
- * GET /api/sites
- * Returns all sites with a computed field count (per site)
- * ------------------------------------------------------ */
+/* GET /api/sites */
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
@@ -41,10 +38,7 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-/* ------------------------------------------------------
- * GET /api/sites/:id
- * Returns a single site by id
- * ------------------------------------------------------ */
+/* GET /api/sites/:id */
 router.get('/:id', async (req: Request, res: Response) => {
   const id = Number.parseInt(req.params.id, 10);
   if (Number.isNaN(id) || id < 1) {
@@ -68,14 +62,10 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/* ------------------------------------------------------
- * POST /api/sites
- * Creates a new site and returns the inserted row
- * ------------------------------------------------------ */
+/* POST /api/sites */
 router.post('/', async (req: Request<unknown, unknown, SitePayload>, res: Response) => {
   const { name, address, amenities, active } = req.body || {};
 
-  // Basic required validation
   if (!name || !address) {
     return sendError(res, 400, 'Missing required fields: name, address');
   }
@@ -87,7 +77,7 @@ router.post('/', async (req: Request<unknown, unknown, SitePayload>, res: Respon
       .input('name', sql.NVarChar, name)
       .input('address', sql.NVarChar, address)
       .input('amenities', sql.NVarChar, amenities ?? null)
-      .input('active', sql.Bit, active !== false) // default true
+      .input('active', sql.Bit, active !== false)
       .query(`
         INSERT INTO sites (name, address, amenities, active)
         OUTPUT INSERTED.*
@@ -100,10 +90,7 @@ router.post('/', async (req: Request<unknown, unknown, SitePayload>, res: Respon
   }
 });
 
-/* ------------------------------------------------------
- * PUT /api/sites/:id
- * Updates a site and returns the updated row
- * ------------------------------------------------------ */
+/* PUT /api/sites/:id */
 router.put('/:id', async (req: Request<{ id: string }, unknown, SitePayload>, res: Response) => {
   const id = Number.parseInt(req.params.id, 10);
   if (Number.isNaN(id) || id < 1) {
@@ -144,10 +131,7 @@ router.put('/:id', async (req: Request<{ id: string }, unknown, SitePayload>, re
   }
 });
 
-/* ------------------------------------------------------
- * DELETE /api/sites/:id
- * Deletes a site by id
- * ------------------------------------------------------ */
+/* DELETE /api/sites/:id */
 router.delete('/:id', async (req: Request, res: Response) => {
   const id = Number.parseInt(req.params.id, 10);
   if (Number.isNaN(id) || id < 1) {
@@ -162,7 +146,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       .query('DELETE FROM sites WHERE id = @id');
 
     if (!result.rowsAffected || result.rowsAffected[0] === 0) {
-           return sendError(res, 404, 'Site not found');
+      return sendError(res, 404, 'Site not found');
     }
 
     return res.json({ message: 'Site deleted successfully' });
@@ -170,3 +154,5 @@ router.delete('/:id', async (req: Request, res: Response) => {
     return sendError(res, 500, 'Failed to delete site', error);
   }
 });
+
+export default
