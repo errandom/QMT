@@ -118,7 +118,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       .input('id', sql.Int, id)
       .query('DELETE FROM teams WHERE id = @id');
 
-  if (result.rowsAffected[0] === 0) {
+    if (result.rowsAffected[0] === 0) {
       return res.status(404).json({ error: 'Team not found' });
     }
 
@@ -128,5 +128,3 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete team' });
   }
 });
-
-export default
