@@ -9,8 +9,8 @@ export async function getPool() {
   const database = process.env.DB_DATABASE ?? '';
 
   const missing: string[] = [];
-  if (!server) missing.push('DB_SERVER');
-   if (!user) missing.push('DB_USER');
+  if (!server)   missing.push('DB_SERVER');
+  if (!user)     missing.push('DB_USER');
   if (!password) missing.push('DB_PASSWORD');
   if (!database) missing.push('DB_DATABASE');
 
@@ -18,9 +18,12 @@ export async function getPool() {
     throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
   }
 
-  // ✅ Dynamic import with default access
-  const sqlModule = await import('mssql');
-  const sql = sqlModule.default; // Access CommonJS default export
+  // Robust ESM <-> CJS interop for 'mssql'
+  const sqlNs: any = await import('mssql');
+  const sql = sqlNs?.connect ? sqlNs : sqlNs?.default;
+  if (!sql?.connect) {
+    throw new Error('Failed to load mssql: "connect" not found on module/default export');
+  }
 
   const config = {
     server,
@@ -38,6 +41,5 @@ export async function getPool() {
     }
   };
 
-  cachedPool = await sql.connect(config);
+  cached  cachedPool = await sql.connect(config);
   return cachedPool;
-}
