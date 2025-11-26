@@ -24,7 +24,7 @@ jobs:
       - name: Validate package.json
         run: jq -e . package.json || { echo "Invalid package.json"; exit 1; }
 
-      # Install dependencies (with devDependencies for Vite)
+      # Install dependencies (include devDependencies so Vite is available)
       - name: Install dependencies (ci with fallback)
         run: |
           npm config set engine-strict false
@@ -38,15 +38,20 @@ jobs:
             echo "✅ npm install succeeded"
           fi
 
+      - name: Show tool versions
+        run: |
+          node -v
+          npm -v
+          npx --yes vite --version || true
+          npx --yes tsc --version || true
+
       # Build backend
       - name: Build backend
-        run: |
-          npm run build:server || { echo "❌ Missing or failing build:server script"; exit 1; }
+        run: npm run build:server
 
       # Build frontend
       - name: Build frontend
-        run: |
-          npm run build:client || { echo "❌ Missing or failing build:client script"; exit 1; }
+        run: npm run build:client
 
       # Verify build outputs
       - name: Verify build outputs
@@ -54,6 +59,8 @@ jobs:
           test -f dist/server/index.js || { echo "❌ Missing dist/server/index.js"; exit 1; }
           test -f dist/client/index.html || { echo "❌ Missing dist/client/index.html"; exit 1; }
           echo "✅ Build verified"
+          echo "--- dist tree (top-level) ---"
+          find dist -maxdepth 2 -type f | sed 's/^/  /'
 
       # Upload artifacts
       - name: Upload build artifacts
@@ -94,7 +101,6 @@ jobs:
           package: '.'
           startup-command: 'NODE_ENV=production node --trace-uncaught dist/server/index.js'
 
-      # Warm up homepage
       - name: Warm up homepage
         run: |
           BASE="https://qmt.azurewebsites.net"
@@ -102,31 +108,26 @@ jobs:
           for i in {1..5}; do
             CODE=$(curl -sS -o /dev/null -w "%{http_code}" "$BASE/" || echo "000")
             echo "Warm-up attempt $i: http=$CODE"
-            if [ "$CODE" = "200" ]; then
-              echo "✅ Homepage responded with 200"
-              break
-            fi
-            sleep 10
+            [ "$CODE" = "200" ] && { echo "✅ Homepage 200"; break; }
+            sleep 8
           done
 
-      # Health check
       - name: Health check
         run: |
-          BASE="https://qmt.azurewebsites.net/api/health"
-          echo "Checking health endpoint..."
+          URL="https://qmt.azurewebsites.net/api/health"
+          echo "Checking $URL ..."
           LAST=""
           for i in {1..5}; do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "$BASE" || echo "000")
-            RESP=$(curl -sS -H "Accept: application/json" "$BASE" || true)
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            RESP=$(curl -sS -H "Accept: application/json" "$URL" || true)
             STATUS=$(echo "$RESP" | jq -r '.status // empty' 2>/dev/null || echo "")
             DB=$(echo "$RESP" | jq -r '.database // empty' 2>/dev/null || echo "")
             echo "Attempt $i: http=$CODE status=${STATUS:-unknown} db=${DB:-unknown}"
-
             if [ "$CODE" = "200" ] && [ "$STATUS" = "ok" ]; then
               echo "✅ Health check passed: $RESP"
               exit 0
             fi
-
-            LAST="$RESP"
-            sleep 10
+            LAST            LAST="$RESP"
+            sleep 8
           done
+          echo "❌ Health check failed. Last response: $LAST"
