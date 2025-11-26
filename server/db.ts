@@ -36,10 +36,10 @@ export async function getPool(): Promise<any> {
     },
     pool: {
       max: 10,
-           min: 0,
+      min: 0,
       idleTimeoutMillis: 30000
     }
   };
 
   cachedPool = await sql.connect(config);
-  return cachedPool;
+  return  return cachedPool;
