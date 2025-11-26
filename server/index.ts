@@ -1,4 +1,3 @@
-
 // server/index.ts
 import express, { Request, Response, NextFunction, Router } from 'express';
 import cors from 'cors';
@@ -51,32 +50,19 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 });
 
 /* ----------------------------- Static / SPA ----------------------------- */
-/**
- * Production serving:
- * - Vite builds to dist/client
- * - Express serves static assets from dist/client
- * - Non-/api routes fall back to dist/client/index.html (SPA)
- */
 if (process.env.NODE_ENV === 'production') {
   const clientPath = path.join(__dirname, '../client'); // dist/server/../client -> dist/client
   app.use(express.static(clientPath));
 }
 
 /* ----------------------------- Helper: Safe router loader ----------------------------- */
-/**
- * Dynamic import of route modules compiled to JS in dist/server/routes/*.js.
- * Accepts default export or named 'router'. Returns null if not a Router.
- */
 async function loadRouter(modulePath: string): Promise<Router | null> {
   try {
     const mod: any = await import(modulePath);
     const candidate = mod?.default ?? mod?.router;
-
-    // Express Router instances are callable functions; guard accordingly
     if (candidate && typeof candidate === 'function') {
       return candidate as Router;
     }
-
     console.error(`Module at ${modulePath} did not export an Express Router (default or named 'router').`);
     return null;
   } catch (error) {
@@ -125,7 +111,6 @@ async function initDatabase() {
  */
 function installSpaFallback() {
   if (process.env.NODE_ENV !== 'production') return;
-
   const clientPath = path.join(__dirname, '../client');
   app.get('*', (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith('/api')) return next();
@@ -158,7 +143,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
-process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.onprocess.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
 process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
 /* ----------------------------- Go ----------------------------- */
