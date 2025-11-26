@@ -40,6 +40,6 @@ export async function getPool() {
       idleTimeoutMillis: 30000
     }
   };
-
-  cached  cachedPool = await sql.connect(config);
+}
+  cachedPool = await sql.connect(config);
   return cachedPool;
