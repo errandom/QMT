@@ -37,11 +37,6 @@ jobs:
             echo "✅ npm install succeeded"
           fi
 
-      - name: Install Tailwind CSS and PostCSS
-        run: |
-          npm install -D tailwindcss postcss autoprefixer
-          npx tailwindcss init -p
-
       - name: Show tool versions
         run: |
           node -v
@@ -134,4 +129,4 @@ jobs:
             LAST="$RESP"
             sleep 8
           done
-          echo "❌ Health check failed. Last response: $LAST"
+          echo "❌ Health check failed. Last
