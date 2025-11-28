@@ -7,14 +7,14 @@
 @import './index.css';
 @import "tw-animate-css";
 
-/* Remove @custom-variant and @config (unsupported without plugins) */
+/* Remove @custom-variant and @config completely */
 
 @layer base {
   *,
   ::after,
   ::before,
   ::backdrop,
-  ::  ::file-selector-button {
+  ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
 }
