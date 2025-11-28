@@ -1,4 +1,3 @@
-// server/index.ts
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -8,20 +7,16 @@ import { fileURLToPath } from 'url';
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
-// Prefer static imports to catch compile-time errors
-import authRouter      from './routes/auth.js';
-import eventsRouter    from './routes/events.js';
-import teamsRouter     from './routes/teams.js';
-import sitesRouter     from './routes/sites.js';
-import fieldsRouter    from './routes/fields.js';
+// Static imports for routes
+import authRouter from './routes/auth.js';
+import eventsRouter from './routes/events.js';
+import teamsRouter from './routes/teams.js';
+import sitesRouter from './routes/sites.js';
+import fieldsRouter from './routes/fields.js';
 import equipmentRouter from './routes/equipment.js';
-import requestsRouter  from './routes/requests.js';
+import requestsRouter from './routes/requests.js';
 
-console.log('🟢 index module loaded');
-
-/* ----------------------------- Env ----------------------------- */
 dotenv.config();
-console.log('🔧 dotenv configured');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,56 +49,40 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
-/* ----------------------------- API Routers ----------------------------- */
-// Mount only when present so build failures are visible in logs
-if (authRouter)      app.use('/api/auth', authRouter);
-if (eventsRouter)    app.use('/api/events', eventsRouter);
-if (teamsRouter)     app.use('/api/teams', teamsRouter);
-if (sitesRouter)     app.use('/api/sites', sitesRouter);
-if (fieldsRouter)    app.use('/api/fields', fieldsRouter);
-if (equipmentRouter) app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
-if (requestsRouter)  app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
+/* ----------------------------- API Routes ----------------------------- */
+app.use('/api/auth', authRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/teams', teamsRouter);
+app.use('/api/sites', sitesRouter);
+app.use('/api/fields', fieldsRouter);
+app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
+app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 
 console.log('✅ Routes registered');
 
 /* ----------------------------- Static / SPA ----------------------------- */
-// Always serve static, regardless of NODE_ENV
 const clientPath = path.resolve(__dirname, '../client'); // dist/server/../client -> dist/client
 app.use(express.static(clientPath));
 
-/**
- * SPA fallback AFTER routers so /api/* is handled by the API and
- * non-API routes serve index.html (client-side routing).
- */
 app.get('*', (req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/api')) return next();
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 /* ----------------------------- Startup ----------------------------- */
-async function initDatabase() {
-  console.log('🔌 Connecting to database...');
+(async () => {
   try {
-    await getPool(); // warm-up pool with retry
+    console.log('🚀 Bootstrapping server...');
+    await getPool(); // Warm-up DB
     console.log('✅ Database connected (warm)');
   } catch (error) {
     console.error('⚠️ Database warm-up failed:', error);
-    console.error('Continuing; API will retry on demand');
-  }
-}
-
-async function startServer() {
-  try {
-    console.log('🚀 Bootstrapping server...');
-    await initDatabase();
-  } catch (err) {
-    console.error('❌ Startup error before listen:', err);
   }
 
   app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
   });
-}
+})();
 
 /* ----------------------------- Global error handling ----------------------------- */
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
@@ -115,8 +94,4 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
-process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
-process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
-
-/* ----------------------------- Go ----------------------------- */
-startServer();
+process.onprocess.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
