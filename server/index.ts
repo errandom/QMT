@@ -1,5 +1,4 @@
 
-// server/index.ts
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -9,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
-// Static imports for routes (each must export default router)
+// Static imports for routes
 import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import teamsRouter from './routes/teams.js';
@@ -65,22 +64,17 @@ console.log('✅ Routes registered');
 
 /* ----------------------------- Static / SPA ----------------------------- */
 /**
- * Your build layout in Kudu:
- *   site/wwwroot/dist/
+ * Build layout:
+ *   dist/
  *     ├─ index.html
- *     ├─ assets/...
- *     └─ server/ (compiled backend)
+ *     ├─ assets/
+ *     └─ server/
  *
- * Since __dirname === site/wwwroot/dist/server at runtime,
- * ".." resolves to site/wwwroot/dist (the client bundle root).
+ * At runtime: __dirname = dist/server → ".." = dist
  */
-const clientPath = path.resolve(__dirname, '..'); // -> dist
+const clientPath = path.resolve(__dirname, '..'); // → dist
 app.use(express.static(clientPath));
 
-/**
- * SPA fallback AFTER API routers so /api/* hits the API,
- * and other routes return the built index.html.
- */
 app.get('*', (req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/api')) return next();
   res.sendFile(path.join(clientPath, 'index.html'));
@@ -90,11 +84,10 @@ app.get('*', (req: Request, res: Response, next: NextFunction) => {
 (async () => {
   try {
     console.log('🚀 Bootstrapping server...');
-    await getPool(); // warm DB pool (db.ts handles retries)
+    await getPool(); // Warm DB pool
     console.log('✅ Database connected (warm)');
   } catch (error) {
     console.error('⚠️ Database warm-up failed:', error);
-    // Continue: endpoints call getPool() on demand and will retry there
   }
 
   app.listen(PORT, () => {
@@ -113,4 +106,3 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
 process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
-process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
