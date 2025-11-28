@@ -2,12 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom imports */
 @import './styles/theme.css';
 @import './index.css';
 @import "tw-animate-css";
 
-/* Base layer overrides */
 @layer base {
   *,
   ::after,
@@ -19,8 +17,8 @@
 }
 
 @layer base {
-  * {
-       @apply border-border outline-ring/50;
+  *  * {
+    @apply border border-gray-200 outline outline-blue-500/50;
   }
 
   body {
