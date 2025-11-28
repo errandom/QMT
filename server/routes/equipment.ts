@@ -1,15 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db.js';
-import sql from 'mssql';
+import * as sql from 'mssql';
 
 const router = Router();
 
-// GET all equipment
-router.get('/', async (req: Request, res: Response) => {
+/**
+ * GET /api/equipment
+ * Fetch all equipment
+ */
+router.get('/', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT * FROM equipment 
+      SELECT * FROM equipment
       ORDER BY name
     `);
     res.json(result.recordset);
@@ -19,18 +22,24 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET single equipment by ID
+/**
+ * GET /api/equipment/:id
+ * Fetch single equipment by ID
+ */
 router.get('/:id', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid equipment ID' });
+
   try {
     const pool = await getPool();
     const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
+      .input('id', sql.Int, id)
       .query('SELECT * FROM equipment WHERE id = @id');
-    
+
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Equipment not found' });
     }
-    
+
     res.json(result.recordset[0]);
   } catch (error) {
     console.error('Error fetching equipment:', error);
@@ -38,11 +47,15 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST create new equipment
+/**
+ * POST /api/equipment
+ * Create new equipment
+ */
 router.post('/', async (req: Request, res: Response) => {
+  const { name, category, quantity, condition, location } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
   try {
-    const { name, category, quantity, condition, location } = req.body;
-    
     const pool = await getPool();
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
@@ -55,7 +68,7 @@ router.post('/', async (req: Request, res: Response) => {
         OUTPUT INSERTED.*
         VALUES (@name, @category, @quantity, @condition, @location)
       `);
-    
+
     res.status(201).json(result.recordset[0]);
   } catch (error) {
     console.error('Error creating equipment:', error);
@@ -63,21 +76,28 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// PUT update equipment
+/**
+ * PUT /api/equipment/:id
+ * Update equipment
+ */
 router.put('/:id', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid equipment ID' });
+
+  const { name, category, quantity, condition, location } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
   try {
-    const { name, category, quantity, condition, location } = req.body;
-    
     const pool = await getPool();
     const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
+      .input('id', sql.Int, id)
       .input('name', sql.NVarChar, name)
-      .input('category', sql.NVarChar, category)
-      .input('quantity', sql.Int, quantity)
-      .input('condition', sql.NVarChar, condition)
-      .input('location', sql.NVarChar, location)
+      .input('category', sql.NVarChar, category || null)
+      .input('quantity', sql.Int, quantity || 1)
+      .input('condition', sql.NVarChar, condition || 'good')
+      .input('location', sql.NVarChar, location || null)
       .query(`
-        UPDATE equipment 
+        UPDATE equipment
         SET name = @name,
             category = @category,
             quantity = @quantity,
@@ -86,11 +106,11 @@ router.put('/:id', async (req: Request, res: Response) => {
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
-    
+
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Equipment not found' });
     }
-    
+
     res.json(result.recordset[0]);
   } catch (error) {
     console.error('Error updating equipment:', error);
@@ -98,18 +118,24 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE equipment
+/**
+ * DELETE /api/equipment/:id
+ * Remove equipment
+ */
 router.delete('/:id', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid equipment ID' });
+
   try {
     const pool = await getPool();
     const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
+      .input('id', sql.Int, id)
       .query('DELETE FROM equipment WHERE id = @id');
-    
-    if (result.rowsAffected[0] === 0) {
+
+    if ((result.rowsAffected?.[0] ?? 0) === 0) {
       return res.status(404).json({ error: 'Equipment not found' });
     }
-    
+
     res.json({ message: 'Equipment deleted successfully' });
   } catch (error) {
     console.error('Error deleting equipment:', error);
@@ -117,4 +143,4 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-export default router;
+/** ✅ Critical for build success */
