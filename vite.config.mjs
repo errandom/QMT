@@ -1,18 +1,19 @@
-
+// vite.config.mjs
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react-swc';
+import path from 'path';
+import react from '@vitejs/plugin-react-swc'; // works fine with React 18+ too
 
 export default defineConfig({
   plugins: [react()],
+  root: '.',                 // index.html at repo root
+  base: '/',                 // absolute asset paths
   resolve: {
-      alias: {
-        '@github/spark': '@github/spark/dist/index.js'
-      }
-    },
-  root: '.',
-  base: '/',
+    alias: {
+      '@': path.resolve(process.cwd(), 'src')  // map "@/..." -> "<repo>/src"
+    }
+  },
   build: {
-    outDir: 'dist/client',
+    out    outDir: 'dist',          // NOTE: your build emits to 'dist' (index.html + assets)
     emptyOutDir: true,
     sourcemap: false,
     manifest: true
@@ -21,4 +22,3 @@ export default defineConfig({
     port: 5173,
     open: true
   }
-});
