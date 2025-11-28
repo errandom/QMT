@@ -17,11 +17,11 @@
 }
 
 @layer base {
-  *  * {
+  * {
     @apply border border-gray-200 outline outline-blue-500/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
+   body {
+    @apply bg-gray-50 text-gray-900; /* ✅ Replace custom classes with Tailwind defaults */
   }
 }
