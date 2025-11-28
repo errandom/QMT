@@ -1,21 +1,29 @@
-/* src/main.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* If you keep your config outside /src, point to it explicitly */
-@config "../tailwind.config.js";
-
-/* Core layers (v4 uses @import 'tailwindcss') */
-@import "tailwindcss";
-
-/* Optional 3rd‑party animations (keep AFTER tailwind import) */
-@import "tw-animate-css@import "tw-animate-css";
-
-/* Your app styles (order: framework → 3rd party → theme → component) */
+/* ✅ Ensure all imports are correct and closed */
 @import "./styles/theme.css";
 @import "./index.css";
+@import "tw-animate-css";
 
-/* Dark mode variant: scope styles to elements when a .dark ancestor exists.
-   Use `&` to reference the current rule target, not `*`. */
-@custom-variant dark (&:is(.dark &));
+/* ✅ Custom base styles */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border    border-color: var(--color-gray-200, currentColor);
+  }
+}
 
-/* (Optional) If you also want a data attribute trigger, you can combine:
-@custom-variant dark (&:is(.dark &, [data-theme='dark'] &));
+@layer base {
+  * {
+    @apply border border-gray-200 outline outline-blue-500/50;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900; /* ✅ Replace unsupported classes */
+  }
+}
