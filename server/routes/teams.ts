@@ -1,3 +1,4 @@
+// server/routes/teams.ts
 import { Router, Request, Response } from 'express';
 import * as sql from 'mssql';
 import { getPool } from '../db.js';
@@ -118,7 +119,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       .input('id', sql.Int, id)
       .query('DELETE FROM teams WHERE id = @id');
 
-    if (result.rowsAffected[0] === 0) {
+    if ((result.rowsAffected?.[0] ?? 0) === 0) {
       return res.status(404).json({ error: 'Team not found' });
     }
 
