@@ -1,11 +1,14 @@
-@import 'tailwindcss';
+/* Use Tailwind directives instead of @import */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Keep your custom imports */
 @import './styles/theme.css';
 @import './index.css';
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-@config '../tailwind.config.js';
-
+/* Remove unsupported directives like @config and @custom-variant */
 @layer base {
   *,
   ::after,
