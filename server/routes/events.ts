@@ -177,3 +177,4 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 /** ✅ Critical for build success */
+export default router;
