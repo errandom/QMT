@@ -2,10 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ✅ All imports must come AFTER Tailwind directives */
 @import './styles/theme.css';
 @import './index.css';
 @import "tw-animate-css";
 
+/* Custom base layer overrides */
 @layer base {
   *,
   ::after,
@@ -18,10 +20,10 @@
 
 @layer base {
   * {
-    @apply border border-gray-200 outline outline-blue-500/50;
+    @    @apply border border-gray-200 outline outline-blue-500/50;
   }
 
-   body {
-    @apply bg-gray-50 text-gray-900; /* ✅ Replace custom classes with Tailwind defaults */
+  body {
+    @apply bg-gray-50 text-gray-900; /* ✅ Replace unsupported classes */
   }
 }
