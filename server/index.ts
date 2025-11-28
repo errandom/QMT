@@ -1,22 +1,27 @@
 // server/index.ts
-import express, { Request, Response, NextFunction, Router } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-console.log('🟢 index module loaded');
-
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
+// Prefer static imports to catch compile-time errors
+import authRouter      from './routes/auth.js';
+import eventsRouter    from './routes/events.js';
+import teamsRouter     from './routes/teams.js';
+import sitesRouter     from './routes/sites.js';
+import fieldsRouter    from './routes/fields.js';
+import equipmentRouter from './routes/equipment.js';
+import requestsRouter  from './routes/requests.js';
+
+console.log('🟢 index module loaded');
+
 /* ----------------------------- Env ----------------------------- */
-try {
-  dotenv.config();
-  console.log('🔧 dotenv configured');
-} catch (err) {
-  console.error('dotenv.config failed:', err);
-}
+dotenv.config();
+console.log('🔧 dotenv configured');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +35,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
@@ -49,81 +54,48 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
+/* ----------------------------- API Routers ----------------------------- */
+// Mount only when present so build failures are visible in logs
+if (authRouter)      app.use('/api/auth', authRouter);
+if (eventsRouter)    app.use('/api/events', eventsRouter);
+if (teamsRouter)     app.use('/api/teams', teamsRouter);
+if (sitesRouter)     app.use('/api/sites', sitesRouter);
+if (fieldsRouter)    app.use('/api/fields', fieldsRouter);
+if (equipmentRouter) app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
+if (requestsRouter)  app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
+
+console.log('✅ Routes registered');
+
 /* ----------------------------- Static / SPA ----------------------------- */
-if (process.env.NODE_ENV === 'production') {
-  const clientPath = path.join(__dirname, '../client'); // dist/server/../client -> dist/client
-  app.use(express.static(clientPath));
-}
-
-/* ----------------------------- Helper: Safe router loader ----------------------------- */
-async function loadRouter(modulePath: string): Promise<Router | null> {
-  try {
-    const mod: any = await import(modulePath);
-    const candidate = mod?.default ?? mod?.router;
-    if (candidate && typeof candidate === 'function') {
-      return candidate as Router;
-    }
-    console.error(`Module at ${modulePath} did not export an Express Router (default or named 'router').`);
-    return null;
-  } catch (error) {
-    console.error(`Failed to load router at ${modulePath}:`, error);
-    return null;
-  }
-}
-
-/* ----------------------------- Startup ----------------------------- */
-async function registerRoutes() {
-  console.log('🔧 Registering routes...');
-
-  const authRouter      = await loadRouter('./routes/auth.js');
-  const eventsRouter    = await loadRouter('./routes/events.js');
-  const teamsRouter     = await loadRouter('./routes/teams.js');
-  const sitesRouter     = await loadRouter('./routes/sites.js');
-  const fieldsRouter    = await loadRouter('./routes/fields.js');
-  const equipmentRouter = await loadRouter('./routes/equipment.js');
-  const requestsRouter  = await loadRouter('./routes/requests.js');
-
-  if (authRouter)      app.use('/api/auth', authRouter);
-  if (eventsRouter)    app.use('/api/events', eventsRouter);
-  if (teamsRouter)     app.use('/api/teams', teamsRouter);
-  if (sitesRouter)     app.use('/api/sites', sitesRouter);
-  if (fieldsRouter)    app.use('/api/fields', fieldsRouter);
-  if (equipmentRouter) app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
-  if (requestsRouter)  app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
-
-  console.log('✅ Routes registered');
-}
-
-async function initDatabase() {
-  console.log('🔌 Connecting to database...');
-  try {
-    await getPool();
-    console.log('✅ Database connected');
-  } catch (error) {
-    console.error('⚠️ Database connection failed:', error);
-    console.error('Starting without DB...');
-  }
-}
+// Always serve static, regardless of NODE_ENV
+const clientPath = path.resolve(__dirname, '../client'); // dist/server/../client -> dist/client
+app.use(express.static(clientPath));
 
 /**
  * SPA fallback AFTER routers so /api/* is handled by the API and
  * non-API routes serve index.html (client-side routing).
  */
-function installSpaFallback() {
-  if (process.env.NODE_ENV !== 'production') return;
-  const clientPath = path.join(__dirname, '../client');
-  app.get('*', (req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(clientPath, 'index.html'));
-  });
+app.get('*', (req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(clientPath, 'index.html'));
+});
+
+/* ----------------------------- Startup ----------------------------- */
+async function initDatabase() {
+  console.log('🔌 Connecting to database...');
+  try {
+    await getPool(); // warm-up pool with retry
+    console.log('✅ Database connected (warm)');
+  } catch (error) {
+    console.error('⚠️ Database warm-up failed:', error);
+    console.error('Continuing; API will retry on demand');
+  }
 }
 
 async function startServer() {
   try {
     console.log('🚀 Bootstrapping server...');
     await initDatabase();
-    await registerRoutes();
-    installSpaFallback();
   } catch (err) {
     console.error('❌ Startup error before listen:', err);
   }
@@ -147,3 +119,4 @@ process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', er
 process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
 
 /* ----------------------------- Go ----------------------------- */
+startServer();
