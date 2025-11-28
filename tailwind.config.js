@@ -1,4 +1,3 @@
-
 import fs from 'fs';
 
 /** @type {import('tailwindcss').Config} */
@@ -124,16 +123,15 @@ const defaultTheme = {
       56: 'var(--size-56)',
       60: 'var(--size-60)',
       64: 'var(--size-64)',
-      72: 'var(--size-72)',
+           72: 'var(--size-72)',
       80: 'var(--size-80)',
-           96: 'var(--size-96)',
+      96: 'var(--size-96)',
     },
-    darkMode: ['selector', '[data-appearance="dark"]'],
   },
 };
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: { ...defaultTheme, ...customTheme },
-  plugins: [], // ✅ Fixed syntax
+  plugins: [],
 }
