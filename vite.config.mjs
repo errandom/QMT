@@ -1,12 +1,13 @@
-// vite.config.mjs
-import { defineConfig } from 'vite';
 
-// IMPORTANT: index.html is at the repo root
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc'; // React 19 support with SWC for fast builds
+
 export default defineConfig({
-  root: '.',                 // Vite looks for index.html  root: '.',                 // Vite looks for index.html here
-  base: '/',                 // ensure absolute asset paths under root
+  plugins: [react()],
+  root: '.',                 // Vite looks for index  root: '.',                 // Vite looks for index.html at the repo root
+  base: '/',                 // Ensure absolute asset paths
   build: {
-    outDir: 'dist/client',   // where compiled assets go
+    outDir: 'dist/client',   // Where compiled assets go
     emptyOutDir: true,
     sourcemap: false,
     manifest: true
@@ -14,5 +15,4 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true
-  }
-})
+  })
