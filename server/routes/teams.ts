@@ -1,11 +1,13 @@
-// server/routes/teams.ts
 import { Router, Request, Response } from 'express';
 import * as sql from 'mssql';
 import { getPool } from '../db.js';
 
 const router = Router();
 
-/* GET all teams */
+/**
+ * GET /api/teams
+ * Fetch all active teams
+ */
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const pool = await getPool();
@@ -21,7 +23,10 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-/* GET team by ID */
+/**
+ * GET /api/teams/:id
+ * Fetch team by ID
+ */
 router.get('/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid team ID' });
@@ -43,19 +48,24 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/* POST create team */
+/**
+ * POST /api/teams
+ * Create a new team
+ */
 router.post('/', async (req: Request, res: Response) => {
   const { name, sport, age_group, coaches, active } = req.body;
-  if (!name || !sport) return res.status(400).json({ error: 'Missing required fields: name, sport' });
+  if (!name || !sport) {
+    return res.status(400).json({ error: 'Missing required fields: name, sport' });
+  }
 
   try {
     const pool = await getPool();
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
       .input('sport', sql.NVarChar, sport)
-      .input('age_group', sql.NVarChar, age_group || null)
-      .input('coaches', sql.NVarChar, coaches || null)
-      .input('active', sql.Bit, active !== false)
+      .input('age_group', sql.NVarChar, age_group ?? null)
+      .input('coaches', sql.NVarChar, coaches ?? null)
+      .input('active', sql.Bit, active !== false) // default true
       .query(`
         INSERT INTO teams (name, sport, age_group, coaches, active)
         OUTPUT INSERTED.*
@@ -69,13 +79,18 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-/* PUT update team */
+/**
+ * PUT /api/teams/:id
+ * Update an existing team
+ */
 router.put('/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid team ID' });
 
   const { name, sport, age_group, coaches, active } = req.body;
-  if (!name || !sport) return res.status(400).json({ error: 'Missing required fields: name, sport' });
+  if (!name || !sport) {
+    return res.status(400).json({ error: 'Missing required fields: name, sport' });
+  }
 
   try {
     const pool = await getPool();
@@ -83,9 +98,9 @@ router.put('/:id', async (req: Request, res: Response) => {
       .input('id', sql.Int, id)
       .input('name', sql.NVarChar, name)
       .input('sport', sql.NVarChar, sport)
-      .input('age_group', sql.NVarChar, age_group || null)
-      .input('coaches', sql.NVarChar, coaches || null)
-      .input('active', sql.Bit, active)
+      .input('age_group', sql.NVarChar, age_group ?? null)
+      .input('coaches', sql.NVarChar, coaches ?? null)
+      .input('active', sql.Bit, typeof active === 'boolean' ? active : true)
       .query(`
         UPDATE teams
         SET name = @name,
@@ -108,7 +123,10 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/* DELETE team */
+/**
+ * DELETE /api/teams/:id
+ * Remove a team
+ */
 router.delete('/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid team ID' });
@@ -129,3 +147,6 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete team' });
   }
 });
+
+/** ✅ Critical for build success */
+export default router;
