@@ -1,48 +1,60 @@
 // server/db.ts
-let cachedPool: any = null;
+import * as sql from 'mssql';
 
-export async function getPool(): Promise<any> {
-  if (cachedPool) return cachedPool;
-
-  const server = process.env.DB_SERVER ?? '';
-  const user = process.env.DB_USER ?? '';
-  const password = process.env.DB_PASSWORD ?? '';
-  const database = process.env.DB_DATABASE ?? '';
-
-  const missing: string[] = [];
-  if (!server)   missing.push('DB_SERVER');
-  if (!user)     missing.push('DB_USER');
-  if (!password) missing.push('DB_PASSWORD');
-  if (!database) missing.push('DB_DATABASE');
-
-  if (missing.length) {
-    throw new Error(`Missing database environment variables: ${missing.join(', ')}`);
+const config: sql.config = {
+  server: process.env.DB_SERVER ?? '',
+  database: process.env.DB_DATABASE ?? '',
+  user: process.env.DB_USER ?? '',
+  password: process.env.DB_PASSWORD ?? '',
+  options: {
+    encrypt: true,
+    trustServerCertificate: false,
+    enableArithAbort: true,
+    connectTimeout: 30000
+  },
+  pool: {
+    max: 10,
+    min: 1,
+    idleTimeoutMillis: 30000
   }
+};
 
-  // Robust ESM <-> CJS interop for 'mssql'
-  const sqlNs: any = await import('mssql');
-  // Prefer the namespace when it exposes connect; otherwise fall back to default
-  const sql: any = (sqlNs && typeof sqlNs.connect === 'function') ? sqlNs : sqlNs?.default;
-  if (!sql || typeof sql.connect !== 'function') {
-    throw new Error('Failed to load mssql: "connect" function not found on module/default export');
-  }
+let pool: sql.ConnectionPool | null = null;
+let poolPromise: Promise<sql.ConnectionPool> | null = null;
 
-  const config = {
-    server,
-    user,
-    password,
-    database,
-    options: {
-      encrypt: true,
-      trustServerCertificate: false
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      idleTimeoutMillis: 30000
+/**
+ * Connect with retry logic to handle cold starts and transient failures.
+ */
+async function connectWithRetry(retries = 5, delayMs = 2000): Promise<sql.ConnectionPool> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const p = await new sql.ConnectionPool(config).connect();
+      pool = p;
+      return p;
+    } catch (err) {
+      console.error(`DB connect attempt ${attempt}/${retries} failed:`, (err as Error)?.message ?? err);
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, delayMs));
     }
-  };
-
-  cachedPool = await sql.connect(config);
-  return cachedPool;
+  }
+  throw new Error('Unable to connect to SQL after retries');
 }
+
+/**
+ * Get a singleton pool instance. Creates and caches if not already connected.
+ */
+export async function getPool(): Promise<sql.ConnectionPool> {
+  if (pool && pool.connected) return pool;
+  if (!poolPromise) poolPromise = connectWithRetry(5, 2000);
+  return poolPromise;
+}
+
+/**
+ * Close the pool gracefully (optional for shutdown hooks).
+ */
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.close();
+    pool = null;
+    poolPromise = null;
+  }
