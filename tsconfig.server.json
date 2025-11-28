@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",                // Use NodeNext for ESM; fallback to Node16 if needed
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist/server",
     "rootDir": "server",
@@ -11,7 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "sourceMap": true                    // Optional: helpful for debugging
+    "sourceMap": true
   },
   "include": ["server/**/*"],
   "exclude": ["node_modules", "dist"]
