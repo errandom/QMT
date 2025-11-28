@@ -3,11 +3,11 @@ import { Toaster } from '@/components/ui/sonner'
 import Header from '@/components/Header'
 import Dashboard from '@/components/Dashboard'
 import OperationsOffice from '@/components/OperationsOffice'
-import { useKV } from '@github/spark/hooks'
 import { User } from '@/lib/types'
 
 function App() {
-  const [currentUser, setCurrentUser] = useKV<User | null>('current-user', null)
+  // Replace Spark's useKV with React's useState
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [view, setView] = useState<'dashboard' | 'office'>('dashboard')
 
   const handleSetUser = (user: User | null) => {
@@ -16,8 +16,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        currentUser={currentUser || null}
+      <Header
+        currentUser={currentUser}
         onLogin={handleSetUser}
         onLogout={() => handleSetUser(null)}
         onNavigate={setView}
@@ -25,14 +25,14 @@ function App() {
       />
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {view === 'dashboard' ? (
-          <Dashboard 
-            currentUser={currentUser || null} 
+          <Dashboard
+            current            currentUser={currentUser}
             onLogin={handleSetUser}
             onNavigateToOffice={() => setView('office')}
           />
         ) : (
-          <OperationsOffice 
-            currentUser={currentUser || null} 
+          <OperationsOffice
+            currentUser={currentUser}
             onNavigateToDashboard={() => setView('dashboard')}
           />
         )}
@@ -41,5 +41,3 @@ function App() {
     </div>
   )
 }
-
-export default App
