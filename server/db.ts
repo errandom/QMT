@@ -58,3 +58,4 @@ export async function closePool(): Promise<void> {
     pool = null;
     poolPromise = null;
   }
+}
