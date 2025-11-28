@@ -171,3 +171,4 @@ router.post('/change-password', authenticateToken, async (req: AuthRequest, res:
 });
 
 /** ✅ Critical for build success */
+export default router;
