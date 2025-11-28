@@ -1,3 +1,5 @@
+
+// server/index.ts
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -7,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { getPool } from './db.js';
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
 
-// Static imports for routes
+// Static imports for routes (each must export default router)
 import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import teamsRouter from './routes/teams.js';
@@ -16,6 +18,7 @@ import fieldsRouter from './routes/fields.js';
 import equipmentRouter from './routes/equipment.js';
 import requestsRouter from './routes/requests.js';
 
+/* ----------------------------- Env ----------------------------- */
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -61,9 +64,23 @@ app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
 console.log('✅ Routes registered');
 
 /* ----------------------------- Static / SPA ----------------------------- */
-const clientPath = path.resolve(__dirname, '../client'); // dist/server/../client -> dist/client
+/**
+ * Your build layout in Kudu:
+ *   site/wwwroot/dist/
+ *     ├─ index.html
+ *     ├─ assets/...
+ *     └─ server/ (compiled backend)
+ *
+ * Since __dirname === site/wwwroot/dist/server at runtime,
+ * ".." resolves to site/wwwroot/dist (the client bundle root).
+ */
+const clientPath = path.resolve(__dirname, '..'); // -> dist
 app.use(express.static(clientPath));
 
+/**
+ * SPA fallback AFTER API routers so /api/* hits the API,
+ * and other routes return the built index.html.
+ */
 app.get('*', (req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/api')) return next();
   res.sendFile(path.join(clientPath, 'index.html'));
@@ -73,10 +90,11 @@ app.get('*', (req: Request, res: Response, next: NextFunction) => {
 (async () => {
   try {
     console.log('🚀 Bootstrapping server...');
-    await getPool(); // Warm-up DB
+    await getPool(); // warm DB pool (db.ts handles retries)
     console.log('✅ Database connected (warm)');
   } catch (error) {
     console.error('⚠️ Database warm-up failed:', error);
+    // Continue: endpoints call getPool() on demand and will retry there
   }
 
   app.listen(PORT, () => {
@@ -94,4 +112,5 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 process.on('unhandledRejection', (err) => console.error('UNHANDLED_REJECTION:', err));
-process.onprocess.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.on('uncaughtException', (err) => console.error('UNCAUGHT_EXCEPTION:', err));
+process.on('exit', (code) => console.error(`🔴 process exiting with code ${code}`));
