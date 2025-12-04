@@ -1,12 +1,7 @@
-
 {
   "name": "spark-template",
   "private": true,
   "version": "0.0.0",
-
-  // Remove "type": "module" so Node treats .js files as CommonJS
-  // "type": "module",
-
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run dev\"",
@@ -14,13 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "optimize": "vite optimize",
-
-    // Production start: run your Express server
     "start": "node server.js"
-
-    // Removed:
-    // - dev:server / build:server / hash-password (they referenced TS server paths you aren't using now)
-    // Add them back later if/when you reintroduce a TS server build.
   },
 
   "dependencies": {
@@ -68,10 +57,7 @@
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.5.2",
-
-    // Pin Express to a stable v4 line (v5 is still pre-GA in many ecosystems)
     "express": "^4.19.2",
-
     "framer-motion": "^12.6.2",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",
@@ -101,10 +87,7 @@
     "@tailwindcss/postcss": "^4.1.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
-
-    // These @types are fine even if express is v4; types are compatible.
     "@types/express": "^5.0.5",
-
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mssql": "^9.1.8",
     "@types/react": "^19.0.10",
