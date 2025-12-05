@@ -1,34 +1,27 @@
-import tailwindcss from "@tailwindcss/vite";
+// vite.config.mts
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import { defineConfig, PluginOption } from "vite";
-
+import tailwindcss from "@tailwindcss/vite";
 import sparkPlugin from "@github/spark/spark-vite-plugin";
 import createIconImportProxy from "@github/spark/vitePhosphorIconProxyPlugin";
-import { resolve } from 'path'
+import { resolve } from "path";
 
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
+// PROJECT_ROOT for alias resolution (ESM-friendly)
+const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname;
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    react(),            // SWC-based React plugin (good choice for speed)
     tailwindcss(),
-    // DO NOT REMOVE
-    createIconImportProxy() as PluginOption,
-    sparkPlugin() as PluginOption,
+    createIconImportProxy(), // Spark Phosphor proxy
+    sparkPlugin(),           // Spark Vite plugin
   ],
   resolve: {
     alias: {
-      '@': resolve(projectRoot, 'src')
-    }
+      "@": resolve(projectRoot, "src"),
+    },
   },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      }
-    }
-  }
-});
+  build: {
+    outDir: "dist",
+    // (Optional) If bundle stays large, add manualChunks or split vendor:
