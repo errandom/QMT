@@ -12,7 +12,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -21,19 +21,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # 1) Bring package-lock.json in sync with package.json (no node_modules yet)
-      - name: Sync lockfile with package.json
+      # 1) Sync lockfile with package.json
+      - name: Sync lockfile
         run: npm install --package-lock-only --no-audit --no-fund
 
-      # 2) Do a deterministic clean install based on the freshly-synced lockfile
-      - name: Clean install (npm ci)
+      # 2) Clean install based on lockfile
+      - name: Install dependencies
         run: npm ci
 
-      # 3) Build the Vite frontend
-      - name: Build frontend (Vite)
+      # 3) Build Vite frontend
+      - name: Build frontend
         run: npm run build
 
-      # Upload only what the app needs at runtime
+      # 4) Upload only runtime files
       - name: Upload deployable artifact
         uses: actions/upload-artifact@v4
         with:
