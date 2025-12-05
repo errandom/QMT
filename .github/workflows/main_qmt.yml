@@ -21,19 +21,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # 1) Sync lockfile with package.json
+      # 1) Sync lockfile with package.json (no node_modules yet)
       - name: Sync lockfile
         run: npm install --package-lock-only --no-audit --no-fund
 
-      # 2) Clean install based on lockfile
+      # 2) Clean install based on lockfile (deterministic)
       - name: Install dependencies
         run: npm ci
 
-      # 3) Build Vite frontend
+      # 3) Build Vite frontend (outputs to dist/)
       - name: Build frontend
         run: npm run build
 
-      # 4) Upload only runtime files
+      # 4) Upload only runtime files (minimal payload)
       - name: Upload deployable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,8 +64,13 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F235CDF61BDD429D85E2A40EC4EB1385 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C28A3FED0F5043218788CA86A94EC145 }}
 
+      # 5) Deploy and force Oryx to build (restore runtime deps on server)
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
           slot-name: 'Production'
+          package: './'
+          enable-oryx-build: true
+          # Optional: if you ever include dev files, prevent server builds during deploy
+          #
