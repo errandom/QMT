@@ -1,48 +1,81 @@
-// server.js
-const express = require('express');
-const path = require('path');
-const sql = require('mssql');
+name: Build and deploy Node.js app to Azure Web App - QMT
 
-const app = express();
-const port = process.env.PORT || 3000;
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
-// --- Azure SQL connection (App Settings in Azure Portal) ---
-const sqlConfig = {
-  server: process.env.SQL_SERVER,           // e.g., myserver.database.windows.net
-  database: process.env.SQL_DATABASE,       // e.g., QMT
-  user: process.env.SQL_USER,
-  password: process.env.SQL_PASSWORD,
-  options: {
-    encrypt: true,
-    trustServerCertificate: false
-  }
-};
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
-// Health check
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-// Example: teams API
-app.get('/api/teams', async (_req, res) => {
-  try {
-    const pool = await sql.connect(sqlConfig);
-    const result = await pool.request()
-      .query('SELECT TOP 50 * FROM Teams ORDER BY Id DESC');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('SQL error:', err);
-    res.status(500).json({ error: 'Failed to fetch teams' });
-  }
-});
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-// Serve the Vite build output
-const distDir = path.join(__dirname, 'dist');
-app.use(express.static(distDir));
+      # 1) Sync lockfile with package.json (no install yet)
+      - name: Sync lockfile
+        run: npm install --package-lock-only --no-audit --no-fund
 
-// SPA fallback
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(distDir, 'index.html'));
-});
+      # 2) Deterministic install for build
+      - name: Install dependencies
+        run: npm ci
 
-app.listen(port, () => {
-  console.log(`QMT listening on port ${port}`);
-});
+      # 3) Build Vite frontend (outputs to dist/)
+      - name: Build frontend
+        run: npm run build
+
+      # 4) Prune devDependencies to minimize runtime size
+      - name: Prune dev deps for runtime
+        run: npm prune --production
+
+      # 5) Pack runtime node_modules into a tarball for App Service startup script
+      - name: Create node_modules tarball
+        run: tar -czf node_modules.tar.gz node_modules
+
+      # 6) Upload only runtime files (minimal payload)
+      - name: Upload deployable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qmt-app
+          path: |
+            dist
+            server.js
+            package.json
+            package-lock.json
+            node_modules.tar.gz
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: qmt-app
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BFBAE102322E4F7DAEB495083C6F040E }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F235CDF61BDD429D85E2A40EC4EB1385 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C28A3FED0F5043218788CA86A94EC145 }}
+
+      - name: Deploy to Azure Web App
+               uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'QMT'
+          slot-name: 'Production'
+          package: './'
