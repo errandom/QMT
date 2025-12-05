@@ -1,4 +1,3 @@
-
 // server.js
 const express = require('express');
 const path = require('path');
@@ -46,4 +45,4 @@ app.get('*', (_req, res) => {
 
 app.listen(port, () => {
   console.log(`QMT listening on port ${port}`);
-};
+});
