@@ -21,27 +21,23 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # 1) Sync lockfile with package.json (no install yet)
       - name: Sync lockfile
         run: npm install --package-lock-only --no-audit --no-fund
 
-      # 2) Deterministic install for build
       - name: Install dependencies
         run: npm ci
 
-      # 3) Build Vite frontend (outputs to dist/)
-      - name: Build frontend
+      - name: Build frontend (Vite)
         run: npm run build
 
-      # 4) Prune devDependencies to minimize runtime size
-      - name: Prune dev deps for runtime
+      # Prune dev deps to keep runtime small
+      - name: Prune devDependencies
         run: npm prune --production
 
-      # 5) Pack runtime node_modules into a tarball for App Service startup script
+      # Package runtime deps so App Service can extract them at startup
       - name: Create node_modules tarball
         run: tar -czf node_modules.tar.gz node_modules
 
-      # 6) Upload only runtime files (minimal payload)
       - name: Upload deployable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,7 +60,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: qmt-app
+                   name: qmt-app
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -74,7 +70,7 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C28A3FED0F5043218788CA86A94EC145 }}
 
       - name: Deploy to Azure Web App
-               uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'QMT'
           slot-name: 'Production'
