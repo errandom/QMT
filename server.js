@@ -1,77 +1,80 @@
-name: Build and deploy Node.js app to Azure Web App - QMT
+// server.js
+const express = require('express');
+const path = require('path');
+const sql = require('mssql');
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+const app = express();
+const port = process.env.PORT || 3000;
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+/**
+ * Azure SQL connection settings from environment variables
+ * (App Service → Configuration → Application settings)
+ */
+const sqlConfig = {
+  server: process.env.SQL_SERVER,           // e.g., myserver.database.windows.net
+  database: process.env.SQL_DATABASE,       // e.g., QMT
+  user: process.env.SQL_USER,
+  password: process.env.SQL_PASSWORD,
+  options: {
+    encrypt: true,                          // REQUIRED for Azure SQL
+    trustServerCertificate: false
+  }
+};
 
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+// Optional: maintain a single global pool (prevents multiple pool creation)
+let poolPromise;
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
+/**
+ * Get or create a global connection pool
+ */
+async function getPool() {
+  if (!poolPromise) {
+    poolPromise = sql.connect(sqlConfig);
+  }
+  return poolPromise;
+}
 
-      - name: Sync lockfile
-        run: npm install --package-lock-only --no-audit --no-fund
+/**
+ * Health check
+ */
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, uptime: process.uptime() });
+});
 
-      - name: Install dependencies
-        run: npm ci
+/**
+ * Teams API
+ * Adjust the SQL query to match your actual table/schema
+ * (e.g., 'dbo.Teams' if needed)
+ */
+app.get('/api/teams', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query('SELECT TOP 50 * FROM dbo.Teams ORDER BY Id DESC'); // change to your schema/table if different
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('SQL error:', err);
+    res.status(500).json({ error: 'Failed to fetch teams' });
+  }
+});
 
-      - name: Build frontend (Vite)
-        run: npm run build
+/**
+ * Static assets from Vite build
+ * Ensure your CI built to /dist and deployed it into wwwroot
+ */
+const distDir = path.join(__dirname, 'dist');
+app.use(express.static(distDir));
 
-      # Prune dev deps to keep runtime small
-      - name: Prune devDependencies
-        run: npm prune --production
+/**
+ * * SPA fallback to index.html
+ */
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distDir, 'index.html'));
+});
 
-      # Package runtime deps so App Service can extract them at startup
-      - name: Create node_modules tarball
-        run: tar -czf node_modules.tar.gz node_modules
-
-      - name: Upload deployable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: qmt-app
-          path: |
-            dist
-            server.js
-            package.json
-            package-lock.json
-            node_modules.tar.gz
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-                   name: qmt-app
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BFBAE102322E4F7DAEB495083C6F040E }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F235CDF61BDD429D85E2A40EC4EB1385 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C28A3FED0F5043218788CA86A94EC145 }}
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'QMT'
-          slot-name: 'Production'
-          package: './'
+/**
+ * Start the server
+ */
+app.listen(port, () => {
+  console.log(`QMT app listening on port ${port}`);
+});
