@@ -110,4 +110,3 @@ process.on('uncaughtException', (err) =>process.on('uncaughtException', (err) =>
 // ------------------------------
 app.listen(port, '0.0.0.0', () => {
   console.log(`QMT app listening on port ${port}`);
-});
