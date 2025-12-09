@@ -101,7 +101,7 @@ app.use((err, _req, res, _next) => {
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION:', err);
 });
-process.on('uncaughtException', (err) =>process.on('uncaughtException', (err) => {
+process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err);
 });
 
