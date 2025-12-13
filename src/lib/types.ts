@@ -45,6 +45,15 @@ export interface Field {
   isActive: boolean
 }
 
+export interface User {
+  id: number
+  username: string
+  role: UserRole
+  email?: string
+  fullName?: string
+  isActive: boolean
+}
+
 export interface Contact {
   firstName: string
   lastName: string
@@ -132,14 +141,6 @@ export interface Equipment {
   description?: string
   quantity: number
   assignedTeamId?: string
-}
-
-export interface User {
-  id: string
-  username: string
-  password: string
-  role: UserRole
-  isActive: boolean
 }
 
 export interface WeatherForecast {
