@@ -35,10 +35,11 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
       
       // Convert API user to app User type
       const user: User = {
-        id: response.user.id.toString(),
+        id: response.user.id,
         username: response.user.username,
-        password: '', // Don't store password
         role: response.user.role,
+        email: response.user.email,
+        fullName: response.user.fullName,
         isActive: true
       }
       
