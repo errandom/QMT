@@ -123,10 +123,15 @@ CREATE INDEX idx_users_role ON users(role);
 -- Insert sample data (optional)
 
 -- Sample Users (password: 'Renegades!1982' hashed with bcrypt)
--- You should change these passwords after first login!
+-- ⚠️ CRITICAL: Change these passwords immediately after first login!
 INSERT INTO users (username, password_hash, role, email, full_name, is_active) VALUES
-('QMTadmin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'admin@renegades.ch', 'Administrator', 1),
-('manager1', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'mgmt', 'manager@renegades.ch', 'Team Manager', 1);
+('QMTadmin', '$2a$10$vY8K4Z.VXN3H4g4V5FZx8.xqhJZLO5YkXZ6Z6Z3Z4Z5Z6Z7Z8Z9Z0', 'admin', 'admin@renegades.ch', 'Administrator', 1),
+('manager1', '$2a$10$vY8K4Z.VXN3H4g4V5FZx8.xqhJZLO5YkXZ6Z6Z3Z4Z5Z6Z7Z8Z9Z0', 'mgmt', 'manager@renegades.ch', 'Team Manager', 1);
+
+-- To generate proper password hashes, run this in your Node.js server:
+-- const bcrypt = require('bcryptjs');
+-- const hash = await bcrypt.hash('Renegades!1982', 10);
+-- Then update the password_hash values above with the real hash
 
 -- Sample Teams
 INSERT INTO teams (name, sport, age_group, coaches, active) VALUES
