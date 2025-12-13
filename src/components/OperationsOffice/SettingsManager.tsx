@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useKV } from '@github/spark/hooks'
 import { User, UserRole } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,66 +6,60 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Plus, PencilSimple, UserCircle } from '@phosphor-icons/react'
+import { Plus, UserCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { DEFAULT_USER } from '@/lib/auth'
+import { api } from '@/lib/api'
 
 interface SettingsManagerProps {
   currentUser: User
 }
 
 export default function SettingsManager({ currentUser }: SettingsManagerProps) {
-  const [users = [DEFAULT_USER], setUsers] = useKV<User[]>('users', [DEFAULT_USER])
   const [showDialog, setShowDialog] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [formData, setFormData] = useState<Partial<User>>({
+  const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'user',
-    isActive: true
+    role: 'user' as UserRole,
+    email: '',
+    fullName: ''
   })
 
   const handleCreate = () => {
-    setEditingUser(null)
     setFormData({
       username: '',
       password: '',
       role: 'user',
-      isActive: true
+      email: '',
+      fullName: ''
     })
     setShowDialog(true)
   }
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user)
-    setFormData(user)
-    setShowDialog(true)
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
     
-    if (editingUser) {
-      setUsers((current = [DEFAULT_USER]) =>
-        current.map(u => u.id === editingUser.id ? { ...formData, id: editingUser.id } as User : u)
-      )
-      toast.success('User updated successfully')
-    } else {
-      const newUser: User = {
-        ...formData,
-        id: `user-${Date.now()}`
-      } as User
+    try {
+      await api.register({
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        email: formData.email || undefined,
+        fullName: formData.fullName || undefined
+      })
       
-      setUsers((current = [DEFAULT_USER]) => [...current, newUser])
       toast.success('User created successfully')
+      setShowDialog(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create user')
+    } finally {
+      setIsSubmitting(false)
     }
-    
-    setShowDialog(false)
   }
 
   const isAdmin = currentUser.role === 'admin'
@@ -89,8 +82,14 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                 {currentUser.username.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="space-y-1">
               <div className="font-semibold">{currentUser.username}</div>
+              {currentUser.fullName && (
+                <div className="text-sm text-muted-foreground">{currentUser.fullName}</div>
+              )}
+              {currentUser.email && (
+                <div className="text-sm text-muted-foreground">{currentUser.email}</div>
+              )}
               <Badge variant="secondary">{currentUser.role}</Badge>
             </div>
           </div>
@@ -104,7 +103,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">User Management</h3>
-                <p className="text-sm text-muted-foreground">Manage system users and their roles</p>
+                <p className="text-sm text-muted-foreground">Create new system users (Admin only)</p>
               </div>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2" size={16} />
@@ -112,42 +111,20 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               </Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {users.map((user) => (
-                <Card key={user.id} className={!user.isActive ? 'opacity-60' : ''}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <UserCircle size={16} />
-                          {user.username}
-                        </CardTitle>
-                        <div className="flex gap-2">
-                          <Badge variant="secondary" className="text-xs">{user.role}</Badge>
-                          <Badge variant={user.isActive ? 'default' : 'destructive'} className="text-xs">
-                            {user.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(user)}
-                        disabled={user.id === DEFAULT_USER.id}
-                      >
-                        <PencilSimple size={16} />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardContent className="py-6">
+                <div className="flex items-center justify-center text-muted-foreground">
+                  <UserCircle size={24} className="mr-2" />
+                  <span>User list requires backend API integration</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>{editingUser ? 'Edit User' : 'Create User'}</DialogTitle>
+                <DialogTitle>Create New User</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -157,7 +134,6 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
-                    disabled={editingUser?.id === DEFAULT_USER.id}
                   />
                 </div>
 
@@ -168,8 +144,26 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required={!editingUser}
-                    placeholder={editingUser ? 'Leave blank to keep current' : ''}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   />
                 </div>
 
@@ -187,22 +181,12 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                   </Select>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                    disabled={editingUser?.id === DEFAULT_USER.id}
-                  />
-                  <Label htmlFor="isActive">Active</Label>
-                </div>
-
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingUser ? 'Update' : 'Create'}
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Creating...' : 'Create User'}
                   </Button>
                 </div>
               </form>
