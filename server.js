@@ -164,18 +164,288 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Teams (adjust schema/table to match your DB)
+// ------------------------------
+// Data API endpoints
+// ------------------------------
+
+// Teams
 app.get('/api/teams', async (_req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request()
-      .query('SELECT TOP (50) * FROM dbo.Teams ORDER BY Id DESC'); // change dbo.Teams if needed
+      .query('SELECT * FROM teams ORDER BY name');
     res.json(result.recordset);
   } catch (err) {
-    console.error('SQL error /api/teams:', {
-      message: err.message, code: err.code, number: err.number, state: err.state, name: err.name
-    });
-    res.status(500).json({ error: 'Failed to fetch teams', detail: err.message });
+    console.error('Error fetching teams:', err);
+    res.status(500).json({ error: 'Failed to fetch teams' });
+  }
+});
+
+app.get('/api/teams/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('SELECT * FROM teams WHERE id = @id');
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error fetching team:', err);
+    res.status(500).json({ error: 'Failed to fetch team' });
+  }
+});
+
+// Events
+app.get('/api/events', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT 
+        e.*,
+        t.name as team_name,
+        t.sport,
+        f.name as field_name,
+        s.name as site_name,
+        s.address as site_address
+      FROM events e
+      LEFT JOIN teams t ON e.team_id = t.id
+      LEFT JOIN fields f ON e.field_id = f.id
+      LEFT JOIN sites s ON f.site_id = s.id
+      ORDER BY e.start_time DESC
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching events:', err);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+app.get('/api/events/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        SELECT 
+          e.*,
+          t.name as team_name,
+          t.sport,
+          f.name as field_name,
+          s.name as site_name,
+          s.address as site_address
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN fields f ON e.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error fetching event:', err);
+    res.status(500).json({ error: 'Failed to fetch event' });
+  }
+});
+
+// Sites
+app.get('/api/sites', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT 
+        s.*,
+        (SELECT COUNT(*) FROM fields WHERE site_id = s.id) as field_count
+      FROM sites s
+      ORDER BY s.name
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching sites:', err);
+    res.status(500).json({ error: 'Failed to fetch sites' });
+  }
+});
+
+app.get('/api/sites/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('SELECT * FROM sites WHERE id = @id');
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error fetching site:', err);
+    res.status(500).json({ error: 'Failed to fetch site' });
+  }
+});
+
+// Fields
+app.get('/api/fields', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT 
+        f.*,
+        s.name as site_name,
+        s.address as site_address
+      FROM fields f
+      LEFT JOIN sites s ON f.site_id = s.id
+      ORDER BY s.name, f.name
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching fields:', err);
+    res.status(500).json({ error: 'Failed to fetch fields' });
+  }
+});
+
+app.get('/api/fields/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        SELECT 
+          f.*,
+          s.name as site_name,
+          s.address as site_address
+        FROM fields f
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE f.id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Field not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error fetching field:', err);
+    res.status(500).json({ error: 'Failed to fetch field' });
+  }
+});
+
+// Equipment
+app.get('/api/equipment', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query('SELECT * FROM equipment ORDER BY name');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching equipment:', err);
+    res.status(500).json({ error: 'Failed to fetch equipment' });
+  }
+});
+
+app.get('/api/equipment/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('SELECT * FROM equipment WHERE id = @id');
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Equipment not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error fetching equipment:', err);
+    res.status(500).json({ error: 'Failed to fetch equipment' });
+  }
+});
+
+// Requests
+app.get('/api/requests', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT 
+        r.*,
+        t.name as team_name,
+        f.name as field_name,
+        s.name as site_name
+      FROM requests r
+      LEFT JOIN teams t ON r.team_id = t.id
+      LEFT JOIN fields f ON r.field_id = f.id
+      LEFT JOIN sites s ON f.site_id = s.id
+      ORDER BY r.created_at DESC
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching requests:', err);
+    res.status(500).json({ error: 'Failed to fetch requests' });
+  }
+});
+
+app.get('/api/requests/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        SELECT 
+          r.*,
+          t.name as team_name,
+          f.name as field_name,
+          s.name as site_name
+        FROM requests r
+        LEFT JOIN teams t ON r.team_id = t.id
+        LEFT JOIN fields f ON r.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE r.id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error fetching request:', err);
+    res.status(500).json({ error: 'Failed to fetch request' });
+  }
+});
+
+app.post('/api/requests', async (req, res) => {
+  try {
+    const { request_type, requestor_name, requestor_phone, requestor_email, team_id, field_id, 
+            event_type, requested_date, requested_time, duration, description } = req.body;
+    
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('request_type', sql.NVarChar, request_type)
+      .input('requestor_name', sql.NVarChar, requestor_name)
+      .input('requestor_phone', sql.NVarChar, requestor_phone || null)
+      .input('requestor_email', sql.NVarChar, requestor_email || null)
+      .input('team_id', sql.Int, team_id || null)
+      .input('field_id', sql.Int, field_id || null)
+      .input('event_type', sql.NVarChar, event_type || null)
+      .input('requested_date', sql.Date, requested_date || null)
+      .input('requested_time', sql.Time, requested_time || null)
+      .input('duration', sql.Int, duration || null)
+      .input('description', sql.NVarChar, description || null)
+      .query(`
+        INSERT INTO requests 
+        (request_type, requestor_name, requestor_phone, requestor_email, team_id, field_id, 
+         event_type, requested_date, requested_time, duration, description, status)
+        OUTPUT INSERTED.*
+        VALUES 
+        (@request_type, @requestor_name, @requestor_phone, @requestor_email, @team_id, @field_id,
+         @event_type, @requested_date, @requested_time, @duration, @description, 'pending')
+      `);
+    
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error creating request:', err);
+    res.status(500).json({ error: 'Failed to create request' });
   }
 });
 
