@@ -25,15 +25,43 @@ const sqlConfig = {
   password: process.env.SQL_PASSWORD,
   options: {
     encrypt: true,                          // REQUIRED for Azure SQL
-    trustServerCertificate: false
-  }
+    trustServerCertificate: false,
+    enableArithAbort: true,
+    connectTimeout: 30000,                  // 30 seconds
+    requestTimeout: 30000                   // 30 seconds
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  },
+  // Add connection retry logic
+  connectionRetryTimeout: 60000
 };
 
 // Maintain a single pool
 let poolPromise;
 async function getPool() {
   if (!poolPromise) {
-    poolPromise = sql.connect(sqlConfig);
+    console.log('Attempting SQL connection with config:', {
+      server: sqlConfig.server,
+      database: sqlConfig.database,
+      user: sqlConfig.user,
+      passwordSet: !!sqlConfig.password,
+      options: sqlConfig.options
+    });
+    poolPromise = sql.connect(sqlConfig).then(pool => {
+      console.log('✓ SQL Pool connected successfully');
+      return pool;
+    }).catch(err => {
+      console.error('✗ SQL connection failed:', {
+        message: err.message,
+        code: err.code,
+        originalError: err.originalError?.message
+      });
+      poolPromise = null; // Reset so it can retry
+      throw err;
+    });
   }
   return poolPromise;
 }
@@ -108,6 +136,24 @@ process.on('uncaughtException', (err) => {
 // ------------------------------
 // Start the server (bind to all interfaces)
 // ------------------------------
-app.listen(port, '0.0.0.0', () => {
+app.listen(port, '0.0.0.0', async () => {
   console.log(`QMT app listening on port ${port}`);
+  console.log('Environment variables check:', {
+    SQL_SERVER: process.env.SQL_SERVER,
+    SQL_DATABASE: process.env.SQL_DATABASE,
+    SQL_USER: process.env.SQL_USER,
+    SQL_PASSWORD: process.env.SQL_PASSWORD ? '***SET***' : 'MISSING',
+    NODE_ENV: process.env.NODE_ENV
+  });
+  
+  // Test database connection on startup
+  try {
+    console.log('Testing database connection...');
+    const pool = await getPool();
+    await pool.request().query('SELECT 1 AS test');
+    console.log('✓ Database connection successful');
+  } catch (err) {
+    console.error('✗ Database connection failed on startup:', err.message);
+    console.error('Full error:', err);
+  }
 });
