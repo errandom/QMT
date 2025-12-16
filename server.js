@@ -198,6 +198,70 @@ app.get('/api/teams/:id', async (req, res) => {
   }
 });
 
+app.post('/api/teams', async (req, res) => {
+  try {
+    const { name, sport, age_group, coaches, active } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('name', sql.NVarChar, name)
+      .input('sport', sql.NVarChar, sport)
+      .input('age_group', sql.NVarChar, age_group || null)
+      .input('coaches', sql.NVarChar, coaches || null)
+      .input('active', sql.Bit, active !== false ? 1 : 0)
+      .query(`
+        INSERT INTO teams (name, sport, age_group, coaches, active)
+        OUTPUT INSERTED.*
+        VALUES (@name, @sport, @age_group, @coaches, @active)
+      `);
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error creating team:', err);
+    res.status(500).json({ error: 'Failed to create team' });
+  }
+});
+
+app.put('/api/teams/:id', async (req, res) => {
+  try {
+    const { name, sport, age_group, coaches, active } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('name', sql.NVarChar, name)
+      .input('sport', sql.NVarChar, sport)
+      .input('age_group', sql.NVarChar, age_group || null)
+      .input('coaches', sql.NVarChar, coaches || null)
+      .input('active', sql.Bit, active !== false ? 1 : 0)
+      .query(`
+        UPDATE teams 
+        SET name = @name, sport = @sport, age_group = @age_group, 
+            coaches = @coaches, active = @active, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error updating team:', err);
+    res.status(500).json({ error: 'Failed to update team' });
+  }
+});
+
+app.delete('/api/teams/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM teams WHERE id = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting team:', err);
+    res.status(500).json({ error: 'Failed to delete team' });
+  }
+});
+
 // Events
 app.get('/api/events', async (_req, res) => {
   try {
@@ -253,6 +317,75 @@ app.get('/api/events/:id', async (req, res) => {
   }
 });
 
+app.post('/api/events', async (req, res) => {
+  try {
+    const { team_id, field_id, event_type, start_time, end_time, description, status } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('team_id', sql.Int, team_id || null)
+      .input('field_id', sql.Int, field_id || null)
+      .input('event_type', sql.NVarChar, event_type)
+      .input('start_time', sql.DateTime, start_time)
+      .input('end_time', sql.DateTime, end_time)
+      .input('description', sql.NVarChar, description || null)
+      .input('status', sql.NVarChar, status || 'scheduled')
+      .query(`
+        INSERT INTO events (team_id, field_id, event_type, start_time, end_time, description, status)
+        OUTPUT INSERTED.*
+        VALUES (@team_id, @field_id, @event_type, @start_time, @end_time, @description, @status)
+      `);
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error creating event:', err);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const { team_id, field_id, event_type, start_time, end_time, description, status } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('team_id', sql.Int, team_id || null)
+      .input('field_id', sql.Int, field_id || null)
+      .input('event_type', sql.NVarChar, event_type)
+      .input('start_time', sql.DateTime, start_time)
+      .input('end_time', sql.DateTime, end_time)
+      .input('description', sql.NVarChar, description || null)
+      .input('status', sql.NVarChar, status)
+      .query(`
+        UPDATE events 
+        SET team_id = @team_id, field_id = @field_id, event_type = @event_type,
+            start_time = @start_time, end_time = @end_time, description = @description,
+            status = @status, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error updating event:', err);
+    res.status(500).json({ error: 'Failed to update event' });
+  }
+});
+
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM events WHERE id = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting event:', err);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
 // Sites
 app.get('/api/sites', async (_req, res) => {
   try {
@@ -285,6 +418,65 @@ app.get('/api/sites/:id', async (req, res) => {
   } catch (err) {
     console.error('Error fetching site:', err);
     res.status(500).json({ error: 'Failed to fetch site' });
+  }
+});
+
+app.post('/api/sites', async (req, res) => {
+  try {
+    const { name, address, amenities } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('name', sql.NVarChar, name)
+      .input('address', sql.NVarChar, address || null)
+      .input('amenities', sql.NVarChar, amenities || null)
+      .query(`
+        INSERT INTO sites (name, address, amenities)
+        OUTPUT INSERTED.*
+        VALUES (@name, @address, @amenities)
+      `);
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error creating site:', err);
+    res.status(500).json({ error: 'Failed to create site' });
+  }
+});
+
+app.put('/api/sites/:id', async (req, res) => {
+  try {
+    const { name, address, amenities } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('name', sql.NVarChar, name)
+      .input('address', sql.NVarChar, address || null)
+      .input('amenities', sql.NVarChar, amenities || null)
+      .query(`
+        UPDATE sites 
+        SET name = @name, address = @address, amenities = @amenities, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error updating site:', err);
+    res.status(500).json({ error: 'Failed to update site' });
+  }
+});
+
+app.delete('/api/sites/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM sites WHERE id = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting site:', err);
+    res.status(500).json({ error: 'Failed to delete site' });
   }
 });
 
@@ -333,6 +525,68 @@ app.get('/api/fields/:id', async (req, res) => {
   }
 });
 
+app.post('/api/fields', async (req, res) => {
+  try {
+    const { site_id, name, field_type, surface_type } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('site_id', sql.Int, site_id)
+      .input('name', sql.NVarChar, name)
+      .input('field_type', sql.NVarChar, field_type || null)
+      .input('surface_type', sql.NVarChar, surface_type || null)
+      .query(`
+        INSERT INTO fields (site_id, name, field_type, surface_type)
+        OUTPUT INSERTED.*
+        VALUES (@site_id, @name, @field_type, @surface_type)
+      `);
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error creating field:', err);
+    res.status(500).json({ error: 'Failed to create field' });
+  }
+});
+
+app.put('/api/fields/:id', async (req, res) => {
+  try {
+    const { site_id, name, field_type, surface_type } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('site_id', sql.Int, site_id)
+      .input('name', sql.NVarChar, name)
+      .input('field_type', sql.NVarChar, field_type || null)
+      .input('surface_type', sql.NVarChar, surface_type || null)
+      .query(`
+        UPDATE fields 
+        SET site_id = @site_id, name = @name, field_type = @field_type, 
+            surface_type = @surface_type, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Field not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error updating field:', err);
+    res.status(500).json({ error: 'Failed to update field' });
+  }
+});
+
+app.delete('/api/fields/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM fields WHERE id = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting field:', err);
+    res.status(500).json({ error: 'Failed to delete field' });
+  }
+});
+
 // Equipment
 app.get('/api/equipment', async (_req, res) => {
   try {
@@ -360,6 +614,70 @@ app.get('/api/equipment/:id', async (req, res) => {
   } catch (err) {
     console.error('Error fetching equipment:', err);
     res.status(500).json({ error: 'Failed to fetch equipment' });
+  }
+});
+
+app.post('/api/equipment', async (req, res) => {
+  try {
+    const { name, category, quantity, condition, location } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('name', sql.NVarChar, name)
+      .input('category', sql.NVarChar, category || null)
+      .input('quantity', sql.Int, quantity || 1)
+      .input('condition', sql.NVarChar, condition || 'good')
+      .input('location', sql.NVarChar, location || null)
+      .query(`
+        INSERT INTO equipment (name, category, quantity, condition, location)
+        OUTPUT INSERTED.*
+        VALUES (@name, @category, @quantity, @condition, @location)
+      `);
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error creating equipment:', err);
+    res.status(500).json({ error: 'Failed to create equipment' });
+  }
+});
+
+app.put('/api/equipment/:id', async (req, res) => {
+  try {
+    const { name, category, quantity, condition, location } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('name', sql.NVarChar, name)
+      .input('category', sql.NVarChar, category || null)
+      .input('quantity', sql.Int, quantity)
+      .input('condition', sql.NVarChar, condition)
+      .input('location', sql.NVarChar, location || null)
+      .query(`
+        UPDATE equipment 
+        SET name = @name, category = @category, quantity = @quantity, 
+            condition = @condition, location = @location, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Equipment not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error updating equipment:', err);
+    res.status(500).json({ error: 'Failed to update equipment' });
+  }
+});
+
+app.delete('/api/equipment/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM equipment WHERE id = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting equipment:', err);
+    res.status(500).json({ error: 'Failed to delete equipment' });
   }
 });
 
@@ -446,6 +764,44 @@ app.post('/api/requests', async (req, res) => {
   } catch (err) {
     console.error('Error creating request:', err);
     res.status(500).json({ error: 'Failed to create request' });
+  }
+});
+
+app.put('/api/requests/:id', async (req, res) => {
+  try {
+    const { status, admin_notes } = req.body;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('status', sql.NVarChar, status)
+      .input('admin_notes', sql.NVarChar, admin_notes || null)
+      .query(`
+        UPDATE requests 
+        SET status = @status, admin_notes = @admin_notes, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `);
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error updating request:', err);
+    res.status(500).json({ error: 'Failed to update request' });
+  }
+});
+
+app.delete('/api/requests/:id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM requests WHERE id = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting request:', err);
+    res.status(500).json({ error: 'Failed to delete request' });
   }
 });
 
