@@ -2,6 +2,8 @@
 const express = require('express');
 const path = require('path');
 const sql = require('mssql');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -14,6 +16,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Port: App Service injects PORT (e.g., 8080). Fall back locally.
 const port = process.env.PORT || 3000;
+
+// JWT Secret for authentication
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // ------------------------------
 // Azure SQL connection settings
@@ -86,6 +91,76 @@ app.get('/api/db-check', async (_req, res) => {
       message: err.message, code: err.code, number: err.number, state: err.state, name: err.name
     });
     res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Login endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    console.log('Login attempt for username:', username);
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('username', sql.NVarChar, username)
+      .query(`
+        SELECT id, username, password_hash, role, is_active, email, full_name
+        FROM users
+        WHERE username = @username
+      `);
+
+    if (result.recordset.length === 0) {
+      console.log('User not found:', username);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = result.recordset[0];
+
+    if (!user.is_active) {
+      console.log('Inactive user:', username);
+      return res.status(403).json({ error: 'Account is inactive' });
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      console.log('Invalid password for user:', username);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log('Login successful for user:', username);
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email,
+        fullName: user.full_name,
+      },
+    });
+  } catch (err) {
+    console.error('Login error:', {
+      message: err.message, code: err.code, number: err.number, state: err.state, name: err.name
+    });
+    res.status(500).json({ error: 'Login failed', detail: err.message });
   }
 });
 
