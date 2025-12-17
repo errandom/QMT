@@ -1,66 +1,81 @@
-import { useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-/**
- * Hook to initialize application data from the API on app startup
- * Fetches all necessary data and stores it in the KV store
- */
-export function useInitializeData() {
-  const [, setEvents] = useKV<any[]>('events', [])
-  const [, setTeams] = useKV<any[]>('teams', [])
-  const [, setSites] = useKV<any[]>('sites', [])
-  const [, setFields] = useKV<any[]>('fields', [])
-  const [, setEquipment] = useKV<any[]>('equipment', [])
-  const [, setFacilityRequests] = useKV<any[]>('facility-requests', [])
-  const [, setEquipmentRequests] = useKV<any[]>('equipment-requests', [])
-  const [, setCancellationRequests] = useKV<any[]>('cancellation-requests', [])
+export default function DebugDataLoader() {
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<Record<string, any>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const testEndpoint = async (name: string, fn: () => Promise<any>) => {
+    setLoading(true)
+    try {
+      console.log(`[DEBUG] Testing ${name}...`)
+      const data = await fn()
+      console.log(`[DEBUG] ${name} success:`, data)
+      setResults(prev => ({ ...prev, [name]: data }))
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[name]
+        return newErrors
+      })
+    } catch (error: any) {
+      console.error(`[DEBUG] ${name} failed:`, error)
+      setErrors(prev => ({ ...prev, [name]: error.message }))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        // Fetch all data in parallel
-        const [eventsData, teamsData, sitesData, fieldsData, equipmentData] = await Promise.all([
-          api.getEvents().catch(err => {
-            console.error('Failed to load events:', err)
-            return []
-          }),
-          api.getTeams().catch(err => {
-            console.error('Failed to load teams:', err)
-            return []
-          }),
-          api.getSites().catch(err => {
-            console.error('Failed to load sites:', err)
-            return []
-          }),
-          api.getFields().catch(err => {
-            console.error('Failed to load fields:', err)
-            return []
-          }),
-          api.getEquipment().catch(err => {
-            console.error('Failed to load equipment:', err)
-            return []
-          })
-        ])
+    console.log('DebugDataLoader mounted')
+  }, [])
 
-        // Store data in KV store
-        setEvents(eventsData)
-        setTeams(teamsData)
-        setSites(sitesData)
-        setFields(fieldsData)
-        setEquipment(equipmentData)
+  return (
+    <div className="p-4 space-y-4 max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>API Debug Tools</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Button onClick={() => testEndpoint('getEvents', () => api.getEvents())}>
+              Test Get Events
+            </Button>
+            <Button onClick={() => testEndpoint('getTeams', () => api.getTeams())}>
+              Test Get Teams
+            </Button>
+            <Button onClick={() => testEndpoint('getSites', () => api.getSites())}>
+              Test Get Sites
+            </Button>
+            <Button onClick={() => testEndpoint('getFields', () => api.getFields())}>
+              Test Get Fields
+            </Button>
+            <Button onClick={() => testEndpoint('getEquipment', () => api.getEquipment())}>
+              Test Get Equipment
+            </Button>
+          </div>
 
-        // Initialize request collections as empty (populated by user submissions)
-        setFacilityRequests([])
-        setEquipmentRequests([])
-        setCancellationRequests([])
+          {Object.entries(results).length > 0 && (
+            <div>
+              <h3 className="font-bold">Results:</h3>
+              <pre className="bg-gray-100 p-2 rounded text-sm overflow-auto max-h-96">
+                {JSON.stringify(results, null, 2)}
+              </pre>
+            </div>
+          )}
 
-        console.log('✓ Application data initialized successfully')
-      } catch (error) {
-        console.error('Failed to initialize application data:', error)
-      }
-    }
-
-    initializeData()
-  }, [setEvents, setTeams, setSites, setFields, setEquipment, setFacilityRequests, setEquipmentRequests, setCancellationRequests])
+          {Object.entries(errors).length > 0 && (
+            <div>
+              <h3 className="font-bold text-red-600">Errors:</h3>
+              <pre className="bg-red-100 p-2 rounded text-sm overflow-auto max-h-96">
+                {JSON.stringify(errors, null, 2)}
+              </pre>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
