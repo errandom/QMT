@@ -17,6 +17,7 @@ router.get('/', async (req: Request, res: Response) => {
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY s.name, f.name
     `);
+    console.log('[Fields GET] Retrieved', result.recordset.length, 'fields')
     res.json(result.recordset);
   } catch (error) {
     console.error('Error fetching fields:', error);
