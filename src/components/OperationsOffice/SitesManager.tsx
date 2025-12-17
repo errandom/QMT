@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Site, Amenity, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -19,8 +19,7 @@ interface SitesManagerProps {
 }
 
 export default function SitesManager({ currentUser }: SitesManagerProps) {
-  const [sites = [], setSites] = useKV<Site[]>('sites', [])
-  const [fields = [], setFields] = useKV<any[]>('fields', [])
+  const { sites, setSites, fields, setFields } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingSite, setEditingSite] = useState<Site | null>(null)
 
