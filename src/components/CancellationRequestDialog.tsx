@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { CancellationRequest } from '@/lib/types'
 import { toast } from 'sonner'
 
@@ -25,7 +25,7 @@ export default function CancellationRequestDialog({
   eventDate,
   eventTime
 }: CancellationRequestDialogProps) {
-  const [, setCancellationRequests] = useKV<CancellationRequest[]>('cancellation-requests', [])
+  const { setCancellationRequests } = useData()
   
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
