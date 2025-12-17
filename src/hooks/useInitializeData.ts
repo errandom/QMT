@@ -7,14 +7,14 @@ import { api } from '@/lib/api'
  * Fetches all necessary data and stores it in the KV store
  */
 export function useInitializeData() {
-  const [, setEvents] = useKV('events', [])
-  const [, setTeams] = useKV('teams', [])
-  const [, setSites] = useKV('sites', [])
-  const [, setFields] = useKV('fields', [])
-  const [, setEquipment] = useKV('equipment', [])
-  const [, setFacilityRequests] = useKV('facility-requests', [])
-  const [, setEquipmentRequests] = useKV('equipment-requests', [])
-  const [, setCancellationRequests] = useKV('cancellation-requests', [])
+  const [, setEvents] = useKV<any[]>('events', [])
+  const [, setTeams] = useKV<any[]>('teams', [])
+  const [, setSites] = useKV<any[]>('sites', [])
+  const [, setFields] = useKV<any[]>('fields', [])
+  const [, setEquipment] = useKV<any[]>('equipment', [])
+  const [, setFacilityRequests] = useKV<any[]>('facility-requests', [])
+  const [, setEquipmentRequests] = useKV<any[]>('equipment-requests', [])
+  const [, setCancellationRequests] = useKV<any[]>('cancellation-requests', [])
 
   useEffect(() => {
     const initializeData = async () => {
