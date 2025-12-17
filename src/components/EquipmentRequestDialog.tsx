@@ -66,7 +66,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
     )
   }
 
-  const activeTeams = (teams || []).filter(t => t.isActive)
+  const activeTeams = (teams || [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
