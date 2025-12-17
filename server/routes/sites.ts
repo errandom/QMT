@@ -15,6 +15,7 @@ router.get('/', async (req: Request, res: Response) => {
       FROM sites s
       ORDER BY s.name
     `);
+    console.log('[Sites GET] Retrieved', result.recordset.length, 'sites')
     res.json(result.recordset);
   } catch (error) {
     console.error('Error fetching sites:', error);
