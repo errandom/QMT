@@ -1,368 +1,188 @@
-import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { toast } from 'sonner'
 import { useKV } from '@github/spark/hooks'
-import { FacilityRequest, EventType, Team } from '@/lib/types'
+import { Event, SportType, Team, Field, Site } from '@/lib/types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CalendarBlank } from '@phosphor-icons/react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-interface FacilityRequestDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+interface ScheduleViewProps {
+  sportFilter: 'All Sports' | SportType
+  teamFilter: string
 }
 
-export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRequestDialogProps) {
-  const [requests = [], setRequests] = useKV<FacilityRequest[]>('facility-requests', [])
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const TIME_SLOTS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30']
+
+export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewProps) {
+  const [events = []] = useKV<Event[]>('events', [])
   const [teams = []] = useKV<Team[]>('teams', [])
+  const [fields = []] = useKV<Field[]>('fields', [])
+  const [sites = []] = useKV<Site[]>('sites', [])
+
+  const activeSites = sites
   
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [eventType, setEventType] = useState<EventType | ''>('')
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([])
-  const [purpose, setPurpose] = useState('')
-  const [opponent, setOpponent] = useState('')
-  const [date, setDate] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [duration, setDuration] = useState('90')
-  const [description, setDescription] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    if (!eventType) {
-      toast.error('Please select an event type')
-      setIsLoading(false)
-      return
+  const allEvents = events.filter((event) => {
+    if (teamFilter !== 'all') {
+      if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
     }
 
-    if ((eventType === 'Game' || eventType === 'Practice') && selectedTeams.length === 0) {
-      toast.error('Please select at least one team for game/practice')
-      setIsLoading(false)
-      return
+    if (sportFilter !== 'All Sports') {
+      if (!event.teamIds) return false
+      const eventTeams = teams.filter(t => event.teamIds.includes(t.id))
+      if (eventTeams.length === 0) return false
+      if (!eventTeams.some(t => t.sportType === sportFilter)) return false
     }
 
-    if (eventType !== 'Game' && eventType !== 'Practice' && !purpose) {
-      toast.error('Please specify the purpose')
-      setIsLoading(false)
-      return
-    }
+    return true
+  })
 
-    const newRequest: FacilityRequest = {
-      id: `req-${Date.now()}`,
-      requestorName: name,
-      requestorPhone: phone,
-      eventType: eventType as EventType,
-      teamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
-      purpose: purpose || undefined,
-      opponent: opponent || undefined,
-      date,
-      startTime,
-      duration: parseInt(duration),
-      description: description || undefined,
-      status: 'Pending',
-      createdAt: new Date().toISOString()
-    }
+  const recurringEvents = allEvents.filter(event => event.isRecurring)
 
-    setRequests((current) => [...(current || []), newRequest])
-    toast.success('Facility request submitted successfully')
+  const getEventPosition = (startTime: string, endTime: string) => {
+    const start = timeToMinutes(startTime)
+    const end = timeToMinutes(endTime)
+    const scheduleStart = 17 * 60
+    const scheduleEnd = 22 * 60
     
-    setName('')
-    setPhone('')
-    setEventType('')
-    setSelectedTeams([])
-    setPurpose('')
-    setOpponent('')
-    setDate('')
-    setStartTime('')
-    setDuration('90')
-    setDescription('')
-    setIsLoading(false)
-    onOpenChange(false)
+    if (end <= scheduleStart || start >= scheduleEnd) return null
+    
+    const visibleStart = Math.max(start, scheduleStart)
+    const visibleEnd = Math.min(end, scheduleEnd)
+    const totalMinutes = scheduleEnd - scheduleStart
+    
+    const leftPercent = ((visibleStart - scheduleStart) / totalMinutes) * 100
+    const widthPercent = ((visibleEnd - visibleStart) / totalMinutes) * 100
+    
+    return { left: `${leftPercent}%`, width: `${widthPercent}%` }
   }
 
-  const handleTeamToggle = (teamId: string) => {
-    setSelectedTeams((current) =>
-      current.includes(teamId)
-        ? current.filter(id => id !== teamId)
-        : [...current, teamId]
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
+  const getEventsForSiteFieldDay = (siteId: string, fieldId: string, dayIndex: number) => {
+    return recurringEvents.filter(event => {
+      return event.fieldId === fieldId && event.recurringDays?.includes(dayIndex)
+    })
+  }
+
+  const getTeamColor = (teamIds: string[]) => {
+    const colors = [
+      'bg-blue-500',
+      'bg-green-500',
+      'bg-purple-500',
+      'bg-orange-500',
+      'bg-pink-500',
+      'bg-teal-500'
+    ]
+    const hash = teamIds[0]?.charCodeAt(0) || 0
+    return colors[hash % colors.length]
+  }
+
+  if (recurringEvents.length === 0) {
+    return (
+      <Alert>
+        <CalendarBlank className="h-4 w-4" />
+        <AlertDescription>
+          No recurring events scheduled for the current planning period.
+        </AlertDescription>
+      </Alert>
     )
   }
 
-  const activeTeams = (teams || []).filter(t => t.isActive)
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8"
-        style={{
-          background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
-          backdropFilter: 'blur(16px)'
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-semibold" style={{ color: '#001f3f' }}>
-            Request Facility
-          </DialogTitle>
-          <DialogDescription style={{ color: '#001f3f', opacity: 0.8 }}>
-            Submit a request to book a facility for your team or event
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: '#001f3f' }}>Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone" style={{ color: '#001f3f' }}>Phone *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-          </div>
+    <div className="space-y-6">
+      {activeSites.map(site => {
+        const siteFields = fields.filter(f => f.siteId === site.id)
+        if (siteFields.length === 0) return null
 
-          <div className="space-y-2">
-            <Label htmlFor="event-type" style={{ color: '#001f3f' }}>Event Type *</Label>
-            <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
-              <SelectTrigger 
-                id="event-type"
-                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] hover:!bg-white focus:!bg-white data-[placeholder]:!text-[oklch(0.28_0.005_240)] [&_svg]:!text-[oklch(0.28_0.005_240)] w-full"
-                style={{
-                  boxShadow: 'none',
-                  backdropFilter: 'none'
-                }}
-              >
-                <SelectValue placeholder="Select event type" />
-              </SelectTrigger>
-              <SelectContent 
-                className="!bg-white !text-[oklch(0.28_0.005_240)] !border-[#248bcc] !z-[10000]"
-                style={{
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                  backdropFilter: 'none'
-                }}
-              >
-                <SelectItem value="Game" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Game</SelectItem>
-                <SelectItem value="Practice" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Practice</SelectItem>
-                <SelectItem value="Meeting" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Meeting</SelectItem>
-                <SelectItem value="Other" className="!text-[oklch(0.28_0.005_240)] hover:!bg-[#248bcc]/10 focus:!bg-[#248bcc] focus:!text-white data-[highlighted]:!bg-[#248bcc] data-[highlighted]:!text-white">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(eventType === 'Game' || eventType === 'Practice') && (
-            <div className="space-y-2">
-              <Label style={{ color: '#001f3f' }}>Teams * (select at least one)</Label>
-              <div 
-                className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-32 overflow-y-auto"
-                style={{
-                  border: '1px solid #248bcc',
-                  backgroundColor: 'white'
-                }}
-              >
-                {activeTeams.map(team => (
-                  <div key={team.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`team-${team.id}`}
-                      checked={selectedTeams.includes(team.id)}
-                      onCheckedChange={() => handleTeamToggle(team.id)}
-                    />
-                    <label
-                      htmlFor={`team-${team.id}`}
-                      className="text-sm cursor-pointer"
-                      style={{ color: 'oklch(0.28 0.005 240)' }}
-                    >
-                      {team.name}
-                    </label>
+        return (
+          <Card key={site.id} className="glass-card border-white/30">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold" style={{ color: '#001f3f' }}>{site.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <div className="min-w-[800px]">
+                  <div className="grid grid-cols-6 gap-2 mb-2">
+                    <div className="text-sm font-medium" style={{ color: '#6b7280' }}>Field</div>
+                    {DAYS.map(day => (
+                      <div key={day} className="text-sm font-medium text-center" style={{ color: '#001f3f' }}>
+                        {day}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {eventType === 'Game' && (
-            <div className="space-y-2">
-              <Label htmlFor="opponent" style={{ color: '#001f3f' }}>Opponent (optional)</Label>
-              <Input
-                id="opponent"
-                value={opponent}
-                onChange={(e) => setOpponent(e.target.value)}
-                placeholder="Enter opponent team name"
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-          )}
+                  {siteFields.map(field => (
+                    <div key={field.id} className="grid grid-cols-6 gap-2 mb-4">
+                      <div className="text-sm font-medium flex items-center" style={{ color: '#001f3f' }}>
+                        {field.name}
+                      </div>
+                      
+                      {DAYS.map((day, dayIndex) => {
+                        const dayEvents = getEventsForSiteFieldDay(site.id, field.id, dayIndex + 1)
+                        
+                        return (
+                          <div key={day} className="relative h-12 rounded-lg border" style={{
+                            background: 'rgba(255, 255, 255, 0.4)',
+                            borderColor: 'rgba(36, 139, 204, 0.3)'
+                          }}>
+                            <TooltipProvider>
+                              {dayEvents.map(event => {
+                                const position = getEventPosition(event.startTime, event.endTime)
+                                if (!position) return null
+                                
+                                const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
+                                const teamColor = getTeamColor(event.teamIds || [])
+                                const isCancelled = event.status === 'Cancelled'
+                                
+                                return (
+                                  <Tooltip key={event.id}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        className={`absolute top-1 bottom-1 ${isCancelled ? 'bg-gray-400 opacity-60' : teamColor} rounded px-1 flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-all overflow-hidden shadow-md ${isCancelled ? 'line-through' : ''}`}
+                                        style={position}
+                                      >
+                                        <span className="truncate">
+                                          {eventTeams.map(t => t.name).join(', ')}
+                                        </span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="glass-card border-white/30">
+                                      <div className="text-xs space-y-1">
+                                        <div className="font-semibold">{event.title}</div>
+                                        <div>{event.startTime} - {event.endTime}</div>
+                                        <div>{eventTeams.map(t => t.name).join(', ')}</div>
+                                        <div className="text-muted-foreground">Status: {event.status}</div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )
+                              })}
+                            </TooltipProvider>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
 
-          {eventType && eventType !== 'Game' && eventType !== 'Practice' && (
-            <div className="space-y-2">
-              <Label htmlFor="purpose" style={{ color: '#001f3f' }}>Purpose *</Label>
-              <Input
-                id="purpose"
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                placeholder="Specify the purpose"
-                required
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-          )}
-
-          {(eventType === 'Meeting' || eventType === 'Other') && activeTeams.length > 0 && (
-            <div className="space-y-2">
-              <Label style={{ color: '#001f3f' }}>Teams (optional)</Label>
-              <div 
-                className="grid grid-cols-2 gap-2 p-3 rounded-md max-h-32 overflow-y-auto"
-                style={{
-                  border: '1px solid #248bcc',
-                  backgroundColor: 'white'
-                }}
-              >
-                {activeTeams.map(team => (
-                  <div key={team.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`team-opt-${team.id}`}
-                      checked={selectedTeams.includes(team.id)}
-                      onCheckedChange={() => handleTeamToggle(team.id)}
-                    />
-                    <label
-                      htmlFor={`team-opt-${team.id}`}
-                      className="text-sm cursor-pointer"
-                      style={{ color: 'oklch(0.28 0.005 240)' }}
-                    >
-                      {team.name}
-                    </label>
+                  <div className="grid grid-cols-6 gap-2 mt-2 pt-2 border-t border-white/30">
+                    <div></div>
+                    {DAYS.map(day => (
+                      <div key={day} className="flex justify-between text-[10px] px-1" style={{ color: '#6b7280' }}>
+                        <span>17:00</span>
+                        <span>19:30</span>
+                        <span>22:00</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date" style={{ color: '#001f3f' }}>Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="start-time" style={{ color: '#001f3f' }}>Start Time *</Label>
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="duration" style={{ color: '#001f3f' }}>Duration (min) *</Label>
-              <Input
-                id="duration"
-                type="number"
-                min={(eventType === 'Game' || eventType === 'Practice') ? 90 : 30}
-                step="30"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                required
-                style={{
-                  borderColor: '#248bcc',
-                  backgroundColor: 'white',
-                  color: 'oklch(0.28 0.005 240)'
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description" style={{ color: '#001f3f' }}>Additional Details</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Any additional context or special requirements..."
-              rows={3}
-              style={{
-                borderColor: '#248bcc',
-                backgroundColor: 'white',
-                color: 'oklch(0.28 0.005 240)'
-              }}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              style={{
-                borderColor: '#3e4347',
-                backgroundColor: 'white',
-                color: '#3e4347'
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading}
-              style={{
-                backgroundColor: '#248bcc',
-                color: 'white',
-                border: 'none'
-              }}
-              className="hover:opacity-90"
-            >
-              {isLoading ? 'Submitting...' : 'Submit Request'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
   )
 }
