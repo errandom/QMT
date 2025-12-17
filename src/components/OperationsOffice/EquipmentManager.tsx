@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Equipment, Team, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -19,8 +19,7 @@ interface EquipmentManagerProps {
 }
 
 export default function EquipmentManager({ currentUser }: EquipmentManagerProps) {
-  const [equipment = [], setEquipment] = useKV<Equipment[]>('equipment', [])
-  const [teams = []] = useKV<Team[]>('teams', [])
+  const { equipment, setEquipment, teams } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null)
 
