@@ -1,4 +1,4 @@
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { FacilityRequest, EquipmentRequest, CancellationRequest, User, Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,11 +12,12 @@ interface RequestsManagerProps {
 }
 
 export default function RequestsManager({ currentUser }: RequestsManagerProps) {
-  const [facilityRequests = [], setFacilityRequests] = useKV<FacilityRequest[]>('facility-requests', [])
-  const [equipmentRequests = [], setEquipmentRequests] = useKV<EquipmentRequest[]>('equipment-requests', [])
-  const [cancellationRequests = [], setCancellationRequests] = useKV<CancellationRequest[]>('cancellation-requests', [])
-  const [teams = []] = useKV<any[]>('teams', [])
-  const [events = [], setEvents] = useKV<Event[]>('events', [])
+  const { 
+    facilityRequests, setFacilityRequests,
+    equipmentRequests, setEquipmentRequests,
+    cancellationRequests, setCancellationRequests,
+    teams, events, setEvents 
+  } = useData()
 
   const handleApproveFacility = (requestId: string) => {
     const request = facilityRequests.find(r => r.id === requestId)
