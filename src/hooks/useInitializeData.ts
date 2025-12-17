@@ -105,5 +105,6 @@ export function useInitializeData() {
     return () => {
       isMounted = false
     }
-  }, [setEvents, setTeams, setSites, setFields, setEquipment, setFacilityRequests, setEquipmentRequests, setCancellationRequests])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run only once on mount
 }
