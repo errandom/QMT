@@ -45,11 +45,15 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
   }
 
   const filteredTeams = (teams || []).filter((team: any) => {
-    if (sportFilter === 'All Sports') return team.isActive
-    return team.isActive && team.sportType === sportFilter
+    if (sportFilter === 'All Sports') return true
+    return team.sportType === sportFilter
   })
 
-  const { tackle: tackleTeams, flag: flagTeams } = getTeamsBySportType(teams || [])
+  // Get teams by sport type (includes active and inactive)
+  const tackle: any[] = (teams || []).filter(t => t.sportType === 'Tackle Football')
+  const flag: any[] = (teams || []).filter(t => t.sportType === 'Flag Football')
+  const tackleTeams = tackle
+  const flagTeams = flag
 
   const sportOptions = [
     { 
