@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Equipment, Team, User } from '@/lib/types'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -47,32 +48,63 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
     setShowDialog(true)
   }
 
-  const handleDelete = (equipmentId: string) => {
+  const handleDelete = async (equipmentId: string) => {
     if (confirm('Are you sure you want to delete this equipment?')) {
-      setEquipment((current = []) => current.filter(eq => eq.id !== equipmentId))
-      toast.success('Equipment deleted successfully')
+      try {
+        const numericId = parseInt(equipmentId)
+        if (!isNaN(numericId)) {
+          await api.deleteEquipment(numericId)
+        }
+        setEquipment((current = []) => current.filter(eq => eq.id !== equipmentId))
+        toast.success('Equipment deleted successfully')
+      } catch (error: any) {
+        console.error('Error deleting equipment:', error)
+        toast.error(error.message || 'Failed to delete equipment')
+      }
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (editingEquipment) {
-      setEquipment((current = []) =>
-        current.map(eq => eq.id === editingEquipment.id ? { ...formData, id: editingEquipment.id } as Equipment : eq)
-      )
-      toast.success('Equipment updated successfully')
-    } else {
-      const newEquipment: Equipment = {
-        ...formData,
-        id: `equipment-${Date.now()}`
-      } as Equipment
+    try {
+      if (!formData.name) {
+        toast.error('Equipment name is required')
+        return
+      }
+
+      const apiData = {
+        name: formData.name,
+        category: formData.description || null,
+        quantity: formData.quantity || 1,
+        condition: 'good'
+      }
+
+      if (editingEquipment) {
+        const numericId = parseInt(editingEquipment.id)
+        if (!isNaN(numericId)) {
+          await api.updateEquipment(numericId, apiData)
+        }
+        setEquipment((current = []) =>
+          current.map(eq => eq.id === editingEquipment.id ? { ...formData, id: editingEquipment.id } as Equipment : eq)
+        )
+        toast.success('Equipment updated successfully')
+      } else {
+        const response = await api.createEquipment(apiData)
+        const newEquipment: Equipment = {
+          ...formData,
+          id: response.id?.toString() || `equipment-${Date.now()}`
+        } as Equipment
+        
+        setEquipment((current = []) => [...current, newEquipment])
+        toast.success('Equipment created successfully')
+      }
       
-      setEquipment((current = []) => [...current, newEquipment])
-      toast.success('Equipment created successfully')
+      setShowDialog(false)
+    } catch (error: any) {
+      console.error('Error saving equipment:', error)
+      toast.error(error.message || 'Failed to save equipment')
     }
-    
-    setShowDialog(false)
   }
 
   const getTeamName = (teamId?: string) => {
