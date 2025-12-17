@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Site, Amenity, User } from '@/lib/types'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -79,42 +80,71 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
     setShowDialog(true)
   }
 
-  const handleDelete = (siteId: string) => {
+  const handleDelete = async (siteId: string) => {
     if (confirm('Are you sure you want to delete this site?')) {
-      setSites((current) => (current || []).filter(s => s.id !== siteId))
-      setFields((current: any) => (current || []).filter((f: any) => f.siteId !== siteId))
-      toast.success('Site deleted successfully')
+      try {
+        const numericId = parseInt(siteId)
+        if (!isNaN(numericId)) {
+          await api.deleteSite(numericId)
+        }
+        setSites((current) => (current || []).filter(s => s.id !== siteId))
+        setFields((current: any) => (current || []).filter((f: any) => f.siteId !== siteId))
+        toast.success('Site deleted successfully')
+      } catch (error: any) {
+        console.error('Error deleting site:', error)
+        toast.error(error.message || 'Failed to delete site')
+      }
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (editingSite) {
-      setSites((current) =>
-        (current || []).map(s => s.id === editingSite.id ? { ...formData, id: editingSite.id } as Site : s)
-      )
-      
-      if (!formData.isActive) {
-        setFields((current: any) =>
-          (current || []).map((f: any) => 
-            f.siteId === editingSite.id ? { ...f, isActive: false } : f
-          )
+    try {
+      if (!formData.name) {
+        toast.error('Site name is required')
+        return
+      }
+
+      const apiData = {
+        name: formData.name,
+        address: formData.address || null
+      }
+
+      if (editingSite) {
+        const numericId = parseInt(editingSite.id)
+        if (!isNaN(numericId)) {
+          await api.updateSite(numericId, apiData)
+        }
+        setSites((current) =>
+          (current || []).map(s => s.id === editingSite.id ? { ...formData, id: editingSite.id } as Site : s)
         )
+        
+        if (!formData.isActive) {
+          setFields((current: any) =>
+            (current || []).map((f: any) => 
+              f.siteId === editingSite.id ? { ...f, isActive: false } : f
+            )
+          )
+        }
+        
+        toast.success('Site updated successfully')
+      } else {
+        const response = await api.createSite(apiData)
+        const newSite: Site = {
+          ...formData,
+          id: response.id?.toString() || `site-${Date.now()}`
+        } as Site
+        
+        setSites((current) => [...(current || []), newSite])
+        toast.success('Site created successfully')
       }
       
-      toast.success('Site updated successfully')
-    } else {
-      const newSite: Site = {
-        ...formData,
-        id: `site-${Date.now()}`
-      } as Site
-      
-      setSites((current) => [...(current || []), newSite])
-      toast.success('Site created successfully')
+      setShowDialog(false)
+    } catch (error: any) {
+      console.error('Error saving site:', error)
+      toast.error(error.message || 'Failed to save site')
     }
-    
-    setShowDialog(false)
   }
 
   const handleAmenityChange = (amenity: keyof Amenity) => {
@@ -127,11 +157,28 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
     }))
   }
 
-  const handleToggleActive = (siteId: string, currentActive: boolean) => {
-    setSites((current) =>
-      (current || []).map(s => s.id === siteId ? { ...s, isActive: !currentActive } : s)
-    )
-    toast.success(`Site ${currentActive ? 'deactivated' : 'activated'} successfully`)
+  const handleToggleActive = async (siteId: string, currentActive: boolean) => {
+    try {
+      const site = (sites || []).find(s => s.id === siteId)
+      if (!site) return
+
+      const numericId = parseInt(siteId)
+      if (!isNaN(numericId)) {
+        const apiData = {
+          name: site.name,
+          address: site.address || null
+        }
+        await api.updateSite(numericId, apiData)
+      }
+      
+      setSites((current) =>
+        (current || []).map(s => s.id === siteId ? { ...s, isActive: !currentActive } : s)
+      )
+      toast.success(`Site ${currentActive ? 'deactivated' : 'activated'} successfully`)
+    } catch (error: any) {
+      console.error('Error toggling site status:', error)
+      toast.error(error.message || 'Failed to update site status')
+    }
   }
 
   return (
