@@ -56,51 +56,78 @@ app.use('/api/auth', authRouter);
 // Public read-only routes (GET requests - anyone can view data)
 // Handle GET requests without authentication
 app.get('/api/events', async (req: Request, res: Response, next: NextFunction) => {
-  const pool = await getPool();
-  const result = await pool.request().query(`
-    SELECT 
-      e.*,
-      t.name as team_name,
-      t.sport,
-      f.name as field_name,
-      s.name as site_name,
-      s.address as site_address
-    FROM events e
-    LEFT JOIN teams t ON e.team_id = t.id
-    LEFT JOIN fields f ON e.field_id = f.id
-    LEFT JOIN sites s ON f.site_id = s.id
-    ORDER BY e.start_time DESC
-  `);
-  console.log('[API GET Events] Retrieved', result.recordset.length, 'events');
-  res.json(result.recordset);
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT 
+        e.*,
+        t.name as team_name,
+        t.sport,
+        f.name as field_name,
+        s.name as site_name,
+        s.address as site_address
+      FROM events e
+      LEFT JOIN teams t ON e.team_id = t.id
+      LEFT JOIN fields f ON e.field_id = f.id
+      LEFT JOIN sites s ON f.site_id = s.id
+      ORDER BY e.start_time DESC
+    `);
+    console.log('[API GET Events] Retrieved', result.recordset.length, 'events');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('[API GET Events] ERROR:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get('/api/teams', async (req: Request, res: Response, next: NextFunction) => {
-  const pool = await getPool();
-  const result = await pool.request().query(`SELECT * FROM teams WHERE active = 1 ORDER BY sport, name`);
-  console.log('[API GET Teams] Retrieved', result.recordset.length, 'teams');
-  res.json(result.recordset);
+  try {
+    const pool = await getPool();
+    // IMPORTANT: Return ALL teams, regardless of active status
+    // The frontend filters based on active status in the UI
+    const result = await pool.request().query(`SELECT * FROM teams ORDER BY sport, name`);
+    console.log('[API GET Teams] Retrieved', result.recordset.length, 'teams');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('[API GET Teams] ERROR:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get('/api/sites', async (req: Request, res: Response, next: NextFunction) => {
-  const pool = await getPool();
-  const result = await pool.request().query(`SELECT s.*, (SELECT COUNT(*) FROM fields WHERE site_id = s.id) as field_count FROM sites s ORDER BY s.name`);
-  console.log('[API GET Sites] Retrieved', result.recordset.length, 'sites');
-  res.json(result.recordset);
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`SELECT s.*, (SELECT COUNT(*) FROM fields WHERE site_id = s.id) as field_count FROM sites s ORDER BY s.name`);
+    console.log('[API GET Sites] Retrieved', result.recordset.length, 'sites');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('[API GET Sites] ERROR:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get('/api/fields', async (req: Request, res: Response, next: NextFunction) => {
-  const pool = await getPool();
-  const result = await pool.request().query(`SELECT f.*, s.name as site_name, s.address as site_address FROM fields f LEFT JOIN sites s ON f.site_id = s.id ORDER BY s.name, f.name`);
-  console.log('[API GET Fields] Retrieved', result.recordset.length, 'fields');
-  res.json(result.recordset);
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`SELECT f.*, s.name as site_name, s.address as site_address FROM fields f LEFT JOIN sites s ON f.site_id = s.id ORDER BY s.name, f.name`);
+    console.log('[API GET Fields] Retrieved', result.recordset.length, 'fields');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('[API GET Fields] ERROR:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get('/api/equipment', async (req: Request, res: Response, next: NextFunction) => {
-  const pool = await getPool();
-  const result = await pool.request().query(`SELECT * FROM equipment ORDER BY name`);
-  console.log('[API GET Equipment] Retrieved', result.recordset.length, 'equipment items');
-  res.json(result.recordset);
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`SELECT * FROM equipment ORDER BY name`);
+    console.log('[API GET Equipment] Retrieved', result.recordset.length, 'equipment items');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('[API GET Equipment] ERROR:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get('/api/events/:id', async (req: Request, res: Response, next: NextFunction) => {
