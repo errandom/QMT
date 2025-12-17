@@ -12,6 +12,7 @@ router.get('/', async (req: Request, res: Response) => {
       SELECT * FROM equipment 
       ORDER BY name
     `);
+    console.log('[Equipment GET] Retrieved', result.recordset.length, 'equipment items')
     res.json(result.recordset);
   } catch (error) {
     console.error('Error fetching equipment:', error);
