@@ -1,7 +1,7 @@
 import { Team, SportType } from './types'
 
 export function filterTeamsBySport(teams: Team[], sportType: SportType): Team[] {
-  return teams.filter(team => team.isActive && team.sportType === sportType)
+  return teams.filter(team => team.sportType === sportType)
 }
 
 export function getTeamsBySportType(teams: Team[]): {
