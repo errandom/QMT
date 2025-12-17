@@ -19,7 +19,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   const [fields = []] = useKV<Field[]>('fields', [])
   const [sites = []] = useKV<Site[]>('sites', [])
 
-  const activeSites = sites.filter(s => s.isActive && s.isSportsFacility)
+  const activeSites = sites
   
   const allEvents = events.filter((event) => {
     if (teamFilter !== 'all') {
@@ -94,7 +94,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   return (
     <div className="space-y-6">
       {activeSites.map(site => {
-        const siteFields = fields.filter(f => f.siteId === site.id && f.isActive)
+        const siteFields = fields.filter(f => f.siteId === site.id)
         if (siteFields.length === 0) return null
 
         return (
