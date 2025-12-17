@@ -5,10 +5,14 @@ import Dashboard from '@/components/Dashboard'
 import OperationsOffice from '@/components/OperationsOffice'
 import { User } from '@/lib/types'
 import { getCurrentUser, logout } from '@/lib/auth'
+import { useInitializeData } from '@/hooks/useInitializeData'
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [view, setView] = useState<'dashboard' | 'office'>('dashboard')
+
+  // Initialize application data from API on mount
+  useInitializeData()
 
   // Restore user from token on mount
   useEffect(() => {
