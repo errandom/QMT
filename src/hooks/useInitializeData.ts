@@ -7,20 +7,22 @@ import { api } from '@/lib/api'
  * Fetches all necessary data and stores it in the KV store
  */
 export function useInitializeData() {
-  const [, setEvents] = useKV<any[]>('events', [])
-  const [, setTeams] = useKV<any[]>('teams', [])
-  const [, setSites] = useKV<any[]>('sites', [])
-  const [, setFields] = useKV<any[]>('fields', [])
-  const [, setEquipment] = useKV<any[]>('equipment', [])
-  const [, setFacilityRequests] = useKV<any[]>('facility-requests', [])
-  const [, setEquipmentRequests] = useKV<any[]>('equipment-requests', [])
-  const [, setCancellationRequests] = useKV<any[]>('cancellation-requests', [])
+  const [events, setEvents] = useKV<any[]>('events', [])
+  const [teams, setTeams] = useKV<any[]>('teams', [])
+  const [sites, setSites] = useKV<any[]>('sites', [])
+  const [fields, setFields] = useKV<any[]>('fields', [])
+  const [equipment, setEquipment] = useKV<any[]>('equipment', [])
+  const [facilityRequests, setFacilityRequests] = useKV<any[]>('facility-requests', [])
+  const [equipmentRequests, setEquipmentRequests] = useKV<any[]>('equipment-requests', [])
+  const [cancellationRequests, setCancellationRequests] = useKV<any[]>('cancellation-requests', [])
 
   useEffect(() => {
     let isMounted = true
     const initializeData = async () => {
       try {
-        console.log('[useInitializeData] Starting data initialization...')
+        console.log('========================================')
+        console.log('[useInitializeData] 🚀 Starting data initialization...')
+        console.log('========================================')
         
         // Fetch all data in parallel
         const results = await Promise.allSettled([
@@ -31,7 +33,10 @@ export function useInitializeData() {
           api.getEquipment()
         ])
 
-        if (!isMounted) return
+        if (!isMounted) {
+          console.log('[useInitializeData] ⚠️ Component unmounted, aborting')
+          return
+        }
 
         const eventsData = results[0].status === 'fulfilled' ? results[0].value : []
         const teamsData = results[1].status === 'fulfilled' ? results[1].value : []
@@ -39,41 +44,59 @@ export function useInitializeData() {
         const fieldsData = results[3].status === 'fulfilled' ? results[3].value : []
         const equipmentData = results[4].status === 'fulfilled' ? results[4].value : []
 
-        // Detailed logging for debugging
-        console.log('[useInitializeData] Events API Response:', eventsData)
-        console.log('[useInitializeData] Teams API Response:', teamsData)
-        console.log('[useInitializeData] Sites API Response:', sitesData)
-        console.log('[useInitializeData] Fields API Response:', fieldsData)
-        console.log('[useInitializeData] Equipment API Response:', equipmentData)
+        // Log each response in detail
+        console.log('📊 [useInitializeData] API RESPONSES:')
+        console.log(`   Events: ${eventsData.length} records`, eventsData)
+        console.log(`   Teams: ${teamsData.length} records`, teamsData)
+        console.log(`   Sites: ${sitesData.length} records`, sitesData)
+        console.log(`   Fields: ${fieldsData.length} records`, fieldsData)
+        console.log(`   Equipment: ${equipmentData.length} records`, equipmentData)
 
-        if (results[0].status === 'rejected') console.error('[useInitializeData] Failed to load events:', results[0].reason)
-        if (results[1].status === 'rejected') console.error('[useInitializeData] Failed to load teams:', results[1].reason)
-        if (results[2].status === 'rejected') console.error('[useInitializeData] Failed to load sites:', results[2].reason)
-        if (results[3].status === 'rejected') console.error('[useInitializeData] Failed to load fields:', results[3].reason)
-        if (results[4].status === 'rejected') console.error('[useInitializeData] Failed to load equipment:', results[4].reason)
+        // Log any errors
+        if (results[0].status === 'rejected') console.error('[useInitializeData] ❌ Events API Error:', results[0].reason)
+        if (results[1].status === 'rejected') console.error('[useInitializeData] ❌ Teams API Error:', results[1].reason)
+        if (results[2].status === 'rejected') console.error('[useInitializeData] ❌ Sites API Error:', results[2].reason)
+        if (results[3].status === 'rejected') console.error('[useInitializeData] ❌ Fields API Error:', results[3].reason)
+        if (results[4].status === 'rejected') console.error('[useInitializeData] ❌ Equipment API Error:', results[4].reason)
 
-        // Store data in KV store
-        console.log('[useInitializeData] Storing data into KV store:', { 
-          events: eventsData.length, 
-          teams: teamsData.length, 
-          sites: sitesData.length, 
-          fields: fieldsData.length, 
-          equipment: equipmentData.length 
-        })
+        // Store data in KV store - with verification
+        console.log('💾 [useInitializeData] Storing data into KV store...')
+        
+        console.log('   Setting events:', eventsData.length, 'items')
         setEvents(eventsData)
+        
+        console.log('   Setting teams:', teamsData.length, 'items')
         setTeams(teamsData)
+        
+        console.log('   Setting sites:', sitesData.length, 'items')
         setSites(sitesData)
+        
+        console.log('   Setting fields:', fieldsData.length, 'items')
         setFields(fieldsData)
+        
+        console.log('   Setting equipment:', equipmentData.length, 'items')
         setEquipment(equipmentData)
 
         // Initialize request collections as empty (populated by user submissions)
+        console.log('   Setting requests (empty)...')
         setFacilityRequests([])
         setEquipmentRequests([])
         setCancellationRequests([])
 
-        console.log('✓ [useInitializeData] Application data initialized successfully')
+        console.log('========================================')
+        console.log('✅ [useInitializeData] Application data initialized successfully!')
+        console.log('Summary:')
+        console.log(`   Events: ${eventsData.length}`)
+        console.log(`   Teams: ${teamsData.length}`)
+        console.log(`   Sites: ${sitesData.length}`)
+        console.log(`   Fields: ${fieldsData.length}`)
+        console.log(`   Equipment: ${equipmentData.length}`)
+        console.log('========================================')
       } catch (error) {
-        console.error('[useInitializeData] Failed to initialize application data:', error)
+        console.error('========================================')
+        console.error('❌ [useInitializeData] FATAL ERROR during initialization:')
+        console.error(error)
+        console.error('========================================')
       }
     }
 
