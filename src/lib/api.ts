@@ -34,59 +34,68 @@ export function setStoredUser(user: any): void {
 
 // Data transformation utilities to convert between database snake_case and frontend camelCase
 function transformTeam(team: any): any {
+  if (!team) return team;
   return {
     ...team,
-    id: team.id?.toString() || '',
-    sportType: team.sport || team.sportType,
-    isActive: team.active !== undefined ? team.active : team.isActive,
-    headCoach: team.head_coach || team.headCoach,
-    teamManager: team.team_manager || team.teamManager,
-    rosterSize: team.roster_size || team.rosterSize
+    // Ensure id is string
+    id: String(team.id || ''),
+    // Handle sport field - could be 'sport' or 'sportType'
+    sportType: team.sportType || team.sport,
+    // Handle active field - could be number (0/1) or boolean - convert to boolean for consistency
+    isActive: team.isActive !== undefined ? Boolean(team.isActive) : (team.active !== undefined ? Boolean(team.active) : true),
+    // Handle coach fields
+    headCoach: team.headCoach || team.head_coach,
+    teamManager: team.teamManager || team.team_manager,
+    // Handle roster size
+    rosterSize: team.rosterSize || team.roster_size
   };
 }
 
 function transformSite(site: any): any {
+  if (!site) return site;
   return {
     ...site,
-    id: site.id?.toString() || '',
-    zipCode: site.zip_code || site.zipCode,
-    contactFirstName: site.contact_first_name || site.contactFirstName,
-    contactLastName: site.contact_last_name || site.contactLastName,
-    contactPhone: site.contact_phone || site.contactPhone,
-    contactEmail: site.contact_email || site.contactEmail,
-    isSportsFacility: site.is_sports_facility !== undefined ? site.is_sports_facility : site.isSportsFacility,
-    isActive: site.active !== undefined ? site.active : site.isActive
+    id: String(site.id || ''),
+    zipCode: site.zipCode || site.zip_code,
+    contactFirstName: site.contactFirstName || site.contact_first_name,
+    contactLastName: site.contactLastName || site.contact_last_name,
+    contactPhone: site.contactPhone || site.contact_phone,
+    contactEmail: site.contactEmail || site.contact_email,
+    isSportsFacility: site.isSportsFacility !== undefined ? Boolean(site.isSportsFacility) : (site.is_sports_facility !== undefined ? Boolean(site.is_sports_facility) : false),
+    isActive: site.isActive !== undefined ? Boolean(site.isActive) : (site.active !== undefined ? Boolean(site.active) : true)
   };
 }
 
 function transformField(field: any): any {
+  if (!field) return field;
   return {
     ...field,
-    id: field.id?.toString() || '',
-    siteId: (field.site_id || field.siteId)?.toString() || '',
-    turfType: field.turf_type || field.turfType,
-    hasLights: field.has_lights !== undefined ? field.has_lights : field.hasLights,
-    fieldSize: field.field_size || field.fieldSize,
-    isActive: field.active !== undefined ? field.active : field.isActive
+    id: String(field.id || ''),
+    siteId: String(field.siteId || field.site_id || ''),
+    turfType: field.turfType || field.turf_type,
+    hasLights: field.hasLights !== undefined ? Boolean(field.hasLights) : (field.has_lights !== undefined ? Boolean(field.has_lights) : false),
+    fieldSize: field.fieldSize || field.field_size,
+    isActive: field.isActive !== undefined ? Boolean(field.isActive) : (field.active !== undefined ? Boolean(field.active) : true)
   };
 }
 
 function transformEquipment(equipment: any): any {
+  if (!equipment) return equipment;
   return {
     ...equipment,
-    id: equipment.id?.toString() || '',
-    isActive: equipment.active !== undefined ? equipment.active : equipment.isActive
+    id: String(equipment.id || ''),
+    isActive: equipment.isActive !== undefined ? Boolean(equipment.isActive) : (equipment.active !== undefined ? Boolean(equipment.active) : true)
   };
 }
 
 function transformEvent(event: any): any {
+  if (!event) return event;
   return {
     ...event,
-    id: event.id?.toString() || '',
-    eventType: event.event_type || event.eventType,
-    teamId: (event.team_id || event.teamId)?.toString() || '',
-    fieldId: (event.field_id || event.fieldId)?.toString() || '',
-    organizerId: (event.organizer_id || event.organizerId)?.toString() || ''
+    id: String(event.id || ''),
+    eventType: event.eventType || event.event_type,
+    teamId: String(event.teamId || event.team_id || ''),
+    fieldId: String(event.fieldId || event.field_id || '')
   };
 }
 
