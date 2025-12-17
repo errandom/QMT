@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import sql from 'mssql';
 import { getPool } from './db.js';
 
 // Import routes
@@ -52,15 +53,108 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // Public routes (no authentication required)
 app.use('/api/auth', authRouter);
 
-// Public read-only routes (anyone can view events, teams, sites, fields)
-app.get('/api/events', eventsRouter);
-app.get('/api/events/:id', eventsRouter);
-app.get('/api/teams', teamsRouter);
-app.get('/api/teams/:id', teamsRouter);
-app.get('/api/sites', sitesRouter);
-app.get('/api/sites/:id', sitesRouter);
-app.get('/api/fields', fieldsRouter);
-app.get('/api/fields/:id', fieldsRouter);
+// Public read-only routes (GET requests - anyone can view data)
+// Handle GET requests without authentication
+app.get('/api/events', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request().query(`
+    SELECT 
+      e.*,
+      t.name as team_name,
+      t.sport,
+      f.name as field_name,
+      s.name as site_name,
+      s.address as site_address
+    FROM events e
+    LEFT JOIN teams t ON e.team_id = t.id
+    LEFT JOIN fields f ON e.field_id = f.id
+    LEFT JOIN sites s ON f.site_id = s.id
+    ORDER BY e.start_time DESC
+  `);
+  console.log('[API GET Events] Retrieved', result.recordset.length, 'events');
+  res.json(result.recordset);
+});
+
+app.get('/api/teams', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT * FROM teams WHERE active = 1 ORDER BY sport, name`);
+  console.log('[API GET Teams] Retrieved', result.recordset.length, 'teams');
+  res.json(result.recordset);
+});
+
+app.get('/api/sites', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT s.*, (SELECT COUNT(*) FROM fields WHERE site_id = s.id) as field_count FROM sites s ORDER BY s.name`);
+  console.log('[API GET Sites] Retrieved', result.recordset.length, 'sites');
+  res.json(result.recordset);
+});
+
+app.get('/api/fields', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT f.*, s.name as site_name, s.address as site_address FROM fields f LEFT JOIN sites s ON f.site_id = s.id ORDER BY s.name, f.name`);
+  console.log('[API GET Fields] Retrieved', result.recordset.length, 'fields');
+  res.json(result.recordset);
+});
+
+app.get('/api/equipment', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT * FROM equipment ORDER BY name`);
+  console.log('[API GET Equipment] Retrieved', result.recordset.length, 'equipment items');
+  res.json(result.recordset);
+});
+
+app.get('/api/events/:id', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, req.params.id)
+    .query(`
+      SELECT 
+        e.*,
+        t.name as team_name,
+        t.sport,
+        f.name as field_name,
+        s.name as site_name,
+        s.address as site_address
+      FROM events e
+      LEFT JOIN teams t ON e.team_id = t.id
+      LEFT JOIN fields f ON e.field_id = f.id
+      LEFT JOIN sites s ON f.site_id = s.id
+      WHERE e.id = @id
+    `);
+  res.json(result.recordset.length > 0 ? result.recordset[0] : { error: 'Not found' });
+});
+
+app.get('/api/teams/:id', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, req.params.id)
+    .query(`SELECT * FROM teams WHERE id = @id`);
+  res.json(result.recordset.length > 0 ? result.recordset[0] : { error: 'Not found' });
+});
+
+app.get('/api/sites/:id', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, req.params.id)
+    .query(`SELECT * FROM sites WHERE id = @id`);
+  res.json(result.recordset.length > 0 ? result.recordset[0] : { error: 'Not found' });
+});
+
+app.get('/api/fields/:id', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, req.params.id)
+    .query(`SELECT f.*, s.name as site_name, s.address as site_address FROM fields f LEFT JOIN sites s ON f.site_id = s.id WHERE f.id = @id`);
+  res.json(result.recordset.length > 0 ? result.recordset[0] : { error: 'Not found' });
+});
+
+app.get('/api/equipment/:id', async (req: Request, res: Response, next: NextFunction) => {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, req.params.id)
+    .query(`SELECT * FROM equipment WHERE id = @id`);
+  res.json(result.recordset.length > 0 ? result.recordset[0] : { error: 'Not found' });
+});
 
 // Public request submission (anyone can submit a request)
 app.post('/api/requests', requestsRouter);
