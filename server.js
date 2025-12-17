@@ -49,12 +49,27 @@ let poolPromise;
 async function getPool() {
   if (!poolPromise) {
     console.log('Attempting SQL connection with config:', {
-      server: sqlConfig.server,
-      database: sqlConfig.database,
-      user: sqlConfig.user,
+      server: sqlConfig.server || 'NOT SET',
+      database: sqlConfig.database || 'NOT SET',
+      user: sqlConfig.user || 'NOT SET',
       passwordSet: !!sqlConfig.password,
       options: sqlConfig.options
     });
+    
+    // CHECK IF CREDENTIALS ARE MISSING
+    if (!sqlConfig.server || !sqlConfig.database || !sqlConfig.user || !sqlConfig.password) {
+      console.error('❌ CRITICAL: Database credentials missing!');
+      console.error('Missing:', {
+        SQL_SERVER: !sqlConfig.server,
+        SQL_DATABASE: !sqlConfig.database,
+        SQL_USER: !sqlConfig.user,
+        SQL_PASSWORD: !sqlConfig.password
+      });
+      console.error('Set these environment variables in Azure App Service Configuration');
+      poolPromise = Promise.reject(new Error('Database credentials not configured'));
+      return poolPromise;
+    }
+    
     poolPromise = sql.connect(sqlConfig).then(pool => {
       console.log('✓ SQL Pool connected successfully');
       return pool;
@@ -91,6 +106,53 @@ app.get('/api/db-check', async (_req, res) => {
       message: err.message, code: err.code, number: err.number, state: err.state, name: err.name
     });
     res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Enhanced diagnostic endpoint to check data loading
+app.get('/api/diagnostic', async (_req, res) => {
+  console.log('========== DIAGNOSTIC CHECK ==========');
+  const results = {
+    timestamp: new Date().toISOString(),
+    database: {},
+    data: {}
+  };
+
+  try {
+    const pool = await getPool();
+    console.log('✓ Pool connected');
+    
+    // Check each table
+    const tables = ['teams', 'sites', 'fields', 'equipment', 'events'];
+    
+    for (const table of tables) {
+      try {
+        const countResult = await pool.request().query(`SELECT COUNT(*) as cnt FROM ${table}`);
+        const count = countResult.recordset[0]?.cnt || 0;
+        results.database[table] = count;
+        console.log(`  ${table}: ${count} records`);
+        
+        // Get first record as sample
+        if (count > 0) {
+          const sampleResult = await pool.request().query(`SELECT TOP 1 * FROM ${table}`);
+          results.data[table] = {
+            count,
+            sample: sampleResult.recordset[0]
+          };
+        } else {
+          results.data[table] = { count: 0, sample: null };
+        }
+      } catch (err) {
+        results.database[table] = 'ERROR: ' + err.message;
+        console.error(`  ERROR querying ${table}:`, err.message);
+      }
+    }
+    
+    console.log('========== DIAGNOSTIC COMPLETE ==========');
+    res.json(results);
+  } catch (err) {
+    console.error('Diagnostic error:', err);
+    res.status(500).json({ error: err.message, results });
   }
 });
 
@@ -171,13 +233,21 @@ app.post('/api/auth/login', async (req, res) => {
 // Teams
 app.get('/api/teams', async (_req, res) => {
   try {
+    console.log('[GET /api/teams] 🔄 Fetching teams...');
     const pool = await getPool();
+    console.log('[GET /api/teams] ✓ Pool obtained');
     const result = await pool.request()
       .query('SELECT * FROM teams ORDER BY name');
+    console.log('[GET /api/teams] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/teams] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error fetching teams:', err);
-    res.status(500).json({ error: 'Failed to fetch teams' });
+    console.error('[GET /api/teams] ❌ Error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'Failed to fetch teams', details: err.message });
   }
 });
 
@@ -265,7 +335,9 @@ app.delete('/api/teams/:id', async (req, res) => {
 // Events
 app.get('/api/events', async (_req, res) => {
   try {
+    console.log('[GET /api/events] 🔄 Fetching events...');
     const pool = await getPool();
+    console.log('[GET /api/events] ✓ Pool obtained');
     const result = await pool.request().query(`
       SELECT 
         e.*,
@@ -280,10 +352,16 @@ app.get('/api/events', async (_req, res) => {
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
     `);
+    console.log('[GET /api/events] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/events] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error fetching events:', err);
-    res.status(500).json({ error: 'Failed to fetch events' });
+    console.error('[GET /api/events] ❌ Error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'Failed to fetch events', details: err.message });
   }
 });
 
@@ -389,7 +467,9 @@ app.delete('/api/events/:id', async (req, res) => {
 // Sites
 app.get('/api/sites', async (_req, res) => {
   try {
+    console.log('[GET /api/sites] 🔄 Fetching sites...');
     const pool = await getPool();
+    console.log('[GET /api/sites] ✓ Pool obtained');
     const result = await pool.request().query(`
       SELECT 
         s.*,
@@ -397,10 +477,16 @@ app.get('/api/sites', async (_req, res) => {
       FROM sites s
       ORDER BY s.name
     `);
+    console.log('[GET /api/sites] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/sites] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error fetching sites:', err);
-    res.status(500).json({ error: 'Failed to fetch sites' });
+    console.error('[GET /api/sites] ❌ Error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'Failed to fetch sites', details: err.message });
   }
 });
 
@@ -483,7 +569,9 @@ app.delete('/api/sites/:id', async (req, res) => {
 // Fields
 app.get('/api/fields', async (_req, res) => {
   try {
+    console.log('[GET /api/fields] 🔄 Fetching fields...');
     const pool = await getPool();
+    console.log('[GET /api/fields] ✓ Pool obtained');
     const result = await pool.request().query(`
       SELECT 
         f.*,
@@ -493,10 +581,16 @@ app.get('/api/fields', async (_req, res) => {
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY s.name, f.name
     `);
+    console.log('[GET /api/fields] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/fields] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error fetching fields:', err);
-    res.status(500).json({ error: 'Failed to fetch fields' });
+    console.error('[GET /api/fields] ❌ Error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'Failed to fetch fields', details: err.message });
   }
 });
 
@@ -590,13 +684,21 @@ app.delete('/api/fields/:id', async (req, res) => {
 // Equipment
 app.get('/api/equipment', async (_req, res) => {
   try {
+    console.log('[GET /api/equipment] 🔄 Fetching equipment...');
     const pool = await getPool();
+    console.log('[GET /api/equipment] ✓ Pool obtained');
     const result = await pool.request()
       .query('SELECT * FROM equipment ORDER BY name');
+    console.log('[GET /api/equipment] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/equipment] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error fetching equipment:', err);
-    res.status(500).json({ error: 'Failed to fetch equipment' });
+    console.error('[GET /api/equipment] ❌ Error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'Failed to fetch equipment', details: err.message });
   }
 });
 
