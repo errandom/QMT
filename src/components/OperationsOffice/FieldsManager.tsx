@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Field, Site, TurfType, FieldSize, User } from '@/lib/types'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -55,32 +56,63 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
     setShowDialog(true)
   }
 
-  const handleDelete = (fieldId: string) => {
+  const handleDelete = async (fieldId: string) => {
     if (confirm('Are you sure you want to delete this field?')) {
-      setFields((current = []) => current.filter(f => f.id !== fieldId))
-      toast.success('Field deleted successfully')
+      try {
+        const numericId = parseInt(fieldId)
+        if (!isNaN(numericId)) {
+          await api.deleteField(numericId)
+        }
+        setFields((current = []) => current.filter(f => f.id !== fieldId))
+        toast.success('Field deleted successfully')
+      } catch (error: any) {
+        console.error('Error deleting field:', error)
+        toast.error(error.message || 'Failed to delete field')
+      }
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (editingField) {
-      setFields((current = []) =>
-        current.map(f => f.id === editingField.id ? { ...formData, id: editingField.id } as Field : f)
-      )
-      toast.success('Field updated successfully')
-    } else {
-      const newField: Field = {
-        ...formData,
-        id: `field-${Date.now()}`
-      } as Field
+    try {
+      if (!formData.name || !formData.siteId) {
+        toast.error('Field name and site are required')
+        return
+      }
+
+      const apiData = {
+        name: formData.name,
+        site_id: parseInt(formData.siteId),
+        field_type: formData.turfType || null,
+        surface_type: formData.fieldSize || null
+      }
+
+      if (editingField) {
+        const numericId = parseInt(editingField.id)
+        if (!isNaN(numericId)) {
+          await api.updateField(numericId, apiData)
+        }
+        setFields((current = []) =>
+          current.map(f => f.id === editingField.id ? { ...formData, id: editingField.id } as Field : f)
+        )
+        toast.success('Field updated successfully')
+      } else {
+        const response = await api.createField(apiData)
+        const newField: Field = {
+          ...formData,
+          id: response.id?.toString() || `field-${Date.now()}`
+        } as Field
+        
+        setFields((current = []) => [...current, newField])
+        toast.success('Field created successfully')
+      }
       
-      setFields((current = []) => [...current, newField])
-      toast.success('Field created successfully')
+      setShowDialog(false)
+    } catch (error: any) {
+      console.error('Error saving field:', error)
+      toast.error(error.message || 'Failed to save field')
     }
-    
-    setShowDialog(false)
   }
 
   const getSiteName = (siteId: string) => {
