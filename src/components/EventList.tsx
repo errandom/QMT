@@ -1,4 +1,4 @@
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Event, SportType, Team, Field, Site } from '@/lib/types'
 import EventCard from './EventCard'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -11,10 +11,7 @@ interface EventListProps {
 }
 
 export default function EventList({ sportFilter, teamFilter }: EventListProps) {
-  const [events = [], setEvents] = useKV<Event[]>('events', [])
-  const [teams = []] = useKV<Team[]>('teams', [])
-  const [fields = []] = useKV<Field[]>('fields', [])
-  const [sites = []] = useKV<Site[]>('sites', [])
+  const { events, setEvents, teams, fields, sites } = useData()
 
   useEffect(() => {
     const now = new Date()
