@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { EquipmentRequest, Team } from '@/lib/types'
 
 interface EquipmentRequestDialogProps {
@@ -15,8 +15,7 @@ interface EquipmentRequestDialogProps {
 }
 
 export default function EquipmentRequestDialog({ open, onOpenChange }: EquipmentRequestDialogProps) {
-  const [requests = [], setRequests] = useKV<EquipmentRequest[]>('equipment-requests', [])
-  const [teams = []] = useKV<Team[]>('teams', [])
+  const { equipmentRequests, setEquipmentRequests, teams } = useData()
   
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -46,7 +45,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
       createdAt: new Date().toISOString()
     }
 
-    setRequests((current) => [...(current || []), newRequest])
+    setEquipmentRequests((current) => [...(current || []), newRequest])
     toast.success('Equipment request submitted successfully')
     
     setName('')
