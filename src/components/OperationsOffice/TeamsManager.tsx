@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Team, SportType, RosterSize, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ interface TeamsManagerProps {
 }
 
 export default function TeamsManager({ currentUser }: TeamsManagerProps) {
-  const [teams = [], setTeams] = useKV<Team[]>('teams', [])
+  const { teams, setTeams } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
 
