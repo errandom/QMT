@@ -470,6 +470,7 @@ app.get('/api/sites', async (_req, res) => {
     console.log('[GET /api/sites] 🔄 Fetching sites...');
     const pool = await getPool();
     console.log('[GET /api/sites] ✓ Pool obtained');
+    console.log('[GET /api/sites] 📝 Executing query: SELECT s.*, (SELECT COUNT(*) FROM fields WHERE site_id = s.id) as field_count FROM sites s ORDER BY s.name');
     const result = await pool.request().query(`
       SELECT 
         s.*,
@@ -478,6 +479,7 @@ app.get('/api/sites', async (_req, res) => {
       ORDER BY s.name
     `);
     console.log('[GET /api/sites] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/sites] 📊 Recordset columns:', result.recordset?.[0] ? Object.keys(result.recordset[0]) : 'NO DATA');
     console.log('[GET /api/sites] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
@@ -572,6 +574,7 @@ app.get('/api/fields', async (_req, res) => {
     console.log('[GET /api/fields] 🔄 Fetching fields...');
     const pool = await getPool();
     console.log('[GET /api/fields] ✓ Pool obtained');
+    console.log('[GET /api/fields] 📝 Executing query: SELECT f.*, s.name as site_name, s.address as site_address FROM fields f LEFT JOIN sites s ON f.site_id = s.id ORDER BY s.name, f.name');
     const result = await pool.request().query(`
       SELECT 
         f.*,
@@ -582,6 +585,7 @@ app.get('/api/fields', async (_req, res) => {
       ORDER BY s.name, f.name
     `);
     console.log('[GET /api/fields] ✓ Query executed, recordset length:', result.recordset?.length);
+    console.log('[GET /api/fields] 📊 Recordset columns:', result.recordset?.[0] ? Object.keys(result.recordset[0]) : 'NO DATA');
     console.log('[GET /api/fields] ✓ Returning data:', result.recordset);
     res.json(result.recordset);
   } catch (err) {
@@ -911,6 +915,44 @@ app.delete('/api/requests/:id', async (req, res) => {
 // Static assets + SPA fallback
 // ------------------------------
 const distDir = path.join(__dirname, 'dist');
+
+// ⭐ GitHub Spark KV Store Backend (REQUIRED!)
+// This stores data in memory - used by useKV hook on frontend
+const kvStore = new Map();
+
+app.post('/_spark/kv/:key', express.json(), (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+    console.log(`[KV] Storing key "${key}"`, value ? `(${JSON.stringify(value).length} bytes)` : '');
+    kvStore.set(key, value);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[KV] Error storing key:', err);
+    res.status(500).json({ error: 'Failed to store key' });
+  }
+});
+
+app.get('/_spark/kv/:key', (req, res) => {
+  try {
+    const { key } = req.params;
+    const value = kvStore.get(key);
+    console.log(`[KV] Retrieved key "${key}"`, value ? `(${JSON.stringify(value).length} bytes)` : '(empty)');
+    if (value === undefined) {
+      return res.status(404).json({ error: 'Key not found' });
+    }
+    res.json(value);
+  } catch (err) {
+    console.error('[KV] Error retrieving key:', err);
+    res.status(500).json({ error: 'Failed to retrieve key' });
+  }
+});
+
+// ⭐ Spark lifecycle endpoint
+app.post('/_spark/loaded', (_req, res) => {
+  console.log('[Spark] Client loaded');
+  res.json({ ok: true });
+});
 
 // Serve the Vite production build (must come before fallback)
 app.use(express.static(distDir, { maxAge: '1h' }));
