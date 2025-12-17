@@ -107,6 +107,8 @@ export async function apiRequest<T>(
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getToken();
   
+  console.log(`[API] 🚀 Requesting: ${url}`);
+  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options?.headers,
@@ -130,10 +132,13 @@ export async function apiRequest<T>(
     const error = await response.json().catch(() => ({ 
       error: 'An error occurred' 
     }));
+    console.error(`[API] ❌ Error on ${url}:`, error);
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log(`[API] ✓ Response from ${url}:`, data);
+  return data;
 }
 
 // Example API functions
