@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Field, Site, TurfType, FieldSize, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -19,8 +19,7 @@ interface FieldsManagerProps {
 }
 
 export default function FieldsManager({ currentUser }: FieldsManagerProps) {
-  const [fields = [], setFields] = useKV<Field[]>('fields', [])
-  const [sites = []] = useKV<Site[]>('sites', [])
+  const { fields, setFields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingField, setEditingField] = useState<Field | null>(null)
 
