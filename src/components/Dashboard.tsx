@@ -8,7 +8,7 @@ import FacilityRequestDialog from './FacilityRequestDialog'
 import EquipmentRequestDialog from './EquipmentRequestDialog'
 import LoginDialog from './LoginDialog'
 import { User, SportType } from '@/lib/types'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { hasAccess } from '@/lib/auth'
 import { COLORS, SIZES, STYLES } from '@/lib/constants'
 import { getTeamsBySportType } from '@/lib/teamUtils'
@@ -26,7 +26,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
   const [showFacilityDialog, setShowFacilityDialog] = useState(false)
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
-  const [teams] = useKV<any[]>('teams', [])
+  const { teams } = useData()
 
   const handleOfficeClick = () => {
     if (currentUser && hasAccess(currentUser)) {
