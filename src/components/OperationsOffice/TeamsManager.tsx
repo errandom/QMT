@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Team, SportType, RosterSize, User } from '@/lib/types'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -51,39 +52,100 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
     setShowDialog(true)
   }
 
-  const handleDelete = (teamId: string) => {
+  const handleDelete = async (teamId: string) => {
     if (confirm('Are you sure you want to delete this team?')) {
-      setTeams((current = []) => current.filter(t => t.id !== teamId))
-      toast.success('Team deleted successfully')
+      try {
+        const numericId = parseInt(teamId)
+        if (!isNaN(numericId)) {
+          await api.deleteTeam(numericId)
+        }
+        setTeams((current = []) => current.filter(t => t.id !== teamId))
+        toast.success('Team deleted successfully')
+      } catch (error: any) {
+        console.error('Error deleting team:', error)
+        toast.error(error.message || 'Failed to delete team')
+      }
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (editingTeam) {
-      setTeams((current = []) =>
-        current.map(t => t.id === editingTeam.id ? { ...formData, id: editingTeam.id } as Team : t)
-      )
-      toast.success('Team updated successfully')
-    } else {
-      const newTeam: Team = {
-        ...formData,
-        id: `team-${Date.now()}`
-      } as Team
+    try {
+      if (!formData.name) {
+        toast.error('Team name is required')
+        return
+      }
+
+      // Map form data to API format
+      const apiData = {
+        name: formData.name,
+        sport: formData.sportType,
+        age_group: formData.rosterSize || null,
+        coaches: formData.headCoach ? `${formData.headCoach.firstName} ${formData.headCoach.lastName}` : null,
+        active: formData.isActive
+      }
+
+      if (editingTeam) {
+        // Update existing team
+        const numericId = parseInt(editingTeam.id)
+        if (!isNaN(numericId)) {
+          await api.updateTeam(numericId, apiData)
+          setTeams((current = []) =>
+            current.map(t => t.id === editingTeam.id ? { ...formData, id: editingTeam.id } as Team : t)
+          )
+          toast.success('Team updated successfully')
+        } else {
+          // For non-numeric IDs, just update in memory
+          setTeams((current = []) =>
+            current.map(t => t.id === editingTeam.id ? { ...formData, id: editingTeam.id } as Team : t)
+          )
+          toast.success('Team updated successfully')
+        }
+      } else {
+        // Create new team
+        const response = await api.createTeam(apiData)
+        const newTeam: Team = {
+          ...formData,
+          id: response.id?.toString() || `team-${Date.now()}`
+        } as Team
+        
+        setTeams((current = []) => [...current, newTeam])
+        toast.success('Team created successfully')
+      }
       
-      setTeams((current = []) => [...current, newTeam])
-      toast.success('Team created successfully')
+      setShowDialog(false)
+    } catch (error: any) {
+      console.error('Error saving team:', error)
+      toast.error(error.message || 'Failed to save team')
     }
-    
-    setShowDialog(false)
   }
 
-  const handleToggleActive = (teamId: string, currentActive: boolean) => {
-    setTeams((current = []) =>
-      current.map(t => t.id === teamId ? { ...t, isActive: !currentActive } : t)
-    )
-    toast.success(`Team ${currentActive ? 'deactivated' : 'activated'} successfully`)
+  const handleToggleActive = async (teamId: string, currentActive: boolean) => {
+    try {
+      const team = teams.find(t => t.id === teamId)
+      if (!team) return
+
+      const numericId = parseInt(teamId)
+      if (!isNaN(numericId)) {
+        const apiData = {
+          name: team.name,
+          sport: team.sportType,
+          age_group: team.rosterSize || null,
+          coaches: team.headCoach ? `${team.headCoach.firstName} ${team.headCoach.lastName}` : null,
+          active: !currentActive
+        }
+        await api.updateTeam(numericId, apiData)
+      }
+      
+      setTeams((current = []) =>
+        current.map(t => t.id === teamId ? { ...t, isActive: !currentActive } : t)
+      )
+      toast.success(`Team ${currentActive ? 'deactivated' : 'activated'} successfully`)
+    } catch (error: any) {
+      console.error('Error toggling team status:', error)
+      toast.error(error.message || 'Failed to update team status')
+    }
   }
 
   const tackleTeams = teams.filter(t => t.sportType === 'Tackle Football')
