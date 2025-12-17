@@ -158,9 +158,18 @@ export const api = {
 
   // Events
   getEvents: async () => {
-    const events = await apiRequest<any[]>('/events');
-    console.log('[API] Raw events from server:', events);
-    return events.map(transformEvent);
+    try {
+      const events = await apiRequest<any[]>('/events');
+      console.log('[API] Raw events from server:', events);
+      if (!Array.isArray(events)) {
+        console.error('[API] ERROR: events is not an array:', typeof events);
+        return [];
+      }
+      return events.map(transformEvent);
+    } catch (error) {
+      console.error('[API] Error fetching events:', error);
+      return [];
+    }
   },
   getEvent: (id: number) => apiRequest<any>(`/events/${id}`),
   createEvent: (data: any) => apiRequest<any>('/events', {
@@ -177,11 +186,20 @@ export const api = {
 
   // Teams
   getTeams: async () => {
-    const teams = await apiRequest<any[]>('/teams');
-    console.log('[API] Raw teams from server:', teams);
-    const transformed = teams.map(transformTeam);
-    console.log('[API] Transformed teams:', transformed);
-    return transformed;
+    try {
+      const teams = await apiRequest<any[]>('/teams');
+      console.log('[API] Raw teams from server:', teams);
+      if (!Array.isArray(teams)) {
+        console.error('[API] ERROR: teams is not an array:', typeof teams);
+        return [];
+      }
+      const transformed = teams.map(transformTeam);
+      console.log('[API] Transformed teams:', transformed);
+      return transformed;
+    } catch (error) {
+      console.error('[API] Error fetching teams:', error);
+      return [];
+    }
   },
   getTeam: (id: number) => apiRequest<any>(`/teams/${id}`),
   createTeam: (data: any) => apiRequest<any>('/teams', {
@@ -198,11 +216,20 @@ export const api = {
 
   // Sites
   getSites: async () => {
-    const sites = await apiRequest<any[]>('/sites');
-    console.log('[API] Raw sites from server:', sites);
-    const transformed = sites.map(transformSite);
-    console.log('[API] Transformed sites:', transformed);
-    return transformed;
+    try {
+      const sites = await apiRequest<any[]>('/sites');
+      console.log('[API] Raw sites from server:', sites);
+      if (!Array.isArray(sites)) {
+        console.error('[API] ERROR: sites is not an array:', typeof sites);
+        return [];
+      }
+      const transformed = sites.map(transformSite);
+      console.log('[API] Transformed sites:', transformed);
+      return transformed;
+    } catch (error) {
+      console.error('[API] Error fetching sites:', error);
+      return [];
+    }
   },
   getSite: (id: number) => apiRequest<any>(`/sites/${id}`),
   createSite: (data: any) => apiRequest<any>('/sites', {
@@ -219,11 +246,20 @@ export const api = {
 
   // Fields
   getFields: async () => {
-    const fields = await apiRequest<any[]>('/fields');
-    console.log('[API] Raw fields from server:', fields);
-    const transformed = fields.map(transformField);
-    console.log('[API] Transformed fields:', transformed);
-    return transformed;
+    try {
+      const fields = await apiRequest<any[]>('/fields');
+      console.log('[API] Raw fields from server:', fields);
+      if (!Array.isArray(fields)) {
+        console.error('[API] ERROR: fields is not an array:', typeof fields);
+        return [];
+      }
+      const transformed = fields.map(transformField);
+      console.log('[API] Transformed fields:', transformed);
+      return transformed;
+    } catch (error) {
+      console.error('[API] Error fetching fields:', error);
+      return [];
+    }
   },
   getField: (id: number) => apiRequest<any>(`/fields/${id}`),
   createField: (data: any) => apiRequest<any>('/fields', {
@@ -240,11 +276,20 @@ export const api = {
 
   // Equipment
   getEquipment: async () => {
-    const equipment = await apiRequest<any[]>('/equipment');
-    console.log('[API] Raw equipment from server:', equipment);
-    const transformed = equipment.map(transformEquipment);
-    console.log('[API] Transformed equipment:', transformed);
-    return transformed;
+    try {
+      const equipment = await apiRequest<any[]>('/equipment');
+      console.log('[API] Raw equipment from server:', equipment);
+      if (!Array.isArray(equipment)) {
+        console.error('[API] ERROR: equipment is not an array:', typeof equipment);
+        return [];
+      }
+      const transformed = equipment.map(transformEquipment);
+      console.log('[API] Transformed equipment:', transformed);
+      return transformed;
+    } catch (error) {
+      console.error('[API] Error fetching equipment:', error);
+      return [];
+    }
   },
   getEquipmentItem: (id: number) => apiRequest<any>(`/equipment/${id}`),
   createEquipment: (data: any) => apiRequest<any>('/equipment', {
