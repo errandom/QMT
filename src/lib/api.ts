@@ -32,6 +32,64 @@ export function setStoredUser(user: any): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+// Data transformation utilities to convert between database snake_case and frontend camelCase
+function transformTeam(team: any): any {
+  return {
+    ...team,
+    id: team.id?.toString() || '',
+    sportType: team.sport || team.sportType,
+    isActive: team.active !== undefined ? team.active : team.isActive,
+    headCoach: team.head_coach || team.headCoach,
+    teamManager: team.team_manager || team.teamManager,
+    rosterSize: team.roster_size || team.rosterSize
+  };
+}
+
+function transformSite(site: any): any {
+  return {
+    ...site,
+    id: site.id?.toString() || '',
+    zipCode: site.zip_code || site.zipCode,
+    contactFirstName: site.contact_first_name || site.contactFirstName,
+    contactLastName: site.contact_last_name || site.contactLastName,
+    contactPhone: site.contact_phone || site.contactPhone,
+    contactEmail: site.contact_email || site.contactEmail,
+    isSportsFacility: site.is_sports_facility !== undefined ? site.is_sports_facility : site.isSportsFacility,
+    isActive: site.active !== undefined ? site.active : site.isActive
+  };
+}
+
+function transformField(field: any): any {
+  return {
+    ...field,
+    id: field.id?.toString() || '',
+    siteId: (field.site_id || field.siteId)?.toString() || '',
+    turfType: field.turf_type || field.turfType,
+    hasLights: field.has_lights !== undefined ? field.has_lights : field.hasLights,
+    fieldSize: field.field_size || field.fieldSize,
+    isActive: field.active !== undefined ? field.active : field.isActive
+  };
+}
+
+function transformEquipment(equipment: any): any {
+  return {
+    ...equipment,
+    id: equipment.id?.toString() || '',
+    isActive: equipment.active !== undefined ? equipment.active : equipment.isActive
+  };
+}
+
+function transformEvent(event: any): any {
+  return {
+    ...event,
+    id: event.id?.toString() || '',
+    eventType: event.event_type || event.eventType,
+    teamId: (event.team_id || event.teamId)?.toString() || '',
+    fieldId: (event.field_id || event.fieldId)?.toString() || '',
+    organizerId: (event.organizer_id || event.organizerId)?.toString() || ''
+  };
+}
+
 // Helper function to make API calls
 export async function apiRequest<T>(
   endpoint: string,
@@ -90,7 +148,11 @@ export const api = {
     }),
 
   // Events
-  getEvents: () => apiRequest<any[]>('/events'),
+  getEvents: async () => {
+    const events = await apiRequest<any[]>('/events');
+    console.log('[API] Raw events from server:', events);
+    return events.map(transformEvent);
+  },
   getEvent: (id: number) => apiRequest<any>(`/events/${id}`),
   createEvent: (data: any) => apiRequest<any>('/events', {
     method: 'POST',
@@ -105,7 +167,13 @@ export const api = {
   }),
 
   // Teams
-  getTeams: () => apiRequest<any[]>('/teams'),
+  getTeams: async () => {
+    const teams = await apiRequest<any[]>('/teams');
+    console.log('[API] Raw teams from server:', teams);
+    const transformed = teams.map(transformTeam);
+    console.log('[API] Transformed teams:', transformed);
+    return transformed;
+  },
   getTeam: (id: number) => apiRequest<any>(`/teams/${id}`),
   createTeam: (data: any) => apiRequest<any>('/teams', {
     method: 'POST',
@@ -120,7 +188,13 @@ export const api = {
   }),
 
   // Sites
-  getSites: () => apiRequest<any[]>('/sites'),
+  getSites: async () => {
+    const sites = await apiRequest<any[]>('/sites');
+    console.log('[API] Raw sites from server:', sites);
+    const transformed = sites.map(transformSite);
+    console.log('[API] Transformed sites:', transformed);
+    return transformed;
+  },
   getSite: (id: number) => apiRequest<any>(`/sites/${id}`),
   createSite: (data: any) => apiRequest<any>('/sites', {
     method: 'POST',
@@ -135,7 +209,13 @@ export const api = {
   }),
 
   // Fields
-  getFields: () => apiRequest<any[]>('/fields'),
+  getFields: async () => {
+    const fields = await apiRequest<any[]>('/fields');
+    console.log('[API] Raw fields from server:', fields);
+    const transformed = fields.map(transformField);
+    console.log('[API] Transformed fields:', transformed);
+    return transformed;
+  },
   getField: (id: number) => apiRequest<any>(`/fields/${id}`),
   createField: (data: any) => apiRequest<any>('/fields', {
     method: 'POST',
@@ -150,7 +230,13 @@ export const api = {
   }),
 
   // Equipment
-  getEquipment: () => apiRequest<any[]>('/equipment'),
+  getEquipment: async () => {
+    const equipment = await apiRequest<any[]>('/equipment');
+    console.log('[API] Raw equipment from server:', equipment);
+    const transformed = equipment.map(transformEquipment);
+    console.log('[API] Transformed equipment:', transformed);
+    return transformed;
+  },
   getEquipmentItem: (id: number) => apiRequest<any>(`/equipment/${id}`),
   createEquipment: (data: any) => apiRequest<any>('/equipment', {
     method: 'POST',
