@@ -13,6 +13,7 @@ router.get('/', async (req: Request, res: Response) => {
       WHERE active = 1
       ORDER BY sport, name
     `);
+    console.log('[Teams GET] Retrieved', result.recordset.length, 'active teams')
     res.json(result.recordset);
   } catch (error) {
     console.error('Error fetching teams:', error);
