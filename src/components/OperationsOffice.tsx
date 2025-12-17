@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear, ArrowLeft } from '@phosphor-icons/react'
 import { User, FacilityRequest, EquipmentRequest, CancellationRequest } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { COLORS, SIZES } from '@/lib/constants'
 import ScheduleManager from './OperationsOffice/ScheduleManager'
 import RequestsManager from './OperationsOffice/RequestsManager'
@@ -23,9 +23,7 @@ interface OperationsOfficeProps {
 
 export default function OperationsOffice({ currentUser, onNavigateToDashboard }: OperationsOfficeProps) {
   const [activeTab, setActiveTab] = useState('schedule')
-  const [facilityRequests = []] = useKV<FacilityRequest[]>('facility-requests', [])
-  const [equipmentRequests = []] = useKV<EquipmentRequest[]>('equipment-requests', [])
-  const [cancellationRequests = []] = useKV<CancellationRequest[]>('cancellation-requests', [])
+  const { facilityRequests, equipmentRequests, cancellationRequests } = useData()
 
   const hasUnresolvedRequests = 
     facilityRequests.some(r => r.status === 'Pending') ||
