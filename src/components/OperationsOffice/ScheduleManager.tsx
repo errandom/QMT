@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,10 +30,7 @@ interface ScheduleManagerProps {
 }
 
 export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
-  const [events = [], setEvents] = useKV<Event[]>('events', [])
-  const [teams = []] = useKV<Team[]>('teams', [])
-  const [fields = []] = useKV<Field[]>('fields', [])
-  const [sites = []] = useKV<any[]>('sites', [])
+  const { events, setEvents, teams, fields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
 
