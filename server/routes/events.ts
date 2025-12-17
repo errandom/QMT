@@ -22,6 +22,7 @@ router.get('/', async (req: Request, res: Response) => {
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
     `);
+    console.log('[Events GET] Retrieved', result.recordset.length, 'events')
     res.json(result.recordset);
   } catch (error) {
     console.error('Error fetching events:', error);
