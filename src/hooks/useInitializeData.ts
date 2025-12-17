@@ -39,14 +39,27 @@ export function useInitializeData() {
         const fieldsData = results[3].status === 'fulfilled' ? results[3].value : []
         const equipmentData = results[4].status === 'fulfilled' ? results[4].value : []
 
-        if (results[0].status === 'rejected') console.warn('[useInitializeData] Failed to load events:', results[0].reason)
-        if (results[1].status === 'rejected') console.warn('[useInitializeData] Failed to load teams:', results[1].reason)
-        if (results[2].status === 'rejected') console.warn('[useInitializeData] Failed to load sites:', results[2].reason)
-        if (results[3].status === 'rejected') console.warn('[useInitializeData] Failed to load fields:', results[3].reason)
-        if (results[4].status === 'rejected') console.warn('[useInitializeData] Failed to load equipment:', results[4].reason)
+        // Detailed logging for debugging
+        console.log('[useInitializeData] Events API Response:', eventsData)
+        console.log('[useInitializeData] Teams API Response:', teamsData)
+        console.log('[useInitializeData] Sites API Response:', sitesData)
+        console.log('[useInitializeData] Fields API Response:', fieldsData)
+        console.log('[useInitializeData] Equipment API Response:', equipmentData)
+
+        if (results[0].status === 'rejected') console.error('[useInitializeData] Failed to load events:', results[0].reason)
+        if (results[1].status === 'rejected') console.error('[useInitializeData] Failed to load teams:', results[1].reason)
+        if (results[2].status === 'rejected') console.error('[useInitializeData] Failed to load sites:', results[2].reason)
+        if (results[3].status === 'rejected') console.error('[useInitializeData] Failed to load fields:', results[3].reason)
+        if (results[4].status === 'rejected') console.error('[useInitializeData] Failed to load equipment:', results[4].reason)
 
         // Store data in KV store
-        console.log('[useInitializeData] Storing data:', { events: eventsData.length, teams: teamsData.length, sites: sitesData.length, fields: fieldsData.length, equipment: equipmentData.length })
+        console.log('[useInitializeData] Storing data into KV store:', { 
+          events: eventsData.length, 
+          teams: teamsData.length, 
+          sites: sitesData.length, 
+          fields: fieldsData.length, 
+          equipment: equipmentData.length 
+        })
         setEvents(eventsData)
         setTeams(teamsData)
         setSites(sitesData)
