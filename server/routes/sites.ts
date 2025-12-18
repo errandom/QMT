@@ -118,7 +118,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       isActive
     } = req.body;
     
-    console.log('[Sites PUT] Received data:', req.body);
+    console.log('[Sites PUT] Received data:', JSON.stringify(req.body, null, 2));
     
     const pool = await getPool();
     const result = await pool.request()
@@ -160,6 +160,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Site not found' });
     }
     
+    console.log('[Sites PUT] Returning updated site:', JSON.stringify(result.recordset[0], null, 2));
     res.json(result.recordset[0]);
   } catch (error) {
     console.error('Error updating site:', error);
