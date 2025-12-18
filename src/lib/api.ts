@@ -53,16 +53,48 @@ function transformTeam(team: any): any {
 
 function transformSite(site: any): any {
   if (!site) return site;
+  
+  // Parse amenities if it's a JSON string
+  let amenities = site.amenities;
+  if (typeof amenities === 'string') {
+    try {
+      amenities = JSON.parse(amenities);
+    } catch (e) {
+      // If parsing fails, use default amenities
+      amenities = {
+        parking: false,
+        toilets: false,
+        lockerRooms: false,
+        shower: false,
+        restaurant: false,
+        equipmentStash: false
+      };
+    }
+  }
+  
+  // Ensure amenities has all required fields
+  if (!amenities || typeof amenities !== 'object') {
+    amenities = {
+      parking: false,
+      toilets: false,
+      lockerRooms: false,
+      shower: false,
+      restaurant: false,
+      equipmentStash: false
+    };
+  }
+  
   return {
     ...site,
     id: String(site.id || ''),
-    zipCode: site.zipCode || site.zip_code,
-    contactFirstName: site.contactFirstName || site.contact_first_name,
-    contactLastName: site.contactLastName || site.contact_last_name,
-    contactPhone: site.contactPhone || site.contact_phone,
-    contactEmail: site.contactEmail || site.contact_email,
+    zipCode: site.zipCode || site.zip_code || '',
+    contactFirstName: site.contactFirstName || site.contact_first_name || '',
+    contactLastName: site.contactLastName || site.contact_last_name || '',
+    contactPhone: site.contactPhone || site.contact_phone || '',
+    contactEmail: site.contactEmail || site.contact_email || '',
     isSportsFacility: site.isSportsFacility !== undefined ? Boolean(site.isSportsFacility) : (site.is_sports_facility !== undefined ? Boolean(site.is_sports_facility) : false),
-    isActive: site.isActive !== undefined ? Boolean(site.isActive) : (site.active !== undefined ? Boolean(site.active) : true)
+    isActive: site.isActive !== undefined ? Boolean(site.isActive) : (site.active !== undefined ? Boolean(site.active) : true),
+    amenities
   };
 }
 
