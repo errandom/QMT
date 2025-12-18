@@ -85,14 +85,18 @@ function transformSite(site: any): any {
   }
   
   return {
-    ...site,
     id: String(site.id || ''),
+    name: site.name || '',
+    address: site.address || '',
+    city: site.city || '',
     zipCode: site.zipCode || site.zip_code || '',
+    latitude: site.latitude || 0,
+    longitude: site.longitude || 0,
     contactFirstName: site.contactFirstName || site.contact_first_name || '',
     contactLastName: site.contactLastName || site.contact_last_name || '',
     contactPhone: site.contactPhone || site.contact_phone || '',
     contactEmail: site.contactEmail || site.contact_email || '',
-    isSportsFacility: site.isSportsFacility !== undefined ? Boolean(site.isSportsFacility) : (site.is_sports_facility !== undefined ? Boolean(site.is_sports_facility) : false),
+    isSportsFacility: site.isSportsFacility !== undefined ? Boolean(site.isSportsFacility) : (site.is_sports_facility !== undefined ? Boolean(site.is_sports_facility) : true),
     isActive: site.isActive !== undefined ? Boolean(site.isActive) : (site.active !== undefined ? Boolean(site.active) : true),
     amenities
   };
