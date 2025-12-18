@@ -63,6 +63,29 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/auth/users - Get all users (admin only)
+router.get('/users', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    // Only admins can view users
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin privileges required' });
+    }
+
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`
+        SELECT id, username, role, email, full_name, is_active, created_at, updated_at
+        FROM users
+        ORDER BY created_at DESC
+      `);
+
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
 // POST /api/auth/register - Register new user (admin only)
 router.post('/register', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
