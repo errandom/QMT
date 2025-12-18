@@ -61,6 +61,8 @@ router.post('/', async (req: Request, res: Response) => {
       isActive
     } = req.body;
     
+    console.log('[Sites POST] Received data:', req.body);
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
@@ -115,6 +117,8 @@ router.put('/:id', async (req: Request, res: Response) => {
       amenities,
       isActive
     } = req.body;
+    
+    console.log('[Sites PUT] Received data:', req.body);
     
     const pool = await getPool();
     const result = await pool.request()
