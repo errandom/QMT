@@ -315,7 +315,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Label htmlFor="address" style={{ color: COLORS.CHARCOAL }}>Address *</Label>
                 <Input
                   id="address"
-                  value={formData.address}
+                  value={formData.address || ''}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
@@ -325,7 +325,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Label htmlFor="city" style={{ color: COLORS.CHARCOAL }}>City *</Label>
                 <Input
                   id="city"
-                  value={formData.city}
+                  value={formData.city || ''}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
@@ -338,7 +338,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Label htmlFor="zipCode" style={{ color: COLORS.CHARCOAL }}>Zip Code *</Label>
                 <Input
                   id="zipCode"
-                  value={formData.zipCode}
+                  value={formData.zipCode || ''}
                   onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
@@ -350,8 +350,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                   id="latitude"
                   type="number"
                   step="any"
-                  value={formData.latitude}
-                  onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
+                  value={formData.latitude || ''}
+                  onChange={(e) => setFormData({ ...formData, latitude: e.target.value ? parseFloat(e.target.value) : 0 })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -362,8 +362,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                   id="longitude"
                   type="number"
                   step="any"
-                  value={formData.longitude}
-                  onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
+                  value={formData.longitude || ''}
+                  onChange={(e) => setFormData({ ...formData, longitude: e.target.value ? parseFloat(e.target.value) : 0 })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -375,7 +375,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Label htmlFor="contactFirstName" style={{ color: COLORS.CHARCOAL }}>Contact First Name *</Label>
                 <Input
                   id="contactFirstName"
-                  value={formData.contactFirstName}
+                  value={formData.contactFirstName || ''}
                   onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
@@ -385,7 +385,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Label htmlFor="contactLastName" style={{ color: COLORS.CHARCOAL }}>Contact Last Name *</Label>
                 <Input
                   id="contactLastName"
-                  value={formData.contactLastName}
+                  value={formData.contactLastName || ''}
                   onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
@@ -399,7 +399,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Input
                   id="contactPhone"
                   type="tel"
-                  value={formData.contactPhone}
+                  value={formData.contactPhone || ''}
                   onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
@@ -410,7 +410,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 <Input
                   id="contactEmail"
                   type="email"
-                  value={formData.contactEmail}
+                  value={formData.contactEmail || ''}
                   onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
