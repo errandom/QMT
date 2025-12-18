@@ -55,11 +55,11 @@ function transformTeam(team: any): any {
   return {
     id: String(team.id || ''),
     name: team.name || '',
-    sportType: team.sportType || team.sport,
+    sportType: team.sport || team.sportType || 'Tackle Football',
     isActive: team.isActive !== undefined ? Boolean(team.isActive) : (team.active !== undefined ? Boolean(team.active) : true),
     headCoach,
     teamManager,
-    rosterSize: team.rosterSize || team.age_group
+    rosterSize: team.age_group || team.rosterSize
   };
 }
 
