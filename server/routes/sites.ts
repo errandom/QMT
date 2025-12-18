@@ -45,17 +45,49 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST create new site
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, address, amenities } = req.body;
+    const { 
+      name, 
+      address, 
+      city,
+      zipCode,
+      latitude,
+      longitude,
+      contactFirstName,
+      contactLastName,
+      contactPhone,
+      contactEmail,
+      isSportsFacility,
+      amenities,
+      isActive
+    } = req.body;
     
     const pool = await getPool();
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
-      .input('address', sql.NVarChar, address)
+      .input('address', sql.NVarChar, address || null)
+      .input('city', sql.NVarChar, city || null)
+      .input('zip_code', sql.NVarChar, zipCode || null)
+      .input('latitude', sql.Float, latitude || null)
+      .input('longitude', sql.Float, longitude || null)
+      .input('contact_first_name', sql.NVarChar, contactFirstName || null)
+      .input('contact_last_name', sql.NVarChar, contactLastName || null)
+      .input('contact_phone', sql.NVarChar, contactPhone || null)
+      .input('contact_email', sql.NVarChar, contactEmail || null)
+      .input('is_sports_facility', sql.Bit, isSportsFacility !== false)
       .input('amenities', sql.NVarChar, amenities || null)
+      .input('active', sql.Bit, isActive !== false)
       .query(`
-        INSERT INTO sites (name, address, amenities)
+        INSERT INTO sites (
+          name, address, city, zip_code, latitude, longitude,
+          contact_first_name, contact_last_name, contact_phone, contact_email,
+          is_sports_facility, amenities, active
+        )
         OUTPUT INSERTED.*
-        VALUES (@name, @address, @amenities)
+        VALUES (
+          @name, @address, @city, @zip_code, @latitude, @longitude,
+          @contact_first_name, @contact_last_name, @contact_phone, @contact_email,
+          @is_sports_facility, @amenities, @active
+        )
       `);
     
     res.status(201).json(result.recordset[0]);
@@ -68,19 +100,54 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update site
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { name, address, amenities } = req.body;
+    const { 
+      name, 
+      address, 
+      city,
+      zipCode,
+      latitude,
+      longitude,
+      contactFirstName,
+      contactLastName,
+      contactPhone,
+      contactEmail,
+      isSportsFacility,
+      amenities,
+      isActive
+    } = req.body;
     
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('name', sql.NVarChar, name)
-      .input('address', sql.NVarChar, address)
-      .input('amenities', sql.NVarChar, amenities)
+      .input('address', sql.NVarChar, address || null)
+      .input('city', sql.NVarChar, city || null)
+      .input('zip_code', sql.NVarChar, zipCode || null)
+      .input('latitude', sql.Float, latitude || null)
+      .input('longitude', sql.Float, longitude || null)
+      .input('contact_first_name', sql.NVarChar, contactFirstName || null)
+      .input('contact_last_name', sql.NVarChar, contactLastName || null)
+      .input('contact_phone', sql.NVarChar, contactPhone || null)
+      .input('contact_email', sql.NVarChar, contactEmail || null)
+      .input('is_sports_facility', sql.Bit, isSportsFacility !== undefined ? isSportsFacility : true)
+      .input('amenities', sql.NVarChar, amenities || null)
+      .input('active', sql.Bit, isActive !== undefined ? isActive : true)
       .query(`
         UPDATE sites 
         SET name = @name,
             address = @address,
-            amenities = @amenities
+            city = @city,
+            zip_code = @zip_code,
+            latitude = @latitude,
+            longitude = @longitude,
+            contact_first_name = @contact_first_name,
+            contact_last_name = @contact_last_name,
+            contact_phone = @contact_phone,
+            contact_email = @contact_email,
+            is_sports_facility = @is_sports_facility,
+            amenities = @amenities,
+            active = @active,
+            updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
