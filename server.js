@@ -270,18 +270,47 @@ app.get('/api/teams/:id', async (req, res) => {
 
 app.post('/api/teams', async (req, res) => {
   try {
-    const { name, sport, age_group, coaches, active } = req.body;
+    const { 
+      name, 
+      sport, 
+      age_group, 
+      coaches,
+      headCoach,
+      teamManager,
+      active 
+    } = req.body;
+    
+    console.log('[Teams POST] Received data:', JSON.stringify(req.body, null, 2));
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
       .input('sport', sql.NVarChar, sport)
       .input('age_group', sql.NVarChar, age_group || null)
       .input('coaches', sql.NVarChar, coaches || null)
+      .input('head_coach_first_name', sql.NVarChar, headCoach?.firstName || null)
+      .input('head_coach_last_name', sql.NVarChar, headCoach?.lastName || null)
+      .input('head_coach_email', sql.NVarChar, headCoach?.email || null)
+      .input('head_coach_phone', sql.NVarChar, headCoach?.phone || null)
+      .input('team_manager_first_name', sql.NVarChar, teamManager?.firstName || null)
+      .input('team_manager_last_name', sql.NVarChar, teamManager?.lastName || null)
+      .input('team_manager_email', sql.NVarChar, teamManager?.email || null)
+      .input('team_manager_phone', sql.NVarChar, teamManager?.phone || null)
       .input('active', sql.Bit, active !== false ? 1 : 0)
       .query(`
-        INSERT INTO teams (name, sport, age_group, coaches, active)
+        INSERT INTO teams (
+          name, sport, age_group, coaches,
+          head_coach_first_name, head_coach_last_name, head_coach_email, head_coach_phone,
+          team_manager_first_name, team_manager_last_name, team_manager_email, team_manager_phone,
+          active
+        )
         OUTPUT INSERTED.*
-        VALUES (@name, @sport, @age_group, @coaches, @active)
+        VALUES (
+          @name, @sport, @age_group, @coaches,
+          @head_coach_first_name, @head_coach_last_name, @head_coach_email, @head_coach_phone,
+          @team_manager_first_name, @team_manager_last_name, @team_manager_email, @team_manager_phone,
+          @active
+        )
       `);
     res.status(201).json(result.recordset[0]);
   } catch (err) {
@@ -292,7 +321,18 @@ app.post('/api/teams', async (req, res) => {
 
 app.put('/api/teams/:id', async (req, res) => {
   try {
-    const { name, sport, age_group, coaches, active } = req.body;
+    const { 
+      name, 
+      sport, 
+      age_group, 
+      coaches,
+      headCoach,
+      teamManager,
+      active 
+    } = req.body;
+    
+    console.log('[Teams PUT] Received data:', JSON.stringify(req.body, null, 2));
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
@@ -300,11 +340,31 @@ app.put('/api/teams/:id', async (req, res) => {
       .input('sport', sql.NVarChar, sport)
       .input('age_group', sql.NVarChar, age_group || null)
       .input('coaches', sql.NVarChar, coaches || null)
+      .input('head_coach_first_name', sql.NVarChar, headCoach?.firstName || null)
+      .input('head_coach_last_name', sql.NVarChar, headCoach?.lastName || null)
+      .input('head_coach_email', sql.NVarChar, headCoach?.email || null)
+      .input('head_coach_phone', sql.NVarChar, headCoach?.phone || null)
+      .input('team_manager_first_name', sql.NVarChar, teamManager?.firstName || null)
+      .input('team_manager_last_name', sql.NVarChar, teamManager?.lastName || null)
+      .input('team_manager_email', sql.NVarChar, teamManager?.email || null)
+      .input('team_manager_phone', sql.NVarChar, teamManager?.phone || null)
       .input('active', sql.Bit, active !== false ? 1 : 0)
       .query(`
         UPDATE teams 
-        SET name = @name, sport = @sport, age_group = @age_group, 
-            coaches = @coaches, active = @active, updated_at = GETDATE()
+        SET name = @name, 
+            sport = @sport, 
+            age_group = @age_group, 
+            coaches = @coaches,
+            head_coach_first_name = @head_coach_first_name,
+            head_coach_last_name = @head_coach_last_name,
+            head_coach_email = @head_coach_email,
+            head_coach_phone = @head_coach_phone,
+            team_manager_first_name = @team_manager_first_name,
+            team_manager_last_name = @team_manager_last_name,
+            team_manager_email = @team_manager_email,
+            team_manager_phone = @team_manager_phone,
+            active = @active, 
+            updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
@@ -511,17 +571,54 @@ app.get('/api/sites/:id', async (req, res) => {
 
 app.post('/api/sites', async (req, res) => {
   try {
-    const { name, address, amenities } = req.body;
+    const { 
+      name, 
+      address, 
+      city,
+      zipCode,
+      latitude,
+      longitude,
+      contactFirstName,
+      contactLastName,
+      contactPhone,
+      contactEmail,
+      isSportsFacility,
+      amenities,
+      isActive
+    } = req.body;
+    
+    console.log('[Sites POST] Received data:', JSON.stringify(req.body, null, 2));
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
       .input('address', sql.NVarChar, address || null)
+      .input('city', sql.NVarChar, city || null)
+      .input('zip_code', sql.NVarChar, zipCode || null)
+      .input('latitude', sql.Float, latitude || null)
+      .input('longitude', sql.Float, longitude || null)
+      .input('contact_first_name', sql.NVarChar, contactFirstName || null)
+      .input('contact_last_name', sql.NVarChar, contactLastName || null)
+      .input('contact_phone', sql.NVarChar, contactPhone || null)
+      .input('contact_email', sql.NVarChar, contactEmail || null)
+      .input('is_sports_facility', sql.Bit, isSportsFacility !== false)
       .input('amenities', sql.NVarChar, amenities || null)
+      .input('active', sql.Bit, isActive !== false)
       .query(`
-        INSERT INTO sites (name, address, amenities)
+        INSERT INTO sites (
+          name, address, city, zip_code, latitude, longitude,
+          contact_first_name, contact_last_name, contact_phone, contact_email,
+          is_sports_facility, amenities, active
+        )
         OUTPUT INSERTED.*
-        VALUES (@name, @address, @amenities)
+        VALUES (
+          @name, @address, @city, @zip_code, @latitude, @longitude,
+          @contact_first_name, @contact_last_name, @contact_phone, @contact_email,
+          @is_sports_facility, @amenities, @active
+        )
       `);
+    
+    console.log('[Sites POST] Created site:', JSON.stringify(result.recordset[0], null, 2));
     res.status(201).json(result.recordset[0]);
   } catch (err) {
     console.error('Error creating site:', err);
@@ -531,16 +628,56 @@ app.post('/api/sites', async (req, res) => {
 
 app.put('/api/sites/:id', async (req, res) => {
   try {
-    const { name, address, amenities } = req.body;
+    const { 
+      name, 
+      address, 
+      city,
+      zipCode,
+      latitude,
+      longitude,
+      contactFirstName,
+      contactLastName,
+      contactPhone,
+      contactEmail,
+      isSportsFacility,
+      amenities,
+      isActive
+    } = req.body;
+    
+    console.log('[Sites PUT] Received data:', JSON.stringify(req.body, null, 2));
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('name', sql.NVarChar, name)
       .input('address', sql.NVarChar, address || null)
+      .input('city', sql.NVarChar, city || null)
+      .input('zip_code', sql.NVarChar, zipCode || null)
+      .input('latitude', sql.Float, latitude || null)
+      .input('longitude', sql.Float, longitude || null)
+      .input('contact_first_name', sql.NVarChar, contactFirstName || null)
+      .input('contact_last_name', sql.NVarChar, contactLastName || null)
+      .input('contact_phone', sql.NVarChar, contactPhone || null)
+      .input('contact_email', sql.NVarChar, contactEmail || null)
+      .input('is_sports_facility', sql.Bit, isSportsFacility !== undefined ? isSportsFacility : true)
       .input('amenities', sql.NVarChar, amenities || null)
+      .input('active', sql.Bit, isActive !== undefined ? isActive : true)
       .query(`
         UPDATE sites 
-        SET name = @name, address = @address, amenities = @amenities, updated_at = GETDATE()
+        SET name = @name,
+            address = @address,
+            city = @city,
+            zip_code = @zip_code,
+            latitude = @latitude,
+            longitude = @longitude,
+            contact_first_name = @contact_first_name,
+            contact_last_name = @contact_last_name,
+            contact_phone = @contact_phone,
+            contact_email = @contact_email,
+            is_sports_facility = @is_sports_facility,
+            amenities = @amenities,
+            active = @active,
+            updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
@@ -548,6 +685,8 @@ app.put('/api/sites/:id', async (req, res) => {
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Site not found' });
     }
+    
+    console.log('[Sites PUT] Returning updated site:', JSON.stringify(result.recordset[0], null, 2));
     res.json(result.recordset[0]);
   } catch (err) {
     console.error('Error updating site:', err);
@@ -625,17 +764,23 @@ app.get('/api/fields/:id', async (req, res) => {
 
 app.post('/api/fields', async (req, res) => {
   try {
-    const { site_id, name, field_type, surface_type } = req.body;
+    const { site_id, name, field_type, surface_type, has_lights, capacity, active } = req.body;
+    
+    console.log('[Fields POST] Received data:', JSON.stringify(req.body, null, 2));
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('site_id', sql.Int, site_id)
       .input('name', sql.NVarChar, name)
       .input('field_type', sql.NVarChar, field_type || null)
       .input('surface_type', sql.NVarChar, surface_type || null)
+      .input('has_lights', sql.Bit, has_lights || false)
+      .input('capacity', sql.Int, capacity || null)
+      .input('active', sql.Bit, active !== false ? 1 : 0)
       .query(`
-        INSERT INTO fields (site_id, name, field_type, surface_type)
+        INSERT INTO fields (site_id, name, field_type, surface_type, has_lights, capacity, active)
         OUTPUT INSERTED.*
-        VALUES (@site_id, @name, @field_type, @surface_type)
+        VALUES (@site_id, @name, @field_type, @surface_type, @has_lights, @capacity, @active)
       `);
     res.status(201).json(result.recordset[0]);
   } catch (err) {
@@ -646,7 +791,10 @@ app.post('/api/fields', async (req, res) => {
 
 app.put('/api/fields/:id', async (req, res) => {
   try {
-    const { site_id, name, field_type, surface_type } = req.body;
+    const { site_id, name, field_type, surface_type, has_lights, capacity, active } = req.body;
+    
+    console.log('[Fields PUT] Received data:', JSON.stringify(req.body, null, 2));
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
@@ -654,10 +802,19 @@ app.put('/api/fields/:id', async (req, res) => {
       .input('name', sql.NVarChar, name)
       .input('field_type', sql.NVarChar, field_type || null)
       .input('surface_type', sql.NVarChar, surface_type || null)
+      .input('has_lights', sql.Bit, has_lights || false)
+      .input('capacity', sql.Int, capacity || null)
+      .input('active', sql.Bit, active !== false ? 1 : 0)
       .query(`
         UPDATE fields 
-        SET site_id = @site_id, name = @name, field_type = @field_type, 
-            surface_type = @surface_type, updated_at = GETDATE()
+        SET site_id = @site_id, 
+            name = @name, 
+            field_type = @field_type, 
+            surface_type = @surface_type,
+            has_lights = @has_lights,
+            capacity = @capacity,
+            active = @active,
+            updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
