@@ -285,15 +285,21 @@ export const api = {
       return [];
     }
   },
-  getSite: (id: number) => apiRequest<any>(`/sites/${id}`),
-  createSite: (data: any) => apiRequest<any>('/sites', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  updateSite: (id: number, data: any) => apiRequest<any>(`/sites/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  getSite: (id: number) => apiRequest<any>(`/sites/${id}`).then(transformSite),
+  createSite: async (data: any) => {
+    const response = await apiRequest<any>('/sites', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return transformSite(response);
+  },
+  updateSite: async (id: number, data: any) => {
+    const response = await apiRequest<any>(`/sites/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return transformSite(response);
+  },
   deleteSite: (id: number) => apiRequest<any>(`/sites/${id}`, {
     method: 'DELETE',
   }),
