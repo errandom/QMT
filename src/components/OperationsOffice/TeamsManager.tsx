@@ -82,7 +82,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
         name: formData.name,
         sport: formData.sportType,
         age_group: formData.rosterSize || null,
-        coaches: formData.headCoach ? `${formData.headCoach.firstName} ${formData.headCoach.lastName}` : null,
+
         active: formData.isActive,
         headCoachFirstName: formData.headCoach?.firstName || null,
         headCoachLastName: formData.headCoach?.lastName || null,
