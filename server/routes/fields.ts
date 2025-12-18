@@ -55,7 +55,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST create new field
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { site_id, name, field_type, surface_type } = req.body;
+    const { site_id, name, field_type, surface_type, has_lights, capacity, active } = req.body;
+    
+    console.log('[Fields POST] Received data:', req.body);
     
     const pool = await getPool();
     const result = await pool.request()
@@ -63,10 +65,13 @@ router.post('/', async (req: Request, res: Response) => {
       .input('name', sql.NVarChar, name)
       .input('field_type', sql.NVarChar, field_type || null)
       .input('surface_type', sql.NVarChar, surface_type || null)
+      .input('has_lights', sql.Bit, has_lights || false)
+      .input('capacity', sql.Int, capacity || null)
+      .input('active', sql.Bit, active !== false)
       .query(`
-        INSERT INTO fields (site_id, name, field_type, surface_type)
+        INSERT INTO fields (site_id, name, field_type, surface_type, has_lights, capacity, active)
         OUTPUT INSERTED.*
-        VALUES (@site_id, @name, @field_type, @surface_type)
+        VALUES (@site_id, @name, @field_type, @surface_type, @has_lights, @capacity, @active)
       `);
     
     res.status(201).json(result.recordset[0]);
@@ -79,7 +84,9 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update field
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { site_id, name, field_type, surface_type } = req.body;
+    const { site_id, name, field_type, surface_type, has_lights, capacity, active } = req.body;
+    
+    console.log('[Fields PUT] Received data:', req.body);
     
     const pool = await getPool();
     const result = await pool.request()
@@ -88,12 +95,19 @@ router.put('/:id', async (req: Request, res: Response) => {
       .input('name', sql.NVarChar, name)
       .input('field_type', sql.NVarChar, field_type)
       .input('surface_type', sql.NVarChar, surface_type)
+      .input('has_lights', sql.Bit, has_lights || false)
+      .input('capacity', sql.Int, capacity || null)
+      .input('active', sql.Bit, active !== undefined ? active : true)
       .query(`
         UPDATE fields 
         SET site_id = @site_id,
             name = @name,
             field_type = @field_type,
-            surface_type = @surface_type
+            surface_type = @surface_type,
+            has_lights = @has_lights,
+            capacity = @capacity,
+            active = @active,
+            updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
