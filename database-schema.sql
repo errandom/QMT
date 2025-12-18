@@ -40,7 +40,17 @@ CREATE TABLE sites (
   id INT PRIMARY KEY IDENTITY(1,1),
   name NVARCHAR(255) NOT NULL,
   address NVARCHAR(500),
+  city NVARCHAR(255),
+  zip_code NVARCHAR(20),
+  latitude FLOAT,
+  longitude FLOAT,
+  contact_first_name NVARCHAR(255),
+  contact_last_name NVARCHAR(255),
+  contact_phone NVARCHAR(50),
+  contact_email NVARCHAR(255),
+  is_sports_facility BIT DEFAULT 1,
   amenities NVARCHAR(1000),
+  active BIT DEFAULT 1,
   created_at DATETIME DEFAULT GETDATE(),
   updated_at DATETIME DEFAULT GETDATE()
 );
