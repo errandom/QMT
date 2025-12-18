@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, UserRole } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Plus, UserCircle } from '@phosphor-icons/react'
+import { Plus, UserCircle, Trash, PencilSimple } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { COLORS } from '@/lib/constants'
 
 interface SettingsManagerProps {
   currentUser: User
@@ -20,6 +21,8 @@ interface SettingsManagerProps {
 export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [showDialog, setShowDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [users, setUsers] = useState<any[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
 
   const [formData, setFormData] = useState({
     username: '',
@@ -28,6 +31,25 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
     email: '',
     fullName: ''
   })
+
+  // Fetch users on mount if admin
+  useEffect(() => {
+    if (currentUser.role === 'admin') {
+      fetchUsers()
+    }
+  }, [])
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true)
+    try {
+      const data = await api.getUsers()
+      setUsers(data)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch users')
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
 
   const handleCreate = () => {
     setFormData({
@@ -55,6 +77,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
       
       toast.success('User created successfully')
       setShowDialog(false)
+      fetchUsers() // Refresh the user list
     } catch (error: any) {
       toast.error(error.message || 'Failed to create user')
     } finally {
@@ -111,14 +134,67 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               </Button>
             </div>
 
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex items-center justify-center text-muted-foreground">
-                  <UserCircle size={24} className="mr-2" />
-                  <span>User list requires backend API integration</span>
-                </div>
-              </CardContent>
-            </Card>
+            {loadingUsers ? (
+              <Card>
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-center text-muted-foreground">
+                    <span>Loading users...</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : users.length === 0 ? (
+              <Card>
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-center text-muted-foreground">
+                    <UserCircle size={24} className="mr-2" />
+                    <span>No users found</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {users.map((user) => (
+                  <Card key={user.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback>
+                              {user.username.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-sm">{user.username}</CardTitle>
+                            <Badge variant="secondary" className="mt-1 text-xs">
+                              {user.role}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-1">
+                      {user.full_name && (
+                        <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                          <span className="text-muted-foreground">Name: </span>
+                          {user.full_name}
+                        </div>
+                      )}
+                      {user.email && (
+                        <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                          <span className="text-muted-foreground">Email: </span>
+                          {user.email}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1 pt-2">
+                        <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-xs">
+                          {user.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -171,7 +247,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                   <Label htmlFor="role">Role *</Label>
                   <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v as UserRole })}>
                     <SelectTrigger id="role">
-                      <SelectValue />
+                      <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
