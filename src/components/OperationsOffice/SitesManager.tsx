@@ -75,7 +75,22 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
 
   const handleEdit = (site: Site) => {
     setEditingSite(site)
-    setFormData(site)
+    // Ensure all fields are properly mapped when editing
+    setFormData({
+      name: site.name,
+      address: site.address,
+      zipCode: site.zipCode,
+      city: site.city,
+      latitude: site.latitude,
+      longitude: site.longitude,
+      contactFirstName: site.contactFirstName,
+      contactLastName: site.contactLastName,
+      contactPhone: site.contactPhone,
+      contactEmail: site.contactEmail,
+      isSportsFacility: site.isSportsFacility,
+      amenities: site.amenities,
+      isActive: site.isActive
+    })
     setShowDialog(true)
   }
 
@@ -126,11 +141,15 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
       if (editingSite) {
         const numericId = parseInt(editingSite.id)
         if (!isNaN(numericId)) {
-          await api.updateSite(numericId, apiData)
+          const updatedSite = await api.updateSite(numericId, apiData)
+          // Update state with the transformed response from the server
+          setSites((current) =>
+            (current || []).map(s => s.id === editingSite.id ? {
+              ...updatedSite,
+              id: editingSite.id
+            } : s)
+          )
         }
-        setSites((current) =>
-          (current || []).map(s => s.id === editingSite.id ? { ...formData, id: editingSite.id } as Site : s)
-        )
         
         if (!formData.isActive) {
           setFields((current: any) =>
@@ -142,12 +161,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         
         toast.success('Site updated successfully')
       } else {
-        const response = await api.createSite(apiData)
-        const newSite: Site = {
-          ...formData,
-          id: response.id?.toString() || `site-${Date.now()}`
-        } as Site
-        
+        const newSite = await api.createSite(apiData)
+        // The response is already transformed by the API layer
         setSites((current) => [...(current || []), newSite])
         toast.success('Site created successfully')
       }
