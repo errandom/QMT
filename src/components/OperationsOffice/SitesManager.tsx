@@ -107,7 +107,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
 
       const apiData = {
         name: formData.name,
-        address: formData.address || null
+        address: formData.address || null,
+        amenities: JSON.stringify(formData.amenities)
       }
 
       if (editingSite) {
