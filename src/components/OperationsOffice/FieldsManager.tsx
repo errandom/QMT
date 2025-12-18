@@ -90,6 +90,8 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
         active: formData.isActive !== false
       }
 
+      console.log('FIELDS FRONTEND: Submitting field data:', apiData)
+
       if (editingField) {
         const numericId = parseInt(editingField.id)
         if (!isNaN(numericId)) {
