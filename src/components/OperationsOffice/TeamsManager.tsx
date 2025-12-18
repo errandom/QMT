@@ -83,8 +83,18 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
         sport: formData.sportType,
         age_group: formData.rosterSize || null,
         coaches: formData.headCoach ? `${formData.headCoach.firstName} ${formData.headCoach.lastName}` : null,
-        active: formData.isActive
+        active: formData.isActive,
+        headCoachFirstName: formData.headCoach?.firstName || null,
+        headCoachLastName: formData.headCoach?.lastName || null,
+        headCoachEmail: formData.headCoach?.email || null,
+        headCoachPhone: formData.headCoach?.phone || null,
+        teamManagerFirstName: formData.teamManager?.firstName || null,
+        teamManagerLastName: formData.teamManager?.lastName || null,
+        teamManagerEmail: formData.teamManager?.email || null,
+        teamManagerPhone: formData.teamManager?.phone || null
       }
+
+      console.log('TEAMS FRONTEND: Submitting team data:', apiData)
 
       if (editingTeam) {
         // Update existing team
@@ -133,7 +143,15 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
           sport: team.sportType,
           age_group: team.rosterSize || null,
           coaches: team.headCoach ? `${team.headCoach.firstName} ${team.headCoach.lastName}` : null,
-          active: !currentActive
+          active: !currentActive,
+          headCoachFirstName: team.headCoach?.firstName || null,
+          headCoachLastName: team.headCoach?.lastName || null,
+          headCoachEmail: team.headCoach?.email || null,
+          headCoachPhone: team.headCoach?.phone || null,
+          teamManagerFirstName: team.teamManager?.firstName || null,
+          teamManagerLastName: team.teamManager?.lastName || null,
+          teamManagerEmail: team.teamManager?.email || null,
+          teamManagerPhone: team.teamManager?.phone || null
         }
         await api.updateTeam(numericId, apiData)
       }
@@ -326,7 +344,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.headCoach?.firstName || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    headCoach: { ...formData.headCoach!, firstName: e.target.value }
+                    headCoach: { 
+                      firstName: e.target.value,
+                      lastName: formData.headCoach?.lastName || '',
+                      email: formData.headCoach?.email || '',
+                      phone: formData.headCoach?.phone || ''
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -335,7 +358,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.headCoach?.lastName || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    headCoach: { ...formData.headCoach!, lastName: e.target.value }
+                    headCoach: { 
+                      firstName: formData.headCoach?.firstName || '',
+                      lastName: e.target.value,
+                      email: formData.headCoach?.email || '',
+                      phone: formData.headCoach?.phone || ''
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -345,7 +373,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.headCoach?.email || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    headCoach: { ...formData.headCoach!, email: e.target.value }
+                    headCoach: { 
+                      firstName: formData.headCoach?.firstName || '',
+                      lastName: formData.headCoach?.lastName || '',
+                      email: e.target.value,
+                      phone: formData.headCoach?.phone || ''
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -355,7 +388,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.headCoach?.phone || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    headCoach: { ...formData.headCoach!, phone: e.target.value }
+                    headCoach: { 
+                      firstName: formData.headCoach?.firstName || '',
+                      lastName: formData.headCoach?.lastName || '',
+                      email: formData.headCoach?.email || '',
+                      phone: e.target.value
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -372,7 +410,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.teamManager?.firstName || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    teamManager: { ...formData.teamManager!, firstName: e.target.value }
+                    teamManager: { 
+                      firstName: e.target.value,
+                      lastName: formData.teamManager?.lastName || '',
+                      email: formData.teamManager?.email || '',
+                      phone: formData.teamManager?.phone || ''
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -381,7 +424,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.teamManager?.lastName || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    teamManager: { ...formData.teamManager!, lastName: e.target.value }
+                    teamManager: { 
+                      firstName: formData.teamManager?.firstName || '',
+                      lastName: e.target.value,
+                      email: formData.teamManager?.email || '',
+                      phone: formData.teamManager?.phone || ''
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -391,7 +439,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.teamManager?.email || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    teamManager: { ...formData.teamManager!, email: e.target.value }
+                    teamManager: { 
+                      firstName: formData.teamManager?.firstName || '',
+                      lastName: formData.teamManager?.lastName || '',
+                      email: e.target.value,
+                      phone: formData.teamManager?.phone || ''
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
@@ -401,7 +454,12 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                   value={formData.teamManager?.phone || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    teamManager: { ...formData.teamManager!, phone: e.target.value }
+                    teamManager: { 
+                      firstName: formData.teamManager?.firstName || '',
+                      lastName: formData.teamManager?.lastName || '',
+                      email: formData.teamManager?.email || '',
+                      phone: e.target.value
+                    }
                   })}
                   style={{ color: COLORS.CHARCOAL }}
                 />
