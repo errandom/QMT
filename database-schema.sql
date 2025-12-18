@@ -62,6 +62,9 @@ CREATE TABLE fields (
   name NVARCHAR(255) NOT NULL,
   field_type NVARCHAR(50),
   surface_type NVARCHAR(50),
+  has_lights BIT DEFAULT 0,
+  capacity INT,
+  active BIT DEFAULT 1,
   created_at DATETIME DEFAULT GETDATE(),
   updated_at DATETIME DEFAULT GETDATE(),
   CONSTRAINT FK_fields_sites FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
