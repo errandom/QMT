@@ -48,6 +48,18 @@
   position: fixed !important;
 }
 
+/* Toast notifications - must appear above everything including dialogs */
+[data-sonner-toaster],
+.toaster,
+.toast-message {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
+[data-sonner-toast] {
+  z-index: 999999 !important;
+}
+
 [data-slot="dialog-content"].glass-card {
   background: linear-gradient(to top right, 
     #248bcc 0%, 
