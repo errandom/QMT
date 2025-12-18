@@ -25,7 +25,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
 
   const [formData, setFormData] = useState<Partial<Field>>({
     name: '',
-    siteId: '',
+    siteId: undefined,
     turfType: 'Natural Turf',
     hasLights: false,
     fieldSize: 'Full',
@@ -39,7 +39,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
     setEditingField(null)
     setFormData({
       name: '',
-      siteId: '',
+      siteId: undefined,
       turfType: 'Natural Turf',
       hasLights: false,
       fieldSize: 'Full',
@@ -243,7 +243,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
             <div className="space-y-2">
               <Label htmlFor="site" style={{ color: COLORS.CHARCOAL }}>Site *</Label>
               <Select 
-                value={formData.siteId} 
+                value={formData.siteId || ''} 
                 onValueChange={(v) => setFormData({ ...formData, siteId: v })}
               >
                 <SelectTrigger id="site" style={{ color: COLORS.CHARCOAL }}>
