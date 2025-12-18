@@ -136,12 +136,13 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         isActive: formData.isActive
       }
 
-      console.log('SITES FRONTEND: Submitting site data:', apiData)
+      console.log('SITES FRONTEND: Submitting site data:', JSON.stringify(apiData, null, 2))
 
       if (editingSite) {
         const numericId = parseInt(editingSite.id)
         if (!isNaN(numericId)) {
           const updatedSite = await api.updateSite(numericId, apiData)
+          console.log('SITES FRONTEND: Received updated site:', JSON.stringify(updatedSite, null, 2))
           // Update state with the transformed response from the server
           setSites((current) =>
             (current || []).map(s => s.id === editingSite.id ? {
@@ -162,6 +163,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         toast.success('Site updated successfully')
       } else {
         const newSite = await api.createSite(apiData)
+        console.log('SITES FRONTEND: Received new site:', JSON.stringify(newSite, null, 2))
         // The response is already transformed by the API layer
         setSites((current) => [...(current || []), newSite])
         toast.success('Site created successfully')
