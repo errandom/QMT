@@ -34,17 +34,22 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
   // Fetch users on mount if admin
   useEffect(() => {
+    console.log('[SettingsManager] Current user role:', currentUser.role);
     if (currentUser.role === 'admin') {
-      fetchUsers()
+      console.log('[SettingsManager] Fetching users...');
+      fetchUsers();
     }
-  }, [])
+  }, [currentUser.role])
 
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
+      console.log('[SettingsManager] Calling api.getUsers()');
       const data = await api.getUsers()
+      console.log('[SettingsManager] Received users:', data);
       setUsers(data)
     } catch (error: any) {
+      console.error('[SettingsManager] Error fetching users:', error);
       toast.error(error.message || 'Failed to fetch users')
     } finally {
       setLoadingUsers(false)
