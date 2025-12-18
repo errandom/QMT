@@ -81,10 +81,13 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
       }
 
       const apiData = {
-        name: formData.name,
         site_id: parseInt(formData.siteId),
+        name: formData.name,
         field_type: formData.turfType || null,
-        surface_type: formData.fieldSize || null
+        surface_type: formData.fieldSize || null,
+        has_lights: formData.hasLights || false,
+        capacity: formData.capacity || null,
+        active: formData.isActive !== false
       }
 
       if (editingField) {
@@ -238,9 +241,8 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
             <div className="space-y-2">
               <Label htmlFor="site" style={{ color: COLORS.CHARCOAL }}>Site *</Label>
               <Select 
-                value={formData.siteId || ''} 
+                value={formData.siteId} 
                 onValueChange={(v) => setFormData({ ...formData, siteId: v })}
-                required
               >
                 <SelectTrigger id="site" style={{ color: COLORS.CHARCOAL }}>
                   <SelectValue placeholder="Select site" />
@@ -259,7 +261,6 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 <Select 
                   value={formData.turfType || 'Natural Turf'} 
                   onValueChange={(v) => setFormData({ ...formData, turfType: v as TurfType })}
-                  required
                 >
                   <SelectTrigger id="turfType" style={{ color: COLORS.CHARCOAL }}>
                     <SelectValue placeholder="Select turf type" />
@@ -275,7 +276,6 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 <Select 
                   value={formData.fieldSize || 'Full'} 
                   onValueChange={(v) => setFormData({ ...formData, fieldSize: v as FieldSize })}
-                  required
                 >
                   <SelectTrigger id="fieldSize" style={{ color: COLORS.CHARCOAL }}>
                     <SelectValue placeholder="Select field size" />
