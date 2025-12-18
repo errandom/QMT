@@ -222,14 +222,14 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
             <div className="space-y-2">
               <Label htmlFor="assignedTeam" style={{ color: COLORS.CHARCOAL }}>Assigned Team</Label>
               <Select 
-                value={formData.assignedTeamId || ''} 
-                onValueChange={(v) => setFormData({ ...formData, assignedTeamId: v })}
+                value={formData.assignedTeamId || 'unassigned'} 
+                onValueChange={(v) => setFormData({ ...formData, assignedTeamId: v === 'unassigned' ? undefined : v })}
               >
                 <SelectTrigger id="assignedTeam" style={{ color: COLORS.CHARCOAL }}>
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {(teams as any[]).filter((t: any) => t.isActive).map((team: any) => (
                     <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
                   ))}
