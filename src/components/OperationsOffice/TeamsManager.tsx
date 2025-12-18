@@ -83,13 +83,13 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
         sport: formData.sportType,
         age_group: formData.rosterSize || null,
         active: formData.isActive,
-        headCoach: formData.headCoach ? {
+        headCoach: (formData.headCoach?.firstName || formData.headCoach?.lastName || formData.headCoach?.email || formData.headCoach?.phone) ? {
           firstName: formData.headCoach.firstName || null,
           lastName: formData.headCoach.lastName || null,
           email: formData.headCoach.email || null,
           phone: formData.headCoach.phone || null
         } : null,
-        teamManager: formData.teamManager ? {
+        teamManager: (formData.teamManager?.firstName || formData.teamManager?.lastName || formData.teamManager?.email || formData.teamManager?.phone)r?.firstName || formData.teamManager?.lastName || formData.teamManager?.email || formData.teamManager?.phone) ? {
           firstName: formData.teamManager.firstName || null,
           lastName: formData.teamManager.lastName || null,
           email: formData.teamManager.email || null,
@@ -147,13 +147,13 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
           age_group: team.rosterSize || null,
           coaches: team.headCoach ? `${team.headCoach.firstName} ${team.headCoach.lastName}` : null,
           active: !currentActive,
-          headCoach: team.headCoach ? {
+          headCoach: (team.headCoach?.firstName || team.headCoach?.lastName || team.headCoach?.email || team.headCoach?.phone) ? {
             firstName: team.headCoach.firstName || null,
             lastName: team.headCoach.lastName || null,
             email: team.headCoach.email || null,
             phone: team.headCoach.phone || null
           } : null,
-          teamManager: team.teamManager ? {
+          teamManager: (team.teamManager?.firstName || team.teamManager?.lastName || team.teamManager?.email || team.teamManager?.phone)r?.firstName || team.teamManager?.lastName || team.teamManager?.email || team.teamManager?.phone) ? {
             firstName: team.teamManager.firstName || null,
             lastName: team.teamManager.lastName || null,
             email: team.teamManager.email || null,
