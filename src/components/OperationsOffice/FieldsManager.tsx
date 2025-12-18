@@ -246,12 +246,21 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 value={formData.siteId || ''} 
                 onValueChange={(v) => setFormData({ ...formData, siteId: v })}
               >
-                <SelectTrigger id="site" style={{ color: COLORS.CHARCOAL }}>
+                <SelectTrigger 
+                  id="site" 
+                  className="bg-white border-gray-300 text-[#2C3E50] data-[placeholder]:text-gray-500"
+                >
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-gray-300">
                   {activeSportsSites.map(site => (
-                    <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                    <SelectItem 
+                      key={site.id} 
+                      value={site.id}
+                      className="text-[#2C3E50] focus:bg-[#248bcc] focus:text-white"
+                    >
+                      {site.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -264,12 +273,25 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                   value={formData.turfType || 'Natural Turf'} 
                   onValueChange={(v) => setFormData({ ...formData, turfType: v as TurfType })}
                 >
-                  <SelectTrigger id="turfType" style={{ color: COLORS.CHARCOAL }}>
+                  <SelectTrigger 
+                    id="turfType" 
+                    className="bg-white border-gray-300 text-[#2C3E50] data-[placeholder]:text-gray-500"
+                  >
                     <SelectValue placeholder="Select turf type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Natural Turf">Natural Turf</SelectItem>
-                    <SelectItem value="Artificial Turf">Artificial Turf</SelectItem>
+                  <SelectContent className="bg-white border-gray-300">
+                    <SelectItem 
+                      value="Natural Turf"
+                      className="text-[#2C3E50] focus:bg-[#248bcc] focus:text-white"
+                    >
+                      Natural Turf
+                    </SelectItem>
+                    <SelectItem 
+                      value="Artificial Turf"
+                      className="text-[#2C3E50] focus:bg-[#248bcc] focus:text-white"
+                    >
+                      Artificial Turf
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -279,12 +301,25 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                   value={formData.fieldSize || 'Full'} 
                   onValueChange={(v) => setFormData({ ...formData, fieldSize: v as FieldSize })}
                 >
-                  <SelectTrigger id="fieldSize" style={{ color: COLORS.CHARCOAL }}>
+                  <SelectTrigger 
+                    id="fieldSize" 
+                    className="bg-white border-gray-300 text-[#2C3E50] data-[placeholder]:text-gray-500"
+                  >
                     <SelectValue placeholder="Select field size" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Full">Full</SelectItem>
-                    <SelectItem value="Shared">Shared</SelectItem>
+                  <SelectContent className="bg-white border-gray-300">
+                    <SelectItem 
+                      value="Full"
+                      className="text-[#2C3E50] focus:bg-[#248bcc] focus:text-white"
+                    >
+                      Full
+                    </SelectItem>
+                    <SelectItem 
+                      value="Shared"
+                      className="text-[#2C3E50] focus:bg-[#248bcc] focus:text-white"
+                    >
+                      Shared
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
