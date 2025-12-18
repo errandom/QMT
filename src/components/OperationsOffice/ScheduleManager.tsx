@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -84,37 +85,69 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     setShowDialog(true)
   }
 
-  const handleDelete = (eventId: string) => {
+  const handleDelete = async (eventId: string) => {
     if (confirm('Are you sure you want to delete this event?')) {
-      setEvents((current = []) => current.filter(ev => ev.id !== eventId))
-      toast.success('Event deleted successfully')
+      try {
+        const numericId = parseInt(eventId)
+        if (!isNaN(numericId)) {
+          await api.deleteEvent(numericId)
+        }
+        setEvents((current = []) => current.filter(ev => ev.id !== eventId))
+        toast.success('Event deleted successfully')
+      } catch (error: any) {
+        console.error('Error deleting event:', error)
+        toast.error(error.message || 'Failed to delete event')
+      }
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (formData.status === 'Confirmed' && !formData.fieldId) {
-      toast.error('Cannot confirm an event without a field location')
-      return
-    }
-    
-    if (editingEvent) {
-      setEvents((current = []) =>
-        current.map(ev => ev.id === editingEvent.id ? { ...formData, id: editingEvent.id } as Event : ev)
-      )
-      toast.success('Event updated successfully')
-    } else {
-      const newEvent: Event = {
-        ...formData,
-        id: `event-${Date.now()}`
-      } as Event
+    try {
+      if (formData.status === 'Confirmed' && !formData.fieldId) {
+        toast.error('Cannot confirm an event without a field location')
+        return
+      }
+
+      // Map frontend Event to database schema
+      const apiData = {
+        team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+        field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+        event_type: formData.eventType,
+        start_time: `${formData.date}T${formData.startTime}:00`,
+        end_time: `${formData.date}T${formData.endTime}:00`,
+        description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
+        status: formData.status?.toLowerCase() || 'scheduled'
+      }
+
+      console.log('[ScheduleManager] Submitting event:', apiData)
       
-      setEvents((current = []) => [...current, newEvent])
-      toast.success('Event created successfully')
+      if (editingEvent) {
+        const numericId = parseInt(editingEvent.id)
+        if (!isNaN(numericId)) {
+          await api.updateEvent(numericId, apiData)
+        }
+        setEvents((current = []) =>
+          current.map(ev => ev.id === editingEvent.id ? { ...formData, id: editingEvent.id } as Event : ev)
+        )
+        toast.success('Event updated successfully')
+      } else {
+        const response = await api.createEvent(apiData)
+        const newEvent: Event = {
+          ...formData,
+          id: response.id?.toString() || `event-${Date.now()}`
+        } as Event
+        
+        setEvents((current = []) => [...current, newEvent])
+        toast.success('Event created successfully')
+      }
+      
+      setShowDialog(false)
+    } catch (error: any) {
+      console.error('Error saving event:', error)
+      toast.error(error.message || 'Failed to save event')
     }
-    
-    setShowDialog(false)
   }
 
   const handleTeamToggle = (teamId: string) => {
