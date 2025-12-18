@@ -82,16 +82,19 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
         name: formData.name,
         sport: formData.sportType,
         age_group: formData.rosterSize || null,
-
         active: formData.isActive,
-        headCoachFirstName: formData.headCoach?.firstName || null,
-        headCoachLastName: formData.headCoach?.lastName || null,
-        headCoachEmail: formData.headCoach?.email || null,
-        headCoachPhone: formData.headCoach?.phone || null,
-        teamManagerFirstName: formData.teamManager?.firstName || null,
-        teamManagerLastName: formData.teamManager?.lastName || null,
-        teamManagerEmail: formData.teamManager?.email || null,
-        teamManagerPhone: formData.teamManager?.phone || null
+        headCoach: formData.headCoach ? {
+          firstName: formData.headCoach.firstName || null,
+          lastName: formData.headCoach.lastName || null,
+          email: formData.headCoach.email || null,
+          phone: formData.headCoach.phone || null
+        } : null,
+        teamManager: formData.teamManager ? {
+          firstName: formData.teamManager.firstName || null,
+          lastName: formData.teamManager.lastName || null,
+          email: formData.teamManager.email || null,
+          phone: formData.teamManager.phone || null
+        } : null
       }
 
       console.log('TEAMS FRONTEND: Submitting team data:', apiData)
@@ -144,14 +147,18 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
           age_group: team.rosterSize || null,
           coaches: team.headCoach ? `${team.headCoach.firstName} ${team.headCoach.lastName}` : null,
           active: !currentActive,
-          headCoachFirstName: team.headCoach?.firstName || null,
-          headCoachLastName: team.headCoach?.lastName || null,
-          headCoachEmail: team.headCoach?.email || null,
-          headCoachPhone: team.headCoach?.phone || null,
-          teamManagerFirstName: team.teamManager?.firstName || null,
-          teamManagerLastName: team.teamManager?.lastName || null,
-          teamManagerEmail: team.teamManager?.email || null,
-          teamManagerPhone: team.teamManager?.phone || null
+          headCoach: team.headCoach ? {
+            firstName: team.headCoach.firstName || null,
+            lastName: team.headCoach.lastName || null,
+            email: team.headCoach.email || null,
+            phone: team.headCoach.phone || null
+          } : null,
+          teamManager: team.teamManager ? {
+            firstName: team.teamManager.firstName || null,
+            lastName: team.teamManager.lastName || null,
+            email: team.teamManager.email || null,
+            phone: team.teamManager.phone || null
+          } : null
         }
         await api.updateTeam(numericId, apiData)
       }
