@@ -27,7 +27,7 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
     name: '',
     description: '',
     quantity: 1,
-    assignedTeamId: ''
+    assignedTeamId: undefined
   })
 
   const handleCreate = () => {
@@ -36,7 +36,7 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
       name: '',
       description: '',
       quantity: 1,
-      assignedTeamId: ''
+      assignedTeamId: undefined
     })
     setShowDialog(true)
   }
