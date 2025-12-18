@@ -332,6 +332,9 @@ app.put('/api/teams/:id', async (req, res) => {
     } = req.body;
     
     console.log('[Teams PUT] Received data:', JSON.stringify(req.body, null, 2));
+    console.log('[Teams PUT] ID:', req.params.id);
+    console.log('[Teams PUT] headCoach:', headCoach);
+    console.log('[Teams PUT] teamManager:', teamManager);
     
     const pool = await getPool();
     const result = await pool.request()
@@ -369,13 +372,20 @@ app.put('/api/teams/:id', async (req, res) => {
         WHERE id = @id
       `);
     
+    console.log('[Teams PUT] Query result:', result.recordset);
+    
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Team not found' });
     }
     res.json(result.recordset[0]);
   } catch (err) {
-    console.error('Error updating team:', err);
-    res.status(500).json({ error: 'Failed to update team' });
+    console.error('[Teams PUT] Error updating team:', err);
+    console.error('[Teams PUT] Error details:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'Failed to update team', details: err.message });
   }
 });
 
