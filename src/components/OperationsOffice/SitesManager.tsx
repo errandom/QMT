@@ -121,6 +121,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         isActive: formData.isActive
       }
 
+      console.log('SITES FRONTEND: Submitting site data:', apiData)
+
       if (editingSite) {
         const numericId = parseInt(editingSite.id)
         if (!isNaN(numericId)) {
