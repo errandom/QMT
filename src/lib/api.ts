@@ -184,6 +184,12 @@ export async function apiRequest<T>(
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 
+  // Handle 204 No Content responses (e.g., DELETE operations)
+  if (response.status === 204) {
+    console.log(`[API] ✓ Response from ${url}: 204 No Content`);
+    return {} as T;
+  }
+
   const data = await response.json();
   console.log(`[API] ✓ Response from ${url}:`, data);
   return data;
