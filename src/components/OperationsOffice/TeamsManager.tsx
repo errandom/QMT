@@ -320,7 +320,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
             <div className="space-y-2">
               <Label htmlFor="rosterSize" style={{ color: COLORS.CHARCOAL }}>Roster Size</Label>
               <Select 
-                value={formData.rosterSize} 
+                value={formData.rosterSize || ''} 
                 onValueChange={(v) => setFormData({ ...formData, rosterSize: v as RosterSize })}
               >
                 <SelectTrigger id="rosterSize" style={{ color: COLORS.CHARCOAL }}>
