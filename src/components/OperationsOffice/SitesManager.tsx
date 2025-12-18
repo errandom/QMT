@@ -108,7 +108,17 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
       const apiData = {
         name: formData.name,
         address: formData.address || null,
-        amenities: JSON.stringify(formData.amenities)
+        city: formData.city || null,
+        zipCode: formData.zipCode || null,
+        latitude: formData.latitude || 0,
+        longitude: formData.longitude || 0,
+        contactFirstName: formData.contactFirstName || null,
+        contactLastName: formData.contactLastName || null,
+        contactPhone: formData.contactPhone || null,
+        contactEmail: formData.contactEmail || null,
+        isSportsFacility: formData.isSportsFacility,
+        amenities: JSON.stringify(formData.amenities),
+        isActive: formData.isActive
       }
 
       if (editingSite) {
