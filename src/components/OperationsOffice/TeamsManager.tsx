@@ -89,7 +89,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
           email: formData.headCoach.email || null,
           phone: formData.headCoach.phone || null
         } : null,
-        teamManager: (formData.teamManager?.firstName || formData.teamManager?.lastName || formData.teamManager?.email || formData.teamManager?.phone)r?.firstName || formData.teamManager?.lastName || formData.teamManager?.email || formData.teamManager?.phone) ? {
+        teamManager: (formData.teamManager?.firstName || formData.teamManager?.lastName || formData.teamManager?.email || formData.teamManager?.phone) ? {
           firstName: formData.teamManager.firstName || null,
           lastName: formData.teamManager.lastName || null,
           email: formData.teamManager.email || null,
@@ -153,7 +153,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
             email: team.headCoach.email || null,
             phone: team.headCoach.phone || null
           } : null,
-          teamManager: (team.teamManager?.firstName || team.teamManager?.lastName || team.teamManager?.email || team.teamManager?.phone)r?.firstName || team.teamManager?.lastName || team.teamManager?.email || team.teamManager?.phone) ? {
+          teamManager: (team.teamManager?.firstName || team.teamManager?.lastName || team.teamManager?.email || team.teamManager?.phone) ? {
             firstName: team.teamManager.firstName || null,
             lastName: team.teamManager.lastName || null,
             email: team.teamManager.email || null,
