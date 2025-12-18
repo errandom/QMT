@@ -103,6 +103,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
         // Update existing team
         const numericId = parseInt(editingTeam.id)
         if (!isNaN(numericId)) {
+          console.log('TEAMS FRONTEND: Updating team ID:', numericId)
           await api.updateTeam(numericId, apiData)
           setTeams((current = []) =>
             current.map(t => t.id === editingTeam.id ? { ...formData, id: editingTeam.id } as Team : t)
@@ -145,7 +146,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
           name: team.name,
           sport: team.sportType,
           age_group: team.rosterSize || null,
-          coaches: team.headCoach ? `${team.headCoach.firstName} ${team.headCoach.lastName}` : null,
+          coaches: (team.headCoach?.firstName || team.headCoach?.lastName) ? `${team.headCoach.firstName || ''} ${team.headCoach.lastName || ''}`.trim() : null,
           active: !currentActive,
           headCoach: (team.headCoach?.firstName || team.headCoach?.lastName || team.headCoach?.email || team.headCoach?.phone) ? {
             firstName: team.headCoach.firstName || null,
@@ -160,6 +161,7 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
             phone: team.teamManager.phone || null
           } : null
         }
+        console.log('TEAMS FRONTEND: Toggle active data:', apiData)
         await api.updateTeam(numericId, apiData)
       }
       
