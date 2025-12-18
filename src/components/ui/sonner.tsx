@@ -15,8 +15,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
         } as CSSProperties
-      }
-      {...props}
+      }      toastOptions={{
+        style: {
+          zIndex: 10001,
+        },
+      }}      {...props}
     />
   )
 }
