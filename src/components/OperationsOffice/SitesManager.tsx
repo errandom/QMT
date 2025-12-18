@@ -178,7 +178,18 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
       if (!isNaN(numericId)) {
         const apiData = {
           name: site.name,
-          address: site.address || null
+          address: site.address || null,
+          city: site.city || null,
+          zipCode: site.zipCode || null,
+          latitude: site.latitude || 0,
+          longitude: site.longitude || 0,
+          contactFirstName: site.contactFirstName || null,
+          contactLastName: site.contactLastName || null,
+          contactPhone: site.contactPhone || null,
+          contactEmail: site.contactEmail || null,
+          isSportsFacility: site.isSportsFacility,
+          amenities: JSON.stringify(site.amenities),
+          isActive: !currentActive
         }
         await api.updateSite(numericId, apiData)
       }
