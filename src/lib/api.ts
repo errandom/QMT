@@ -35,19 +35,31 @@ export function setStoredUser(user: any): void {
 // Data transformation utilities to convert between database snake_case and frontend camelCase
 function transformTeam(team: any): any {
   if (!team) return team;
+  
+  // Build headCoach object from database fields
+  const headCoach = (team.head_coach_first_name || team.head_coach_last_name || team.head_coach_email || team.head_coach_phone) ? {
+    firstName: team.head_coach_first_name || '',
+    lastName: team.head_coach_last_name || '',
+    email: team.head_coach_email || '',
+    phone: team.head_coach_phone || ''
+  } : undefined;
+  
+  // Build teamManager object from database fields
+  const teamManager = (team.team_manager_first_name || team.team_manager_last_name || team.team_manager_email || team.team_manager_phone) ? {
+    firstName: team.team_manager_first_name || '',
+    lastName: team.team_manager_last_name || '',
+    email: team.team_manager_email || '',
+    phone: team.team_manager_phone || ''
+  } : undefined;
+  
   return {
-    ...team,
-    // Ensure id is string
     id: String(team.id || ''),
-    // Handle sport field - could be 'sport' or 'sportType'
+    name: team.name || '',
     sportType: team.sportType || team.sport,
-    // Handle active field - could be number (0/1) or boolean - convert to boolean for consistency
     isActive: team.isActive !== undefined ? Boolean(team.isActive) : (team.active !== undefined ? Boolean(team.active) : true),
-    // Handle coach fields
-    headCoach: team.headCoach || team.head_coach,
-    teamManager: team.teamManager || team.team_manager,
-    // Handle roster size
-    rosterSize: team.rosterSize || team.roster_size
+    headCoach,
+    teamManager,
+    rosterSize: team.rosterSize || team.age_group
   };
 }
 
