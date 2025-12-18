@@ -287,10 +287,9 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
                 <Select 
                   value={formData.sportType || 'Tackle Football'} 
                   onValueChange={(v) => setFormData({ ...formData, sportType: v as SportType })}
-                  required
                 >
                   <SelectTrigger id="sportType" style={{ color: COLORS.CHARCOAL }}>
-                    <SelectValue />
+                    <SelectValue placeholder="Select sport type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Tackle Football">Tackle Football</SelectItem>
@@ -303,16 +302,16 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
             <div className="space-y-2">
               <Label htmlFor="rosterSize" style={{ color: COLORS.CHARCOAL }}>Roster Size</Label>
               <Select 
-                value={formData.rosterSize || ''} 
+                value={formData.rosterSize} 
                 onValueChange={(v) => setFormData({ ...formData, rosterSize: v as RosterSize })}
               >
                 <SelectTrigger id="rosterSize" style={{ color: COLORS.CHARCOAL }}>
                   <SelectValue placeholder="Select roster size" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="< 15">{'< 15'}</SelectItem>
+                  <SelectItem value="< 15">Less than 15</SelectItem>
                   <SelectItem value="16-30">16-30</SelectItem>
-                  <SelectItem value="> 30">{'>  30'}</SelectItem>
+                  <SelectItem value="> 30">More than 30</SelectItem>
                 </SelectContent>
               </Select>
             </div>
