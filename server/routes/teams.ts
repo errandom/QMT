@@ -116,7 +116,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     console.log('[Teams PUT] Received data:', req.body);
     
     const pool = await getPool();
-    const result = await pool.request()
+    await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('name', sql.NVarChar, name)
       .input('sport', sql.NVarChar, sport)
@@ -145,18 +145,25 @@ router.put('/:id', async (req: Request, res: Response) => {
             team_manager_email = @team_manager_email,
             team_manager_phone = @team_manager_phone,
             updated_at = GETDATE()
-        OUTPUT INSERTED.*
         WHERE id = @id
       `);
+    
+    // Fetch the updated record separately to avoid OUTPUT INSERTED.* issues
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('SELECT * FROM teams WHERE id = @id');
     
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Team not found' });
     }
     
     res.json(result.recordset[0]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating team:', error);
-    res.status(500).json({ error: 'Failed to update team' });
+    res.status(500).json({ 
+      error: 'Failed to update team',
+      details: error.message || 'Unknown error'
+    });
   }
 });
 
