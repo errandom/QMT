@@ -274,7 +274,6 @@ app.post('/api/teams', async (req, res) => {
       name, 
       sport, 
       age_group, 
-      coaches,
       headCoach,
       teamManager,
       active 
@@ -287,7 +286,6 @@ app.post('/api/teams', async (req, res) => {
       .input('name', sql.NVarChar, name)
       .input('sport', sql.NVarChar, sport)
       .input('age_group', sql.NVarChar, age_group || null)
-      .input('coaches', sql.NVarChar, coaches || null)
       .input('head_coach_first_name', sql.NVarChar, headCoach?.firstName || null)
       .input('head_coach_last_name', sql.NVarChar, headCoach?.lastName || null)
       .input('head_coach_email', sql.NVarChar, headCoach?.email || null)
@@ -299,14 +297,14 @@ app.post('/api/teams', async (req, res) => {
       .input('active', sql.Bit, active !== false ? 1 : 0)
       .query(`
         INSERT INTO teams (
-          name, sport, age_group, coaches,
+          name, sport, age_group,
           head_coach_first_name, head_coach_last_name, head_coach_email, head_coach_phone,
           team_manager_first_name, team_manager_last_name, team_manager_email, team_manager_phone,
           active
         )
         OUTPUT INSERTED.*
         VALUES (
-          @name, @sport, @age_group, @coaches,
+          @name, @sport, @age_group,
           @head_coach_first_name, @head_coach_last_name, @head_coach_email, @head_coach_phone,
           @team_manager_first_name, @team_manager_last_name, @team_manager_email, @team_manager_phone,
           @active
@@ -325,7 +323,6 @@ app.put('/api/teams/:id', async (req, res) => {
       name, 
       sport, 
       age_group, 
-      coaches,
       headCoach,
       teamManager,
       active 
@@ -337,12 +334,11 @@ app.put('/api/teams/:id', async (req, res) => {
     console.log('[Teams PUT] teamManager:', teamManager);
     
     const pool = await getPool();
-    const result = await pool.request()
+    await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('name', sql.NVarChar, name)
       .input('sport', sql.NVarChar, sport)
       .input('age_group', sql.NVarChar, age_group || null)
-      .input('coaches', sql.NVarChar, coaches || null)
       .input('head_coach_first_name', sql.NVarChar, headCoach?.firstName || null)
       .input('head_coach_last_name', sql.NVarChar, headCoach?.lastName || null)
       .input('head_coach_email', sql.NVarChar, headCoach?.email || null)
@@ -357,7 +353,6 @@ app.put('/api/teams/:id', async (req, res) => {
         SET name = @name, 
             sport = @sport, 
             age_group = @age_group, 
-            coaches = @coaches,
             head_coach_first_name = @head_coach_first_name,
             head_coach_last_name = @head_coach_last_name,
             head_coach_email = @head_coach_email,
@@ -368,9 +363,13 @@ app.put('/api/teams/:id', async (req, res) => {
             team_manager_phone = @team_manager_phone,
             active = @active, 
             updated_at = GETDATE()
-        OUTPUT INSERTED.*
         WHERE id = @id
       `);
+    
+    // Fetch the updated team separately
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('SELECT * FROM teams WHERE id = @id');
     
     console.log('[Teams PUT] Query result:', result.recordset);
     
