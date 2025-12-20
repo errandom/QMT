@@ -87,7 +87,7 @@ CREATE TABLE events (
   start_time DATETIME NOT NULL,
   end_time DATETIME NOT NULL,
   description NVARCHAR(1000),
-  status NVARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'cancelled', 'completed', 'postponed')),
+  status NVARCHAR(50) DEFAULT 'Planned' CHECK (status IN ('Planned', 'Confirmed', 'Cancelled', 'Completed')),
   created_at DATETIME DEFAULT GETDATE(),
   updated_at DATETIME DEFAULT GETDATE(),
   CONSTRAINT FK_events_teams FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
