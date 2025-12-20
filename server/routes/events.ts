@@ -75,7 +75,7 @@ router.post('/', async (req: Request, res: Response) => {
       .input('start_time', sql.DateTime, start_time)
       .input('end_time', sql.DateTime, end_time)
       .input('description', sql.NVarChar, description || null)
-      .input('status', sql.NVarChar, status || 'scheduled')
+      .input('status', sql.NVarChar, status || 'Planned')
       .query(`
         INSERT INTO events (team_id, field_id, event_type, start_time, end_time, description, status)
         OUTPUT INSERTED.*
