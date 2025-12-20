@@ -110,20 +110,28 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         return
       }
 
-      // Map frontend Event to database schema
-      const apiData = {
-        team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
-        field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
-        event_type: formData.eventType,
-        start_time: `${formData.date}T${formData.startTime}:00`,
-        end_time: `${formData.date}T${formData.endTime}:00`,
-        description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
-        status: formData.status?.toLowerCase() || 'scheduled'
+      if (formData.isRecurring && (!formData.recurringDays || formData.recurringDays.length === 0)) {
+        toast.error('Please select at least one weekday for the recurring event')
+        return
       }
 
-      console.log('[ScheduleManager] Submitting event:', apiData)
-      
+      if (formData.isRecurring && !formData.recurringEndDate) {
+        toast.error('Please specify an end date for the recurring event')
+        return
+      }
+
       if (editingEvent) {
+        // Editing existing event - update single event only
+        const apiData = {
+          team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+          field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+          event_type: formData.eventType,
+          start_time: `${formData.date}T${formData.startTime}:00`,
+          end_time: `${formData.date}T${formData.endTime}:00`,
+          description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
+          status: formData.status || 'Planned'
+        }
+
         const numericId = parseInt(editingEvent.id)
         if (!isNaN(numericId)) {
           await api.updateEvent(numericId, apiData)
@@ -133,14 +141,66 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         )
         toast.success('Event updated successfully')
       } else {
-        const response = await api.createEvent(apiData)
-        const newEvent: Event = {
-          ...formData,
-          id: response.id?.toString() || `event-${Date.now()}`
-        } as Event
-        
-        setEvents((current = []) => [...current, newEvent])
-        toast.success('Event created successfully')
+        // Creating new event(s)
+        if (formData.isRecurring) {
+          // Generate all recurring event instances
+          const startDate = new Date(formData.date!)
+          const endDate = new Date(formData.recurringEndDate!)
+          const createdEvents: Event[] = []
+          
+          // Iterate through each day from start to end date
+          for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+            const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Convert Sunday from 0 to 7
+            
+            // Check if this day is in the selected recurring days
+            if (formData.recurringDays?.includes(dayOfWeek)) {
+              const dateStr = currentDate.toISOString().split('T')[0]
+              
+              const apiData = {
+                team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+                field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+                event_type: formData.eventType,
+                start_time: `${dateStr}T${formData.startTime}:00`,
+                end_time: `${dateStr}T${formData.endTime}:00`,
+                description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
+                status: formData.status || 'Planned'
+              }
+
+              const response = await api.createEvent(apiData)
+              const newEvent: Event = {
+                ...formData,
+                id: response.id?.toString() || `event-${Date.now()}-${dateStr}`,
+                date: dateStr,
+                isRecurring: false // Individual instances are not marked as recurring
+              } as Event
+              
+              createdEvents.push(newEvent)
+            }
+          }
+          
+          setEvents((current = []) => [...current, ...createdEvents])
+          toast.success(`Created ${createdEvents.length} recurring events successfully`)
+        } else {
+          // Single event creation
+          const apiData = {
+            team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+            field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+            event_type: formData.eventType,
+            start_time: `${formData.date}T${formData.startTime}:00`,
+            end_time: `${formData.date}T${formData.endTime}:00`,
+            description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
+            status: formData.status || 'Planned'
+          }
+
+          const response = await api.createEvent(apiData)
+          const newEvent: Event = {
+            ...formData,
+            id: response.id?.toString() || `event-${Date.now()}`
+          } as Event
+          
+          setEvents((current = []) => [...current, newEvent])
+          toast.success('Event created successfully')
+        }
       }
       
       setShowDialog(false)
