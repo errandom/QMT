@@ -1,6 +1,6 @@
 export type SportType = 'Tackle Football' | 'Flag Football'
 export type EventType = 'Game' | 'Practice' | 'Meeting' | 'Other'
-export type EventStatus = 'Planned' | 'Confirmed' | 'Cancelled'
+export type EventStatus = 'Planned' | 'Confirmed' | 'Cancelled' | 'Completed'
 export type TurfType = 'Natural Turf' | 'Artificial Turf'
 export type FieldSize = 'Full' | 'Shared'
 export type RosterSize = '< 15' | '16-30' | '> 30'
