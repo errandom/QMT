@@ -23,13 +23,15 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
 
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     role: 'user' as UserRole,
     email: '',
-    fullName: ''
+    fullName: '',
+    isActive: true
   })
 
   // Fetch users on mount if admin
@@ -57,14 +59,49 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   }
 
   const handleCreate = () => {
+    setEditingUser(null)
     setFormData({
       username: '',
       password: '',
       role: 'user',
       email: '',
-      fullName: ''
+      fullName: '',
+      isActive: true
     })
     setShowDialog(true)
+  }
+
+  const handleEdit = (user: any) => {
+    setEditingUser(user)
+    setFormData({
+      username: user.username,
+      password: '', // Don't populate password
+      role: user.role,
+      email: user.email || '',
+      fullName: user.full_name || '',
+      isActive: user.is_active
+    })
+    setShowDialog(true)
+  }
+
+  const handleDelete = async (userId: number, username: string) => {
+    if (userId === currentUser.id) {
+      toast.error('Cannot delete your own account')
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await api.deleteUser(userId)
+      toast.success('User deleted successfully')
+      fetchUsers()
+    } catch (error: any) {
+      console.error('[SettingsManager] Error deleting user:', error)
+      toast.error(error.message || 'Failed to delete user')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,26 +109,55 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
     
     console.log('[SettingsManager] Form submitted with data:', formData);
     
-    if (!formData.username || !formData.password || !formData.role) {
-      toast.error('Username, password, and role are required')
+    if (!formData.username || !formData.role) {
+      toast.error('Username and role are required')
+      return
+    }
+
+    // Validate password for new users
+    if (!editingUser && !formData.password) {
+      toast.error('Password is required for new users')
+      return
+    }
+
+    // Validate password length if provided
+    if (formData.password && formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters')
       return
     }
     
     setIsSubmitting(true)
     
     try {
-      console.log('[SettingsManager] Calling api.register...');
-      const result = await api.register({
-        username: formData.username,
-        password: formData.password,
-        role: formData.role,
-        email: formData.email || undefined,
-        fullName: formData.fullName || undefined
-      })
-      console.log('[SettingsManager] User created successfully:', result);
+      if (editingUser) {
+        // Update existing user
+        console.log('[SettingsManager] Updating user:', editingUser.id);
+        const updateData = {
+          username: formData.username,
+          role: formData.role,
+          email: formData.email || undefined,
+          fullName: formData.fullName || undefined,
+          isActive: formData.isActive
+        }
+        await api.updateUser(editingUser.id, updateData)
+        console.log('[SettingsManager] User updated successfully');
+        toast.success('User updated successfully')
+      } else {
+        // Create new user
+        console.log('[SettingsManager] Calling api.register...');
+        const result = await api.register({
+          username: formData.username,
+          password: formData.password,
+          role: formData.role,
+          email: formData.email || undefined,
+          fullName: formData.fullName || undefined
+        })
+        console.log('[SettingsManager] User created successfully:', result);
+        toast.success('User created successfully')
+      }
       
-      toast.success('User created successfully')
       setShowDialog(false)
+      setEditingUser(null)
       
       // Reset form
       setFormData({
@@ -99,13 +165,14 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
         password: '',
         role: 'user',
         email: '',
-        fullName: ''
+        fullName: '',
+        isActive: true
       })
       
       fetchUsers() // Refresh the user list
     } catch (error: any) {
-      console.error('[SettingsManager] Error creating user:', error);
-      toast.error(error.message || 'Failed to create user')
+      console.error('[SettingsManager] Error saving user:', error);
+      toast.error(error.message || `Failed to ${editingUser ? 'update' : 'create'} user`)
     } finally {
       setIsSubmitting(false)
     }
@@ -196,6 +263,25 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                             </Badge>
                           </div>
                         </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(user)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <PencilSimple size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(user.id, user.username)}
+                            disabled={user.id === currentUser.id}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="text-sm space-y-1">
@@ -226,7 +312,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Create New User</DialogTitle>
+                <DialogTitle>{editingUser ? 'Edit User' : 'Create New User'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -240,15 +326,15 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
+                  <Label htmlFor="password">Password {editingUser ? '(leave blank to keep current)' : '*'}</Label>
                   <Input
                     id="password"
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     minLength={6}
-                    required
-                    placeholder="Minimum 6 characters"
+                    required={!editingUser}
+                    placeholder={editingUser ? 'Leave blank to keep current password' : 'Minimum 6 characters'}
                   />
                   {formData.password && formData.password.length < 6 && (
                     <p className="text-xs text-destructive">Password must be at least 6 characters</p>
@@ -288,12 +374,27 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                   </Select>
                 </div>
 
+                {editingUser && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="isActive" className="text-sm font-normal cursor-pointer">
+                      Active Account
+                    </Label>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Creating...' : 'Create User'}
+                    {isSubmitting ? (editingUser ? 'Updating...' : 'Creating...') : (editingUser ? 'Update User' : 'Create User')}
                   </Button>
                 </div>
               </form>
