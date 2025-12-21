@@ -125,11 +125,15 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
     
+    console.log('[Events PUT] Request body:', req.body);
+    
     // Handle team_ids as comma-separated string
     const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
     
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
+    
+    console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr);
     
     const pool = await getPool();
     const result = await pool.request()
