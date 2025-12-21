@@ -33,7 +33,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return true
   })
 
-  const recurringEvents = allEvents.filter(event => event.isRecurring)
+  // Show all events - both recurring and one-time events
+  const displayEvents = allEvents
 
   const getEventPosition = (startTime: string, endTime: string) => {
     const start = timeToMinutes(startTime)
@@ -59,8 +60,15 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   }
 
   const getEventsForSiteFieldDay = (siteId: string, fieldId: string, dayIndex: number) => {
-    return recurringEvents.filter(event => {
-      return event.fieldId === fieldId && event.recurringDays?.includes(dayIndex)
+    return displayEvents.filter(event => {
+      // For recurring events, check if the day matches
+      if (event.isRecurring && event.recurringDays) {
+        return event.fieldId === fieldId && event.recurringDays.includes(dayIndex)
+      }
+      // For one-time events, check if the event's date falls on this day of the week
+      const eventDate = new Date(event.date)
+      const eventDayOfWeek = eventDate.getDay() === 0 ? 7 : eventDate.getDay() // Sunday = 7
+      return event.fieldId === fieldId && eventDayOfWeek === dayIndex
     })
   }
 
@@ -77,12 +85,12 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return colors[hash % colors.length]
   }
 
-  if (recurringEvents.length === 0) {
+  if (displayEvents.length === 0) {
     return (
       <Alert>
         <CalendarBlank className="h-4 w-4" />
         <AlertDescription>
-          No recurring events scheduled for the current planning period.
+          No events scheduled for the current planning period.
         </AlertDescription>
       </Alert>
     )
