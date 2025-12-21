@@ -65,10 +65,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status } = req.body;
+    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
     
     // Handle team_ids as comma-separated string
     const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
+    
+    // Handle recurring_days as comma-separated string
+    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
     
     const pool = await getPool();
     const result = await pool.request()
@@ -81,13 +84,15 @@ router.post('/', async (req: Request, res: Response) => {
       .input('description', sql.NVarChar, description || null)
       .input('notes', sql.NVarChar, notes || null)
       .input('status', sql.NVarChar, status || 'Planned')
+      .input('recurring_days', sql.NVarChar, recurringDaysStr)
+      .input('recurring_end_date', sql.Date, recurring_end_date || null)
       .query(`
-        INSERT INTO events (team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status)
+        INSERT INTO events (team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
         OUTPUT INSERTED.*
-        VALUES (@team_id, @team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status)
+        VALUES (@team_id, @team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
       `);
     
-    console.log('[Events POST] Created event with team_ids:', teamIdsStr);
+    console.log('[Events POST] Created event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
     
     // Fetch the created event with joins to return complete data
     const createdEvent = await pool.request()
@@ -118,10 +123,13 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update event
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status } = req.body;
+    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
     
     // Handle team_ids as comma-separated string
     const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
+    
+    // Handle recurring_days as comma-separated string
+    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
     
     const pool = await getPool();
     const result = await pool.request()
@@ -135,6 +143,8 @@ router.put('/:id', async (req: Request, res: Response) => {
       .input('description', sql.NVarChar, description)
       .input('notes', sql.NVarChar, notes)
       .input('status', sql.NVarChar, status)
+      .input('recurring_days', sql.NVarChar, recurringDaysStr)
+      .input('recurring_end_date', sql.Date, recurring_end_date || null)
       .query(`
         UPDATE events 
         SET team_id = @team_id,
@@ -145,12 +155,14 @@ router.put('/:id', async (req: Request, res: Response) => {
             end_time = @end_time,
             description = @description,
             notes = @notes,
-            status = @status
+            status = @status,
+            recurring_days = @recurring_days,
+            recurring_end_date = @recurring_end_date
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
     
-    console.log('[Events PUT] Updated event with team_ids:', teamIdsStr);
+    console.log('[Events PUT] Updated event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
     
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
