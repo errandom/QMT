@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank, Trash } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 
@@ -34,6 +34,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const { events, setEvents, teams, fields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+
+  // Filter state
+  const [filterTeam, setFilterTeam] = useState<string>('all')
+  const [filterEventType, setFilterEventType] = useState<string>('all')
+  const [filterStartDate, setFilterStartDate] = useState<string>('')
+  const [filterEndDate, setFilterEndDate] = useState<string>('')
 
   const [formData, setFormData] = useState<Partial<Event>>({
     title: '',
@@ -216,6 +222,47 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     }))
   }
 
+  // Filter and sort events
+  const filteredAndSortedEvents = useMemo(() => {
+    let filtered = [...events]
+
+    // Filter by team
+    if (filterTeam !== 'all') {
+      filtered = filtered.filter(event => 
+        event.teamIds && event.teamIds.includes(filterTeam)
+      )
+    }
+
+    // Filter by event type
+    if (filterEventType !== 'all') {
+      filtered = filtered.filter(event => event.eventType === filterEventType)
+    }
+
+    // Filter by date range
+    if (filterStartDate) {
+      filtered = filtered.filter(event => event.date >= filterStartDate)
+    }
+    if (filterEndDate) {
+      filtered = filtered.filter(event => event.date <= filterEndDate)
+    }
+
+    // Sort by date (ascending) and then by start time
+    filtered.sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date)
+      if (dateCompare !== 0) return dateCompare
+      return a.startTime.localeCompare(b.startTime)
+    })
+
+    return filtered
+  }, [events, filterTeam, filterEventType, filterStartDate, filterEndDate])
+
+  const clearFilters = () => {
+    setFilterTeam('all')
+    setFilterEventType('all')
+    setFilterStartDate('')
+    setFilterEndDate('')
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -226,8 +273,87 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         </Button>
       </div>
 
+      {/* Filter Controls */}
+      <Card className="glass-card">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3 mb-3">
+            <FunnelSimple size={20} style={{ color: COLORS.NAVY }} />
+            <span className="font-medium" style={{ color: COLORS.NAVY }}>Filters</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="filterTeam" className="text-xs">Team</Label>
+              <Select value={filterTeam} onValueChange={setFilterTeam}>
+                <SelectTrigger id="filterTeam" className="h-9">
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {activeTeams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterEventType" className="text-xs">Event Type</Label>
+              <Select value={filterEventType} onValueChange={setFilterEventType}>
+                <SelectTrigger id="filterEventType" className="h-9">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Game">Game</SelectItem>
+                  <SelectItem value="Practice">Practice</SelectItem>
+                  <SelectItem value="Meeting">Meeting</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterStartDate" className="text-xs">From Date</Label>
+              <Input
+                id="filterStartDate"
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="h-9"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterEndDate" className="text-xs">To Date</Label>
+              <Input
+                id="filterEndDate"
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </div>
+          {(filterTeam !== 'all' || filterEventType !== 'all' || filterStartDate || filterEndDate) && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                Showing {filteredAndSortedEvents.length} of {events.length} events
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearFilters}
+                className="h-8 text-xs"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2">
-        {events.map((event) => (
+        {filteredAndSortedEvents.map((event) => (
           <Card key={event.id} className="glass-card">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
