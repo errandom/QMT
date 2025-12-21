@@ -332,6 +332,71 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
   }
 });
 
+// Update user (admin only)
+app.put('/api/auth/users/:id', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { username, role, email, fullName, isActive } = req.body;
+    
+    console.log('[Update User] Updating user ID:', req.params.id);
+
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('username', sql.NVarChar, username)
+      .input('role', sql.NVarChar, role)
+      .input('email', sql.NVarChar, email || null)
+      .input('full_name', sql.NVarChar, fullName || null)
+      .input('is_active', sql.Bit, isActive !== undefined ? isActive : true)
+      .query(`
+        UPDATE users 
+        SET username = @username,
+            role = @role,
+            email = @email,
+            full_name = @full_name,
+            is_active = @is_active,
+            updated_at = GETDATE()
+        OUTPUT INSERTED.id, INSERTED.username, INSERTED.role, INSERTED.email, INSERTED.full_name, INSERTED.is_active
+        WHERE id = @id
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log('[Update User] User updated successfully');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('[Update User] Error:', err);
+    if (err.number === 2627) { // Unique constraint violation
+      return res.status(409).json({ error: 'Username already exists' });
+    }
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// Delete user (admin only)
+app.delete('/api/auth/users/:id', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('[Delete User] Deleting user ID:', req.params.id);
+
+    // Prevent deleting yourself
+    if (parseInt(req.params.id) === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM users WHERE id = @id');
+
+    console.log('[Delete User] User deleted successfully');
+    res.status(204).send();
+  } catch (err) {
+    console.error('[Delete User] Error:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // Change password
 app.post('/api/auth/change-password', verifyToken, async (req, res) => {
   try {
