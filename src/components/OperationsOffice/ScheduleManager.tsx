@@ -152,64 +152,25 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         }
         toast.success('Event updated successfully')
       } else {
-        // Creating new event(s)
-        if (formData.isRecurring) {
-          // Generate all recurring event instances
-          const startDate = new Date(formData.date!)
-          const endDate = new Date(formData.recurringEndDate!)
-          const createdEvents: Event[] = []
-          
-          // Iterate through each day from start to end date
-          for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
-            const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Convert Sunday from 0 to 7
-            
-            // Check if this day is in the selected recurring days
-            if (formData.recurringDays?.includes(dayOfWeek)) {
-              const dateStr = currentDate.toISOString().split('T')[0]
-              
-              const apiData = {
-                team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
-                field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
-                event_type: formData.eventType,
-                start_time: `${dateStr}T${formData.startTime}:00`,
-                end_time: `${dateStr}T${formData.endTime}:00`,
-                description: formData.title || '',
-                notes: formData.notes || '',
-                status: formData.status || 'Planned',
-                recurring_days: formData.recurringDays.join(','),
-                recurring_end_date: formData.recurringEndDate
-              }
-
-              console.log('[ScheduleManager] Creating recurring event instance:', apiData)
-
-              const transformedEvent = await api.createEvent(apiData)
-              createdEvents.push(transformedEvent)
-            }
-          }
-          
-          setEvents((current = []) => [...current, ...createdEvents])
-          toast.success(`Created ${createdEvents.length} recurring events successfully`)
-        } else {
-          // Single event creation
-          const apiData = {
-            team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
-            field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
-            event_type: formData.eventType,
-            start_time: `${formData.date}T${formData.startTime}:00`,
-            end_time: `${formData.date}T${formData.endTime}:00`,
-            description: formData.title || '',
-            notes: formData.notes || '',
-            status: formData.status || 'Planned',
-            recurring_days: null,
-            recurring_end_date: null
-          }
-
-          console.log('[ScheduleManager] Creating single event:', apiData)
-
-          const transformedEvent = await api.createEvent(apiData)
-          setEvents((current = []) => [...current, transformedEvent])
-          toast.success('Event created successfully')
+        // Creating new event
+        const apiData = {
+          team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
+          field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+          event_type: formData.eventType,
+          start_time: `${formData.date}T${formData.startTime}:00`,
+          end_time: `${formData.date}T${formData.endTime}:00`,
+          description: formData.title || '',
+          notes: formData.notes || '',
+          status: formData.status || 'Planned',
+          recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays.join(',') : null,
+          recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null
         }
+
+        console.log('[ScheduleManager] Creating event:', apiData)
+
+        const transformedEvent = await api.createEvent(apiData)
+        setEvents((current = []) => [...current, transformedEvent])
+        toast.success(formData.isRecurring ? 'Recurring event created successfully' : 'Event created successfully')
       }
       
       setShowDialog(false)
