@@ -129,7 +129,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       if (editingEvent) {
         // Editing existing event - update single event only
         const apiData = {
-          team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
           team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
           field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
           event_type: formData.eventType,
@@ -138,10 +137,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           description: formData.title || '',
           notes: formData.notes || '',
           status: formData.status || 'Planned',
-          recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays : null,
+          recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays.join(',') : null,
           recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null
         }
 
+        console.log('[ScheduleManager] Updating event with data:', apiData)
+        
         const numericId = parseInt(editingEvent.id)
         if (!isNaN(numericId)) {
           const transformedEvent = await api.updateEvent(numericId, apiData)
@@ -175,9 +176,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 description: formData.title || '',
                 notes: formData.notes || '',
                 status: formData.status || 'Planned',
-                recurring_days: formData.recurringDays,
+                recurring_days: formData.recurringDays.join(','),
                 recurring_end_date: formData.recurringEndDate
               }
+
+              console.log('[ScheduleManager] Creating recurring event instance:', apiData)
 
               const transformedEvent = await api.createEvent(apiData)
               createdEvents.push(transformedEvent)
@@ -200,6 +203,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             recurring_days: null,
             recurring_end_date: null
           }
+
+          console.log('[ScheduleManager] Creating single event:', apiData)
 
           const transformedEvent = await api.createEvent(apiData)
           setEvents((current = []) => [...current, transformedEvent])
