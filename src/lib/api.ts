@@ -232,11 +232,31 @@ export async function apiRequest<T>(
       // Token expired or invalid - clear auth state
       removeToken();
     }
-    const error = await response.json().catch(() => ({ 
-      error: 'An error occurred' 
-    }));
-    console.error(`[API] ❌ Error on ${url}:`, error);
-    throw new Error(error.error || `HTTP ${response.status}`);
+    
+    // Try to parse JSON error, fallback to text
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const error = await response.json();
+      errorMessage = error.error || error.message || errorMessage;
+    } catch (e) {
+      // Not JSON, try to get text
+      try {
+        const text = await response.text();
+        // Check if it's HTML
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          console.error(`[API] ❌ Server returned HTML instead of JSON for ${url}`);
+          console.error('[API] Response preview:', text.substring(0, 200));
+          errorMessage = 'Server error: Expected JSON but received HTML. Check server logs.';
+        } else {
+          errorMessage = text || errorMessage;
+        }
+      } catch (e2) {
+        // Can't get any response body
+      }
+    }
+    
+    console.error(`[API] ❌ Error on ${url}:`, errorMessage);
+    throw new Error(errorMessage);
   }
 
   // Handle 204 No Content responses (e.g., DELETE operations)
