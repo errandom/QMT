@@ -69,21 +69,42 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    console.log('[SettingsManager] Form submitted with data:', formData);
+    
+    if (!formData.username || !formData.password || !formData.role) {
+      toast.error('Username, password, and role are required')
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {
-      await api.register({
+      console.log('[SettingsManager] Calling api.register...');
+      const result = await api.register({
         username: formData.username,
         password: formData.password,
         role: formData.role,
         email: formData.email || undefined,
         fullName: formData.fullName || undefined
       })
+      console.log('[SettingsManager] User created successfully:', result);
       
       toast.success('User created successfully')
       setShowDialog(false)
+      
+      // Reset form
+      setFormData({
+        username: '',
+        password: '',
+        role: 'user',
+        email: '',
+        fullName: ''
+      })
+      
       fetchUsers() // Refresh the user list
     } catch (error: any) {
+      console.error('[SettingsManager] Error creating user:', error);
       toast.error(error.message || 'Failed to create user')
     } finally {
       setIsSubmitting(false)
@@ -225,8 +246,13 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    minLength={6}
                     required
+                    placeholder="Minimum 6 characters"
                   />
+                  {formData.password && formData.password.length < 6 && (
+                    <p className="text-xs text-destructive">Password must be at least 6 characters</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
