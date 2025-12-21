@@ -285,6 +285,15 @@ export const api = {
     }),
   getCurrentUser: () => apiRequest<any>('/auth/me'),
   getUsers: () => apiRequest<any[]>('/auth/users'),
+  updateUser: (id: number, data: { username: string; role: string; email?: string; fullName?: string; isActive?: boolean }) =>
+    apiRequest<any>(`/auth/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteUser: (id: number) =>
+    apiRequest<void>(`/auth/users/${id}`, {
+      method: 'DELETE',
+    }),
   changePassword: (currentPassword: string, newPassword: string) =>
     apiRequest<any>('/auth/change-password', {
       method: 'POST',
