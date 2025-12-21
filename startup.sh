@@ -3,6 +3,16 @@ set -e  # Exit on error
 
 echo "Starting QMT application..."
 
+# Check server.js integrity
+echo "Checking server.js..."
+if grep -q "interface" /home/site/wwwroot/server.js; then
+  echo "ERROR: server.js contains TypeScript code! File is corrupted."
+  echo "First 20 lines of server.js:"
+  head -20 /home/site/wwwroot/server.js
+  exit 1
+fi
+echo "server.js looks valid"
+
 # Extract node_modules if tarball exists
 if [ -f /home/site/wwwroot/node_modules.tar.gz ]; then
   echo "Extracting node_modules..."
