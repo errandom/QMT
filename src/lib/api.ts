@@ -290,6 +290,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  updateProfile: (data: { email?: string; fullName?: string }) =>
+    apiRequest<any>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   deleteUser: (id: number) =>
     apiRequest<void>(`/auth/users/${id}`, {
       method: 'DELETE',
