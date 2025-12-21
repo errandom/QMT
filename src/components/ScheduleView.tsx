@@ -1,3 +1,4 @@
+@@ -1,193 +1,250 @@
 import { useData } from '@/contexts/DataContext'
 import { Event, SportType, Team, Field, Site } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,7 +18,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   const { events, teams, fields, sites } = useData()
 
   const activeSites = sites
-  
+
   const allEvents = events.filter((event) => {
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
@@ -41,16 +42,16 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     const end = timeToMinutes(endTime)
     const scheduleStart = 17 * 60
     const scheduleEnd = 22 * 60
-    
+
     if (end <= scheduleStart || start >= scheduleEnd) return null
-    
+
     const visibleStart = Math.max(start, scheduleStart)
     const visibleEnd = Math.min(end, scheduleEnd)
     const totalMinutes = scheduleEnd - scheduleStart
-    
+
     const leftPercent = ((visibleStart - scheduleStart) / totalMinutes) * 100
     const widthPercent = ((visibleEnd - visibleStart) / totalMinutes) * 100
-    
+
     return { left: `${leftPercent}%`, width: `${widthPercent}%` }
   }
 
@@ -72,60 +73,17 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     })
   }
 
-  const getTeamColor = (teamIds: string[], index: number) => {
-    // Updated color palette - grey and blue tones aligned with site theme
+  const getTeamColor = (teamIds: string[]) => {
     const colors = [
-      { bg: '#248bcc', text: '#ffffff' }, // Primary blue
-      { bg: '#4a90a4', text: '#ffffff' }, // Teal blue
-      { bg: '#5a6c7d', text: '#ffffff' }, // Grey blue
-      { bg: '#6b8caf', text: '#ffffff' }, // Light blue
-      { bg: '#708090', text: '#ffffff' }, // Slate grey
-      { bg: '#4682b4', text: '#ffffff' }  // Steel blue
+      'bg-blue-500',
+      'bg-green-500',
+      'bg-purple-500',
+      'bg-orange-500',
+      'bg-pink-500',
+      'bg-teal-500'
     ]
-    const hash = (teamIds[0]?.charCodeAt(0) || 0) + index
+    const hash = teamIds[0]?.charCodeAt(0) || 0
     return colors[hash % colors.length]
-  }
-
-  // Check if two events overlap in time
-  const eventsOverlap = (event1: Event, event2: Event) => {
-    const start1 = timeToMinutes(event1.startTime)
-    const end1 = timeToMinutes(event1.endTime)
-    const start2 = timeToMinutes(event2.startTime)
-    const end2 = timeToMinutes(event2.endTime)
-    return start1 < end2 && start2 < end1
-  }
-
-  // Assign row positions to prevent overlapping
-  const assignEventRows = (events: Event[]) => {
-    const sortedEvents = [...events].sort((a, b) => 
-      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-    )
-    const rows: Event[][] = []
-    
-    sortedEvents.forEach(event => {
-      let placed = false
-      for (let i = 0; i < rows.length; i++) {
-        const rowEvents = rows[i]
-        const hasOverlap = rowEvents.some(e => eventsOverlap(e, event))
-        if (!hasOverlap) {
-          rows[i].push(event)
-          placed = true
-          break
-        }
-      }
-      if (!placed) {
-        rows.push([event])
-      }
-    })
-    
-    const eventRowMap = new Map<string, number>()
-    rows.forEach((row, rowIndex) => {
-      row.forEach(event => {
-        eventRowMap.set(event.id, rowIndex)
-      })
-    })
-    
-    return { rowCount: rows.length, eventRowMap }
   }
 
   if (displayEvents.length === 0) {
@@ -167,43 +125,30 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                       <div className="text-sm font-medium flex items-center" style={{ color: '#001f3f' }}>
                         {field.name}
                       </div>
-                      
+
                       {DAYS.map((day, dayIndex) => {
                         const dayEvents = getEventsForSiteFieldDay(site.id, field.id, dayIndex + 1)
-                        const { rowCount, eventRowMap } = assignEventRows(dayEvents)
-                        const cellHeight = Math.max(12, rowCount * 16) // Minimum 12 (h-12), or 16px per row
                         
                         return (
-                          <div key={day} className="relative rounded-lg border" style={{
-                            height: `${cellHeight * 4}px`,
+                          <div key={day} className="relative h-12 rounded-lg border" style={{
                             background: 'rgba(255, 255, 255, 0.4)',
                             borderColor: 'rgba(36, 139, 204, 0.3)'
                           }}>
                             <TooltipProvider>
-                              {dayEvents.map((event, eventIndex) => {
+                              {dayEvents.map(event => {
                                 const position = getEventPosition(event.startTime, event.endTime)
                                 if (!position) return null
-                                
+
                                 const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
-                                const teamColor = getTeamColor(event.teamIds || [], eventIndex)
+                                const teamColor = getTeamColor(event.teamIds || [])
                                 const isCancelled = event.status === 'Cancelled'
-                                const rowIndex = eventRowMap.get(event.id) || 0
-                                const rowHeight = cellHeight * 4 / rowCount
-                                
+
                                 return (
                                   <Tooltip key={event.id}>
                                     <TooltipTrigger asChild>
                                       <div
-                                        className="absolute rounded px-1 flex items-center justify-center text-xs font-medium cursor-pointer hover:brightness-110 transition-all overflow-hidden shadow-md"
-                                        style={{
-                                          ...position,
-                                          top: `${rowIndex * rowHeight + 4}px`,
-                                          height: `${rowHeight - 8}px`,
-                                          backgroundColor: isCancelled ? '#9ca3af' : teamColor.bg,
-                                          color: teamColor.text,
-                                          opacity: isCancelled ? 0.6 : 1,
-                                          textDecoration: isCancelled ? 'line-through' : 'none'
-                                        }}
+                                        className={`absolute top-1 bottom-1 ${isCancelled ? 'bg-gray-400 opacity-60' : teamColor} rounded px-1 flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-all overflow-hidden shadow-md ${isCancelled ? 'line-through' : ''}`}
+                                        style={position}
                                       >
                                         <span className="truncate">
                                           {eventTeams.map(t => t.name).join(', ')}
@@ -213,9 +158,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                     <TooltipContent className="glass-card border-white/30">
                                       <div className="text-xs space-y-1">
                                         <div className="font-semibold">{event.title}</div>
-                                        <div className="text-muted-foreground">Type: {event.eventType}</div>
-                                        <div className="font-medium">{event.startTime} - {event.endTime}</div>
-                                        <div>Team(s): {eventTeams.map(t => t.name).join(', ') || 'None'}</div>
+                                        <div>{event.startTime} - {event.endTime}</div>
+                                        <div>{eventTeams.map(t => t.name).join(', ')}</div>
                                         <div className="text-muted-foreground">Status: {event.status}</div>
                                       </div>
                                     </TooltipContent>
