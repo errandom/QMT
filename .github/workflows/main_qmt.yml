@@ -46,8 +46,11 @@ jobs:
             dist
             server.js
             startup.sh
+            .deployment
             package.json
             package-lock.json
+            tsconfig.json
+            vite.config.mts
             node_modules.tar.gz
 
   deploy:
