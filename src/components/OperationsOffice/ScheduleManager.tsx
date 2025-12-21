@@ -130,12 +130,16 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         // Editing existing event - update single event only
         const apiData = {
           team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+          team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
           field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
           event_type: formData.eventType,
           start_time: `${formData.date}T${formData.startTime}:00`,
           end_time: `${formData.date}T${formData.endTime}:00`,
-          description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
-          status: formData.status || 'Planned'
+          description: formData.title || '',
+          notes: formData.notes || '',
+          status: formData.status || 'Planned',
+          recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays : null,
+          recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null
         }
 
         const numericId = parseInt(editingEvent.id)
@@ -164,12 +168,16 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               
               const apiData = {
                 team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+                team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
                 field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
                 event_type: formData.eventType,
                 start_time: `${dateStr}T${formData.startTime}:00`,
                 end_time: `${dateStr}T${formData.endTime}:00`,
-                description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
-                status: formData.status || 'Planned'
+                description: formData.title || '',
+                notes: formData.notes || '',
+                status: formData.status || 'Planned',
+                recurring_days: formData.recurringDays,
+                recurring_end_date: formData.recurringEndDate
               }
 
               const transformedEvent = await api.createEvent(apiData)
@@ -183,12 +191,16 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           // Single event creation
           const apiData = {
             team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
+            team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
             field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
             event_type: formData.eventType,
             start_time: `${formData.date}T${formData.startTime}:00`,
             end_time: `${formData.date}T${formData.endTime}:00`,
-            description: `${formData.title || ''}${formData.notes ? '\n' + formData.notes : ''}`,
-            status: formData.status || 'Planned'
+            description: formData.title || '',
+            notes: formData.notes || '',
+            status: formData.status || 'Planned',
+            recurring_days: null,
+            recurring_end_date: null
           }
 
           const transformedEvent = await api.createEvent(apiData)
