@@ -138,13 +138,41 @@ function transformEquipment(equipment: any): any {
 
 function transformEvent(event: any): any {
   if (!event) return event;
-  return {
-    ...event,
+  
+  console.log('[API] Transforming event:', event.id, event);
+  
+  // Parse start_time and end_time from database datetime format
+  const startDateTime = new Date(event.start_time || event.startTime);
+  const endDateTime = new Date(event.end_time || event.endTime);
+  
+  // Extract date in YYYY-MM-DD format (use UTC to avoid timezone issues)
+  const date = startDateTime.toISOString().split('T')[0];
+  
+  // Extract times in HH:MM format
+  const startTime = startDateTime.toTimeString().slice(0, 5);
+  const endTime = endDateTime.toTimeString().slice(0, 5);
+  
+  // Convert single team_id to teamIds array
+  const teamIds = event.team_id ? [String(event.team_id)] : (event.teamIds || []);
+  
+  const transformed = {
     id: String(event.id || ''),
-    eventType: event.eventType || event.event_type,
-    teamId: String(event.teamId || event.team_id || ''),
-    fieldId: String(event.fieldId || event.field_id || '')
+    title: event.title || event.description || `${event.event_type || event.eventType} Event`,
+    eventType: event.eventType || event.event_type || 'Other',
+    status: event.status || 'Planned',
+    date,
+    startTime,
+    endTime,
+    teamIds,
+    fieldId: String(event.fieldId || event.field_id || ''),
+    isRecurring: event.isRecurring || false,
+    notes: event.notes || event.description,
+    estimatedAttendance: event.estimatedAttendance || event.estimated_attendance,
+    otherParticipants: event.otherParticipants || event.other_participants
   };
+  
+  console.log('[API] Transformed event result:', transformed);
+  return transformed;
 }
 
 // Helper function to make API calls
@@ -232,14 +260,32 @@ export const api = {
     }
   },
   getEvent: (id: number) => apiRequest<any>(`/events/${id}`),
-  createEvent: (data: any) => apiRequest<any>('/events', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  updateEvent: (id: number, data: any) => apiRequest<any>(`/events/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  createEvent: async (data: any) => {
+    try {
+      const event = await apiRequest<any>('/events', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      console.log('[API] Raw created event from server:', event);
+      return transformEvent(event);
+    } catch (error) {
+      console.error('[API] Error creating event:', error);
+      throw error;
+    }
+  },
+  updateEvent: async (id: number, data: any) => {
+    try {
+      const event = await apiRequest<any>(`/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      console.log('[API] Raw updated event from server:', event);
+      return transformEvent(event);
+    } catch (error) {
+      console.error('[API] Error updating event:', error);
+      throw error;
+    }
+  },
   deleteEvent: (id: number) => apiRequest<any>(`/events/${id}`, {
     method: 'DELETE',
   }),
