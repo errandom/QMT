@@ -65,22 +65,29 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { team_id, field_id, event_type, start_time, end_time, description, status } = req.body;
+    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status } = req.body;
+    
+    // Handle team_ids as comma-separated string
+    const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
     
     const pool = await getPool();
     const result = await pool.request()
       .input('team_id', sql.Int, team_id)
+      .input('team_ids', sql.NVarChar, teamIdsStr)
       .input('field_id', sql.Int, field_id)
       .input('event_type', sql.NVarChar, event_type)
       .input('start_time', sql.DateTime, start_time)
       .input('end_time', sql.DateTime, end_time)
       .input('description', sql.NVarChar, description || null)
+      .input('notes', sql.NVarChar, notes || null)
       .input('status', sql.NVarChar, status || 'Planned')
       .query(`
-        INSERT INTO events (team_id, field_id, event_type, start_time, end_time, description, status)
+        INSERT INTO events (team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status)
         OUTPUT INSERTED.*
-        VALUES (@team_id, @field_id, @event_type, @start_time, @end_time, @description, @status)
+        VALUES (@team_id, @team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status)
       `);
+    
+    console.log('[Events POST] Created event with team_ids:', teamIdsStr);
     
     // Fetch the created event with joins to return complete data
     const createdEvent = await pool.request()
@@ -111,30 +118,39 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update event
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { team_id, field_id, event_type, start_time, end_time, description, status } = req.body;
+    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status } = req.body;
+    
+    // Handle team_ids as comma-separated string
+    const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
     
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('team_id', sql.Int, team_id)
+      .input('team_ids', sql.NVarChar, teamIdsStr)
       .input('field_id', sql.Int, field_id)
       .input('event_type', sql.NVarChar, event_type)
       .input('start_time', sql.DateTime, start_time)
       .input('end_time', sql.DateTime, end_time)
       .input('description', sql.NVarChar, description)
+      .input('notes', sql.NVarChar, notes)
       .input('status', sql.NVarChar, status)
       .query(`
         UPDATE events 
         SET team_id = @team_id,
+            team_ids = @team_ids,
             field_id = @field_id,
             event_type = @event_type,
             start_time = @start_time,
             end_time = @end_time,
             description = @description,
+            notes = @notes,
             status = @status
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
+    
+    console.log('[Events PUT] Updated event with team_ids:', teamIdsStr);
     
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
