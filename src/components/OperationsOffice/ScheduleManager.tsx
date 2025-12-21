@@ -167,7 +167,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               const dateStr = currentDate.toISOString().split('T')[0]
               
               const apiData = {
-                team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
                 team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
                 field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
                 event_type: formData.eventType,
@@ -190,7 +189,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         } else {
           // Single event creation
           const apiData = {
-            team_id: formData.teamIds && formData.teamIds.length > 0 ? parseInt(formData.teamIds[0]) : null,
             team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
             field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
             event_type: formData.eventType,
