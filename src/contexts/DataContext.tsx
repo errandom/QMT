@@ -10,14 +10,14 @@ interface DataContextType {
   facilityRequests: any[]
   equipmentRequests: any[]
   cancellationRequests: any[]
-  setEvents: (events: any[]) => void
-  setTeams: (teams: any[]) => void
-  setSites: (sites: any[]) => void
-  setFields: (fields: any[]) => void
-  setEquipment: (equipment: any[]) => void
-  setFacilityRequests: (requests: any[]) => void
-  setEquipmentRequests: (requests: any[]) => void
-  setCancellationRequests: (requests: any[]) => void
+  setEvents: (events: any[] | ((prev: any[]) => any[])) => void
+  setTeams: (teams: any[] | ((prev: any[]) => any[])) => void
+  setSites: (sites: any[] | ((prev: any[]) => any[])) => void
+  setFields: (fields: any[] | ((prev: any[]) => any[])) => void
+  setEquipment: (equipment: any[] | ((prev: any[]) => any[])) => void
+  setFacilityRequests: (requests: any[] | ((prev: any[]) => any[])) => void
+  setEquipmentRequests: (requests: any[] | ((prev: any[]) => any[])) => void
+  setCancellationRequests: (requests: any[] | ((prev: any[]) => any[])) => void
   refreshData: () => Promise<void>
   isLoading: boolean
 }
@@ -57,7 +57,7 @@ function saveToStorage(key: string, value: any): void {
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
-
+  
   // Initialize state from localStorage
   const [events, setEventsState] = useState<any[]>(() => getFromStorage(STORAGE_KEYS.events, []))
   const [teams, setTeamsState] = useState<any[]>(() => getFromStorage(STORAGE_KEYS.teams, []))
@@ -69,44 +69,52 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cancellationRequests, setCancellationRequestsState] = useState<any[]>(() => getFromStorage(STORAGE_KEYS.cancellationRequests, []))
 
   // Wrapper functions that also save to localStorage
-  const setEvents = (data: any[]) => {
-    setEventsState(data)
-    saveToStorage(STORAGE_KEYS.events, data)
+  const setEvents = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(events) : data
+    setEventsState(newData)
+    saveToStorage(STORAGE_KEYS.events, newData)
   }
 
-  const setTeams = (data: any[]) => {
-    setTeamsState(data)
-    saveToStorage(STORAGE_KEYS.teams, data)
+  const setTeams = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(teams) : data
+    setTeamsState(newData)
+    saveToStorage(STORAGE_KEYS.teams, newData)
   }
 
-  const setSites = (data: any[]) => {
-    setSitesState(data)
-    saveToStorage(STORAGE_KEYS.sites, data)
+  const setSites = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(sites) : data
+    setSitesState(newData)
+    saveToStorage(STORAGE_KEYS.sites, newData)
   }
 
-  const setFields = (data: any[]) => {
-    setFieldsState(data)
-    saveToStorage(STORAGE_KEYS.fields, data)
+  const setFields = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(fields) : data
+    setFieldsState(newData)
+    saveToStorage(STORAGE_KEYS.fields, newData)
   }
 
-  const setEquipment = (data: any[]) => {
-    setEquipmentState(data)
-    saveToStorage(STORAGE_KEYS.equipment, data)
+  const setEquipment = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(equipment) : data
+    setEquipmentState(newData)
+    saveToStorage(STORAGE_KEYS.equipment, newData)
   }
 
-  const setFacilityRequests = (data: any[]) => {
-    setFacilityRequestsState(data)
-    saveToStorage(STORAGE_KEYS.facilityRequests, data)
+  const setFacilityRequests = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(facilityRequests) : data
+    setFacilityRequestsState(newData)
+    saveToStorage(STORAGE_KEYS.facilityRequests, newData)
   }
 
-  const setEquipmentRequests = (data: any[]) => {
-    setEquipmentRequestsState(data)
-    saveToStorage(STORAGE_KEYS.equipmentRequests, data)
+  const setEquipmentRequests = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(equipmentRequests) : data
+    setEquipmentRequestsState(newData)
+    saveToStorage(STORAGE_KEYS.equipmentRequests, newData)
   }
 
-  const setCancellationRequests = (data: any[]) => {
-    setCancellationRequestsState(data)
-    saveToStorage(STORAGE_KEYS.cancellationRequests, data)
+  const setCancellationRequests = (data: any[] | ((prev: any[]) => any[])) => {
+    const newData = typeof data === 'function' ? data(cancellationRequests) : data
+    setCancellationRequestsState(newData)
+    saveToStorage(STORAGE_KEYS.cancellationRequests, newData)
   }
 
   // Fetch all data from API
@@ -115,9 +123,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.log('========================================')
       console.log('[DataProvider] 🚀 Starting data initialization...')
       console.log('========================================')
-
+      
       setIsLoading(true)
-
+      
       // Fetch all data in parallel
       const results = await Promise.allSettled([
         api.getEvents(),
