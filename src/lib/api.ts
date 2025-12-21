@@ -169,6 +169,17 @@ function transformEvent(event: any): any {
     teamIds = event.teamIds;
   }
   
+  // Convert recurring_days string to number array
+  let recurringDays: number[] | undefined = undefined;
+  if (event.recurring_days) {
+    recurringDays = event.recurring_days.split(',').map((day: string) => parseInt(day.trim())).filter((day: number) => !isNaN(day));
+  } else if (event.recurringDays) {
+    recurringDays = event.recurringDays;
+  }
+  
+  // Determine if event is recurring
+  const isRecurring = Boolean(recurringDays && recurringDays.length > 0);
+  
   const transformed = {
     id: String(event.id || ''),
     title: event.title || event.description || `${event.event_type || event.eventType} Event`,
@@ -179,7 +190,9 @@ function transformEvent(event: any): any {
     endTime,
     teamIds,
     fieldId: String(event.fieldId || event.field_id || ''),
-    isRecurring: event.isRecurring || false,
+    isRecurring,
+    recurringDays,
+    recurringEndDate: event.recurring_end_date || event.recurringEndDate,
     notes: event.notes || '',
     estimatedAttendance: event.estimatedAttendance || event.estimated_attendance,
     otherParticipants: event.otherParticipants || event.other_participants
