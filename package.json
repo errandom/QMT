@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "optimize": "vite optimize",
     "start": "node server.js",
-    "migrate": "node run-migration.js"
+    "migrate": "node migrate-db.js"
   },
 
   "dependencies": {
