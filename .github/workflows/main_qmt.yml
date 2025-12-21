@@ -30,12 +30,17 @@ jobs:
       - name: Build frontend (Vite)
         run: npm run build
 
+      # Prune dev dependencies for production
+      - name: Prune devDependencies
+        run: npm prune --production
+
       - name: Upload deployable artifact
         uses: actions/upload-artifact@v4
         with:
           name: qmt-app
           path: |
             dist
+            node_modules
             server.js
             .deployment
             .npmrc
