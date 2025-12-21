@@ -1,4 +1,4 @@
-import { useKV } from '@github/spark/hooks'
+import { useData } from '@/contexts/DataContext'
 import { Event, SportType, Team, Field, Site } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -14,10 +14,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const TIME_SLOTS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30']
 
 export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewProps) {
-  const [events = []] = useKV<Event[]>('events', [])
-  const [teams = []] = useKV<Team[]>('teams', [])
-  const [fields = []] = useKV<Field[]>('fields', [])
-  const [sites = []] = useKV<Site[]>('sites', [])
+  const { events, teams, fields, sites } = useData()
 
   const activeSites = sites
   
