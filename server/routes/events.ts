@@ -11,13 +11,10 @@ router.get('/', async (req: Request, res: Response) => {
     const result = await pool.request().query(`
       SELECT 
         e.*,
-        t.name as team_name,
-        t.sport,
         f.name as field_name,
         s.name as site_name,
         s.address as site_address
       FROM events e
-      LEFT JOIN teams t ON e.team_id = t.id
       LEFT JOIN fields f ON e.field_id = f.id
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
@@ -39,13 +36,10 @@ router.get('/:id', async (req: Request, res: Response) => {
       .query(`
         SELECT 
           e.*,
-          t.name as team_name,
-          t.sport,
           f.name as field_name,
           s.name as site_name,
           s.address as site_address
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
@@ -65,17 +59,16 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
     
-    // Handle team_ids as comma-separated string
-    const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
+    // Handle team_ids as comma-separated string (already comes as string from frontend)
+    const teamIdsStr = team_ids || null;
     
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
     
     const pool = await getPool();
     const result = await pool.request()
-      .input('team_id', sql.Int, team_id)
       .input('team_ids', sql.NVarChar, teamIdsStr)
       .input('field_id', sql.Int, field_id)
       .input('event_type', sql.NVarChar, event_type)
@@ -87,9 +80,9 @@ router.post('/', async (req: Request, res: Response) => {
       .input('recurring_days', sql.NVarChar, recurringDaysStr)
       .input('recurring_end_date', sql.Date, recurring_end_date || null)
       .query(`
-        INSERT INTO events (team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
+        INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
         OUTPUT INSERTED.*
-        VALUES (@team_id, @team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
+        VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
       `);
     
     console.log('[Events POST] Created event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
@@ -100,13 +93,10 @@ router.post('/', async (req: Request, res: Response) => {
       .query(`
         SELECT 
           e.*,
-          t.name as team_name,
-          t.sport,
           f.name as field_name,
           s.name as site_name,
           s.address as site_address
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
@@ -123,12 +113,12 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update event
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { team_id, team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
     
     console.log('[Events PUT] Request body:', req.body);
     
-    // Handle team_ids as comma-separated string
-    const teamIdsStr = team_ids || (team_id ? String(team_id) : null);
+    // Handle team_ids as comma-separated string (already comes as string from frontend)
+    const teamIdsStr = team_ids || null;
     
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
@@ -138,7 +128,6 @@ router.put('/:id', async (req: Request, res: Response) => {
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
-      .input('team_id', sql.Int, team_id)
       .input('team_ids', sql.NVarChar, teamIdsStr)
       .input('field_id', sql.Int, field_id)
       .input('event_type', sql.NVarChar, event_type)
@@ -151,8 +140,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       .input('recurring_end_date', sql.Date, recurring_end_date || null)
       .query(`
         UPDATE events 
-        SET team_id = @team_id,
-            team_ids = @team_ids,
+        SET team_ids = @team_ids,
             field_id = @field_id,
             event_type = @event_type,
             start_time = @start_time,
@@ -178,13 +166,10 @@ router.put('/:id', async (req: Request, res: Response) => {
       .query(`
         SELECT 
           e.*,
-          t.name as team_name,
-          t.sport,
           f.name as field_name,
           s.name as site_name,
           s.address as site_address
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
