@@ -45,6 +45,7 @@ jobs:
           path: |
             dist
             server.js
+            startup.sh
             package.json
             package-lock.json
             node_modules.tar.gz
@@ -75,3 +76,5 @@ jobs:
           app-name: 'QMT'
           slot-name: 'Production'
           package: './'
+        env:
+          SCM_DO_BUILD_DURING_DEPLOYMENT: false
