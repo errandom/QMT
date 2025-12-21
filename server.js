@@ -624,8 +624,6 @@ app.get('/api/events', async (_req, res) => {
     const result = await pool.request().query(`
       SELECT 
         e.*,
-        t.name as team_name,
-        t.sport,
         f.name as field_name,
         s.name as site_name,
         s.address as site_address
@@ -655,8 +653,6 @@ app.get('/api/events/:id', async (req, res) => {
       .query(`
         SELECT 
           e.*,
-          t.name as team_name,
-          t.sport,
           f.name as field_name,
           s.name as site_name,
           s.address as site_address
