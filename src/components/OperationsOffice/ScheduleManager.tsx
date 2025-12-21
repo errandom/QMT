@@ -134,11 +134,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
         const numericId = parseInt(editingEvent.id)
         if (!isNaN(numericId)) {
-          await api.updateEvent(numericId, apiData)
+          const transformedEvent = await api.updateEvent(numericId, apiData)
+          setEvents((current = []) =>
+            current.map(ev => ev.id === editingEvent.id ? transformedEvent : ev)
+          )
         }
-        setEvents((current = []) =>
-          current.map(ev => ev.id === editingEvent.id ? { ...formData, id: editingEvent.id } as Event : ev)
-        )
         toast.success('Event updated successfully')
       } else {
         // Creating new event(s)
@@ -166,15 +166,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 status: formData.status || 'Planned'
               }
 
-              const response = await api.createEvent(apiData)
-              const newEvent: Event = {
-                ...formData,
-                id: response.id?.toString() || `event-${Date.now()}-${dateStr}`,
-                date: dateStr,
-                isRecurring: false // Individual instances are not marked as recurring
-              } as Event
-              
-              createdEvents.push(newEvent)
+              const transformedEvent = await api.createEvent(apiData)
+              createdEvents.push(transformedEvent)
             }
           }
           
@@ -192,13 +185,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             status: formData.status || 'Planned'
           }
 
-          const response = await api.createEvent(apiData)
-          const newEvent: Event = {
-            ...formData,
-            id: response.id?.toString() || `event-${Date.now()}`
-          } as Event
-          
-          setEvents((current = []) => [...current, newEvent])
+          const transformedEvent = await api.createEvent(apiData)
+          setEvents((current = []) => [...current, transformedEvent])
           toast.success('Event created successfully')
         }
       }
