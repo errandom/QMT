@@ -145,15 +145,29 @@ function transformEvent(event: any): any {
   const startDateTime = new Date(event.start_time || event.startTime);
   const endDateTime = new Date(event.end_time || event.endTime);
   
-  // Extract date in YYYY-MM-DD format (use UTC to avoid timezone issues)
+  // Extract date in YYYY-MM-DD format using UTC
   const date = startDateTime.toISOString().split('T')[0];
   
-  // Extract times in HH:MM format
-  const startTime = startDateTime.toTimeString().slice(0, 5);
-  const endTime = endDateTime.toTimeString().slice(0, 5);
+  // Extract times in HH:MM format using UTC to avoid timezone shifts
+  const startHours = String(startDateTime.getUTCHours()).padStart(2, '0');
+  const startMinutes = String(startDateTime.getUTCMinutes()).padStart(2, '0');
+  const startTime = `${startHours}:${startMinutes}`;
   
-  // Convert single team_id to teamIds array
-  const teamIds = event.team_id ? [String(event.team_id)] : (event.teamIds || []);
+  const endHours = String(endDateTime.getUTCHours()).padStart(2, '0');
+  const endMinutes = String(endDateTime.getUTCMinutes()).padStart(2, '0');
+  const endTime = `${endHours}:${endMinutes}`;
+  
+  // Convert team_ids string (comma-separated) to array, or fallback to single team_id
+  let teamIds: string[] = [];
+  if (event.team_ids) {
+    // team_ids is stored as comma-separated string like "1,2,3"
+    teamIds = event.team_ids.split(',').map((id: string) => id.trim()).filter(Boolean);
+  } else if (event.team_id) {
+    // Fallback to single team_id
+    teamIds = [String(event.team_id)];
+  } else if (event.teamIds) {
+    teamIds = event.teamIds;
+  }
   
   const transformed = {
     id: String(event.id || ''),
@@ -166,7 +180,7 @@ function transformEvent(event: any): any {
     teamIds,
     fieldId: String(event.fieldId || event.field_id || ''),
     isRecurring: event.isRecurring || false,
-    notes: event.notes || event.description,
+    notes: event.notes || '',
     estimatedAttendance: event.estimatedAttendance || event.estimated_attendance,
     otherParticipants: event.otherParticipants || event.other_participants
   };
