@@ -82,7 +82,26 @@ router.post('/', async (req: Request, res: Response) => {
         VALUES (@team_id, @field_id, @event_type, @start_time, @end_time, @description, @status)
       `);
     
-    res.status(201).json(result.recordset[0]);
+    // Fetch the created event with joins to return complete data
+    const createdEvent = await pool.request()
+      .input('id', sql.Int, result.recordset[0].id)
+      .query(`
+        SELECT 
+          e.*,
+          t.name as team_name,
+          t.sport,
+          f.name as field_name,
+          s.name as site_name,
+          s.address as site_address
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN fields f ON e.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.id = @id
+      `);
+    
+    console.log('[Events POST] Created event:', createdEvent.recordset[0].id);
+    res.status(201).json(createdEvent.recordset[0]);
   } catch (error) {
     console.error('Error creating event:', error);
     res.status(500).json({ error: 'Failed to create event' });
@@ -121,7 +140,26 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Event not found' });
     }
     
-    res.json(result.recordset[0]);
+    // Fetch the updated event with joins to return complete data
+    const updatedEvent = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        SELECT 
+          e.*,
+          t.name as team_name,
+          t.sport,
+          f.name as field_name,
+          s.name as site_name,
+          s.address as site_address
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN fields f ON e.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.id = @id
+      `);
+    
+    console.log('[Events PUT] Updated event:', updatedEvent.recordset[0].id);
+    res.json(updatedEvent.recordset[0]);
   } catch (error) {
     console.error('Error updating event:', error);
     res.status(500).json({ error: 'Failed to update event' });
