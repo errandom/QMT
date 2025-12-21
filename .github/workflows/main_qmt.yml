@@ -30,6 +30,9 @@ jobs:
       - name: Build frontend (Vite)
         run: npm run build
 
+      - name: Compile backend TypeScript
+        run: npx tsc
+
       # Prune dev deps to keep runtime small
       - name: Prune devDependencies
         run: npm prune --production
@@ -44,6 +47,7 @@ jobs:
           name: qmt-app
           path: |
             dist
+            server
             server.js
             package.json
             package-lock.json
