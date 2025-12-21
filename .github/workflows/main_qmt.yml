@@ -30,14 +30,6 @@ jobs:
       - name: Build frontend (Vite)
         run: npm run build
 
-      # Prune dev deps to keep runtime small
-      - name: Prune devDependencies
-        run: npm prune --production
-
-      # Package runtime deps so App Service can extract them at startup
-      - name: Create node_modules tarball
-        run: tar -czf node_modules.tar.gz node_modules
-
       - name: Upload deployable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -45,13 +37,10 @@ jobs:
           path: |
             dist
             server.js
-            startup.sh
             .deployment
+            .npmrc
             package.json
             package-lock.json
-            tsconfig.json
-            vite.config.mts
-            node_modules.tar.gz
 
   deploy:
     runs-on: ubuntu-latest
