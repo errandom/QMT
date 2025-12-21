@@ -416,7 +416,6 @@ app.get('/api/events', async (_req, res) => {
         s.name as site_name,
         s.address as site_address
       FROM events e
-      LEFT JOIN teams t ON e.team_id = t.id
       LEFT JOIN fields f ON e.field_id = f.id
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
@@ -448,7 +447,6 @@ app.get('/api/events/:id', async (req, res) => {
           s.name as site_name,
           s.address as site_address
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
@@ -466,21 +464,29 @@ app.get('/api/events/:id', async (req, res) => {
 
 app.post('/api/events', async (req, res) => {
   try {
-    const { team_id, field_id, event_type, start_time, end_time, description, status } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    
+    // Handle recurring_days as comma-separated string
+    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
+    
     const pool = await getPool();
     const result = await pool.request()
-      .input('team_id', sql.Int, team_id || null)
+      .input('team_ids', sql.NVarChar, team_ids || null)
       .input('field_id', sql.Int, field_id || null)
       .input('event_type', sql.NVarChar, event_type)
       .input('start_time', sql.DateTime, start_time)
       .input('end_time', sql.DateTime, end_time)
       .input('description', sql.NVarChar, description || null)
+      .input('notes', sql.NVarChar, notes || null)
       .input('status', sql.NVarChar, status || 'Planned')
+      .input('recurring_days', sql.NVarChar, recurringDaysStr)
+      .input('recurring_end_date', sql.Date, recurring_end_date || null)
       .query(`
-        INSERT INTO events (team_id, field_id, event_type, start_time, end_time, description, status)
+        INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
         OUTPUT INSERTED.*
-        VALUES (@team_id, @field_id, @event_type, @start_time, @end_time, @description, @status)
+        VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
       `);
+    console.log('[Events POST] Created event with team_ids:', team_ids, 'notes:', notes, 'recurring_days:', recurringDaysStr);
     res.status(201).json(result.recordset[0]);
   } catch (err) {
     console.error('Error creating event:', err);
@@ -490,25 +496,35 @@ app.post('/api/events', async (req, res) => {
 
 app.put('/api/events/:id', async (req, res) => {
   try {
-    const { team_id, field_id, event_type, start_time, end_time, description, status } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    
+    // Handle recurring_days as comma-separated string
+    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
+    
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.params.id)
-      .input('team_id', sql.Int, team_id || null)
+      .input('team_ids', sql.NVarChar, team_ids || null)
       .input('field_id', sql.Int, field_id || null)
       .input('event_type', sql.NVarChar, event_type)
       .input('start_time', sql.DateTime, start_time)
       .input('end_time', sql.DateTime, end_time)
       .input('description', sql.NVarChar, description || null)
+      .input('notes', sql.NVarChar, notes || null)
       .input('status', sql.NVarChar, status)
+      .input('recurring_days', sql.NVarChar, recurringDaysStr)
+      .input('recurring_end_date', sql.Date, recurring_end_date || null)
       .query(`
         UPDATE events 
-        SET team_id = @team_id, field_id = @field_id, event_type = @event_type,
+        SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
             start_time = @start_time, end_time = @end_time, description = @description,
-            status = @status, updated_at = GETDATE()
+            notes = @notes, status = @status, recurring_days = @recurring_days,
+            recurring_end_date = @recurring_end_date, updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
+    
+    console.log('[Events PUT] Updated event with team_ids:', team_ids, 'notes:', notes, 'recurring_days:', recurringDaysStr);
     
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
