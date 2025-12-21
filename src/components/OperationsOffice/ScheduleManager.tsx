@@ -109,7 +109,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     try {
       if (formData.status === 'Confirmed' && !formData.fieldId) {
         toast.error('Cannot confirm an event without a field location')
@@ -142,7 +142,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         }
 
         console.log('[ScheduleManager] Updating event with data:', apiData)
-        
+
         const numericId = parseInt(editingEvent.id)
         if (!isNaN(numericId)) {
           const transformedEvent = await api.updateEvent(numericId, apiData)
@@ -210,7 +210,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           setEvents((current = []) => [...current, transformedEvent])
           toast.success('Event created successfully')
       }
-      
+
       setShowDialog(false)
     } catch (error: any) {
       console.error('Error saving event:', error)
