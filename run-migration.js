@@ -10,6 +10,16 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Validate required environment variables
+const requiredEnvVars = ['DB_USER', 'DB_PASSWORD', 'DB_SERVER', 'DB_NAME'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
+  console.error('Please set these environment variables before running the migration.');
+  process.exit(1);
+}
+
 const config = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -18,6 +28,14 @@ const config = {
   options: {
     encrypt: true,
     trustServerCertificate: false,
+    enableArithAbort: true,
+    connectTimeout: 30000,
+    requestTimeout: 30000,
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000,
   },
 };
 
