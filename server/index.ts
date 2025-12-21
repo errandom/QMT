@@ -53,6 +53,38 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // Public routes (no authentication required)
 app.use('/api/auth', authRouter);
 
+// Public request submission (anyone can submit a request)
+app.post('/api/requests', async (req: Request, res: Response) => {
+  try {
+    const pool = await getPool();
+    const { type, requestor_name, requestor_phone, event_type, team_ids, purpose, opponent, date, start_time, duration, description } = req.body;
+    
+    const result = await pool.request()
+      .input('type', sql.NVarChar, type)
+      .input('requestor_name', sql.NVarChar, requestor_name)
+      .input('requestor_phone', sql.NVarChar, requestor_phone)
+      .input('event_type', sql.NVarChar, event_type)
+      .input('team_ids', sql.NVarChar, team_ids || null)
+      .input('purpose', sql.NVarChar, purpose || null)
+      .input('opponent', sql.NVarChar, opponent || null)
+      .input('date', sql.Date, date)
+      .input('start_time', sql.Time, start_time)
+      .input('duration', sql.Int, duration)
+      .input('description', sql.NVarChar, description || null)
+      .input('status', sql.NVarChar, 'Pending')
+      .query(`
+        INSERT INTO requests (type, requestor_name, requestor_phone, event_type, team_ids, purpose, opponent, date, start_time, duration, description, status)
+        OUTPUT INSERTED.*
+        VALUES (@type, @requestor_name, @requestor_phone, @event_type, @team_ids, @purpose, @opponent, @date, @start_time, @duration, @description, @status)
+      `);
+    
+    res.status(201).json(result.recordset[0]);
+  } catch (error) {
+    console.error('Error creating request:', error);
+    res.status(500).json({ error: 'Failed to create request' });
+  }
+});
+
 // Public read-only routes (GET requests - anyone can view data)
 // Handle GET requests without authentication
 app.get('/api/events', async (req: Request, res: Response, next: NextFunction) => {
@@ -182,9 +214,6 @@ app.get('/api/equipment/:id', async (req: Request, res: Response, next: NextFunc
     .query(`SELECT * FROM equipment WHERE id = @id`);
   res.json(result.recordset.length > 0 ? result.recordset[0] : { error: 'Not found' });
 });
-
-// Public request submission (anyone can submit a request)
-app.post('/api/requests', requestsRouter);
 
 // Protected routes (require authentication and admin/mgmt role)
 app.use('/api/events', authenticateToken, requireAdminOrMgmt, eventsRouter);
