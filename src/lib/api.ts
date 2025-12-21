@@ -120,9 +120,9 @@ function transformField(field: any): any {
     ...field,
     id: String(field.id || ''),
     siteId: String(field.siteId || field.site_id || ''),
-    turfType: field.turfType || field.turf_type,
+    turfType: field.turfType || field.field_type || 'Natural Turf',
     hasLights: field.hasLights !== undefined ? Boolean(field.hasLights) : (field.has_lights !== undefined ? Boolean(field.has_lights) : false),
-    fieldSize: field.fieldSize || field.field_size,
+    fieldSize: field.fieldSize || field.surface_type || 'Full',
     isActive: field.isActive !== undefined ? Boolean(field.isActive) : (field.active !== undefined ? Boolean(field.active) : true)
   };
 }
