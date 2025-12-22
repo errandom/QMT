@@ -89,68 +89,75 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
     <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 ${isPastEvent ? 'opacity-40' : ''}`} style={{ borderRadius: SIZES.BORDER_RADIUS }}>
       <CardHeader className="pb-1">
         <div className="space-y-3">
-          {/* Badges and action buttons row */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
-              <Badge className={statusColors[event.status]}>{event.status}</Badge>
-            </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              {canRequestCancellation && (
-                <Button 
-                  variant="ghost"
-                  size="sm" 
-                  className="h-[26px] px-3 text-xs transition-all hover:bg-transparent whitespace-nowrap"
-                  style={{
-                    backgroundColor: 'rgba(220, 38, 38, 0.15)',
-                    color: 'rgb(220, 38, 38)',
-                    border: 'none'
-                  }}
-                  onClick={() => setCancellationDialogOpen(true)}
-                >
-                  <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
-                  <span className="hidden sm:inline">Request Cancellation</span>
-                  <span className="sm:hidden">Cancel</span>
-                </Button>
-              )}
-              {showWeather && weather && (
-                <div className="text-right text-sm min-w-[80px]">
-                  <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span className="text-2xl leading-none">{weather.icon}</span>
-                    <div className="text-left">
-                      <div className="font-bold text-lg leading-tight" style={{ color: COLORS.NAVY }}>{weather.temperature}°C</div>
-                      <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {showWeather && !weather && loadingWeather && (
-                <div className="text-right text-sm min-w-[80px]">
-                  <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <div className="animate-pulse text-base" style={{ color: '#6b7280' }}>Loading...</div>
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* Badges row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
+            <Badge className={statusColors[event.status]}>{event.status}</Badge>
           </div>
           
-          {/* Event title - full width on mobile */}
-          <div className="w-full">
-            <div className="flex items-center gap-2 mb-0">
-              <div style={{ color: COLORS.NAVY }} className="flex-shrink-0">
-                {eventTypeIcons[event.eventType]}
+          {/* Title and Weather row - aligned at top */}
+          <div className="flex items-start justify-between gap-4">
+            {/* Event title */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start gap-2 mb-0">
+                <div style={{ color: COLORS.NAVY }} className="flex-shrink-0 mt-0.5">
+                  {eventTypeIcons[event.eventType]}
+                </div>
+                <CardTitle className="text-xl font-semibold flex-1 break-words" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
               </div>
-              <CardTitle className="text-xl font-semibold flex-1 break-words" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
             </div>
-            {event.otherParticipants && (
-              <div className="text-base mt-1.5 ml-9 break-words" style={{ color: COLORS.NAVY }}>
-                <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
-                <span>{event.otherParticipants}</span>
+            
+            {/* Weather forecast aligned at same level as title */}
+            {showWeather && weather && (
+              <div className="text-right text-sm min-w-[80px] flex-shrink-0">
+                <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="text-2xl leading-none">{weather.icon}</span>
+                  <div className="text-left">
+                    <div className="font-bold text-lg leading-tight" style={{ color: COLORS.NAVY }}>{weather.temperature}°C</div>
+                    <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {showWeather && !weather && loadingWeather && (
+              <div className="text-right text-sm min-w-[80px] flex-shrink-0">
+                <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <div className="animate-pulse text-base" style={{ color: '#6b7280' }}>Loading...</div>
+                </div>
               </div>
             )}
           </div>
+          
+          {/* Cancellation button below title */}
+          {canRequestCancellation && (
+            <div className="flex justify-start">
+              <Button 
+                variant="ghost"
+                size="sm" 
+                className="h-[26px] px-3 text-xs transition-all hover:bg-transparent whitespace-nowrap"
+                style={{
+                  backgroundColor: 'rgba(220, 38, 38, 0.15)',
+                  color: 'rgb(220, 38, 38)',
+                  border: 'none'
+                }}
+                onClick={() => setCancellationDialogOpen(true)}
+              >
+                <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
+                <span className="hidden sm:inline">Request Cancellation</span>
+                <span className="sm:hidden">Cancel</span>
+              </Button>
+            </div>
+          )}
+          
+          {/* Other participants */}
+          {event.otherParticipants && (
+            <div className="text-base ml-9 break-words" style={{ color: COLORS.NAVY }}>
+              <span style={{ color: '#6b7280' }}>{event.eventType === 'Game' ? 'Opponent: ' : 'Participants: '}</span>
+              <span>{event.otherParticipants}</span>
+            </div>
+          )}
         </div>
       </CardHeader>
       
