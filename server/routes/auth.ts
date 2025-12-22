@@ -196,4 +196,114 @@ router.post('/change-password', authenticateToken, async (req: AuthRequest, res:
   }
 });
 
+// PUT /api/auth/users/:id - Update user (admin or self)
+router.put('/users/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { username, role, email, fullName, isActive } = req.body;
+
+    // Users can update their own email/fullName, admins can update anyone's everything
+    const isOwnProfile = req.user!.id === userId;
+    const isAdmin = req.user!.role === 'admin';
+
+    if (!isOwnProfile && !isAdmin) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Only admins can change roles and active status
+    if (!isAdmin && (role || isActive !== undefined)) {
+      return res.status(403).json({ error: 'Admin privileges required to change role or active status' });
+    }
+
+    const pool = await getPool();
+
+    // Build update query dynamically based on permissions
+    let updateFields = [];
+    let request = pool.request().input('id', sql.Int, userId);
+
+    if (username && isAdmin) {
+      updateFields.push('username = @username');
+      request.input('username', sql.NVarChar, username);
+    }
+
+    if (role && isAdmin) {
+      if (!['admin', 'mgmt', 'user'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+      updateFields.push('role = @role');
+      request.input('role', sql.NVarChar, role);
+    }
+
+    if (email !== undefined) {
+      updateFields.push('email = @email');
+      request.input('email', sql.NVarChar, email || null);
+    }
+
+    if (fullName !== undefined) {
+      updateFields.push('full_name = @full_name');
+      request.input('full_name', sql.NVarChar, fullName || null);
+    }
+
+    if (isActive !== undefined && isAdmin) {
+      updateFields.push('is_active = @is_active');
+      request.input('is_active', sql.Bit, isActive);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updateFields.push('updated_at = GETDATE()');
+
+    const result = await request.query(`
+      UPDATE users 
+      SET ${updateFields.join(', ')}
+      OUTPUT INSERTED.id, INSERTED.username, INSERTED.role, INSERTED.email, INSERTED.full_name, INSERTED.is_active
+      WHERE id = @id
+    `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.recordset[0]);
+  } catch (error: any) {
+    console.error('Error updating user:', error);
+    if (error.number === 2627) { // Unique constraint violation
+      return res.status(409).json({ error: 'Username already exists' });
+    }
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// DELETE /api/auth/users/:id - Delete user (admin only)
+router.delete('/users/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin privileges required' });
+    }
+
+    const userId = parseInt(req.params.id);
+
+    // Prevent self-deletion
+    if (req.user!.id === userId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', sql.Int, userId)
+      .query('DELETE FROM users WHERE id = @id');
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 export default router;
