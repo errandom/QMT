@@ -90,7 +90,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       <CardHeader className="pb-1">
         <div className="space-y-3">
           {/* Badges and cancellation button row */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-start justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
