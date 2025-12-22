@@ -87,7 +87,14 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   const handleEdit = (event: Event) => {
     setEditingEvent(event)
-    setFormData(event)
+    // When editing, populate form but don't show recurring options
+    // Each recurring event is a separate instance
+    setFormData({
+      ...event,
+      isRecurring: false,
+      recurringDays: [],
+      recurringEndDate: ''
+    })
     setShowDialog(true)
   }
 
@@ -116,12 +123,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         return
       }
 
-      if (formData.isRecurring && (!formData.recurringDays || formData.recurringDays.length === 0)) {
+      // Only validate recurring fields when creating new event (not editing)
+      if (!editingEvent && formData.isRecurring && (!formData.recurringDays || formData.recurringDays.length === 0)) {
         toast.error('Please select at least one weekday for the recurring event')
         return
       }
 
-      if (formData.isRecurring && !formData.recurringEndDate) {
+      if (!editingEvent && formData.isRecurring && !formData.recurringEndDate) {
         toast.error('Please specify an end date for the recurring event')
         return
       }
@@ -168,9 +176,18 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
         console.log('[ScheduleManager] Creating event:', apiData)
 
-        const transformedEvent = await api.createEvent(apiData)
-        setEvents((current = []) => [...current, transformedEvent])
-        toast.success(formData.isRecurring ? 'Recurring event created successfully' : 'Event created successfully')
+        const result = await api.createEvent(apiData)
+        
+        // Handle both single event and array of events (for recurring)
+        if (Array.isArray(result)) {
+          // Multiple events created (recurring)
+          setEvents((current = []) => [...current, ...result])
+          toast.success(`${result.length} recurring events created successfully`)
+        } else {
+          // Single event created
+          setEvents((current = []) => [...current, result])
+          toast.success('Event created successfully')
+        }
       }
       
       setShowDialog(false)
@@ -550,52 +567,55 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               />
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="isRecurring"
-                  checked={formData.isRecurring}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
-                  style={{
-                    backgroundColor: formData.isRecurring ? COLORS.NAVY : undefined
-                  }}
-                />
-                <Label htmlFor="isRecurring" style={{ color: COLORS.CHARCOAL }}>Recurring Event</Label>
-              </div>
+            {/* Only show recurring options when creating new event, not when editing */}
+            {!editingEvent && (
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isRecurring"
+                    checked={formData.isRecurring}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
+                    style={{
+                      backgroundColor: formData.isRecurring ? COLORS.NAVY : undefined
+                    }}
+                  />
+                  <Label htmlFor="isRecurring" style={{ color: COLORS.CHARCOAL }}>Recurring Event</Label>
+                </div>
 
-              {formData.isRecurring && (
-                <div className="space-y-3 pl-6 border-l-2">
-                  <div className="space-y-2">
-                    <Label style={{ color: COLORS.CHARCOAL }}>Weekdays</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {WEEKDAYS.map(day => (
-                        <div key={day.value} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`day-${day.value}`}
-                            checked={formData.recurringDays?.includes(day.value)}
-                            onCheckedChange={() => handleDayToggle(day.value)}
-                          />
-                          <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
-                            {day.label}
-                          </label>
-                        </div>
-                      ))}
+                {formData.isRecurring && (
+                  <div className="space-y-3 pl-6 border-l-2">
+                    <div className="space-y-2">
+                      <Label style={{ color: COLORS.CHARCOAL }}>Weekdays</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {WEEKDAYS.map(day => (
+                          <div key={day.value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`day-${day.value}`}
+                              checked={formData.recurringDays?.includes(day.value)}
+                              onCheckedChange={() => handleDayToggle(day.value)}
+                            />
+                            <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                              {day.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringEndDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
+                      <Input
+                        id="recurringEndDate"
+                        type="date"
+                        value={formData.recurringEndDate}
+                        onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
+                        required={formData.isRecurring}
+                        style={{ color: COLORS.CHARCOAL }}
+                      />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="recurringEndDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
-                    <Input
-                      id="recurringEndDate"
-                      type="date"
-                      value={formData.recurringEndDate}
-                      onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
-                      required={formData.isRecurring}
-                      style={{ color: COLORS.CHARCOAL }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button 
