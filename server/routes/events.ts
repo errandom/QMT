@@ -84,7 +84,7 @@ function generateRecurringDates(startDate: Date, endDate: Date, recurringDays: n
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance } = req.body;
     
     // Handle team_ids as comma-separated string (already comes as string from frontend)
     const teamIdsStr = team_ids || null;
@@ -181,10 +181,12 @@ router.post('/', async (req: Request, res: Response) => {
         .input('status', sql.NVarChar, status || 'Planned')
         .input('recurring_days', sql.NVarChar, recurringDaysStr)
         .input('recurring_end_date', sql.Date, recurring_end_date || null)
+        .input('other_participants', sql.NVarChar, other_participants || null)
+        .input('estimated_attendance', sql.Int, estimated_attendance || null)
         .query(`
-          INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
+          INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
           OUTPUT INSERTED.*
-          VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
+          VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
         `);
       
       console.log('[Events POST] Created event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
@@ -216,7 +218,7 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update event
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance } = req.body;
     
     console.log('[Events PUT] Request body:', req.body);
     
@@ -282,10 +284,12 @@ router.put('/:id', async (req: Request, res: Response) => {
           .input('status', sql.NVarChar, status || 'Planned')
           .input('recurring_days', sql.NVarChar, recurringDaysStr)
           .input('recurring_end_date', sql.Date, recurring_end_date)
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
           .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
           `);
         
         createdEvents.push(result.recordset[0]);
@@ -324,6 +328,8 @@ router.put('/:id', async (req: Request, res: Response) => {
         .input('status', sql.NVarChar, status)
         .input('recurring_days', sql.NVarChar, recurringDaysStr)
         .input('recurring_end_date', sql.Date, recurring_end_date || null)
+        .input('other_participants', sql.NVarChar, other_participants || null)
+        .input('estimated_attendance', sql.Int, estimated_attendance || null)
         .query(`
         UPDATE events 
         SET team_ids = @team_ids,
@@ -335,7 +341,9 @@ router.put('/:id', async (req: Request, res: Response) => {
             notes = @notes,
             status = @status,
             recurring_days = @recurring_days,
-            recurring_end_date = @recurring_end_date
+            recurring_end_date = @recurring_end_date,
+            other_participants = @other_participants,
+            estimated_attendance = @estimated_attendance
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
