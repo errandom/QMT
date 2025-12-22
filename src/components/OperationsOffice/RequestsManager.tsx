@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Check, X, ClipboardText, Prohibit } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { api } from '@/lib/api'
 
 interface RequestsManagerProps {
   currentUser: User
@@ -19,41 +20,53 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     teams, events, setEvents 
   } = useData()
 
-  const handleApproveFacility = (requestId: string) => {
+  const handleApproveFacility = async (requestId: string) => {
     const request = facilityRequests.find(r => r.id === requestId)
     
-    if (request) {
+    if (!request) {
+      toast.error('Request not found')
+      return
+    }
+
+    try {
       const endTime = calculateEndTime(request.startTime, request.duration)
       
-      const newEvent: Event = {
-        id: `event-${Date.now()}`,
-        title: request.opponent 
+      // Create event via API
+      const eventData = {
+        team_ids: request.teamIds && request.teamIds.length > 0 ? request.teamIds.join(',') : null,
+        field_id: null, // No field selected yet - admin will need to assign
+        event_type: request.eventType,
+        start_time: `${request.date}T${request.startTime}:00`,
+        end_time: `${request.date}T${endTime}:00`,
+        description: request.opponent 
           ? `${request.eventType} vs ${request.opponent}` 
           : request.purpose 
             ? `${request.eventType} - ${request.purpose}`
             : request.eventType,
-        eventType: request.eventType,
+        notes: request.description || '',
         status: 'Planned',
-        date: request.date,
-        startTime: request.startTime,
-        endTime: endTime,
-        teamIds: request.teamIds || [],
-        otherParticipants: request.opponent || undefined,
-        notes: request.description || undefined,
-        isRecurring: false
+        other_participants: request.opponent || null
       }
       
+      const newEvent = await api.createEvent(eventData)
+      
+      // Update local state
       setEvents((current = []) => [...current, newEvent])
-    }
-    
-    setFacilityRequests((current = []) =>
-      current.map(r =>
-        r.id === requestId
-          ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-          : r
+      
+      // Update request status (note: using string ID as per current data structure)
+      setFacilityRequests((current = []) =>
+        current.map(r =>
+          r.id === requestId
+            ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
+            : r
+        )
       )
-    )
-    toast.success('Facility request approved and event created')
+      
+      toast.success('Facility request approved and event created')
+    } catch (error: any) {
+      console.error('Error approving facility request:', error)
+      toast.error(error.message || 'Failed to approve facility request')
+    }
   }
   
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -97,15 +110,59 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     toast.success('Equipment request rejected')
   }
 
-  const handleApproveCancellation = (requestId: string) => {
-    setCancellationRequests((current = []) =>
-      current.map(r =>
-        r.id === requestId
-          ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-          : r
+  const handleApproveCancellation = async (requestId: string) => {
+    const request = cancellationRequests.find(r => r.id === requestId)
+    
+    if (!request) {
+      toast.error('Request not found')
+      return
+    }
+
+    try {
+      // Find the corresponding event
+      const event = events.find(e => e.id === request.eventId)
+      
+      if (event) {
+        // Update the event status to Cancelled via API
+        const updateData = {
+          team_ids: event.teamIds && event.teamIds.length > 0 ? event.teamIds.join(',') : null,
+          field_id: event.fieldId ? parseInt(event.fieldId) : null,
+          event_type: event.eventType,
+          start_time: `${event.date}T${event.startTime}:00`,
+          end_time: `${event.date}T${event.endTime}:00`,
+          description: event.title || '',
+          notes: event.notes || '',
+          status: 'Cancelled',
+          other_participants: event.otherParticipants || null,
+          estimated_attendance: event.estimatedAttendance || null
+        }
+        
+        await api.updateEvent(parseInt(event.id), updateData)
+        
+        // Update local state
+        setEvents((current = []) =>
+          current.map(e =>
+            e.id === request.eventId
+              ? { ...e, status: 'Cancelled' as const }
+              : e
+          )
+        )
+      }
+      
+      // Update request status
+      setCancellationRequests((current = []) =>
+        current.map(r =>
+          r.id === requestId
+            ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
+            : r
+        )
       )
-    )
-    toast.success('Cancellation request approved')
+      
+      toast.success('Cancellation request approved and event cancelled')
+    } catch (error: any) {
+      console.error('Error approving cancellation request:', error)
+      toast.error(error.message || 'Failed to approve cancellation request')
+    }
   }
 
   const handleRejectCancellation = (requestId: string) => {
