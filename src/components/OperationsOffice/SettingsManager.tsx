@@ -363,19 +363,21 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                         </div>
                         <div className="flex gap-1">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleEdit(user)}
                             className="h-8 w-8 p-0"
+                            title="Edit user"
                           >
                             <PencilSimple size={16} />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleDelete(user.id, user.username)}
                             disabled={user.id === currentUser.id}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            title="Delete user"
                           >
                             <Trash size={16} />
                           </Button>
