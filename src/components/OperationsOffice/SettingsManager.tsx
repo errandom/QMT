@@ -337,7 +337,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               <Card>
                 <CardContent className="py-6">
                   <div className="flex items-center justify-center text-muted-foreground">
-                    <UserCircle size={24} className="mr-2" />
+                    <UserCircle size={24} className="mr-2" weight="duotone" style={{ color: COLORS.ACCENT }} />
                     <span>No users found</span>
                   </div>
                 </CardContent>
