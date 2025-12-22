@@ -94,7 +94,9 @@ router.post('/', async (req: Request, res: Response) => {
     
     console.log('[Events POST] Condition check:', {
       recurringDaysStr,
+      recurringDaysStr_truthy: !!recurringDaysStr,
       recurring_end_date,
+      recurring_end_date_truthy: !!recurring_end_date,
       willGenerateMultiple: !!(recurringDaysStr && recurring_end_date)
     });
     
@@ -102,6 +104,7 @@ router.post('/', async (req: Request, res: Response) => {
     
     // Check if this is a recurring event
     if (recurringDaysStr && recurring_end_date) {
+      console.log('[Events POST] ✅ ENTERING RECURRING EVENT GENERATION BLOCK');
       // Parse recurring days
       const daysArray = recurringDaysStr.split(',').map((d: string) => parseInt(d.trim()));
       
@@ -177,6 +180,7 @@ router.post('/', async (req: Request, res: Response) => {
       // Return all created events
       res.status(201).json(eventsWithDetails.recordset);
     } else {
+      console.log('[Events POST] ❌ NOT generating recurring events - creating single event');
       // Single event (non-recurring)
       const result = await pool.request()
         .input('team_ids', sql.NVarChar, teamIdsStr)
@@ -239,8 +243,12 @@ router.put('/:id', async (req: Request, res: Response) => {
     console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr, 'generate_recurring:', generate_recurring);
     console.log('[Events PUT] Condition check:', {
       generate_recurring,
+      generate_recurring_type: typeof generate_recurring,
+      generate_recurring_boolean: !!generate_recurring,
       recurringDaysStr,
+      recurringDaysStr_truthy: !!recurringDaysStr,
       recurring_end_date,
+      recurring_end_date_truthy: !!recurring_end_date,
       willGenerateMultiple: !!(generate_recurring && recurringDaysStr && recurring_end_date)
     });
     
@@ -248,6 +256,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     
     // Check if we need to generate recurring events (converting existing event to recurring)
     if (generate_recurring && recurringDaysStr && recurring_end_date) {
+      console.log('[Events PUT] ✅ ENTERING RECURRING EVENT GENERATION BLOCK');
       console.log('[Events PUT] Converting event to recurring, generating individual events');
       
       // Parse recurring days
@@ -329,6 +338,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       // Return all created events as array
       res.json(eventsWithDetails.recordset);
     } else {
+      console.log('[Events PUT] ❌ NOT generating recurring events - updating single event');
       // Regular update - single event
       const result = await pool.request()
         .input('id', sql.Int, req.params.id)
