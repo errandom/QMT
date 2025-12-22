@@ -20,6 +20,8 @@ interface SettingsManagerProps {
 
 export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [showDialog, setShowDialog] = useState(false)
+  const [showProfileDialog, setShowProfileDialog] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
@@ -32,6 +34,17 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
     email: '',
     fullName: '',
     isActive: true
+  })
+
+  const [profileData, setProfileData] = useState({
+    email: currentUser.email || '',
+    fullName: currentUser.fullName || ''
+  })
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   })
 
   // Fetch users on mount if admin
@@ -178,6 +191,79 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
     }
   }
 
+  const handleProfileEdit = () => {
+    setProfileData({
+      email: currentUser.email || '',
+      fullName: currentUser.fullName || ''
+    })
+    setShowProfileDialog(true)
+  }
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      await api.updateUser(currentUser.id, {
+        username: currentUser.username,
+        role: currentUser.role,
+        email: profileData.email || undefined,
+        fullName: profileData.fullName || undefined,
+        isActive: true
+      })
+      
+      // Update current user in local storage
+      const updatedUser = {
+        ...currentUser,
+        email: profileData.email,
+        fullName: profileData.fullName
+      }
+      
+      toast.success('Profile updated successfully')
+      setShowProfileDialog(false)
+      
+      // Trigger a page reload to refresh user data
+      window.location.reload()
+    } catch (error: any) {
+      console.error('[SettingsManager] Error updating profile:', error)
+      toast.error(error.message || 'Failed to update profile')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New passwords do not match')
+      return
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await api.changePassword(passwordData.currentPassword, passwordData.newPassword)
+      toast.success('Password changed successfully')
+      setShowPasswordDialog(false)
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
+    } catch (error: any) {
+      console.error('[SettingsManager] Error changing password:', error)
+      toast.error(error.message || 'Failed to change password')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const isAdmin = currentUser.role === 'admin'
 
   return (
@@ -189,7 +275,13 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">User Profile</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">User Profile</CardTitle>
+            <Button variant="outline" size="sm" onClick={handleProfileEdit}>
+              <PencilSimple className="mr-2" size={16} />
+              Edit Profile
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -208,6 +300,12 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               )}
               <Badge variant="secondary">{currentUser.role}</Badge>
             </div>
+          </div>
+          <Separator />
+          <div>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(true)}>
+              Change Password
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -390,6 +488,114 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                 )}
 
                 <div className="flex justify-end gap-2">
+
+      {/* Profile Edit Dialog */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="profile-email">Email</Label>
+              <Input
+                id="profile-email"
+                type="email"
+                value={profileData.email}
+                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                placeholder="your.email@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="profile-fullName">Full Name</Label>
+              <Input
+                id="profile-fullName"
+                value={profileData.fullName}
+                onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
+                placeholder="Your full name"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowProfileDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password *</Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password *</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                minLength={6}
+                required
+                placeholder="Minimum 6 characters"
+              />
+              {passwordData.newPassword && passwordData.newPassword.length < 6 && (
+                <p className="text-xs text-destructive">Password must be at least 6 characters</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password *</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                minLength={6}
+                required
+              />
+              {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
+                <p className="text-xs text-destructive">Passwords do not match</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowPasswordDialog(false)
+                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Changing...' : 'Change Password'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
                   <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                     Cancel
                   </Button>
