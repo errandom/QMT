@@ -89,8 +89,8 @@ router.post('/', async (req: Request, res: Response) => {
     // Handle team_ids as comma-separated string (already comes as string from frontend)
     const teamIdsStr = team_ids || null;
     
-    // Handle recurring_days as comma-separated string
-    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
+    // Handle recurring_days - it comes as string from frontend already
+    const recurringDaysStr = recurring_days || null;
     
     const pool = await getPool();
     
@@ -227,8 +227,8 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Handle team_ids as comma-separated string (already comes as string from frontend)
     const teamIdsStr = team_ids || null;
     
-    // Handle recurring_days as comma-separated string
-    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
+    // Handle recurring_days - it comes as string from frontend already
+    const recurringDaysStr = recurring_days || null;
     
     console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr, 'generate_recurring:', generate_recurring);
     
