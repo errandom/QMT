@@ -337,12 +337,17 @@ export const api = {
   },
   updateEvent: async (id: number, data: any) => {
     try {
-      const event = await apiRequest<any>(`/events/${id}`, {
+      const result = await apiRequest<any>(`/events/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
-      console.log('[API] Raw updated event from server:', event);
-      return transformEvent(event);
+      console.log('[API] Raw updated event(s) from server:', result);
+      
+      // Handle both single event and array of events (when converting to recurring)
+      if (Array.isArray(result)) {
+        return result.map(transformEvent);
+      }
+      return transformEvent(result);
     } catch (error) {
       console.error('[API] Error updating event:', error);
       throw error;
