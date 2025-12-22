@@ -89,10 +89,29 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
     <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 ${isPastEvent ? 'opacity-40' : ''}`} style={{ borderRadius: SIZES.BORDER_RADIUS }}>
       <CardHeader className="pb-1">
         <div className="space-y-3">
-          {/* Badges row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
-            <Badge className={statusColors[event.status]}>{event.status}</Badge>
+          {/* Badges and cancellation button row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
+              <Badge className={statusColors[event.status]}>{event.status}</Badge>
+            </div>
+            {canRequestCancellation && (
+              <Button 
+                variant="ghost"
+                size="sm" 
+                className="h-[26px] px-3 text-xs transition-all hover:bg-transparent whitespace-nowrap flex-shrink-0"
+                style={{
+                  backgroundColor: 'rgba(220, 38, 38, 0.15)',
+                  color: 'rgb(220, 38, 38)',
+                  border: 'none'
+                }}
+                onClick={() => setCancellationDialogOpen(true)}
+              >
+                <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
+                <span className="hidden sm:inline">Request Cancellation</span>
+                <span className="sm:hidden">Cancel</span>
+              </Button>
+            )}
           </div>
           
           {/* Title and Weather row - aligned at top */}
@@ -129,27 +148,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
             )}
           </div>
-          
-          {/* Cancellation button below title */}
-          {canRequestCancellation && (
-            <div className="flex justify-start">
-              <Button 
-                variant="ghost"
-                size="sm" 
-                className="h-[26px] px-3 text-xs transition-all hover:bg-transparent whitespace-nowrap"
-                style={{
-                  backgroundColor: 'rgba(220, 38, 38, 0.15)',
-                  color: 'rgb(220, 38, 38)',
-                  border: 'none'
-                }}
-                onClick={() => setCancellationDialogOpen(true)}
-              >
-                <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
-                <span className="hidden sm:inline">Request Cancellation</span>
-                <span className="sm:hidden">Cancel</span>
-              </Button>
-            </div>
-          )}
           
           {/* Other participants */}
           {event.otherParticipants && (
