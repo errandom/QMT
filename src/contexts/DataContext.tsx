@@ -39,7 +39,11 @@ const STORAGE_KEYS = {
 function getFromStorage<T>(key: string, defaultValue: T): T {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    // Handle cases where item is null, undefined, or the string "undefined"
+    if (!item || item === 'undefined' || item === 'null') {
+      return defaultValue
+    }
+    return JSON.parse(item)
   } catch (error) {
     console.error(`Error reading ${key} from localStorage:`, error)
     return defaultValue
