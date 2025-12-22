@@ -181,6 +181,22 @@ function transformEvent(event: any): any {
   // Determine if event is recurring
   const isRecurring = Boolean(recurringDays && recurringDays.length > 0);
   
+  console.log('[API] Recurring data check:', {
+    recurring_days: event.recurring_days,
+    recurring_end_date: event.recurring_end_date,
+    recurringEndDate: event.recurringEndDate,
+    recurringDays,
+    isRecurring
+  });
+  
+  // Format recurring_end_date to YYYY-MM-DD if it exists
+  let recurringEndDate = event.recurring_end_date || event.recurringEndDate;
+  if (recurringEndDate && recurringEndDate instanceof Date) {
+    recurringEndDate = recurringEndDate.toISOString().split('T')[0];
+  } else if (recurringEndDate && typeof recurringEndDate === 'string' && recurringEndDate.includes('T')) {
+    recurringEndDate = recurringEndDate.split('T')[0];
+  }
+  
   const transformed = {
     id: String(event.id || ''),
     title: event.title || event.description || `${event.event_type || event.eventType} Event`,
@@ -193,7 +209,7 @@ function transformEvent(event: any): any {
     fieldId: String(event.fieldId || event.field_id || ''),
     isRecurring,
     recurringDays,
-    recurringEndDate: event.recurring_end_date || event.recurringEndDate,
+    recurringEndDate,
     notes: event.notes || '',
     estimatedAttendance: event.estimatedAttendance || event.estimated_attendance,
     otherParticipants: event.otherParticipants || event.other_participants
