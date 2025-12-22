@@ -488,6 +488,18 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                 )}
 
                 <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (editingUser ? 'Updating...' : 'Creating...') : (editingUser ? 'Update User' : 'Create User')}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
 
       {/* Profile Edit Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
@@ -596,18 +608,6 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
           </form>
         </DialogContent>
       </Dialog>
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (editingUser ? 'Updating...' : 'Creating...') : (editingUser ? 'Update User' : 'Create User')}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
     </div>
   )
 }
