@@ -41,7 +41,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [filterStartDate, setFilterStartDate] = useState<string>('')
   const [filterEndDate, setFilterEndDate] = useState<string>('')
 
-  const [formData, setFormData] = useState<Partial<Event>>({
+  const [formData, setFormData] = useState<Partial<Event> & { estimatedAttendance?: number | string }>({
     title: '',
     eventType: 'Practice',
     status: 'Planned',
@@ -146,7 +146,10 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           status: formData.status || 'Planned',
           recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays.join(',') : null,
           recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null,
-          generate_recurring: formData.isRecurring // Flag to generate recurring events
+          generate_recurring: formData.isRecurring, // Flag to generate recurring events
+          other_participants: formData.otherParticipants || null,
+          estimated_attendance: formData.estimatedAttendance ? 
+            (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null
         }
 
         console.log('[ScheduleManager] Updating event with data:', apiData)
@@ -184,7 +187,10 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           notes: formData.notes || '',
           status: formData.status || 'Planned',
           recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays.join(',') : null,
-          recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null
+          recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null,
+          other_participants: formData.otherParticipants || null,
+          estimated_attendance: formData.estimatedAttendance ? 
+            (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null
         }
 
         console.log('[ScheduleManager] Creating event:', apiData)
