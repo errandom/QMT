@@ -92,6 +92,12 @@ router.post('/', async (req: Request, res: Response) => {
     // Handle recurring_days - it comes as string from frontend already
     const recurringDaysStr = recurring_days || null;
     
+    console.log('[Events POST] Condition check:', {
+      recurringDaysStr,
+      recurring_end_date,
+      willGenerateMultiple: !!(recurringDaysStr && recurring_end_date)
+    });
+    
     const pool = await getPool();
     
     // Check if this is a recurring event
@@ -231,6 +237,12 @@ router.put('/:id', async (req: Request, res: Response) => {
     const recurringDaysStr = recurring_days || null;
     
     console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr, 'generate_recurring:', generate_recurring);
+    console.log('[Events PUT] Condition check:', {
+      generate_recurring,
+      recurringDaysStr,
+      recurring_end_date,
+      willGenerateMultiple: !!(generate_recurring && recurringDaysStr && recurring_end_date)
+    });
     
     const pool = await getPool();
     
