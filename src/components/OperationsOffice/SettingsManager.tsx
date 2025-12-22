@@ -366,20 +366,20 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => handleEdit(user)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 bg-transparent hover:bg-transparent"
                             title="Edit user"
                           >
-                            <PencilSimple size={16} />
+                            <PencilSimple size={16} weight="duotone" style={{ color: COLORS.ACCENT }} />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDelete(user.id, user.username)}
                             disabled={user.id === currentUser.id}
-                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            className="h-8 w-8 p-0 bg-transparent hover:bg-transparent hover:opacity-80"
                             title="Delete user"
                           >
-                            <Trash size={16} />
+                            <Trash size={16} weight="duotone" style={{ color: 'rgb(220, 38, 38)' }} />
                           </Button>
                         </div>
                       </div>
