@@ -87,13 +87,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   const handleEdit = (event: Event) => {
     setEditingEvent(event)
-    // When editing, populate form but don't show recurring options
-    // Each recurring event is a separate instance
+    // Populate form including recurring data if it exists
     setFormData({
       ...event,
-      isRecurring: false,
-      recurringDays: [],
-      recurringEndDate: ''
+      isRecurring: event.isRecurring || false,
+      recurringDays: event.recurringDays || [],
+      recurringEndDate: event.recurringEndDate || ''
     })
     setShowDialog(true)
   }
@@ -123,19 +122,19 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         return
       }
 
-      // Only validate recurring fields when creating new event (not editing)
-      if (!editingEvent && formData.isRecurring && (!formData.recurringDays || formData.recurringDays.length === 0)) {
+      // Validate recurring fields when isRecurring is enabled (both create and edit)
+      if (formData.isRecurring && (!formData.recurringDays || formData.recurringDays.length === 0)) {
         toast.error('Please select at least one weekday for the recurring event')
         return
       }
 
-      if (!editingEvent && formData.isRecurring && !formData.recurringEndDate) {
+      if (formData.isRecurring && !formData.recurringEndDate) {
         toast.error('Please specify an end date for the recurring event')
         return
       }
 
       if (editingEvent) {
-        // Editing existing event - update single event only
+        // Editing existing event
         const apiData = {
           team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
           field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
@@ -146,19 +145,33 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           notes: formData.notes || '',
           status: formData.status || 'Planned',
           recurring_days: formData.isRecurring && formData.recurringDays ? formData.recurringDays.join(',') : null,
-          recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null
+          recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null,
+          generate_recurring: formData.isRecurring // Flag to generate recurring events
         }
 
         console.log('[ScheduleManager] Updating event with data:', apiData)
         
         const numericId = parseInt(editingEvent.id)
         if (!isNaN(numericId)) {
-          const transformedEvent = await api.updateEvent(numericId, apiData)
-          setEvents((current = []) =>
-            current.map(ev => ev.id === editingEvent.id ? transformedEvent : ev)
-          )
+          const result = await api.updateEvent(numericId, apiData)
+          
+          // Handle both single event and array of events (when converting to recurring)
+          if (Array.isArray(result)) {
+            // Multiple events created (converted to recurring)
+            // Remove the original event and add all new ones
+            setEvents((current = []) => [
+              ...current.filter(ev => ev.id !== editingEvent.id),
+              ...result
+            ])
+            toast.success(`Event converted to recurring: ${result.length} events created`)
+          } else {
+            // Single event updated
+            setEvents((current = []) =>
+              current.map(ev => ev.id === editingEvent.id ? result : ev)
+            )
+            toast.success('Event updated successfully')
+          }
         }
-        toast.success('Event updated successfully')
       } else {
         // Creating new event
         const apiData = {
@@ -567,9 +580,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               />
             </div>
 
-            {/* Only show recurring options when creating new event, not when editing */}
-            {!editingEvent && (
-              <div className="space-y-3">
+            {/* Recurring options available for both create and edit */}
+            <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isRecurring"
@@ -615,21 +627,20 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   </div>
                 )}
               </div>
-            )}
 
-            <div className="flex justify-end gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setShowDialog(false)}
-                style={{
-                  backgroundColor: COLORS.CHARCOAL,
-                  color: 'white',
-                  border: 'none'
-                }}
-              >
-                Cancel
-              </Button>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowDialog(false)}
+                  style={{
+                    backgroundColor: COLORS.CHARCOAL,
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  Cancel
+                </Button>
               <Button 
                 type="submit"
                 style={{
