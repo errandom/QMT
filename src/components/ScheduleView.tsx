@@ -171,11 +171,10 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                       {DAYS.map((day, dayIndex) => {
                         const dayEvents = getEventsForSiteFieldDay(site.id, field.id, dayIndex + 1)
                         const { rowCount, eventRowMap } = assignEventRows(dayEvents)
-                        const cellHeight = Math.max(12, rowCount * 16) // Minimum 12 (h-12), or 16px per row
                         
                         return (
                           <div key={day} className="relative rounded-lg border" style={{
-                            height: `${cellHeight * 4}px`,
+                            height: '120px', // Fixed height for all day boxes
                             background: 'rgba(255, 255, 255, 0.4)',
                             borderColor: 'rgba(36, 139, 204, 0.3)'
                           }}>
@@ -188,7 +187,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                 const teamColor = getTeamColor(event.teamIds || [], eventIndex)
                                 const isCancelled = event.status === 'Cancelled'
                                 const rowIndex = eventRowMap.get(event.id) || 0
-                                const rowHeight = cellHeight * 4 / rowCount
+                                const totalRows = Math.max(rowCount, 1)
+                                const rowHeight = 120 / totalRows
                                 
                                 return (
                                   <Tooltip key={event.id}>
@@ -206,17 +206,16 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                         }}
                                       >
                                         <span className="truncate">
-                                          {eventTeams.map(t => t.name).join(', ')}
+                                          {event.title || event.eventType}
                                         </span>
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent className="glass-card border-white/30">
                                       <div className="text-xs space-y-1">
-                                        <div className="font-semibold">{event.title}</div>
-                                        <div className="text-muted-foreground">Type: {event.eventType}</div>
-                                        <div className="font-medium">{event.startTime} - {event.endTime}</div>
-                                        <div>Team(s): {eventTeams.map(t => t.name).join(', ') || 'None'}</div>
+                                        <div className="font-semibold">Team(s): {eventTeams.map(t => t.name).join(', ') || 'None'}</div>
+                                        <div className="text-muted-foreground">Event Type: {event.eventType}</div>
                                         <div className="text-muted-foreground">Status: {event.status}</div>
+                                        <div className="font-medium">{event.startTime} - {event.endTime}</div>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
