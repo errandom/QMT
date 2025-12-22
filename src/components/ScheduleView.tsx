@@ -212,10 +212,10 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                     </TooltipTrigger>
                                     <TooltipContent className="glass-card border-white/30">
                                       <div className="text-xs space-y-1">
-                                        <div className="font-semibold">Team(s): {eventTeams.map(t => t.name).join(', ') || 'None'}</div>
-                                        <div className="text-muted-foreground">Event Type: {event.eventType}</div>
+                                        <div className="font-semibold">Title: {event.title || event.eventType}</div>
+                                        <div className="text-muted-foreground">Type: {event.eventType}</div>
+                                        <div className="text-muted-foreground">Teams: {eventTeams.map(t => t.name).join(', ') || 'None'}</div>
                                         <div className="text-muted-foreground">Status: {event.status}</div>
-                                        <div className="font-medium">{event.startTime} - {event.endTime}</div>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
