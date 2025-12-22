@@ -216,7 +216,7 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update event
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring } = req.body;
     
     console.log('[Events PUT] Request body:', req.body);
     
@@ -226,22 +226,105 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
     
-    console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr);
+    console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr, 'generate_recurring:', generate_recurring);
     
     const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .input('team_ids', sql.NVarChar, teamIdsStr)
-      .input('field_id', sql.Int, field_id)
-      .input('event_type', sql.NVarChar, event_type)
-      .input('start_time', sql.DateTime, start_time)
-      .input('end_time', sql.DateTime, end_time)
-      .input('description', sql.NVarChar, description)
-      .input('notes', sql.NVarChar, notes)
-      .input('status', sql.NVarChar, status)
-      .input('recurring_days', sql.NVarChar, recurringDaysStr)
-      .input('recurring_end_date', sql.Date, recurring_end_date || null)
-      .query(`
+    
+    // Check if we need to generate recurring events (converting existing event to recurring)
+    if (generate_recurring && recurringDaysStr && recurring_end_date) {
+      console.log('[Events PUT] Converting event to recurring, generating individual events');
+      
+      // Parse recurring days
+      const daysArray = recurringDaysStr.split(',').map((d: string) => parseInt(d.trim()));
+      
+      // Parse the start time to extract date and time components
+      const startDateTime = new Date(start_time);
+      const endDateTime = new Date(end_time);
+      
+      // Calculate time duration in milliseconds
+      const duration = endDateTime.getTime() - startDateTime.getTime();
+      
+      // Generate all applicable dates
+      const recurringDates = generateRecurringDates(
+        startDateTime,
+        new Date(recurring_end_date),
+        daysArray
+      );
+      
+      console.log('[Events PUT] Generating recurring events:', {
+        count: recurringDates.length,
+        dates: recurringDates.slice(0, 5).map(d => d.toISOString().split('T')[0])
+      });
+      
+      // Delete the original event
+      await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .query('DELETE FROM events WHERE id = @id');
+      
+      // Create individual events for each date
+      const createdEvents = [];
+      for (const date of recurringDates) {
+        // Set the time from the original start_time
+        const eventStart = new Date(date);
+        eventStart.setHours(startDateTime.getHours(), startDateTime.getMinutes(), startDateTime.getSeconds());
+        
+        // Calculate end time based on duration
+        const eventEnd = new Date(eventStart.getTime() + duration);
+        
+        const result = await pool.request()
+          .input('team_ids', sql.NVarChar, teamIdsStr)
+          .input('field_id', sql.Int, field_id)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, eventStart)
+          .input('end_time', sql.DateTime, eventEnd)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status || 'Planned')
+          .input('recurring_days', sql.NVarChar, recurringDaysStr)
+          .input('recurring_end_date', sql.Date, recurring_end_date)
+          .query(`
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
+            OUTPUT INSERTED.*
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
+          `);
+        
+        createdEvents.push(result.recordset[0]);
+      }
+      
+      console.log('[Events PUT] Created', createdEvents.length, 'recurring events');
+      
+      // Fetch all created events with joins
+      const eventIds = createdEvents.map(e => e.id);
+      const eventsWithDetails = await pool.request()
+        .query(`
+          SELECT 
+            e.*,
+            f.name as field_name,
+            s.name as site_name,
+            s.address as site_address
+          FROM events e
+          LEFT JOIN fields f ON e.field_id = f.id
+          LEFT JOIN sites s ON f.site_id = s.id
+          WHERE e.id IN (${eventIds.join(',')})
+        `);
+      
+      // Return all created events as array
+      res.json(eventsWithDetails.recordset);
+    } else {
+      // Regular update - single event
+      const result = await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .input('team_ids', sql.NVarChar, teamIdsStr)
+        .input('field_id', sql.Int, field_id)
+        .input('event_type', sql.NVarChar, event_type)
+        .input('start_time', sql.DateTime, start_time)
+        .input('end_time', sql.DateTime, end_time)
+        .input('description', sql.NVarChar, description)
+        .input('notes', sql.NVarChar, notes)
+        .input('status', sql.NVarChar, status)
+        .input('recurring_days', sql.NVarChar, recurringDaysStr)
+        .input('recurring_end_date', sql.Date, recurring_end_date || null)
+        .query(`
         UPDATE events 
         SET team_ids = @team_ids,
             field_id = @field_id,
@@ -257,29 +340,30 @@ router.put('/:id', async (req: Request, res: Response) => {
         WHERE id = @id
       `);
     
-    console.log('[Events PUT] Updated event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
-    
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
+      console.log('[Events PUT] Updated event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
+      
+      if (result.recordset.length === 0) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      
+      // Fetch the updated event with joins to return complete data
+      const updatedEvent = await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .query(`
+          SELECT 
+            e.*,
+            f.name as field_name,
+            s.name as site_name,
+            s.address as site_address
+          FROM events e
+          LEFT JOIN fields f ON e.field_id = f.id
+          LEFT JOIN sites s ON f.site_id = s.id
+          WHERE e.id = @id
+        `);
+      
+      console.log('[Events PUT] Updated event:', updatedEvent.recordset[0].id);
+      res.json(updatedEvent.recordset[0]);
     }
-    
-    // Fetch the updated event with joins to return complete data
-    const updatedEvent = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .query(`
-        SELECT 
-          e.*,
-          f.name as field_name,
-          s.name as site_name,
-          s.address as site_address
-        FROM events e
-        LEFT JOIN fields f ON e.field_id = f.id
-        LEFT JOIN sites s ON f.site_id = s.id
-        WHERE e.id = @id
-      `);
-    
-    console.log('[Events PUT] Updated event:', updatedEvent.recordset[0].id);
-    res.json(updatedEvent.recordset[0]);
   } catch (error) {
     console.error('Error updating event:', error);
     res.status(500).json({ error: 'Failed to update event' });
