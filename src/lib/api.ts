@@ -1,3 +1,4 @@
+
 // API Configuration Module
 // Used by frontend to get the correct API base URL
 
@@ -318,12 +319,17 @@ export const api = {
   getEvent: (id: number) => apiRequest<any>(`/events/${id}`),
   createEvent: async (data: any) => {
     try {
-      const event = await apiRequest<any>('/events', {
+      const result = await apiRequest<any>('/events', {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      console.log('[API] Raw created event from server:', event);
-      return transformEvent(event);
+      console.log('[API] Raw created event(s) from server:', result);
+      
+      // Handle both single event and array of events (for recurring)
+      if (Array.isArray(result)) {
+        return result.map(transformEvent);
+      }
+      return transformEvent(result);
     } catch (error) {
       console.error('[API] Error creating event:', error);
       throw error;
