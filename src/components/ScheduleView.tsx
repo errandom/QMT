@@ -210,12 +210,34 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                         </span>
                                       </div>
                                     </TooltipTrigger>
-                                    <TooltipContent className="glass-card border-white/30">
-                                      <div className="text-xs space-y-1">
-                                        <div className="font-semibold">{event.title || event.eventType}</div>
-                                        <div className="text-muted-foreground">Type: {event.eventType}</div>
-                                        <div className="text-muted-foreground">Teams: {eventTeams.map(t => t.name).join(', ') || 'None'}</div>
-                                        <div className="text-muted-foreground">Status: {event.status}</div>
+                                    <TooltipContent className="glass-card border-white/30 max-w-xs">
+                                      <div className="text-xs space-y-1.5">
+                                        <div className="font-semibold text-sm" style={{ color: '#001f3f' }}>
+                                          {event.title || event.eventType}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                          <span className="font-medium">Type:</span> {event.eventType}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                          <span className="font-medium">Teams:</span> {eventTeams.map(t => t.name).join(', ') || 'None'}
+                                        </div>
+                                        {event.otherParticipants && (
+                                          <div className="text-muted-foreground">
+                                            <span className="font-medium">Participants:</span> {event.otherParticipants}
+                                          </div>
+                                        )}
+                                        <div className="text-muted-foreground">
+                                          <span className="font-medium">Time:</span> {event.startTime} - {event.endTime}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <span className="font-medium text-muted-foreground">Status:</span>
+                                          <Badge 
+                                            variant={event.status === 'Confirmed' ? 'default' : event.status === 'Cancelled' ? 'destructive' : 'secondary'}
+                                            className="text-xs"
+                                          >
+                                            {event.status}
+                                          </Badge>
+                                        </div>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
