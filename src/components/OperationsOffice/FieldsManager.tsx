@@ -228,7 +228,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
               {editingField ? 'Edit Field' : 'Create Field'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pb-20 sm:pb-4">
             <div className="space-y-2">
               <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>Field Name *</Label>
               <Input
