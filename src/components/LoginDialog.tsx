@@ -91,7 +91,7 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4 pb-20 sm:pb-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
