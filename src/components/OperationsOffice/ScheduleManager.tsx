@@ -65,13 +65,21 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     const site = (sites || []).find((s: any) => s.id === f.siteId)
     if (!f.isActive || !site?.isActive) return false
     
-    // For Meeting or Other events, show only non-sports facilities
-    if (formData.eventType === 'Meeting' || formData.eventType === 'Other') {
-      return site.isSportsFacility === false
+    // Only apply sports facility filtering if we have an event type
+    if (formData.eventType) {
+      // For Meeting or Other events, show only non-sports facilities
+      if (formData.eventType === 'Meeting' || formData.eventType === 'Other') {
+        return site.isSportsFacility === false
+      }
+      
+      // For Game or Practice events, show only sports facilities
+      if (formData.eventType === 'Game' || formData.eventType === 'Practice') {
+        return site.isSportsFacility === true
+      }
     }
     
-    // For Game or Practice events, show only sports facilities
-    return site.isSportsFacility === true
+    // Default: show all active fields (when no event type is selected or for unknown types)
+    return true
   })
 
   const handleCreate = () => {
