@@ -414,7 +414,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               <DialogHeader>
                 <DialogTitle>{editingUser ? 'Edit User' : 'Create New User'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 pb-20 sm:pb-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">Username *</Label>
                   <Input
@@ -509,7 +509,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleProfileSubmit} className="space-y-4">
+          <form onSubmit={handleProfileSubmit} className="space-y-4 pb-20 sm:pb-4">
             <div className="space-y-2">
               <Label htmlFor="profile-email">Email</Label>
               <Input
@@ -549,7 +549,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          <form onSubmit={handlePasswordSubmit} className="space-y-4 pb-20 sm:pb-4">
             <div className="space-y-2">
               <Label htmlFor="current-password">Current Password *</Label>
               <Input
