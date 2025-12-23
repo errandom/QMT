@@ -112,7 +112,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             Submit a request to book a facility for your team or event
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-6 pb-20 sm:pb-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name" style={{ color: '#001f3f' }}>Name *</Label>
