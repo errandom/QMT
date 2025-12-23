@@ -105,14 +105,27 @@ router.post('/', async (req: Request, res: Response) => {
     
     const pool = await getPool();
     
-    // Check if this is a recurring event - be more explicit about the check
-    const shouldGenerateRecurring = recurringDaysStr && 
-                                     recurringDaysStr.length > 0 && 
-                                     recurring_end_date && 
-                                     recurring_end_date !== null &&
-                                     recurring_end_date !== '';
+    // Check if this is a recurring event - be very explicit about type checking
+    const hasRecurringDays = recurringDaysStr && 
+                              typeof recurringDaysStr === 'string' && 
+                              recurringDaysStr.trim().length > 0;
     
+    const hasRecurringEndDate = recurring_end_date &&
+                                 recurring_end_date !== null &&
+                                 recurring_end_date !== '' &&
+                                 recurring_end_date !== 'null' &&
+                                 recurring_end_date !== 'undefined';
+    
+    const shouldGenerateRecurring = hasRecurringDays && hasRecurringEndDate;
+    
+    console.log('[Events POST] ===================================');
     console.log('[Events POST] Should generate recurring:', shouldGenerateRecurring);
+    console.log('[Events POST] Detailed breakdown:');
+    console.log('[Events POST]   - recurringDaysStr:', recurringDaysStr, '(type:', typeof recurringDaysStr, ')');
+    console.log('[Events POST]   - hasRecurringDays:', hasRecurringDays);
+    console.log('[Events POST]   - recurring_end_date:', recurring_end_date, '(type:', typeof recurring_end_date, ')');
+    console.log('[Events POST]   - hasRecurringEndDate:', hasRecurringEndDate);
+    console.log('[Events POST] ===================================');
     
     if (shouldGenerateRecurring) {
       console.log('[Events POST] ✅ ENTERING RECURRING EVENT GENERATION BLOCK');
@@ -273,14 +286,35 @@ router.put('/:id', async (req: Request, res: Response) => {
     const pool = await getPool();
     
     // Check if we need to generate recurring events (converting existing event to recurring)
-    const shouldGenerateRecurring = generate_recurring && 
-                                     recurringDaysStr && 
-                                     recurringDaysStr.length > 0 && 
-                                     recurring_end_date && 
-                                     recurring_end_date !== null &&
-                                     recurring_end_date !== '';
+    // Be very explicit about type checking and handle edge cases
+    const hasRecurringDays = recurringDaysStr && 
+                              typeof recurringDaysStr === 'string' && 
+                              recurringDaysStr.trim().length > 0;
     
+    const hasRecurringEndDate = recurring_end_date &&
+                                 recurring_end_date !== null &&
+                                 recurring_end_date !== '' &&
+                                 recurring_end_date !== 'null' &&
+                                 recurring_end_date !== 'undefined';
+    
+    const isGenerateRecurringTrue = generate_recurring === true || 
+                                     generate_recurring === 'true' || 
+                                     generate_recurring === 1;
+    
+    const shouldGenerateRecurring = isGenerateRecurringTrue && 
+                                     hasRecurringDays && 
+                                     hasRecurringEndDate;
+    
+    console.log('[Events PUT] ===================================');
     console.log('[Events PUT] Should generate recurring:', shouldGenerateRecurring);
+    console.log('[Events PUT] Detailed breakdown:');
+    console.log('[Events PUT]   - generate_recurring:', generate_recurring, '(type:', typeof generate_recurring, ')');
+    console.log('[Events PUT]   - isGenerateRecurringTrue:', isGenerateRecurringTrue);
+    console.log('[Events PUT]   - recurringDaysStr:', recurringDaysStr, '(length:', recurringDaysStr?.length, ')');
+    console.log('[Events PUT]   - hasRecurringDays:', hasRecurringDays);
+    console.log('[Events PUT]   - recurring_end_date:', recurring_end_date, '(type:', typeof recurring_end_date, ')');
+    console.log('[Events PUT]   - hasRecurringEndDate:', hasRecurringEndDate);
+    console.log('[Events PUT] ===================================');
     
     if (shouldGenerateRecurring) {
       console.log('[Events PUT] ✅ ENTERING RECURRING EVENT GENERATION BLOCK');
