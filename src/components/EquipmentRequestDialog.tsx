@@ -70,7 +70,7 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="overflow-y-auto max-h-[90vh] w-full max-w-2xl p-8"
+        className="w-[95vw] max-w-2xl max-h-[95vh] overflow-y-auto p-4 sm:p-8"
         style={{
           background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
           backdropFilter: 'blur(16px)'
@@ -178,11 +178,12 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
+              className="w-full sm:w-auto min-h-[44px]"
               style={{
                 borderColor: '#3e4347',
                 backgroundColor: 'white',
@@ -194,12 +195,12 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
             <Button 
               type="submit" 
               disabled={isLoading}
+              className="w-full sm:w-auto min-h-[44px] hover:opacity-90"
               style={{
                 backgroundColor: '#248bcc',
                 color: 'white',
                 border: 'none'
               }}
-              className="hover:opacity-90"
             >
               {isLoading ? 'Submitting...' : 'Submit Request'}
             </Button>
