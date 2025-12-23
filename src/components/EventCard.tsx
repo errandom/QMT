@@ -239,45 +239,47 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                     {field.fieldType}
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1">
-                    {field.turfType === 'Artificial Turf' ? (
-                      <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
+                  <>
+                    <span className="flex items-center gap-1">
+                      {field.turfType === 'Artificial Turf' ? (
+                        <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
+                            <circle cx="8" cy="8" r="6.5" />
+                            <line x1="2" y1="2" x2="14" y2="14" strokeWidth="2" />
+                          </svg>
+                        </div>
+                      ) : (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
-                          <circle cx="8" cy="8" r="6.5" />
-                          <line x1="2" y1="2" x2="14" y2="14" strokeWidth="2" />
                         </svg>
-                      </div>
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
-                      </svg>
+                      )}
+                      {field.turfType}
+                    </span>
+                    {field.hasLights && (
+                      <span className="flex items-center gap-1">
+                        <Lightbulb size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
+                        Lights
+                      </span>
                     )}
-                    {field.turfType}
-                  </span>
+                    <span className="flex items-center gap-1">
+                      {field.fieldSize === 'Full' ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="2" y="3" width="12" height="10" />
+                        </svg>
+                      ) : field.fieldSize === 'Shared' ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="2" y="3" width="12" height="10" />
+                          <rect x="2" y="3" width="6" height="10" fill="currentColor" opacity="0.3" />
+                        </svg>
+                      ) : (
+                        <span>{field.fieldSize}</span>
+                      )}
+                      {field.fieldSize} Field
+                    </span>
+                    {field.capacity && <span>Capacity: {field.capacity}</span>}
+                  </>
                 )}
-                {field.hasLights && (
-                  <span className="flex items-center gap-1">
-                    <Lightbulb size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
-                    Lights
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  {field.fieldSize === 'Full' ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="2" y="3" width="12" height="10" />
-                    </svg>
-                  ) : field.fieldSize === 'Shared' ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="2" y="3" width="12" height="10" />
-                      <rect x="2" y="3" width="6" height="10" fill="currentColor" opacity="0.3" />
-                    </svg>
-                  ) : (
-                    <span>{field.fieldSize}</span>
-                  )}
-                  {field.fieldSize} Field
-                </span>
-                {field.capacity && <span>Capacity: {field.capacity}</span>}
               </div>
             </div>
           </>
