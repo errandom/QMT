@@ -155,7 +155,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
                   <div className="grid grid-cols-6 gap-2 mb-2">
-                    <div className="text-sm font-medium" style={{ color: '#6b7280' }}>Field</div>
+                    <div className="text-sm font-medium" style={{ color: '#6b7280' }}>Location</div>
                     {DAYS.map(day => (
                       <div key={day} className="text-sm font-medium text-center" style={{ color: '#001f3f' }}>
                         {day}
@@ -163,10 +163,15 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                     ))}
                   </div>
 
-                  {siteFields.map(field => (
+                  {siteFields.map(field => {
+                    // Check if this field is used by Meeting/Other events
+                    const fieldEvents = displayEvents.filter(e => e.fieldId === field.id)
+                    const isMeetingLocation = fieldEvents.length > 0 && fieldEvents.every(e => e.eventType === 'Meeting' || e.eventType === 'Other')
+                    
+                    return (
                     <div key={field.id} className="grid grid-cols-6 gap-2 mb-4">
                       <div className="text-sm font-medium flex items-center" style={{ color: '#001f3f' }}>
-                        {field.name}
+                        {isMeetingLocation ? site.name : field.name}
                       </div>
                       
                       {DAYS.map((day, dayIndex) => {
@@ -249,7 +254,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                         )
                       })}
                     </div>
-                  ))}
+                    )
+                  })}
 
                   <div className="grid grid-cols-6 gap-2 mt-2 pt-2 border-t border-white/30">
                     <div></div>
