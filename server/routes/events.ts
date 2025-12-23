@@ -156,6 +156,9 @@ router.post('/', async (req: Request, res: Response) => {
     // Handle recurring_days - it comes as string from frontend already
     const recurringDaysStr = recurring_days || null;
     
+    console.log('[Events POST] ===== INCOMING REQUEST =====');
+    console.log('[Events POST] recurring_days:', recurring_days, 'type:', typeof recurring_days);
+    console.log('[Events POST] recurring_end_date:', recurring_end_date, 'type:', typeof recurring_end_date);
     console.log('[Events POST] Full request body:', req.body);
     console.log('[Events POST] Condition check:', {
       recurringDaysStr,
