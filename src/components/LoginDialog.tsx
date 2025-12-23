@@ -58,7 +58,7 @@ export default function LoginDialog({ open, onOpenChange, onLoginSuccess }: Logi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-[425px] p-6"
+        className="w-[95vw] sm:max-w-[425px] max-h-[95vh] overflow-y-auto p-4 sm:p-6"
         style={{
           background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
           backdropFilter: 'blur(16px)'
