@@ -262,9 +262,16 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null
         }
 
-        console.log('[ScheduleManager] Creating event:', apiData)
+        console.log('[ScheduleManager] Creating event with data:', apiData)
+        console.log('[ScheduleManager] Is recurring:', formData.isRecurring)
+        console.log('[ScheduleManager] Recurring days:', formData.recurringDays)
+        console.log('[ScheduleManager] Recurring end date:', formData.recurringEndDate)
+        console.log('[ScheduleManager] Expected count:', recurringEventCount)
 
         const result = await api.createEvent(apiData)
+        
+        console.log('[ScheduleManager] Result from API:', result)
+        console.log('[ScheduleManager] Result is array:', Array.isArray(result))
         
         // Handle both single event and array of events (for recurring)
         if (Array.isArray(result)) {
