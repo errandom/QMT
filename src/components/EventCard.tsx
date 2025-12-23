@@ -177,7 +177,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               <div className="flex items-start gap-2 text-base" style={{ color: COLORS.NAVY }}>
                 <MapPin style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
                 <div>
-                  <div className="font-semibold">{site.name} - {field.name}</div>
+                  <div className="font-semibold">
+                    {event.eventType === 'Meeting' || event.eventType === 'Other' 
+                      ? site.name 
+                      : `${site.name} - ${field.name}`}
+                  </div>
                   <div className="text-sm" style={{ color: '#6b7280' }}>
                     {site.address}, {site.zipCode} {site.city}
                   </div>
