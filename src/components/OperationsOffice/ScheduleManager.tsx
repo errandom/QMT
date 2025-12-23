@@ -61,8 +61,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const activeTeams = teams.filter(t => t.isActive)
   
   // Get location options based on event type
-  // For Meeting/Other: show sites (non-sports facilities)
-  // For Game/Practice: show fields (sports facilities)
+  // For Meeting/Other: show fields from non-sports facilities (sites)
+  // For Game/Practice: show fields from sports facilities
   const locationOptions = useMemo(() => {
     if (!formData.eventType) {
       // No event type selected, show all fields
@@ -74,20 +74,21 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         .map((f: any) => ({
           id: f.id,
           name: f.name,
-          siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name,
-          type: 'field' as const
+          siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
         }))
     }
     
     if (formData.eventType === 'Meeting' || formData.eventType === 'Other') {
-      // For meetings/other, show non-sports facility sites
-      return (sites || [])
-        .filter((s: any) => s.isActive && s.isSportsFacility === false)
-        .map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          siteName: s.address,
-          type: 'site' as const
+      // For meetings/other, show fields from non-sports facility sites
+      return fields
+        .filter((f: any) => {
+          const site = (sites || []).find((s: any) => s.id === f.siteId)
+          return f.isActive && site?.isActive && site?.isSportsFacility === false
+        })
+        .map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
         }))
     }
     
@@ -100,8 +101,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       .map((f: any) => ({
         id: f.id,
         name: f.name,
-        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name,
-        type: 'field' as const
+        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
       }))
   }, [formData.eventType, fields, sites])
 
@@ -459,7 +459,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent 
-          className="max-w-3xl max-h-[90vh] overflow-y-auto operations-dialog"
+          className="w-[95vw] max-w-3xl max-h-[95vh] overflow-y-auto operations-dialog p-4 sm:p-6"
           style={{
             background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
             border: `3px solid ${COLORS.NAVY}`,
@@ -483,7 +483,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="eventType" style={{ color: COLORS.CHARCOAL }}>Event Type *</Label>
                 <Select 
@@ -521,7 +521,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date" style={{ color: COLORS.CHARCOAL }}>Date *</Label>
                 <Input
@@ -572,7 +572,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 <SelectContent>
                   {locationOptions.map((location: any) => (
                     <SelectItem key={location.id} value={location.id}>
-                      {location.name} {location.siteName && `(${location.siteName})`}
+                      {location.siteName || location.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -581,7 +581,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
             <div className="space-y-2">
               <Label style={{ color: COLORS.CHARCOAL }}>Teams</Label>
-              <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-32 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md max-h-32 overflow-y-auto">
                 {activeTeams.map(team => (
                   <div key={team.id} className="flex items-center space-x-2">
                     <Checkbox
@@ -648,7 +648,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   <div className="space-y-3 pl-6 border-l-2">
                     <div className="space-y-2">
                       <Label style={{ color: COLORS.CHARCOAL }}>Weekdays</Label>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                         {WEEKDAYS.map(day => (
                           <div key={day.value} className="flex items-center space-x-2">
                             <Checkbox
@@ -678,11 +678,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setShowDialog(false)}
+                  className="w-full sm:w-auto min-h-[44px]"
                   style={{
                     backgroundColor: COLORS.CHARCOAL,
                     color: 'white',
@@ -693,6 +694,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 </Button>
               <Button 
                 type="submit"
+                className="w-full sm:w-auto min-h-[44px]"
                 style={{
                   backgroundColor: COLORS.ACCENT,
                   color: 'white',
