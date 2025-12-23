@@ -19,7 +19,8 @@ import {
   Trophy,
   Barbell,
   Strategy,
-  CalendarCheck
+  CalendarCheck,
+  Buildings
 } from '@phosphor-icons/react'
 import { Event, Team, Field, Site, EventType, WeatherForecast } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
@@ -175,7 +176,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
               <div className="flex items-start gap-2 text-base" style={{ color: COLORS.NAVY }}>
-                <MapPin style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
+                {field.fieldType === 'Meeting Room' ? (
+                  <Buildings style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
+                ) : (
+                  <MapPin style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
+                )}
                 <div>
                   <div className="font-semibold">
                     {event.eventType === 'Meeting' || event.eventType === 'Other' 
@@ -228,21 +233,29 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
 
               <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: COLORS.NAVY }}>
-                <span className="flex items-center gap-1">
-                  {field.turfType === 'Artificial Turf' ? (
-                    <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
+                {field.fieldType === 'Meeting Room' ? (
+                  <span className="flex items-center gap-1">
+                    <Buildings size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
+                    {field.fieldType}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    {field.turfType === 'Artificial Turf' ? (
+                      <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
+                          <circle cx="8" cy="8" r="6.5" />
+                          <line x1="2" y1="2" x2="14" y2="14" strokeWidth="2" />
+                        </svg>
+                      </div>
+                    ) : (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
-                        <circle cx="8" cy="8" r="6.5" />
-                        <line x1="2" y1="2" x2="14" y2="14" strokeWidth="2" />
                       </svg>
-                    </div>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
-                    </svg>
-                  )}
-                  {field.turfType}
+                    )}
+                    {field.turfType}
+                  </span>
+                )}
                 </span>
                 {field.hasLights && (
                   <span className="flex items-center gap-1">
