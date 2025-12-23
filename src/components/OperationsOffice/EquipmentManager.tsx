@@ -171,7 +171,7 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent 
-          className="max-w-lg operations-dialog"
+          className="w-[95vw] max-w-lg max-h-[95vh] overflow-y-auto operations-dialog p-4 sm:p-6"
           style={{
             background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
             border: `3px solid ${COLORS.NAVY}`,
@@ -237,11 +237,12 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
               </Select>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => setShowDialog(false)}
+                className="w-full sm:w-auto min-h-[44px]"
                 style={{
                   backgroundColor: COLORS.CHARCOAL,
                   color: 'white',
@@ -252,6 +253,7 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
               </Button>
               <Button 
                 type="submit"
+                className="w-full sm:w-auto min-h-[44px]"
                 style={{
                   backgroundColor: COLORS.ACCENT,
                   color: 'white',
