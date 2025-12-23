@@ -183,7 +183,7 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
               {editingEquipment ? 'Edit Equipment' : 'Add Equipment'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pb-20 sm:pb-4">
             <div className="space-y-2">
               <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>Equipment Name *</Label>
               <Input
