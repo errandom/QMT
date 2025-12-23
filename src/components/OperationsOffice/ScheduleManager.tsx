@@ -288,7 +288,18 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       setShowDialog(false)
     } catch (error: any) {
       console.error('Error saving event:', error)
-      toast.error(error.message || 'Failed to save event')
+      
+      // Handle field booking conflicts
+      if (error.status === 409) {
+        toast.error(error.message || 'Field booking conflict detected', {
+          duration: 5000,
+          description: error.conflictingEvent ? 
+            'This time slot is already booked for another game.' : 
+            undefined
+        })
+      } else {
+        toast.error(error.message || 'Failed to save event')
+      }
     }
   }
 
@@ -607,7 +618,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 <SelectContent>
                   {locationOptions.map((location: any) => (
                     <SelectItem key={location.id} value={location.id}>
-                      {location.siteName || location.name}
+                      {formData.eventType === 'Meeting' || formData.eventType === 'Other' 
+                        ? location.siteName 
+                        : `${location.siteName} - ${location.name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
