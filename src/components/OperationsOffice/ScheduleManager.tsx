@@ -499,7 +499,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               {editingEvent ? 'Edit Event' : 'Create Event'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pb-20 sm:pb-4">
             <div className="space-y-2">
               <Label htmlFor="title" style={{ color: COLORS.CHARCOAL }}>Event Title *</Label>
               <Input
@@ -645,81 +645,81 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 onChange={(e) => setFormData({ ...formData, estimatedAttendance: e.target.value ? parseInt(e.target.value) : undefined })}
                 style={{ color: COLORS.CHARCOAL }}
               />
-            </div> style={{ borderColor: COLORS.ACCENT }}>
-                    <div className="space-y-2">
-                      <Label style={{ color: COLORS.CHARCOAL }}>Weekdays *</Label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {WEEKDAYS.map(day => (
-                          <div key={day.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`day-${day.value}`}
-                              checked={formData.recurringDays?.includes(day.value)}
-                              onCheckedChange={() => handleDayToggle(day.value)}
-                            />
-                            <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
-                              {day.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurringEndDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
-                      <Input
-                        id="recurringEndDate"
-                        type="date"
-                        value={formData.recurringEndDate}
-                        onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
-                        required={formData.isRecurring}
-                        min={formData.date}
-                        style={{ color: COLORS.CHARCOAL }}
-                      />
-                    </div>
-                    {recurringEventCount > 0 && (
-                      <div 
-                        className="p-3 rounded-md text-sm font-medium"
-                        style={{
-                          backgroundColor: 'rgba(36, 139, 204, 0.1)',
-                          color: COLORS.ACCENT,
-                          border: `1px solid ${COLORS.ACCENT}`
-                        }}
-                      >
-                        📅 {recurringEventCount} individual event{recurringEventCount !== 1 ? 's' : ''} will be created
-                      </div>
-                    )}ssName="space-y-3 pl-6 border-l-2">
-                    <div className="space-y-2">
-                      <Label style={{ color: COLORS.CHARCOAL }}>Weekdays</Label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {WEEKDAYS.map(day => (
-                          <div key={day.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`day-${day.value}`}
-                              checked={formData.recurringDays?.includes(day.value)}
-                              onCheckedChange={() => handleDayToggle(day.value)}
-                            />
-                            <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
-                              {day.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurringEndDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
-                      <Input
-                        id="recurringEndDate"
-                        type="date"
-                        value={formData.recurringEndDate}
-                        onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
-                        required={formData.isRecurring}
-                        style={{ color: COLORS.CHARCOAL }}
-                      />
-                    </div>
-                  </div>
-                )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes" style={{ color: COLORS.CHARCOAL }}>Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+                style={{ color: COLORS.CHARCOAL }}
+              />
+            </div>
+
+            {/* Recurring options available for both create and edit */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isRecurring"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
+                  style={{
+                    backgroundColor: formData.isRecurring ? COLORS.NAVY : undefined
+                  }}
+                />
+                <Label htmlFor="isRecurring" style={{ color: COLORS.CHARCOAL }}>Recurring Event</Label>
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+              {formData.isRecurring && (
+                <div className="space-y-3 pl-6 border-l-2" style={{ borderColor: COLORS.ACCENT }}>
+                  <div className="space-y-2">
+                    <Label style={{ color: COLORS.CHARCOAL }}>Weekdays *</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {WEEKDAYS.map(day => (
+                        <div key={day.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`day-${day.value}`}
+                            checked={formData.recurringDays?.includes(day.value)}
+                            onCheckedChange={() => handleDayToggle(day.value)}
+                          />
+                          <label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                            {day.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="recurringEndDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
+                    <Input
+                      id="recurringEndDate"
+                      type="date"
+                      value={formData.recurringEndDate}
+                      onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
+                      required={formData.isRecurring}
+                      min={formData.date}
+                      style={{ color: COLORS.CHARCOAL }}
+                    />
+                  </div>
+                  {recurringEventCount > 0 && (
+                    <div 
+                      className="p-3 rounded-md text-sm font-medium"
+                      style={{
+                        backgroundColor: 'rgba(36, 139, 204, 0.1)',
+                        color: COLORS.ACCENT,
+                        border: `1px solid ${COLORS.ACCENT}`
+                      }}
+                    >
+                      📅 {recurringEventCount} individual event{recurringEventCount !== 1 ? 's' : ''} will be created
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                 <Button 
                   type="button" 
                   variant="outline" 
