@@ -81,6 +81,70 @@ function generateRecurringDates(startDate: Date, endDate: Date, recurringDays: n
   return dates;
 }
 
+// Helper function to check for field booking conflicts (only for Game events)
+async function checkFieldConflict(
+  pool: any,
+  fieldId: number | null,
+  eventType: string,
+  startTime: Date,
+  endTime: Date,
+  excludeEventId?: number
+): Promise<{ hasConflict: boolean; conflictingEvent?: any }> {
+  // Only check conflicts for Game events
+  if (eventType !== 'Game' || !fieldId) {
+    return { hasConflict: false };
+  }
+  
+  try {
+    const query = `
+      SELECT TOP 1 
+        e.id, 
+        e.description as title,
+        e.start_time,
+        e.end_time
+      FROM events e
+      WHERE e.field_id = @field_id
+        AND e.event_type = 'Game'
+        AND e.status != 'Cancelled'
+        ${excludeEventId ? 'AND e.id != @exclude_event_id' : ''}
+        AND (
+          -- New event starts during existing event
+          (@start_time >= e.start_time AND @start_time < e.end_time)
+          OR
+          -- New event ends during existing event
+          (@end_time > e.start_time AND @end_time <= e.end_time)
+          OR
+          -- New event completely encompasses existing event
+          (@start_time <= e.start_time AND @end_time >= e.end_time)
+        )
+    `;
+    
+    const request = pool.request()
+      .input('field_id', sql.Int, fieldId)
+      .input('start_time', sql.DateTime, startTime)
+      .input('end_time', sql.DateTime, endTime);
+    
+    if (excludeEventId) {
+      request.input('exclude_event_id', sql.Int, excludeEventId);
+    }
+    
+    const result = await request.query(query);
+    
+    if (result.recordset.length > 0) {
+      return {
+        hasConflict: true,
+        conflictingEvent: result.recordset[0]
+      };
+    }
+    
+    return { hasConflict: false };
+  } catch (error) {
+    console.error('[checkFieldConflict] Error checking conflict:', error);
+    // In case of error, allow the booking (fail open)
+    return { hasConflict: false };
+  }
+}
+
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -157,6 +221,8 @@ router.post('/', async (req: Request, res: Response) => {
       
       // Create individual events for each date
       const createdEvents = [];
+      const conflictedDates = [];
+      
       for (const date of recurringDates) {
         // Set the time from the original start_time
         const eventStart = new Date(date);
@@ -164,6 +230,21 @@ router.post('/', async (req: Request, res: Response) => {
         
         // Calculate end time based on duration
         const eventEnd = new Date(eventStart.getTime() + duration);
+        
+        // Check for field conflict (only for Game events)
+        const conflict = await checkFieldConflict(
+          pool,
+          field_id,
+          event_type,
+          eventStart,
+          eventEnd
+        );
+        
+        if (conflict.hasConflict) {
+          console.log(`[Events POST] Skipping event on ${eventStart.toISOString()} due to field conflict`);
+          conflictedDates.push(eventStart.toLocaleDateString('en-US'));
+          continue; // Skip this date and move to next
+        }
         
         console.log(`[Events POST] Creating event ${createdEvents.length + 1}/${recurringDates.length} for ${eventStart.toISOString()}`);
         
@@ -191,6 +272,14 @@ router.post('/', async (req: Request, res: Response) => {
       
       console.log('[Events POST] Created', createdEvents.length, 'recurring events');
       
+      if (createdEvents.length === 0) {
+        return res.status(409).json({
+          error: 'All dates have field conflicts',
+          message: 'Cannot create recurring game events - all dates conflict with existing game bookings on this field.',
+          conflictedDates
+        });
+      }
+      
       // Fetch all created events with joins
       const eventIds = createdEvents.map(e => e.id);
       const eventsWithDetails = await pool.request()
@@ -206,10 +295,34 @@ router.post('/', async (req: Request, res: Response) => {
           WHERE e.id IN (${eventIds.join(',')})
         `);
       
-      // Return all created events
-      res.status(201).json(eventsWithDetails.recordset);
+      // Return all created events with warning about conflicts if any
+      const response: any = eventsWithDetails.recordset;
+      if (conflictedDates.length > 0) {
+        res.setHeader('X-Booking-Conflicts', conflictedDates.join(','));
+        console.log('[Events POST] Warning: Some dates had conflicts:', conflictedDates);
+      }
+      res.status(201).json(response);
     } else {
       console.log('[Events POST] ❌ NOT generating recurring events - creating single event');
+      
+      // Check for field conflict (only for Game events)
+      const conflict = await checkFieldConflict(
+        pool,
+        field_id,
+        event_type,
+        new Date(start_time),
+        new Date(end_time)
+      );
+      
+      if (conflict.hasConflict) {
+        const conflictTime = new Date(conflict.conflictingEvent.start_time);
+        return res.status(409).json({ 
+          error: 'Field booking conflict',
+          message: `This field is already booked for a game at ${conflictTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} on ${conflictTime.toLocaleDateString('en-US')}. Game fields cannot have overlapping bookings.`,
+          conflictingEvent: conflict.conflictingEvent
+        });
+      }
+      
       // Single event (non-recurring)
       const result = await pool.request()
         .input('team_ids', sql.NVarChar, teamIdsStr)
@@ -349,6 +462,8 @@ router.put('/:id', async (req: Request, res: Response) => {
       
       // Create individual events for each date
       const createdEvents = [];
+      const conflictedDates = [];
+      
       for (const date of recurringDates) {
         // Set the time from the original start_time
         const eventStart = new Date(date);
@@ -356,6 +471,21 @@ router.put('/:id', async (req: Request, res: Response) => {
         
         // Calculate end time based on duration
         const eventEnd = new Date(eventStart.getTime() + duration);
+        
+        // Check for field conflict (only for Game events)
+        const conflict = await checkFieldConflict(
+          pool,
+          field_id,
+          event_type,
+          eventStart,
+          eventEnd
+        );
+        
+        if (conflict.hasConflict) {
+          console.log(`[Events PUT] Skipping event on ${eventStart.toISOString()} due to field conflict`);
+          conflictedDates.push(eventStart.toLocaleDateString('en-US'));
+          continue; // Skip this date and move to next
+        }
         
         console.log(`[Events PUT] Creating event ${createdEvents.length + 1}/${recurringDates.length} for ${eventStart.toISOString()}`);
         
@@ -383,6 +513,14 @@ router.put('/:id', async (req: Request, res: Response) => {
       
       console.log('[Events PUT] Created', createdEvents.length, 'recurring events');
       
+      if (createdEvents.length === 0) {
+        return res.status(409).json({
+          error: 'All dates have field conflicts',
+          message: 'Cannot create recurring game events - all dates conflict with existing game bookings on this field.',
+          conflictedDates
+        });
+      }
+      
       // Fetch all created events with joins
       const eventIds = createdEvents.map(e => e.id);
       const eventsWithDetails = await pool.request()
@@ -398,10 +536,35 @@ router.put('/:id', async (req: Request, res: Response) => {
           WHERE e.id IN (${eventIds.join(',')})
         `);
       
-      // Return all created events as array
-      res.json(eventsWithDetails.recordset);
+      // Return all created events as array with warning about conflicts if any
+      const response: any = eventsWithDetails.recordset;
+      if (conflictedDates.length > 0) {
+        res.setHeader('X-Booking-Conflicts', conflictedDates.join(','));
+        console.log('[Events PUT] Warning: Some dates had conflicts:', conflictedDates);
+      }
+      res.json(response);
     } else {
       console.log('[Events PUT] ❌ NOT generating recurring events - updating single event');
+      
+      // Check for field conflict (only for Game events)
+      const conflict = await checkFieldConflict(
+        pool,
+        field_id,
+        event_type,
+        new Date(start_time),
+        new Date(end_time),
+        parseInt(req.params.id) // Exclude the current event being updated
+      );
+      
+      if (conflict.hasConflict) {
+        const conflictTime = new Date(conflict.conflictingEvent.start_time);
+        return res.status(409).json({ 
+          error: 'Field booking conflict',
+          message: `This field is already booked for a game at ${conflictTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} on ${conflictTime.toLocaleDateString('en-US')}. Game fields cannot have overlapping bookings.`,
+          conflictingEvent: conflict.conflictingEvent
+        });
+      }
+      
       // Regular update - single event
       const result = await pool.request()
         .input('id', sql.Int, req.params.id)
