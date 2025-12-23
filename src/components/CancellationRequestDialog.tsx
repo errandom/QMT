@@ -72,7 +72,7 @@ export default function CancellationRequestDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-[500px] top-[10%] text-[#001f3f]"
+        className="w-[95vw] sm:max-w-[500px] max-h-[95vh] overflow-y-auto top-[10%] text-[#001f3f] p-4 sm:p-6"
         style={{
           background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
           backdropFilter: 'blur(16px)'
@@ -126,19 +126,19 @@ export default function CancellationRequestDialog({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <Button 
               type="button" 
               variant="outline" 
               onClick={handleClose} 
-              className="bg-[#3e4347] text-white hover:bg-[#3e4347]/90"
+              className="w-full sm:w-auto min-h-[44px] bg-[#3e4347] text-white hover:bg-[#3e4347]/90"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={isSubmitting} 
-              className="bg-[#001f3f] hover:bg-[#001f3f]/90 text-white"
+              className="w-full sm:w-auto min-h-[44px] bg-[#001f3f] hover:bg-[#001f3f]/90 text-white"
             >
               {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </Button>
