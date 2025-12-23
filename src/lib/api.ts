@@ -252,8 +252,11 @@ export async function apiRequest<T>(
     
     // Try to parse JSON error, fallback to text
     let errorMessage = `HTTP ${response.status}`;
+    let errorData: any = null;
+    
     try {
       const error = await response.json();
+      errorData = error;
       errorMessage = error.error || error.message || errorMessage;
     } catch (e) {
       // Not JSON, try to get text
@@ -273,7 +276,15 @@ export async function apiRequest<T>(
     }
     
     console.error(`[API] ❌ Error on ${url}:`, errorMessage);
-    throw new Error(errorMessage);
+    
+    // Create error with status and data for better handling
+    const apiError: any = new Error(errorMessage);
+    apiError.status = response.status;
+    if (errorData) {
+      apiError.conflictingEvent = errorData.conflictingEvent;
+      apiError.conflictedDates = errorData.conflictedDates;
+    }
+    throw apiError;
   }
 
   // Handle 204 No Content responses (e.g., DELETE operations)
