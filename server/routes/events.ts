@@ -92,18 +92,29 @@ router.post('/', async (req: Request, res: Response) => {
     // Handle recurring_days - it comes as string from frontend already
     const recurringDaysStr = recurring_days || null;
     
+    console.log('[Events POST] Full request body:', req.body);
     console.log('[Events POST] Condition check:', {
       recurringDaysStr,
       recurringDaysStr_truthy: !!recurringDaysStr,
+      recurringDaysStr_length: recurringDaysStr?.length,
       recurring_end_date,
       recurring_end_date_truthy: !!recurring_end_date,
+      recurring_end_date_type: typeof recurring_end_date,
       willGenerateMultiple: !!(recurringDaysStr && recurring_end_date)
     });
     
     const pool = await getPool();
     
-    // Check if this is a recurring event
-    if (recurringDaysStr && recurring_end_date) {
+    // Check if this is a recurring event - be more explicit about the check
+    const shouldGenerateRecurring = recurringDaysStr && 
+                                     recurringDaysStr.length > 0 && 
+                                     recurring_end_date && 
+                                     recurring_end_date !== null &&
+                                     recurring_end_date !== '';
+    
+    console.log('[Events POST] Should generate recurring:', shouldGenerateRecurring);
+    
+    if (shouldGenerateRecurring) {
       console.log('[Events POST] ✅ ENTERING RECURRING EVENT GENERATION BLOCK');
       // Parse recurring days
       const daysArray = recurringDaysStr.split(',').map((d: string) => parseInt(d.trim()));
@@ -122,10 +133,13 @@ router.post('/', async (req: Request, res: Response) => {
         daysArray
       );
       
-      console.log('[Events POST] Creating recurring event:', {
+      console.log('[Events POST] Creating recurring events:', {
         count: recurringDates.length,
         dates: recurringDates.slice(0, 5).map(d => d.toISOString().split('T')[0]),
-        recurring_days: daysArray
+        recurring_days: daysArray,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        duration: `${duration / 1000 / 60} minutes`
       });
       
       // Create individual events for each date
@@ -138,6 +152,8 @@ router.post('/', async (req: Request, res: Response) => {
         // Calculate end time based on duration
         const eventEnd = new Date(eventStart.getTime() + duration);
         
+        console.log(`[Events POST] Creating event ${createdEvents.length + 1}/${recurringDates.length} for ${eventStart.toISOString()}`);
+        
         const result = await pool.request()
           .input('team_ids', sql.NVarChar, teamIdsStr)
           .input('field_id', sql.Int, field_id)
@@ -147,8 +163,8 @@ router.post('/', async (req: Request, res: Response) => {
           .input('description', sql.NVarChar, description || null)
           .input('notes', sql.NVarChar, notes || null)
           .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date)
+          .input('recurring_days', sql.NVarChar, null)  // Set to null for individual events
+          .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
           .input('other_participants', sql.NVarChar, other_participants || null)
           .input('estimated_attendance', sql.Int, estimated_attendance || null)
           .query(`
@@ -247,15 +263,26 @@ router.put('/:id', async (req: Request, res: Response) => {
       generate_recurring_boolean: !!generate_recurring,
       recurringDaysStr,
       recurringDaysStr_truthy: !!recurringDaysStr,
+      recurringDaysStr_length: recurringDaysStr?.length,
       recurring_end_date,
       recurring_end_date_truthy: !!recurring_end_date,
+      recurring_end_date_type: typeof recurring_end_date,
       willGenerateMultiple: !!(generate_recurring && recurringDaysStr && recurring_end_date)
     });
     
     const pool = await getPool();
     
     // Check if we need to generate recurring events (converting existing event to recurring)
-    if (generate_recurring && recurringDaysStr && recurring_end_date) {
+    const shouldGenerateRecurring = generate_recurring && 
+                                     recurringDaysStr && 
+                                     recurringDaysStr.length > 0 && 
+                                     recurring_end_date && 
+                                     recurring_end_date !== null &&
+                                     recurring_end_date !== '';
+    
+    console.log('[Events PUT] Should generate recurring:', shouldGenerateRecurring);
+    
+    if (shouldGenerateRecurring) {
       console.log('[Events PUT] ✅ ENTERING RECURRING EVENT GENERATION BLOCK');
       console.log('[Events PUT] Converting event to recurring, generating individual events');
       
@@ -296,6 +323,8 @@ router.put('/:id', async (req: Request, res: Response) => {
         // Calculate end time based on duration
         const eventEnd = new Date(eventStart.getTime() + duration);
         
+        console.log(`[Events PUT] Creating event ${createdEvents.length + 1}/${recurringDates.length} for ${eventStart.toISOString()}`);
+        
         const result = await pool.request()
           .input('team_ids', sql.NVarChar, teamIdsStr)
           .input('field_id', sql.Int, field_id)
@@ -305,8 +334,8 @@ router.put('/:id', async (req: Request, res: Response) => {
           .input('description', sql.NVarChar, description || null)
           .input('notes', sql.NVarChar, notes || null)
           .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date)
+          .input('recurring_days', sql.NVarChar, null)  // Set to null for individual events
+          .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
           .input('other_participants', sql.NVarChar, other_participants || null)
           .input('estimated_attendance', sql.Int, estimated_attendance || null)
           .query(`
