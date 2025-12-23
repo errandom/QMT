@@ -60,27 +60,50 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   const activeTeams = teams.filter(t => t.isActive)
   
-  // Filter fields based on event type
-  const activeFields = fields.filter((f: any) => {
-    const site = (sites || []).find((s: any) => s.id === f.siteId)
-    if (!f.isActive || !site?.isActive) return false
-    
-    // Only apply sports facility filtering if we have an event type
-    if (formData.eventType) {
-      // For Meeting or Other events, show only non-sports facilities
-      if (formData.eventType === 'Meeting' || formData.eventType === 'Other') {
-        return site.isSportsFacility === false
-      }
-      
-      // For Game or Practice events, show only sports facilities
-      if (formData.eventType === 'Game' || formData.eventType === 'Practice') {
-        return site.isSportsFacility === true
-      }
+  // Get location options based on event type
+  // For Meeting/Other: show sites (non-sports facilities)
+  // For Game/Practice: show fields (sports facilities)
+  const locationOptions = useMemo(() => {
+    if (!formData.eventType) {
+      // No event type selected, show all fields
+      return fields
+        .filter((f: any) => {
+          const site = (sites || []).find((s: any) => s.id === f.siteId)
+          return f.isActive && site?.isActive
+        })
+        .map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name,
+          type: 'field' as const
+        }))
     }
     
-    // Default: show all active fields (when no event type is selected or for unknown types)
-    return true
-  })
+    if (formData.eventType === 'Meeting' || formData.eventType === 'Other') {
+      // For meetings/other, show non-sports facility sites
+      return (sites || [])
+        .filter((s: any) => s.isActive && s.isSportsFacility === false)
+        .map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          siteName: s.address,
+          type: 'site' as const
+        }))
+    }
+    
+    // For games/practice, show fields from sports facilities
+    return fields
+      .filter((f: any) => {
+        const site = (sites || []).find((s: any) => s.id === f.siteId)
+        return f.isActive && site?.isActive && site?.isSportsFacility === true
+      })
+      .map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name,
+        type: 'field' as const
+      }))
+  }, [formData.eventType, fields, sites])
 
   const handleCreate = () => {
     setEditingEvent(null)
@@ -535,7 +558,10 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>Location</Label>
+              <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>
+                Location
+                {formData.eventType === 'Meeting' || formData.eventType === 'Other' ? ' (Site)' : ' (Field)'}
+              </Label>
               <Select 
                 value={formData.fieldId || ''} 
                 onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
@@ -544,9 +570,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeFields.map((field: any) => (
-                    <SelectItem key={field.id} value={field.id}>
-                      {field.name} ({(sites || []).find((s: any) => s.id === field.siteId)?.name})
+                  {locationOptions.map((location: any) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name} {location.siteName && `(${location.siteName})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
