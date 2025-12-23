@@ -256,7 +256,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                     {field.turfType}
                   </span>
                 )}
-                </span>
                 {field.hasLights && (
                   <span className="flex items-center gap-1">
                     <Lightbulb size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
