@@ -85,7 +85,7 @@ export default function CancellationRequestDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="pb-20 sm:pb-4">
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-[#001f3f]">Full Name *</Label>
