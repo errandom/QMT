@@ -59,9 +59,19 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   })
 
   const activeTeams = teams.filter(t => t.isActive)
+  
+  // Filter fields based on event type
   const activeFields = fields.filter((f: any) => {
     const site = (sites || []).find((s: any) => s.id === f.siteId)
-    return f.isActive && site?.isActive
+    if (!f.isActive || !site?.isActive) return false
+    
+    // For Meeting or Other events, show only non-sports facilities
+    if (formData.eventType === 'Meeting' || formData.eventType === 'Other') {
+      return site.isSportsFacility === false
+    }
+    
+    // For Game or Practice events, show only sports facilities
+    return site.isSportsFacility === true
   })
 
   const handleCreate = () => {
@@ -118,7 +128,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     
     try {
       if (formData.status === 'Confirmed' && !formData.fieldId) {
-        toast.error('Cannot confirm an event without a field location')
+        toast.error('Cannot confirm an event without a location')
         return
       }
 
@@ -517,13 +527,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>Field</Label>
+              <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>Location</Label>
               <Select 
                 value={formData.fieldId || ''} 
                 onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
               >
                 <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
-                  <SelectValue placeholder="Select field" />
+                  <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeFields.map((field: any) => (
