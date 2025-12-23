@@ -410,7 +410,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
           </div>
 
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="w-[95vw] max-w-lg max-h-[95vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>{editingUser ? 'Edit User' : 'Create New User'}</DialogTitle>
               </DialogHeader>
@@ -489,11 +489,11 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="w-full sm:w-auto min-h-[44px]">
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto min-h-[44px]">
                     {isSubmitting ? (editingUser ? 'Updating...' : 'Creating...') : (editingUser ? 'Update User' : 'Create User')}
                   </Button>
                 </div>
@@ -505,7 +505,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
       {/* Profile Edit Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg max-h-[95vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
           </DialogHeader>
@@ -531,11 +531,11 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               />
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowProfileDialog(false)}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowProfileDialog(false)} className="w-full sm:w-auto min-h-[44px]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto min-h-[44px]">
                 {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
@@ -592,10 +592,11 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               )}
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
               <Button 
                 type="button" 
-                variant="outline" 
+                variant="outline"
+                className="w-full sm:w-auto min-h-[44px]"
                 onClick={() => {
                   setShowPasswordDialog(false)
                   setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
@@ -603,7 +604,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto min-h-[44px]">
                 {isSubmitting ? 'Changing...' : 'Change Password'}
               </Button>
             </div>
