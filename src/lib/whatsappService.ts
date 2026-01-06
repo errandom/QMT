@@ -1,65 +1,66 @@
-import { Event, Team, Field, Site } from './types'
+import type { Event } from './types'
+import { Team, Field, Site } from './types'
 
 export interface WhatsAppConfig {
   groupPhone?: string
-
-
-  fields: Field[],
-): string {
-                
-  
-               
-
-    .map(id => teams.find(t => t.id === id)?.name || 'Unkno
-
-  const site = field ? sites.find(s => s.id === field.siteId) : 
-
-    weekday: 'short',
-    day: 'numeric'
-
-
-
-    `${statusEmoji} ${typeEmoji} *${event.title}*\n\n` +
-    `🕐 ${event
-
-  )
-
-  const [startHour, startMin] = startTime.split(':').map(Number)
-
-  return endMinutes - startMinutes
-
-  if (!config.group
-  const encodedMes
-  
-
-export function notifyEventCreated(
-  teams: Team[],
-  sites:
-
-
-  sendWhatsAppNotification(message, config)
-
-  event: Event,
-  fields: Field[],
-  config?: WhatsAppConfi
-  if (!config) return
-  c
+  enabled?: boolean
 }
 
+function formatEventMessage(
+  event: Event,
   teams: Team[],
-  sites: Site[],
-): void {
-
-  sendWhatsAppNotification(message, config
-
- 
-
-  config?: WhatsAppConfig
-  if (!config) return
+  fields: Field[],
+  sites: Site[]
+): string {
+  const statusEmoji = event.status === 'Cancelled' ? '❌' : 
+                      event.status === 'Confirmed' ? '✅' : 
+                      event.status === 'Completed' ? '🏁' : '📋'
   
-    const date = new Date(e.date).toLocaleDateString
-  }).join('\n')
+  const typeEmoji = event.eventType === 'Game' ? '🏈' : 
+                    event.eventType === 'Practice' ? '🏃' : 
+                    event.eventType === 'Meeting' ? '💼' : '📌'
+
+  const teamNames = event.teamIds
+    .map(id => teams.find(t => t.id === id)?.name || 'Unknown')
+    .join(', ')
+
+  const field = fields.find(f => f.id === event.fieldId)
+  const site = field ? sites.find(s => s.id === field.siteId) : null
+  const location = site ? `${site.name} - ${field?.name}` : 'TBD'
+
+  const date = new Date(event.date).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  })
+
+  // Calculate duration if both times are available
+  let duration = 90 // default
+  if (event.startTime && event.endTime) {
+    const [startHour, startMin] = event.startTime.split(':').map(Number)
+    const [endHour, endMin] = event.endTime.split(':').map(Number)
+    const startMinutes = startHour * 60 + startMin
+    const endMinutes = endHour * 60 + endMin
+    duration = endMinutes - startMinutes
+  }
+
+  return (
+    `${statusEmoji} ${typeEmoji} *${event.title || event.eventType}*\n\n` +
+    `🕐 ${event.startTime || 'TBD'} - ${event.endTime || 'TBD'} (${duration} min)\n` +
+    `📅 ${date}\n` +
+    `👥 ${teamNames || 'No teams assigned'}\n` +
+    `📍 ${location}\n` +
+    (event.notes ? `\n📝 ${event.notes}` : '')
+  )
+}
+
+function sendWhatsAppNotification(message: string, config: WhatsAppConfig): void {
+  if (!config.groupPhone || !config.enabled) return
   
+  const encodedMessage = encodeURIComponent(message)
+  const whatsappUrl = `https://wa.me/${config.groupPhone}?text=${encodedMessage}`
+  
+  window.open(whatsappUrl, '_blank')
 }
 
 
