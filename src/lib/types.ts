@@ -87,6 +87,14 @@ export interface Event {
   isRecurring: boolean
   recurringDays?: number[]
   recurringEndDate?: string
+  // Spond integration fields
+  spondId?: string
+  spondGroupId?: string
+  attendanceAccepted?: number
+  attendanceDeclined?: number
+  attendanceUnanswered?: number
+  attendanceWaiting?: number
+  attendanceLastSync?: string
 }
 
 export interface FacilityRequest {
