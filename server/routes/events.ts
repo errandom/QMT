@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db.js';
 import sql from 'mssql';
+import { parseNaturalLanguageEvent, convertToApiEvents } from '../services/eventParser.js';
 
 const router = Router();
 
@@ -144,6 +145,256 @@ async function checkFieldConflict(
     return { hasConflict: false };
   }
 }
+
+// ============================================================
+// NATURAL LANGUAGE EVENT PARSING
+// ============================================================
+
+/**
+ * POST /api/events/parse
+ * Parse natural language input into structured event data
+ */
+router.post('/parse', async (req: Request, res: Response) => {
+  try {
+    const { input } = req.body;
+    
+    if (!input || typeof input !== 'string') {
+      return res.status(400).json({ error: 'Input text is required' });
+    }
+
+    console.log('[Events] Parsing natural language input:', input.substring(0, 100));
+
+    // Get teams, sites, fields for context
+    const pool = await getPool();
+    
+    const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
+      pool.request().query('SELECT id, name FROM teams WHERE is_active = 1'),
+      pool.request().query('SELECT id, name FROM sites'),
+      pool.request().query('SELECT id, name, site_id FROM fields'),
+    ]);
+
+    const context = {
+      teams: teamsResult.recordset,
+      sites: sitesResult.recordset,
+      fields: fieldsResult.recordset,
+      currentDate: new Date().toISOString().split('T')[0],
+    };
+
+    // Parse the natural language input
+    const result = await parseNaturalLanguageEvent(input, context);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'Could not parse the input',
+      });
+    }
+
+    // Build mapping for conversion
+    const teamMap = new Map<string, number>();
+    for (const team of teamsResult.recordset) {
+      teamMap.set(team.name, team.id);
+    }
+
+    const siteMap = new Map<string, number>();
+    for (const site of sitesResult.recordset) {
+      siteMap.set(site.name, site.id);
+    }
+
+    const fieldMap = new Map<string, { id: number; siteId: number }>();
+    for (const field of fieldsResult.recordset) {
+      fieldMap.set(field.name, { id: field.id, siteId: field.site_id });
+    }
+
+    // Convert to API format
+    const apiEvents = convertToApiEvents(result.events, {
+      teams: teamMap,
+      sites: siteMap,
+      fields: fieldMap,
+    });
+
+    res.json({
+      success: true,
+      summary: result.summary,
+      parsed: result.events,
+      events: apiEvents,
+    });
+  } catch (error) {
+    console.error('[Events] Parse error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to parse input: ' + (error as Error).message 
+    });
+  }
+});
+
+/**
+ * POST /api/events/create-from-natural-language
+ * Parse and create events from natural language in one step
+ */
+router.post('/create-from-natural-language', async (req: Request, res: Response) => {
+  try {
+    const { input, confirm } = req.body;
+    
+    if (!input || typeof input !== 'string') {
+      return res.status(400).json({ error: 'Input text is required' });
+    }
+
+    console.log('[Events] Creating events from natural language:', input.substring(0, 100));
+
+    // Get context
+    const pool = await getPool();
+    
+    const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
+      pool.request().query('SELECT id, name FROM teams WHERE is_active = 1'),
+      pool.request().query('SELECT id, name FROM sites'),
+      pool.request().query('SELECT id, name, site_id FROM fields'),
+    ]);
+
+    const context = {
+      teams: teamsResult.recordset,
+      sites: sitesResult.recordset,
+      fields: fieldsResult.recordset,
+      currentDate: new Date().toISOString().split('T')[0],
+    };
+
+    // Parse the input
+    const result = await parseNaturalLanguageEvent(input, context);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'Could not parse the input',
+      });
+    }
+
+    // Build mapping
+    const teamMap = new Map<string, number>();
+    for (const team of teamsResult.recordset) {
+      teamMap.set(team.name, team.id);
+    }
+
+    const fieldMap = new Map<string, { id: number; siteId: number }>();
+    for (const field of fieldsResult.recordset) {
+      fieldMap.set(field.name, { id: field.id, siteId: field.site_id });
+    }
+
+    const apiEvents = convertToApiEvents(result.events, {
+      teams: teamMap,
+      sites: new Map(),
+      fields: fieldMap,
+    });
+
+    // If not confirmed, return preview
+    if (!confirm) {
+      // Calculate how many events would be created for recurring
+      let totalEvents = 0;
+      for (const event of apiEvents) {
+        if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
+          const start = new Date(event.date);
+          const end = new Date(event.recurringEndDate);
+          const days = event.recurringDays;
+          
+          let current = new Date(start);
+          while (current <= end) {
+            const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
+            if (days.includes(dayOfWeek)) {
+              totalEvents++;
+            }
+            current.setDate(current.getDate() + 1);
+          }
+        } else {
+          totalEvents++;
+        }
+      }
+
+      return res.json({
+        success: true,
+        preview: true,
+        summary: result.summary,
+        totalEvents,
+        events: apiEvents,
+      });
+    }
+
+    // Create the events
+    const createdEvents: any[] = [];
+    
+    for (const event of apiEvents) {
+      if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
+        // Create recurring events
+        const start = new Date(event.date);
+        const end = new Date(event.recurringEndDate);
+        const days = event.recurringDays;
+        
+        let current = new Date(start);
+        while (current <= end) {
+          const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
+          if (days.includes(dayOfWeek)) {
+            const eventDate = current.toISOString().split('T')[0];
+            const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
+            const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
+            
+            const insertResult = await pool.request()
+              .input('team_ids', sql.NVarChar, event.teamIds.join(','))
+              .input('field_id', sql.Int, event.fieldId || null)
+              .input('event_type', sql.NVarChar, event.eventType)
+              .input('start_time', sql.DateTime, startDateTime)
+              .input('end_time', sql.DateTime, endDateTime)
+              .input('description', sql.NVarChar, event.title)
+              .input('notes', sql.NVarChar, event.notes || null)
+              .input('status', sql.NVarChar, 'Scheduled')
+              .input('other_participants', sql.NVarChar, event.otherParticipants || null)
+              .query(`
+                INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+                OUTPUT INSERTED.*
+                VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+              `);
+            
+            createdEvents.push(insertResult.recordset[0]);
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      } else {
+        // Create single event
+        const eventDate = event.date;
+        const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
+        const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
+        
+        const insertResult = await pool.request()
+          .input('team_ids', sql.NVarChar, event.teamIds.join(','))
+          .input('field_id', sql.Int, event.fieldId || null)
+          .input('event_type', sql.NVarChar, event.eventType)
+          .input('start_time', sql.DateTime, startDateTime)
+          .input('end_time', sql.DateTime, endDateTime)
+          .input('description', sql.NVarChar, event.title)
+          .input('notes', sql.NVarChar, event.notes || null)
+          .input('status', sql.NVarChar, 'Scheduled')
+          .input('other_participants', sql.NVarChar, event.otherParticipants || null)
+          .query(`
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+            OUTPUT INSERTED.*
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+          `);
+        
+        createdEvents.push(insertResult.recordset[0]);
+      }
+    }
+
+    res.json({
+      success: true,
+      summary: result.summary,
+      created: createdEvents.length,
+      events: createdEvents,
+    });
+  } catch (error) {
+    console.error('[Events] Create from natural language error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to create events: ' + (error as Error).message 
+    });
+  }
+});
 
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
