@@ -235,7 +235,7 @@ function parseWithRegex(input: string): ParseResult {
     }
 
     // Generate title
-    let title = eventType;
+    let title: string = eventType;
     if (teamNames.length > 0) {
       title = `${teamNames[0]} ${eventType}`;
     }
