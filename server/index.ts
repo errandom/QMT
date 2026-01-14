@@ -38,15 +38,71 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Health check endpoint
+// Health check endpoint (with timing info for diagnosing slow starts)
 app.get('/api/health', async (req: Request, res: Response) => {
+  const startTime = Date.now();
   try {
     const pool = await getPool();
-    const result = await pool.request().query('SELECT 1 as healthy');
-    res.json({ status: 'ok', database: 'connected', timestamp: new Date().toISOString() });
+    const dbConnectTime = Date.now() - startTime;
+    
+    const queryStart = Date.now();
+    await pool.request().query('SELECT 1 as healthy');
+    const queryTime = Date.now() - queryStart;
+    
+    res.json({ 
+      status: 'ok', 
+      database: 'connected', 
+      timing: {
+        connectionMs: dbConnectTime,
+        queryMs: queryTime,
+        totalMs: Date.now() - startTime
+      },
+      timestamp: new Date().toISOString() 
+    });
   } catch (error) {
     console.error('Health check failed:', error);
-    res.status(503).json({ status: 'error', database: 'disconnected', error: (error as Error).message });
+    res.status(503).json({ 
+      status: 'error', 
+      database: 'disconnected', 
+      error: (error as Error).message,
+      timing: { totalMs: Date.now() - startTime },
+      hint: 'If this takes 30-60 seconds, your Azure SQL database may be paused (serverless tier). Consider switching to provisioned compute or increasing auto-pause delay.'
+    });
+  }
+});
+
+// Warm-up endpoint - call this to pre-warm the database connection
+app.get('/api/warmup', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  console.log('[Warmup] Starting database warm-up...');
+  
+  try {
+    const pool = await getPool();
+    const connectTime = Date.now() - startTime;
+    console.log(`[Warmup] Database connected in ${connectTime}ms`);
+    
+    // Run a simple query to fully warm up
+    await pool.request().query('SELECT 1');
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`[Warmup] Complete in ${totalTime}ms`);
+    
+    res.json({ 
+      status: 'warm',
+      timing: {
+        connectionMs: connectTime,
+        totalMs: totalTime
+      },
+      message: totalTime > 5000 
+        ? 'Database was cold (serverless paused). Now warm and ready.'
+        : 'Database was already warm.'
+    });
+  } catch (error) {
+    console.error('[Warmup] Failed:', error);
+    res.status(503).json({ 
+      status: 'error', 
+      error: (error as Error).message 
+    });
   }
 });
 
