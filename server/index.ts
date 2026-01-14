@@ -14,6 +14,7 @@ import sitesRouter from './routes/sites.js';
 import fieldsRouter from './routes/fields.js';
 import equipmentRouter from './routes/equipment.js';
 import requestsRouter from './routes/requests.js';
+import spondRouter from './routes/spond.js';
 
 // Import middleware
 import { authenticateToken, requireAdminOrMgmt } from './middleware/auth.js';
@@ -216,6 +217,7 @@ app.use('/api/sites', authenticateToken, requireAdminOrMgmt, sitesRouter);
 app.use('/api/fields', authenticateToken, requireAdminOrMgmt, fieldsRouter);
 app.use('/api/equipment', authenticateToken, requireAdminOrMgmt, equipmentRouter);
 app.use('/api/requests', authenticateToken, requireAdminOrMgmt, requestsRouter);
+app.use('/api/spond', authenticateToken, requireAdminOrMgmt, spondRouter);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
