@@ -11,11 +11,11 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Plus, UserCircle, Trash, PencilSimple, WhatsappLogo } from '@phosphor-icons/react'
+import { Plus, UserCircle, Trash, PencilSimple, ShareNetwork } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
-import { WhatsAppConfig } from '@/lib/whatsappService'
+import { ShareConfig } from '@/lib/whatsappService'
 import SpondIntegration from './SpondIntegration'
 
 interface SettingsManagerProps {
@@ -31,9 +31,9 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
 
-  const [whatsappConfig, setWhatsappConfig] = useKV<WhatsAppConfig>('whatsapp-config', {
-    groupPhone: '',
-    enabled: false
+  const [whatsappConfig, setWhatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
+    enabled: false,
+    preferNativeShare: true
   })
 
   const [formData, setFormData] = useState({
@@ -277,10 +277,10 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
   const handleWhatsAppConfigSave = () => {
     setWhatsappConfig((current) => ({
-      groupPhone: current?.groupPhone || '',
-      enabled: current?.enabled || false
+      enabled: current?.enabled || false,
+      preferNativeShare: true
     }))
-    toast.success('WhatsApp configuration saved')
+    toast.success('Share notifications settings saved')
   }
 
   return (
@@ -293,48 +293,32 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <WhatsappLogo size={24} weight="fill" style={{ color: '#25D366' }} />
-            <CardTitle className="text-base">WhatsApp Integration</CardTitle>
+            <ShareNetwork size={24} weight="fill" style={{ color: COLORS.ACCENT }} />
+            <CardTitle className="text-base">Share Notifications</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Automatically notify a WhatsApp group when events are created or updated
+            When enabled, a share dialog will appear after creating or updating events, 
+            allowing you to share to WhatsApp groups, SMS, email, or any other app.
           </p>
           
           <div className="flex items-center justify-between">
             <Label htmlFor="whatsapp-enabled" className="text-sm font-medium">
-              Enable WhatsApp notifications
+              Enable share prompts
             </Label>
             <Switch
               id="whatsapp-enabled"
               checked={whatsappConfig?.enabled || false}
               onCheckedChange={(checked) => setWhatsappConfig((current) => ({ 
-                groupPhone: current?.groupPhone || '', 
+                ...current,
                 enabled: checked 
               }))}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="whatsapp-phone">WhatsApp Group Phone Number</Label>
-            <Input
-              id="whatsapp-phone"
-              value={whatsappConfig?.groupPhone || ''}
-              onChange={(e) => setWhatsappConfig((current) => ({ 
-                groupPhone: e.target.value, 
-                enabled: current?.enabled || false 
-              }))}
-              placeholder="e.g., 41791234567 (country code + number, no + or spaces)"
-              disabled={!whatsappConfig?.enabled}
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter the phone number in international format without the + symbol (e.g., 41791234567 for Switzerland)
-            </p>
-          </div>
-
           <Button onClick={handleWhatsAppConfigSave} size="sm">
-            Save Configuration
+            Save Settings
           </Button>
         </CardContent>
       </Card>
