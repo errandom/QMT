@@ -51,13 +51,14 @@
 /* Toast notifications - must appear above everything including dialogs */
 [data-sonner-toaster],
 .toaster,
-.toast-message {
-  z-index: 999999 !important;
+.toast-message,
+[data-sonner-toast] {
+  z-index: 2147483647 !important;
   position: fixed !important;
 }
 
 [data-sonner-toast] {
-  z-index: 999999 !important;
+  z-index: 2147483647 !important;
 }
 
 [data-slot="dialog-content"].glass-card {
