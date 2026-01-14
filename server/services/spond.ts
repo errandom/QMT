@@ -46,20 +46,53 @@ export interface SpondGroup {
 }
 
 export interface SpondEventResponse {
-  accepted?: {
-    uid: string;
-  };
-  declined?: {
-    uid: string;
-  };
-  unanswered?: {
-    uid: string;
-  };
-  waiting?: {
-    uid: string;
-  };
-  unconfirmed?: {
-    uid: string;
+  accepted?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    respondedTime?: string;
+  }>;
+  declined?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    respondedTime?: string;
+  }>;
+  unanswered?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }>;
+  waiting?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }>;
+  unconfirmed?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }>;
+}
+
+export interface SpondAttendance {
+  accepted: SpondMember[];
+  declined: SpondMember[];
+  unanswered: SpondMember[];
+  waiting: SpondMember[];
+  unconfirmed: SpondMember[];
+  counts: {
+    accepted: number;
+    declined: number;
+    unanswered: number;
+    waiting: number;
+    unconfirmed: number;
+    total: number;
   };
 }
 
@@ -467,7 +500,99 @@ export class SpondClient {
   }
 
   /**
-   * Get event attendance/responses
+   * Get detailed event with full attendance/response data
+   */
+  async getEventWithAttendance(eventId: string): Promise<SpondEvent | null> {
+    await this.ensureAuthenticated();
+
+    // The event endpoint returns responses when fetching a single event
+    const url = `${this.API_BASE_URL}sppionds/${eventId}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.authHeaders,
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to fetch event: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json() as SpondEvent;
+  }
+
+  /**
+   * Get event attendance/responses with member details
+   */
+  async getEventAttendance(eventId: string): Promise<SpondAttendance> {
+    const event = await this.getEventWithAttendance(eventId);
+    
+    const emptyResult: SpondAttendance = {
+      accepted: [],
+      declined: [],
+      unanswered: [],
+      waiting: [],
+      unconfirmed: [],
+      counts: { accepted: 0, declined: 0, unanswered: 0, waiting: 0, unconfirmed: 0, total: 0 }
+    };
+
+    if (!event) {
+      return emptyResult;
+    }
+
+    // Get the group to cross-reference member details
+    const groupId = event.recipients?.group?.id;
+    let groupMembers: Map<string, SpondMember> = new Map();
+    
+    if (groupId) {
+      const group = await this.getGroup(groupId);
+      if (group?.members) {
+        group.members.forEach(m => groupMembers.set(m.id, m));
+      }
+    }
+
+    // Helper to enrich response with member details
+    const enrichResponses = (responses: any[] | undefined): SpondMember[] => {
+      if (!responses || !Array.isArray(responses)) return [];
+      return responses.map(r => {
+        const member = groupMembers.get(r.id);
+        return {
+          id: r.id,
+          firstName: r.firstName || member?.firstName || 'Unknown',
+          lastName: r.lastName || member?.lastName || '',
+          email: r.email || member?.email,
+          phoneNumber: member?.phoneNumber,
+        };
+      });
+    };
+
+    const accepted = enrichResponses(event.responses?.accepted);
+    const declined = enrichResponses(event.responses?.declined);
+    const unanswered = enrichResponses(event.responses?.unanswered);
+    const waiting = enrichResponses(event.responses?.waiting);
+    const unconfirmed = enrichResponses(event.responses?.unconfirmed);
+
+    return {
+      accepted,
+      declined,
+      unanswered,
+      waiting,
+      unconfirmed,
+      counts: {
+        accepted: accepted.length,
+        declined: declined.length,
+        unanswered: unanswered.length,
+        waiting: waiting.length,
+        unconfirmed: unconfirmed.length,
+        total: accepted.length + declined.length + unanswered.length + waiting.length + unconfirmed.length
+      }
+    };
+  }
+
+  /**
+   * Get event attendance/responses (legacy method for compatibility)
    */
   async getEventResponses(eventId: string): Promise<{
     accepted: SpondMember[];
@@ -475,19 +600,12 @@ export class SpondClient {
     unanswered: SpondMember[];
     waiting: SpondMember[];
   }> {
-    const event = await this.getEvent(eventId);
-    if (!event || !event.responses) {
-      return { accepted: [], declined: [], unanswered: [], waiting: [] };
-    }
-
-    // The responses in the event contain member UIDs
-    // You would need to cross-reference with group members
-    // This is a simplified version
+    const attendance = await this.getEventAttendance(eventId);
     return {
-      accepted: [],
-      declined: [],
-      unanswered: [],
-      waiting: [],
+      accepted: attendance.accepted,
+      declined: attendance.declined,
+      unanswered: attendance.unanswered,
+      waiting: attendance.waiting,
     };
   }
 
