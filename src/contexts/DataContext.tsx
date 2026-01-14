@@ -129,6 +129,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.log('========================================')
       
       setIsLoading(true)
+      const startTime = Date.now()
+      
+      // First, warm up the database connection (handles serverless DB wake-up)
+      try {
+        console.log('[DataProvider] ⏳ Warming up database connection...')
+        const warmupResponse = await fetch('/api/warmup')
+        const warmupData = await warmupResponse.json()
+        const warmupTime = Date.now() - startTime
+        console.log(`[DataProvider] 🔥 Database warm-up completed in ${warmupTime}ms`, warmupData)
+        
+        if (warmupData.timing?.totalMs > 5000) {
+          console.log('[DataProvider] ⚠️ Database was cold (serverless paused). This caused the delay.')
+        }
+      } catch (warmupError) {
+        console.warn('[DataProvider] ⚠️ Warmup call failed, continuing anyway:', warmupError)
+      }
       
       // Fetch all data in parallel
       const results = await Promise.allSettled([
