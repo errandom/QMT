@@ -9,17 +9,27 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      position="top-center"
+      expand={true}
+      richColors
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "z-index": "999999",
+          "--normal-bg": "#1a1a2e",
+          "--normal-text": "#ffffff",
+          "--normal-border": "rgba(255, 255, 255, 0.2)",
+          "--success-bg": "#065f46",
+          "--success-text": "#ffffff",
+          "--error-bg": "#991b1b",
+          "--error-text": "#ffffff",
+          "zIndex": "2147483647",
         } as CSSProperties
       }
       toastOptions={{
         style: {
-          zIndex: 999999,
+          zIndex: 2147483647,
+          background: '#1a1a2e',
+          color: '#ffffff',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
         },
         className: 'toast-message',
       }}
