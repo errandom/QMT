@@ -1,702 +1,670 @@
 /**
- * Spond Integration API Routes
+ * Spond API Client for Node.js/TypeScript
  * 
- * Provides endpoints for:
- * - Configuring Spond credentials
- * - Testing connection
- * - Triggering sync operations
- * - Managing group/team mappings
+ * Based on the Spond REST API (unofficial)
+ * API Base URL: https://api.spond.com/core/v1/
+ * 
+ * Spond is a sports team management platform. This client allows
+ * syncing events, groups (teams), and members with the Renegades app.
  */
 
-import { Router, Request, Response } from 'express';
-import { getPool } from '../db.js';
-import sql from 'mssql';
-import { 
-  SpondClient, 
-  initializeSpondClient, 
-  getSpondClient, 
-  clearSpondClient 
-} from '../services/spond.js';
-import {
-  importEventsFromSpond,
-  importGroupsFromSpond,
-  exportEventToSpond,
-  fullSync,
-  getSyncStatus,
-  syncEventAttendance,
-  syncAllAttendance,
-  pushEventToSpond,
-  updateEventInSpond,
-} from '../services/spondSync.js';
-
-const router = Router();
-
-/**
- * GET /api/spond/status
- * Get current Spond integration status
- */
-router.get('/status', async (req: Request, res: Response) => {
-  try {
-    const status = await getSyncStatus();
-    
-    // Check if credentials are configured
-    const pool = await getPool();
-    const configResult = await pool.request()
-      .query('SELECT id, created_at, last_sync FROM spond_config WHERE is_active = 1');
-    
-    const isConfigured = configResult.recordset.length > 0;
-    const client = getSpondClient();
-
-    res.json({
-      configured: isConfigured,
-      connected: client !== null,
-      lastSync: status.lastSync,
-      syncedGroups: status.groupCount,
-      syncedEvents: status.eventCount,
-    });
-  } catch (error) {
-    console.error('[Spond] Error getting status:', error);
-    res.status(500).json({ error: 'Failed to get Spond status' });
-  }
-});
-
-/**
- * POST /api/spond/configure
- * Configure Spond credentials
- */
-router.post('/configure', async (req: Request, res: Response) => {
-  try {
-    const { username, password, autoSync, syncIntervalMinutes } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
-
-    // Test the credentials first
-    const testClient = new SpondClient({ username, password });
-    const testResult = await testClient.testConnection();
-
-    if (!testResult.success) {
-      return res.status(401).json({ 
-        error: 'Invalid credentials', 
-        details: testResult.message 
-      });
-    }
-
-    // Store credentials securely
-    const pool = await getPool();
-    
-    // Deactivate any existing config
-    await pool.request()
-      .query('UPDATE spond_config SET is_active = 0 WHERE is_active = 1');
-    
-    // Insert new config
-    await pool.request()
-      .input('username', sql.NVarChar, username)
-      .input('password', sql.NVarChar, password) // TODO: Encrypt this
-      .input('auto_sync', sql.Bit, autoSync || false)
-      .input('sync_interval', sql.Int, syncIntervalMinutes || 60)
-      .input('is_active', sql.Bit, true)
-      .query(`
-        INSERT INTO spond_config (username, password, auto_sync, sync_interval_minutes, is_active)
-        VALUES (@username, @password, @auto_sync, @sync_interval, @is_active)
-      `);
-
-    // Initialize the client
-    initializeSpondClient({ username, password });
-
-    res.json({ 
-      success: true, 
-      message: 'Spond configured successfully',
-      groupCount: testResult.groupCount,
-    });
-  } catch (error) {
-    console.error('[Spond] Configuration error:', error);
-    res.status(500).json({ error: 'Failed to configure Spond' });
-  }
-});
-
-/**
- * DELETE /api/spond/configure
- * Remove Spond configuration
- */
-router.delete('/configure', async (req: Request, res: Response) => {
-  try {
-    const pool = await getPool();
-    await pool.request()
-      .query('UPDATE spond_config SET is_active = 0 WHERE is_active = 1');
-    
-    clearSpondClient();
-    
-    res.json({ success: true, message: 'Spond configuration removed' });
-  } catch (error) {
-    console.error('[Spond] Error removing configuration:', error);
-    res.status(500).json({ error: 'Failed to remove Spond configuration' });
-  }
-});
-
-/**
- * POST /api/spond/test
- * Test Spond connection with provided credentials
- */
-router.post('/test', async (req: Request, res: Response) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
-
-    const testClient = new SpondClient({ username, password });
-    const result = await testClient.testConnection();
-
-    res.json(result);
-  } catch (error) {
-    console.error('[Spond] Test connection error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: `Connection test failed: ${(error as Error).message}` 
-    });
-  }
-});
-
-/**
- * GET /api/spond/groups
- * Get all Spond groups
- */
-router.get('/groups', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const groups = await client.getGroups();
-    
-    // Get local team mappings
-    const pool = await getPool();
-    const mappings = await pool.request()
-      .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
-    
-    const mappingMap = new Map(
-      mappings.recordset.map(m => [m.spond_group_id, { id: m.id, name: m.name }])
-    );
-
-    const groupsWithMappings = groups.map(group => ({
-      id: group.id,
-      name: group.name,
-      activity: group.activity,
-      memberCount: group.members?.length || 0,
-      subGroupCount: group.subGroups?.length || 0,
-      linkedTeam: mappingMap.get(group.id) || null,
-    }));
-
-    res.json(groupsWithMappings);
-  } catch (error) {
-    console.error('[Spond] Error fetching groups:', error);
-    res.status(500).json({ error: 'Failed to fetch Spond groups' });
-  }
-});
-
-/**
- * GET /api/spond/events
- * Get Spond events with optional filtering
- */
-router.get('/events', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { groupId, daysAhead, daysBehind } = req.query;
-    
-    const now = new Date();
-    const minStart = new Date(now);
-    minStart.setDate(minStart.getDate() - (Number(daysBehind) || 7));
-    const maxStart = new Date(now);
-    maxStart.setDate(maxStart.getDate() + (Number(daysAhead) || 30));
-
-    const events = await client.getEvents({
-      groupId: groupId as string,
-      minStart,
-      maxStart,
-      maxEvents: 200,
-    });
-
-    res.json(events.map(event => ({
-      id: event.id,
-      heading: event.heading,
-      description: event.description,
-      type: event.type || event.spilesType,
-      startTimestamp: event.startTimestamp,
-      endTimestamp: event.endTimestamp,
-      cancelled: event.cancelled,
-      location: event.location,
-      groupId: event.recipients?.group?.id,
-      groupName: event.recipients?.group?.name,
-    })));
-  } catch (error) {
-    console.error('[Spond] Error fetching events:', error);
-    res.status(500).json({ error: 'Failed to fetch Spond events' });
-  }
-});
-
-/**
- * POST /api/spond/sync
- * Trigger a full sync from Spond
- */
-router.post('/sync', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { syncGroups, syncEvents, daysAhead } = req.body;
-
-    const results = await fullSync(client, {
-      syncGroups: syncGroups !== false,
-      syncEvents: syncEvents !== false,
-      daysAhead: daysAhead || 60,
-    });
-
-    res.json({
-      success: true,
-      groups: results.groups,
-      events: results.events,
-    });
-  } catch (error) {
-    console.error('[Spond] Sync error:', error);
-    res.status(500).json({ error: 'Sync failed', details: (error as Error).message });
-  }
-});
-
-/**
- * POST /api/spond/sync/groups
- * Sync only groups from Spond
- */
-router.post('/sync/groups', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const result = await importGroupsFromSpond(client);
-    res.json(result);
-  } catch (error) {
-    console.error('[Spond] Groups sync error:', error);
-    res.status(500).json({ error: 'Groups sync failed' });
-  }
-});
-
-/**
- * POST /api/spond/sync/events
- * Sync only events from Spond
- */
-router.post('/sync/events', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { groupId, daysAhead, daysBehind } = req.body;
-
-    const result = await importEventsFromSpond(client, {
-      groupId,
-      daysAhead: daysAhead || 60,
-      daysBehind: daysBehind || 7,
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error('[Spond] Events sync error:', error);
-    res.status(500).json({ error: 'Events sync failed' });
-  }
-});
-
-/**
- * POST /api/spond/export/event/:id
- * Export a local event to Spond
- */
-router.post('/export/event/:id', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const eventId = parseInt(req.params.id);
-    const { spondGroupId } = req.body;
-
-    if (!spondGroupId) {
-      return res.status(400).json({ error: 'spondGroupId is required' });
-    }
-
-    const result = await exportEventToSpond(client, eventId, spondGroupId);
-    
-    if (result.success) {
-      res.json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    console.error('[Spond] Export event error:', error);
-    res.status(500).json({ error: 'Failed to export event' });
-  }
-});
-
-/**
- * POST /api/spond/link/team
- * Link a local team to a Spond group
- */
-router.post('/link/team', async (req: Request, res: Response) => {
-  try {
-    const { teamId, spondGroupId } = req.body;
-
-    if (!teamId || !spondGroupId) {
-      return res.status(400).json({ error: 'teamId and spondGroupId are required' });
-    }
-
-    const pool = await getPool();
-    await pool.request()
-      .input('id', sql.Int, teamId)
-      .input('spond_group_id', sql.NVarChar, spondGroupId)
-      .query('UPDATE teams SET spond_group_id = @spond_group_id WHERE id = @id');
-
-    res.json({ success: true, message: 'Team linked to Spond group' });
-  } catch (error) {
-    console.error('[Spond] Link team error:', error);
-    res.status(500).json({ error: 'Failed to link team' });
-  }
-});
-
-/**
- * DELETE /api/spond/link/team/:id
- * Unlink a team from Spond
- */
-router.delete('/link/team/:id', async (req: Request, res: Response) => {
-  try {
-    const teamId = parseInt(req.params.id);
-
-    const pool = await getPool();
-    await pool.request()
-      .input('id', sql.Int, teamId)
-      .query('UPDATE teams SET spond_group_id = NULL WHERE id = @id');
-
-    res.json({ success: true, message: 'Team unlinked from Spond' });
-  } catch (error) {
-    console.error('[Spond] Unlink team error:', error);
-    res.status(500).json({ error: 'Failed to unlink team' });
-  }
-});
-
-// ============================================================
-// EVENT EXPORT ENDPOINTS (Push to Spond)
-// ============================================================
-
-/**
- * POST /api/spond/push/event/:id
- * Push a local event to Spond (creates new event in Spond)
- */
-router.post('/push/event/:id', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const eventId = parseInt(req.params.id);
-    const { spondGroupId, sendInvites } = req.body;
-
-    const result = await pushEventToSpond(client, eventId, {
-      spondGroupId,
-      sendInvites: sendInvites || false,
-    });
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        spondEventId: result.spondEventId,
-        message: 'Event pushed to Spond successfully'
-      });
-    } else {
-      res.status(400).json({ success: false, error: result.error });
-    }
-  } catch (error) {
-    console.error('[Spond] Push event error:', error);
-    res.status(500).json({ error: 'Failed to push event to Spond' });
-  }
-});
-
-/**
- * PUT /api/spond/push/event/:id
- * Update an existing event in Spond from local changes
- */
-router.put('/push/event/:id', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const eventId = parseInt(req.params.id);
-    const result = await updateEventInSpond(client, eventId);
-    
-    if (result.success) {
-      res.json({ success: true, message: 'Event updated in Spond' });
-    } else {
-      res.status(400).json({ success: false, error: result.error });
-    }
-  } catch (error) {
-    console.error('[Spond] Update event in Spond error:', error);
-    res.status(500).json({ error: 'Failed to update event in Spond' });
-  }
-});
-
-/**
- * POST /api/spond/push/events
- * Push multiple local events to Spond
- */
-router.post('/push/events', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { eventIds, spondGroupId, sendInvites } = req.body;
-    
-    if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
-      return res.status(400).json({ error: 'eventIds array is required' });
-    }
-
-    const results = {
-      successCount: 0,
-      failed: 0,
-      errors: [] as string[],
-      created: [] as { eventId: number; spondEventId: string }[],
-    };
-
-    for (const eventId of eventIds) {
-      const result = await pushEventToSpond(client, eventId, {
-        spondGroupId,
-        sendInvites: sendInvites || false,
-      });
-      
-      if (result.success) {
-        results.successCount++;
-        results.created.push({ eventId, spondEventId: result.spondEventId! });
-      } else {
-        results.failed++;
-        results.errors.push(`Event ${eventId}: ${result.error}`);
-      }
-    }
-
-    res.json({
-      success: results.failed === 0,
-      message: `Pushed ${results.successCount} events, ${results.failed} failed`,
-      ...results
-    });
-  } catch (error) {
-    console.error('[Spond] Bulk push events error:', error);
-    res.status(500).json({ error: 'Failed to push events to Spond' });
-  }
-});
-
-// ============================================================
-// ATTENDANCE ENDPOINTS (Pull from Spond)
-// ============================================================
-
-/**
- * GET /api/spond/attendance/event/:id
- * Get attendance for a single event from Spond
- */
-router.get('/attendance/event/:id', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const eventId = parseInt(req.params.id);
-    
-    // Get the event's Spond ID
-    const pool = await getPool();
-    const eventResult = await pool.request()
-      .input('id', sql.Int, eventId)
-      .query('SELECT spond_id FROM events WHERE id = @id');
-    
-    if (eventResult.recordset.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    
-    const spondId = eventResult.recordset[0].spond_id;
-    if (!spondId) {
-      return res.status(400).json({ error: 'Event is not linked to Spond' });
-    }
-
-    // Fetch fresh attendance from Spond
-    const attendance = await client.getEventAttendance(spondId);
-    
-    res.json({
-      eventId,
-      spondId,
-      attendance: {
-        accepted: attendance.accepted,
-        declined: attendance.declined,
-        unanswered: attendance.unanswered,
-        waiting: attendance.waiting,
-        unconfirmed: attendance.unconfirmed,
-        counts: attendance.counts,
-      }
-    });
-  } catch (error) {
-    console.error('[Spond] Get attendance error:', error);
-    res.status(500).json({ error: 'Failed to get attendance from Spond' });
-  }
-});
-
-/**
- * POST /api/spond/sync/attendance/event/:id
- * Sync attendance for a single event (saves to database)
- */
-router.post('/sync/attendance/event/:id', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const eventId = parseInt(req.params.id);
-    const result = await syncEventAttendance(client, eventId);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        eventId,
-        attendance: result.attendance,
-        message: 'Attendance synced successfully'
-      });
-    } else {
-      res.status(400).json({ success: false, error: result.error });
-    }
-  } catch (error) {
-    console.error('[Spond] Sync attendance error:', error);
-    res.status(500).json({ error: 'Failed to sync attendance' });
-  }
-});
-
-/**
- * POST /api/spond/sync/attendance
- * Sync attendance for all Spond-linked events
- */
-router.post('/sync/attendance', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { onlyFutureEvents, daysAhead, daysBehind } = req.body;
-    
-    const result = await syncAllAttendance(client, {
-      onlyFutureEvents: onlyFutureEvents ?? true,
-      daysAhead: daysAhead || 30,
-      daysBehind: daysBehind || 7,
-    });
-
-    res.json({
-      success: result.success,
-      message: result.message,
-      eventsUpdated: result.updated,
-      errors: result.errors,
-    });
-  } catch (error) {
-    console.error('[Spond] Sync all attendance error:', error);
-    res.status(500).json({ error: 'Failed to sync attendance' });
-  }
-});
-
-/**
- * GET /api/spond/participants/event/:id
- * Get stored attendance participants for an event
- */
-router.get('/participants/event/:id', async (req: Request, res: Response) => {
-  try {
-    const eventId = parseInt(req.params.id);
-    
-    const pool = await getPool();
-    
-    // Get event info
-    const eventResult = await pool.request()
-      .input('id', sql.Int, eventId)
-      .query(`
-        SELECT id, spond_id, attendance_accepted, attendance_declined, 
-               attendance_unanswered, attendance_waiting, attendance_last_sync
-        FROM events WHERE id = @id
-      `);
-    
-    if (eventResult.recordset.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    
-    const event = eventResult.recordset[0];
-    
-    // Get participants
-    const participantsResult = await pool.request()
-      .input('event_id', sql.Int, eventId)
-      .query(`
-        SELECT spond_member_id, first_name, last_name, email, response, 
-               response_time, is_organizer, updated_at
-        FROM event_participants
-        WHERE event_id = @event_id
-        ORDER BY response, last_name, first_name
-      `);
-    
-    res.json({
-      eventId,
-      spondId: event.spond_id,
-      counts: {
-        accepted: event.attendance_accepted || 0,
-        declined: event.attendance_declined || 0,
-        unanswered: event.attendance_unanswered || 0,
-        waiting: event.attendance_waiting || 0,
-      },
-      lastSync: event.attendance_last_sync,
-      participants: participantsResult.recordset,
-    });
-  } catch (error) {
-    console.error('[Spond] Get participants error:', error);
-    res.status(500).json({ error: 'Failed to get participants' });
-  }
-});
-
-/**
- * Helper: Ensure Spond client is initialized
- */
-async function ensureClient(): Promise<SpondClient | null> {
-  let client = getSpondClient();
-  
-  if (!client) {
-    // Try to load from database
-    try {
-      const pool = await getPool();
-      const configResult = await pool.request()
-        .query('SELECT username, password FROM spond_config WHERE is_active = 1');
-      
-      if (configResult.recordset.length > 0) {
-        const { username, password } = configResult.recordset[0];
-        client = initializeSpondClient({ username, password });
-      }
-    } catch (error) {
-      console.error('[Spond] Error loading config:', error);
-    }
-  }
-  
-  return client;
+interface SpondLoginResponse {
+  loginToken: string;
+  [key: string]: any;
 }
 
-export default router;
+interface SpondMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phoneNumber?: string;
+  profile?: {
+    id: string;
+  };
+  role?: string;
+  guardians?: SpondMember[];
+}
+
+interface SpondSubgroup {
+  id: string;
+  name: string;
+  members?: string[];
+}
+
+export interface SpondGroup {
+  id: string;
+  name: string;
+  description?: string;
+  activity?: string;
+  createdTime?: string;
+  members: SpondMember[];
+  subGroups?: SpondSubgroup[];
+  settings?: {
+    [key: string]: any;
+  };
+}
+
+export interface SpondEventResponse {
+  accepted?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    respondedTime?: string;
+  }>;
+  declined?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    respondedTime?: string;
+  }>;
+  unanswered?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }>;
+  waiting?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }>;
+  unconfirmed?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }>;
+}
+
+export interface SpondAttendance {
+  accepted: SpondMember[];
+  declined: SpondMember[];
+  unanswered: SpondMember[];
+  waiting: SpondMember[];
+  unconfirmed: SpondMember[];
+  counts: {
+    accepted: number;
+    declined: number;
+    unanswered: number;
+    waiting: number;
+    unconfirmed: number;
+    total: number;
+  };
+}
+
+export interface SpondEvent {
+  id: string;
+  heading: string;
+  description?: string;
+  spilesType?: string;
+  type?: string;
+  startTimestamp: string;
+  endTimestamp: string;
+  cancelled?: boolean;
+  hidden?: boolean;
+  inviteTime?: string;
+  rsvpDate?: string;
+  location?: {
+    id?: string;
+    feature?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  owners?: SpondMember[];
+  responses?: SpondEventResponse;
+  recipients?: {
+    group?: {
+      id: string;
+      name?: string;
+    };
+    subGroups?: Array<{
+      id: string;
+      name?: string;
+    }>;
+  };
+  tasks?: any[];
+  comments?: any[];
+  autoAccept?: boolean;
+  autoReminderType?: string;
+  matchInfo?: {
+    homeTeam?: string;
+    awayTeam?: string;
+    homeScore?: number;
+    awayScore?: number;
+  };
+}
+
+export interface SpondConfig {
+  username: string;
+  password: string;
+}
+
+export class SpondClient {
+  private readonly API_BASE_URL = 'https://api.spond.com/core/v1/';
+  private readonly DT_FORMAT = 'yyyy-MM-dd\'T\'00:00:00.000\'Z\'';
+  
+  private username: string;
+  private password: string;
+  private token: string | null = null;
+  private chatUrl: string | null = null;
+  private chatAuth: string | null = null;
+  
+  private groups: SpondGroup[] | null = null;
+  private events: SpondEvent[] | null = null;
+
+  constructor(config: SpondConfig) {
+    this.username = config.username;
+    this.password = config.password;
+  }
+
+  private get authHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${this.token}`,
+    };
+  }
+
+  /**
+   * Authenticate with Spond API
+   */
+  async login(): Promise<void> {
+    const loginUrl = `${this.API_BASE_URL}login`;
+    console.log('[Spond] Attempting login for:', this.username);
+    
+    try {
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: this.username,
+          password: this.password,
+        }),
+      });
+
+      console.log('[Spond] Login response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Spond] Login error response:', errorText);
+        
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Invalid email or password. Please check your Spond credentials.');
+        } else if (response.status === 429) {
+          throw new Error('Too many login attempts. Please wait a few minutes and try again.');
+        } else {
+          throw new Error(`Spond login failed (${response.status}): ${response.statusText}`);
+        }
+      }
+
+      const result = await response.json() as SpondLoginResponse;
+      console.log('[Spond] Login response keys:', Object.keys(result));
+      
+      this.token = result.loginToken;
+
+      if (!this.token) {
+        console.error('[Spond] No token in response:', JSON.stringify(result).substring(0, 200));
+        throw new Error('Spond login failed: No authentication token received. The API response format may have changed.');
+      }
+
+      console.log('[Spond] Successfully authenticated');
+    } catch (error) {
+      if (error instanceof TypeError && (error as any).cause?.code === 'ENOTFOUND') {
+        throw new Error('Cannot reach Spond servers. Please check your internet connection.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure we're authenticated before making API calls
+   */
+  private async ensureAuthenticated(): Promise<void> {
+    if (!this.token) {
+      await this.login();
+    }
+  }
+
+  /**
+   * Get all groups the authenticated user has access to
+   */
+  async getGroups(): Promise<SpondGroup[]> {
+    await this.ensureAuthenticated();
+
+    const url = `${this.API_BASE_URL}groups/`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.authHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch groups: ${response.status} ${response.statusText}`);
+    }
+
+    this.groups = await response.json() as SpondGroup[];
+    console.log(`[Spond] Retrieved ${this.groups?.length || 0} groups`);
+    return this.groups || [];
+  }
+
+  /**
+   * Get a specific group by ID
+   */
+  async getGroup(groupId: string): Promise<SpondGroup | null> {
+    if (!this.groups) {
+      await this.getGroups();
+    }
+    
+    return this.groups?.find(g => g.id === groupId) || null;
+  }
+
+  /**
+   * Get events with optional filtering
+   */
+  async getEvents(options: {
+    groupId?: string;
+    subgroupId?: string;
+    includeScheduled?: boolean;
+    includeHidden?: boolean;
+    maxEnd?: Date;
+    minEnd?: Date;
+    maxStart?: Date;
+    minStart?: Date;
+    maxEvents?: number;
+  } = {}): Promise<SpondEvent[]> {
+    await this.ensureAuthenticated();
+
+    const params = new URLSearchParams();
+    
+    if (options.groupId) {
+      params.append('GroupId', options.groupId);
+    }
+    if (options.subgroupId) {
+      params.append('subgroupId', options.subgroupId);
+    }
+    if (options.includeScheduled) {
+      params.append('scheduled', 'true');
+    }
+    if (options.includeHidden) {
+      params.append('includeHidden', 'true');
+    }
+    if (options.maxEnd) {
+      params.append('maxEndTimestamp', options.maxEnd.toISOString());
+    }
+    if (options.minEnd) {
+      params.append('minEndTimestamp', options.minEnd.toISOString());
+    }
+    if (options.maxStart) {
+      params.append('maxStartTimestamp', options.maxStart.toISOString());
+    }
+    if (options.minStart) {
+      params.append('minStartTimestamp', options.minStart.toISOString());
+    }
+    if (options.maxEvents) {
+      params.append('max', options.maxEvents.toString());
+    } else {
+      params.append('max', '100'); // Default limit
+    }
+
+    const url = `${this.API_BASE_URL}sppiond?${params.toString()}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.authHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+    }
+
+    this.events = await response.json() as SpondEvent[];
+    console.log(`[Spond] Retrieved ${this.events?.length || 0} events`);
+    return this.events || [];
+  }
+
+  /**
+   * Get a specific event by ID
+   */
+  async getEvent(eventId: string): Promise<SpondEvent | null> {
+    await this.ensureAuthenticated();
+
+    const url = `${this.API_BASE_URL}sppionds/${eventId}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.authHeaders,
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to fetch event: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json() as SpondEvent;
+  }
+
+  /**
+   * Create a new event in Spond
+   */
+  async createEvent(groupId: string, event: {
+    heading: string;
+    description?: string;
+    startTimestamp: Date;
+    endTimestamp: Date;
+    location?: {
+      address?: string;
+      latitude?: number;
+      longitude?: number;
+    };
+    type?: 'EVENT' | 'RECURRING' | 'MATCH';
+    subgroupIds?: string[];
+    autoAccept?: boolean;
+    inviteTime?: Date;
+  }): Promise<SpondEvent> {
+    await this.ensureAuthenticated();
+
+    const url = `${this.API_BASE_URL}sppionds`;
+    
+    const payload = {
+      heading: event.heading,
+      description: event.description || '',
+      spilesType: event.type || 'EVENT',
+      startTimestamp: event.startTimestamp.toISOString(),
+      endTimestamp: event.endTimestamp.toISOString(),
+      recipients: {
+        group: { id: groupId },
+        ...(event.subgroupIds && event.subgroupIds.length > 0 ? {
+          subGroups: event.subgroupIds.map(id => ({ id }))
+        } : {})
+      },
+      ...(event.location && {
+        location: {
+          address: event.location.address,
+          latitude: event.location.latitude,
+          longitude: event.location.longitude,
+        }
+      }),
+      autoAccept: event.autoAccept ?? false,
+      ...(event.inviteTime && {
+        inviteTime: event.inviteTime.toISOString()
+      }),
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.authHeaders,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create event: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const createdEvent = await response.json() as SpondEvent;
+    console.log(`[Spond] Created event: ${createdEvent.id}`);
+    return createdEvent;
+  }
+
+  /**
+   * Update an existing event in Spond
+   */
+  async updateEvent(eventId: string, updates: Partial<{
+    heading: string;
+    description: string;
+    startTimestamp: Date;
+    endTimestamp: Date;
+    cancelled: boolean;
+    location: {
+      address?: string;
+      latitude?: number;
+      longitude?: number;
+    };
+  }>): Promise<SpondEvent> {
+    await this.ensureAuthenticated();
+
+    const url = `${this.API_BASE_URL}sppionds/${eventId}`;
+    
+    const payload: any = {};
+    
+    if (updates.heading !== undefined) payload.heading = updates.heading;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.startTimestamp !== undefined) payload.startTimestamp = updates.startTimestamp.toISOString();
+    if (updates.endTimestamp !== undefined) payload.endTimestamp = updates.endTimestamp.toISOString();
+    if (updates.cancelled !== undefined) payload.cancelled = updates.cancelled;
+    if (updates.location !== undefined) payload.location = updates.location;
+
+    const response = await fetch(url, {
+      method: 'POST', // Spond uses POST for updates
+      headers: this.authHeaders,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update event: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const updatedEvent = await response.json() as SpondEvent;
+    console.log(`[Spond] Updated event: ${eventId}`);
+    return updatedEvent;
+  }
+
+  /**
+   * Delete (cancel) an event in Spond
+   */
+  async deleteEvent(eventId: string): Promise<void> {
+    await this.ensureAuthenticated();
+
+    const url = `${this.API_BASE_URL}sppionds/${eventId}`;
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: this.authHeaders,
+    });
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Failed to delete event: ${response.status} ${response.statusText}`);
+    }
+
+    console.log(`[Spond] Deleted event: ${eventId}`);
+  }
+
+  /**
+   * Get members from a specific group
+   */
+  async getGroupMembers(groupId: string): Promise<SpondMember[]> {
+    const group = await this.getGroup(groupId);
+    return group?.members || [];
+  }
+
+  /**
+   * Find a person by various identifiers
+   */
+  async getPerson(identifier: string): Promise<SpondMember | null> {
+    if (!this.groups) {
+      await this.getGroups();
+    }
+
+    for (const group of this.groups || []) {
+      for (const member of group.members) {
+        if (this.matchPerson(member, identifier)) {
+          return member;
+        }
+        if (member.guardians) {
+          for (const guardian of member.guardians) {
+            if (this.matchPerson(guardian, identifier)) {
+              return guardian;
+            }
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private matchPerson(person: SpondMember, matchStr: string): boolean {
+    return Boolean(
+      person.id === matchStr ||
+      (person.email && person.email === matchStr) ||
+      `${person.firstName} ${person.lastName}` === matchStr ||
+      (person.profile && person.profile.id === matchStr)
+    );
+  }
+
+  /**
+   * Get detailed event with full attendance/response data
+   */
+  async getEventWithAttendance(eventId: string): Promise<SpondEvent | null> {
+    await this.ensureAuthenticated();
+
+    // The event endpoint returns responses when fetching a single event
+    const url = `${this.API_BASE_URL}sppionds/${eventId}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.authHeaders,
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to fetch event: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json() as SpondEvent;
+  }
+
+  /**
+   * Get event attendance/responses with member details
+   */
+  async getEventAttendance(eventId: string): Promise<SpondAttendance> {
+    const event = await this.getEventWithAttendance(eventId);
+    
+    const emptyResult: SpondAttendance = {
+      accepted: [],
+      declined: [],
+      unanswered: [],
+      waiting: [],
+      unconfirmed: [],
+      counts: { accepted: 0, declined: 0, unanswered: 0, waiting: 0, unconfirmed: 0, total: 0 }
+    };
+
+    if (!event) {
+      return emptyResult;
+    }
+
+    // Get the group to cross-reference member details
+    const groupId = event.recipients?.group?.id;
+    let groupMembers: Map<string, SpondMember> = new Map();
+    
+    if (groupId) {
+      const group = await this.getGroup(groupId);
+      if (group?.members) {
+        group.members.forEach(m => groupMembers.set(m.id, m));
+      }
+    }
+
+    // Helper to enrich response with member details
+    const enrichResponses = (responses: any[] | undefined): SpondMember[] => {
+      if (!responses || !Array.isArray(responses)) return [];
+      return responses.map(r => {
+        const member = groupMembers.get(r.id);
+        return {
+          id: r.id,
+          firstName: r.firstName || member?.firstName || 'Unknown',
+          lastName: r.lastName || member?.lastName || '',
+          email: r.email || member?.email,
+          phoneNumber: member?.phoneNumber,
+        };
+      });
+    };
+
+    const accepted = enrichResponses(event.responses?.accepted);
+    const declined = enrichResponses(event.responses?.declined);
+    const unanswered = enrichResponses(event.responses?.unanswered);
+    const waiting = enrichResponses(event.responses?.waiting);
+    const unconfirmed = enrichResponses(event.responses?.unconfirmed);
+
+    return {
+      accepted,
+      declined,
+      unanswered,
+      waiting,
+      unconfirmed,
+      counts: {
+        accepted: accepted.length,
+        declined: declined.length,
+        unanswered: unanswered.length,
+        waiting: waiting.length,
+        unconfirmed: unconfirmed.length,
+        total: accepted.length + declined.length + unanswered.length + waiting.length + unconfirmed.length
+      }
+    };
+  }
+
+  /**
+   * Get event attendance/responses (legacy method for compatibility)
+   */
+  async getEventResponses(eventId: string): Promise<{
+    accepted: SpondMember[];
+    declined: SpondMember[];
+    unanswered: SpondMember[];
+    waiting: SpondMember[];
+  }> {
+    const attendance = await this.getEventAttendance(eventId);
+    return {
+      accepted: attendance.accepted,
+      declined: attendance.declined,
+      unanswered: attendance.unanswered,
+      waiting: attendance.waiting,
+    };
+  }
+
+  /**
+   * Test connection to Spond
+   */
+  async testConnection(): Promise<{ success: boolean; message: string; groupCount?: number }> {
+    try {
+      await this.login();
+      const groups = await this.getGroups();
+      return {
+        success: true,
+        message: `Connected successfully. Found ${groups.length} group(s).`,
+        groupCount: groups.length,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Connection failed: ${(error as Error).message}`,
+      };
+    }
+  }
+}
+
+// Singleton instance for reuse
+let spondClient: SpondClient | null = null;
+
+export function getSpondClient(): SpondClient | null {
+  return spondClient;
+}
+
+export function initializeSpondClient(config: SpondConfig): SpondClient {
+  spondClient = new SpondClient(config);
+  return spondClient;
+}
+
+export function clearSpondClient(): void {
+  spondClient = null;
+}
