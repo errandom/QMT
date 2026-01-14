@@ -483,3 +483,373 @@ export async function fullSync(
 
   return results;
 }
+
+/**
+ * Sync attendance for a single event from Spond
+ */
+export async function syncEventAttendance(
+  client: SpondClient,
+  eventId: number
+): Promise<{ success: boolean; attendance?: any; error?: string }> {
+  try {
+    const pool = await getPool();
+    
+    // Get the local event with its Spond ID
+    const eventResult = await pool.request()
+      .input('id', sql.Int, eventId)
+      .query('SELECT id, spond_id FROM events WHERE id = @id');
+
+    if (eventResult.recordset.length === 0) {
+      return { success: false, error: 'Event not found' };
+    }
+
+    const event = eventResult.recordset[0];
+    
+    if (!event.spond_id) {
+      return { success: false, error: 'Event is not linked to Spond' };
+    }
+
+    // Fetch attendance from Spond
+    const attendance = await client.getEventAttendance(event.spond_id);
+
+    // Update the event with attendance counts
+    await pool.request()
+      .input('id', sql.Int, eventId)
+      .input('attendance_accepted', sql.Int, attendance.counts.accepted)
+      .input('attendance_declined', sql.Int, attendance.counts.declined)
+      .input('attendance_unanswered', sql.Int, attendance.counts.unanswered)
+      .input('attendance_waiting', sql.Int, attendance.counts.waiting)
+      .input('attendance_data', sql.NVarChar, JSON.stringify(attendance))
+      .input('attendance_last_sync', sql.DateTime, new Date())
+      .query(`
+        UPDATE events SET
+          attendance_accepted = @attendance_accepted,
+          attendance_declined = @attendance_declined,
+          attendance_unanswered = @attendance_unanswered,
+          attendance_waiting = @attendance_waiting,
+          attendance_data = @attendance_data,
+          attendance_last_sync = @attendance_last_sync,
+          updated_at = GETDATE()
+        WHERE id = @id
+      `);
+
+    // Upsert individual participant records
+    const allResponses = [
+      ...attendance.accepted.map(m => ({ ...m, response: 'accepted' })),
+      ...attendance.declined.map(m => ({ ...m, response: 'declined' })),
+      ...attendance.unanswered.map(m => ({ ...m, response: 'unanswered' })),
+      ...attendance.waiting.map(m => ({ ...m, response: 'waiting' })),
+      ...attendance.unconfirmed.map(m => ({ ...m, response: 'unconfirmed' })),
+    ];
+
+    for (const participant of allResponses) {
+      try {
+        // Use MERGE for upsert behavior
+        await pool.request()
+          .input('event_id', sql.Int, eventId)
+          .input('spond_member_id', sql.NVarChar, participant.id)
+          .input('first_name', sql.NVarChar, participant.firstName || '')
+          .input('last_name', sql.NVarChar, participant.lastName || '')
+          .input('email', sql.NVarChar, participant.email || null)
+          .input('response', sql.NVarChar, participant.response)
+          .query(`
+            MERGE event_participants AS target
+            USING (SELECT @event_id as event_id, @spond_member_id as spond_member_id) AS source
+            ON target.event_id = source.event_id AND target.spond_member_id = source.spond_member_id
+            WHEN MATCHED THEN
+              UPDATE SET 
+                first_name = @first_name,
+                last_name = @last_name,
+                email = @email,
+                response = @response,
+                updated_at = GETDATE()
+            WHEN NOT MATCHED THEN
+              INSERT (event_id, spond_member_id, first_name, last_name, email, response)
+              VALUES (@event_id, @spond_member_id, @first_name, @last_name, @email, @response);
+          `);
+      } catch (participantError) {
+        console.error(`[Spond] Error upserting participant ${participant.id}:`, participantError);
+      }
+    }
+
+    console.log(`[Spond] Synced attendance for event ${eventId}: ${attendance.counts.accepted} accepted, ${attendance.counts.declined} declined`);
+
+    return { 
+      success: true, 
+      attendance: {
+        counts: attendance.counts,
+        syncedAt: new Date().toISOString()
+      }
+    };
+  } catch (error) {
+    console.error('[Spond] Error syncing attendance:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+/**
+ * Sync attendance for all Spond-linked events
+ */
+export async function syncAllAttendance(
+  client: SpondClient,
+  options: {
+    onlyFutureEvents?: boolean;
+    daysAhead?: number;
+    daysBehind?: number;
+  } = {}
+): Promise<SyncResult> {
+  const result: SyncResult = {
+    success: true,
+    message: '',
+    imported: 0,
+    updated: 0,
+    errors: [],
+  };
+
+  try {
+    const pool = await getPool();
+    
+    // Build date filter
+    const now = new Date();
+    let dateFilter = '';
+    
+    if (options.onlyFutureEvents) {
+      dateFilter = 'AND e.start_time >= GETDATE()';
+    } else {
+      const minDate = new Date(now);
+      minDate.setDate(minDate.getDate() - (options.daysBehind || 7));
+      const maxDate = new Date(now);
+      maxDate.setDate(maxDate.getDate() + (options.daysAhead || 30));
+      dateFilter = `AND e.start_time BETWEEN '${minDate.toISOString()}' AND '${maxDate.toISOString()}'`;
+    }
+
+    // Get all events with Spond IDs
+    const eventsResult = await pool.request()
+      .query(`
+        SELECT id, spond_id 
+        FROM events e 
+        WHERE spond_id IS NOT NULL ${dateFilter}
+      `);
+
+    console.log(`[Spond] Syncing attendance for ${eventsResult.recordset.length} events`);
+
+    for (const event of eventsResult.recordset) {
+      try {
+        const syncResult = await syncEventAttendance(client, event.id);
+        if (syncResult.success) {
+          result.updated++;
+        } else {
+          result.errors.push(`Event ${event.id}: ${syncResult.error}`);
+        }
+      } catch (eventError) {
+        result.errors.push(`Event ${event.id}: ${(eventError as Error).message}`);
+      }
+    }
+
+    result.message = `Attendance sync completed: ${result.updated} events updated`;
+    console.log(`[Spond Sync] ${result.message}`);
+  } catch (error) {
+    result.success = false;
+    result.message = `Attendance sync failed: ${(error as Error).message}`;
+    result.errors.push((error as Error).message);
+  }
+
+  return result;
+}
+
+/**
+ * Export a local event to Spond (create new event in Spond)
+ */
+export async function pushEventToSpond(
+  client: SpondClient,
+  eventId: number,
+  options: {
+    spondGroupId?: string;
+    sendInvites?: boolean;
+  } = {}
+): Promise<{ success: boolean; spondEventId?: string; error?: string }> {
+  try {
+    const pool = await getPool();
+    
+    // Get the local event with related data
+    const eventResult = await pool.request()
+      .input('id', sql.Int, eventId)
+      .query(`
+        SELECT 
+          e.*,
+          t.name as team_name,
+          t.spond_group_id as team_spond_group_id,
+          f.name as field_name,
+          s.name as site_name,
+          s.address as site_address,
+          s.latitude,
+          s.longitude
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN fields f ON e.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.id = @id
+      `);
+
+    if (eventResult.recordset.length === 0) {
+      return { success: false, error: 'Event not found' };
+    }
+
+    const event = eventResult.recordset[0];
+    
+    // Check if already exported
+    if (event.spond_id) {
+      return { success: false, error: 'Event is already linked to Spond. Use sync to update.' };
+    }
+
+    // Determine which Spond group to use
+    const targetGroupId = options.spondGroupId || event.team_spond_group_id;
+    
+    if (!targetGroupId) {
+      return { success: false, error: 'No Spond group specified. Link the team to a Spond group first, or specify spondGroupId.' };
+    }
+
+    // Build event heading from type and team
+    const heading = buildEventHeading(event);
+    
+    // Build description
+    const description = buildEventDescription(event);
+
+    // Create the event in Spond
+    const spondEvent = await client.createEvent(targetGroupId, {
+      heading,
+      description,
+      startTimestamp: new Date(event.start_time),
+      endTimestamp: new Date(event.end_time),
+      type: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
+      location: event.site_address ? {
+        address: `${event.site_name || ''} - ${event.field_name || ''}\n${event.site_address}`.trim(),
+        latitude: event.latitude,
+        longitude: event.longitude,
+      } : undefined,
+      autoAccept: false,
+      inviteTime: options.sendInvites ? new Date() : undefined,
+    });
+
+    // Update local event with Spond ID
+    await pool.request()
+      .input('id', sql.Int, eventId)
+      .input('spond_id', sql.NVarChar, spondEvent.id)
+      .input('spond_group_id', sql.NVarChar, targetGroupId)
+      .input('spond_data', sql.NVarChar, JSON.stringify(spondEvent))
+      .query(`
+        UPDATE events SET
+          spond_id = @spond_id,
+          spond_group_id = @spond_group_id,
+          spond_data = @spond_data,
+          updated_at = GETDATE()
+        WHERE id = @id
+      `);
+
+    console.log(`[Spond] Exported event ${eventId} to Spond as ${spondEvent.id}`);
+
+    return { success: true, spondEventId: spondEvent.id };
+  } catch (error) {
+    console.error('[Spond] Error exporting event:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+/**
+ * Update an existing event in Spond from local changes
+ */
+export async function updateEventInSpond(
+  client: SpondClient,
+  eventId: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const pool = await getPool();
+    
+    const eventResult = await pool.request()
+      .input('id', sql.Int, eventId)
+      .query(`
+        SELECT 
+          e.*,
+          t.name as team_name,
+          f.name as field_name,
+          s.name as site_name,
+          s.address as site_address,
+          s.latitude,
+          s.longitude
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN fields f ON e.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.id = @id
+      `);
+
+    if (eventResult.recordset.length === 0) {
+      return { success: false, error: 'Event not found' };
+    }
+
+    const event = eventResult.recordset[0];
+    
+    if (!event.spond_id) {
+      return { success: false, error: 'Event is not linked to Spond' };
+    }
+
+    // Update the event in Spond
+    await client.updateEvent(event.spond_id, {
+      heading: buildEventHeading(event),
+      description: buildEventDescription(event),
+      startTimestamp: new Date(event.start_time),
+      endTimestamp: new Date(event.end_time),
+      cancelled: event.status === 'Cancelled',
+      location: event.site_address ? {
+        address: `${event.site_name || ''} - ${event.field_name || ''}\n${event.site_address}`.trim(),
+        latitude: event.latitude,
+        longitude: event.longitude,
+      } : undefined,
+    });
+
+    console.log(`[Spond] Updated event ${eventId} in Spond`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Spond] Error updating event in Spond:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+/**
+ * Build event heading for Spond
+ */
+function buildEventHeading(event: any): string {
+  const parts = [];
+  
+  if (event.event_type) {
+    parts.push(event.event_type);
+  }
+  
+  if (event.team_name) {
+    parts.push(`- ${event.team_name}`);
+  }
+  
+  return parts.join(' ') || 'Event';
+}
+
+/**
+ * Build event description for Spond
+ */
+function buildEventDescription(event: any): string {
+  const lines = [];
+  
+  if (event.description) {
+    lines.push(event.description);
+    lines.push('');
+  }
+  
+  if (event.field_name || event.site_name) {
+    lines.push(`📍 ${event.field_name || ''} at ${event.site_name || ''}`);
+  }
+  
+  if (event.status) {
+    lines.push(`Status: ${event.status}`);
+  }
+  
+  return lines.join('\n');
+}
