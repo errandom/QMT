@@ -66,6 +66,52 @@ END
 GO
 
 -- =====================================================
+-- 3b. Add Attendance columns to Events table
+-- =====================================================
+-- Store attendance counts from Spond
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'attendance_accepted')
+BEGIN
+    ALTER TABLE events ADD attendance_accepted INT DEFAULT 0;
+    PRINT 'Added attendance_accepted column to events table';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'attendance_declined')
+BEGIN
+    ALTER TABLE events ADD attendance_declined INT DEFAULT 0;
+    PRINT 'Added attendance_declined column to events table';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'attendance_unanswered')
+BEGIN
+    ALTER TABLE events ADD attendance_unanswered INT DEFAULT 0;
+    PRINT 'Added attendance_unanswered column to events table';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'attendance_waiting')
+BEGIN
+    ALTER TABLE events ADD attendance_waiting INT DEFAULT 0;
+    PRINT 'Added attendance_waiting column to events table';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'attendance_data')
+BEGIN
+    ALTER TABLE events ADD attendance_data NVARCHAR(MAX) NULL;
+    PRINT 'Added attendance_data column to events table (stores detailed member responses)';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'attendance_last_sync')
+BEGIN
+    ALTER TABLE events ADD attendance_last_sync DATETIME NULL;
+    PRINT 'Added attendance_last_sync column to events table';
+END
+GO
+
+-- =====================================================
 -- 4. Spond Sync Log Table
 -- =====================================================
 -- Track sync history for debugging and auditing
@@ -139,6 +185,34 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_spond_sync_log_type')
 BEGIN
     CREATE INDEX idx_spond_sync_log_type ON spond_sync_log(sync_type, status);
     PRINT 'Created index on spond_sync_log';
+END
+GO
+
+-- =====================================================
+-- 7. Event Participants Table (Attendance Tracking)
+-- =====================================================
+-- Store individual attendance responses from Spond
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='event_participants' AND xtype='U')
+BEGIN
+    CREATE TABLE event_participants (
+        id INT PRIMARY KEY IDENTITY(1,1),
+        event_id INT NOT NULL,
+        spond_member_id NVARCHAR(100) NOT NULL,
+        first_name NVARCHAR(255),
+        last_name NVARCHAR(255),
+        email NVARCHAR(255),
+        response NVARCHAR(50) NOT NULL CHECK (response IN ('accepted', 'declined', 'unanswered', 'waiting', 'unconfirmed')),
+        response_time DATETIME NULL,
+        is_organizer BIT DEFAULT 0,
+        created_at DATETIME DEFAULT GETDATE(),
+        updated_at DATETIME DEFAULT GETDATE(),
+        CONSTRAINT FK_event_participants_events FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+    );
+    PRINT 'Created event_participants table';
+
+    CREATE INDEX idx_event_participants_event_id ON event_participants(event_id);
+    CREATE INDEX idx_event_participants_response ON event_participants(response);
+    CREATE UNIQUE INDEX idx_event_participants_unique ON event_participants(event_id, spond_member_id);
 END
 GO
 
