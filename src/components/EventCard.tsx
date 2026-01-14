@@ -20,7 +20,11 @@ import {
   Barbell,
   Strategy,
   CalendarCheck,
-  Buildings
+  Buildings,
+  UserCheck,
+  UserMinus,
+  Question,
+  Lightning
 } from '@phosphor-icons/react'
 import { Event, Team, Field, Site, EventType, WeatherForecast } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
@@ -176,7 +180,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
               <div className="flex items-start gap-2 text-base" style={{ color: COLORS.NAVY }}>
-                {field.fieldType === 'Meeting Room' ? (
+                {event.eventType === 'Meeting' ? (
                   <Buildings style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
                 ) : (
                   <MapPin style={{ color: COLORS.ACCENT }} className="mt-0.5" size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
@@ -233,10 +237,10 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
 
               <div className="flex flex-wrap gap-2 ml-6 text-xs" style={{ color: COLORS.NAVY }}>
-                {field.fieldType === 'Meeting Room' ? (
+                {event.eventType === 'Meeting' ? (
                   <span className="flex items-center gap-1">
                     <Buildings size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
-                    {field.fieldType}
+                    Meeting Room
                   </span>
                 ) : (
                   <>
@@ -310,6 +314,41 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                   </div>
                 ))}
               </div>
+            </div>
+          </>
+        )}
+
+        {/* Spond Attendance */}
+        {event.spondId && (event.attendanceAccepted !== undefined || event.attendanceDeclined !== undefined) && (
+          <>
+            <Separator className="bg-white/30" />
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-base font-medium" style={{ color: COLORS.NAVY }}>
+                <Lightning style={{ color: '#22c55e' }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
+                <span>Spond Attendance</span>
+              </div>
+              <div className="ml-6 flex flex-wrap gap-3">
+                <div className="flex items-center gap-1 text-sm">
+                  <UserCheck size={16} weight="bold" className="text-green-600" />
+                  <span className="font-medium text-green-700">{event.attendanceAccepted || 0}</span>
+                  <span style={{ color: '#6b7280' }}>accepted</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm">
+                  <UserMinus size={16} weight="bold" className="text-red-500" />
+                  <span className="font-medium text-red-600">{event.attendanceDeclined || 0}</span>
+                  <span style={{ color: '#6b7280' }}>declined</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm">
+                  <Question size={16} weight="bold" className="text-amber-500" />
+                  <span className="font-medium text-amber-600">{event.attendanceUnanswered || 0}</span>
+                  <span style={{ color: '#6b7280' }}>pending</span>
+                </div>
+              </div>
+              {event.attendanceLastSync && (
+                <div className="ml-6 text-xs" style={{ color: '#9ca3af' }}>
+                  Last synced: {new Date(event.attendanceLastSync).toLocaleString()}
+                </div>
+              )}
             </div>
           </>
         )}
