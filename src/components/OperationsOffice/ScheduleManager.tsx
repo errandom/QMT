@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
+import { useKV } from '@github/spark/hooks'
 import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -12,9 +13,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
+import { ShareConfig, notifyEventCreated, notifyEventUpdated } from '@/lib/whatsappService'
+import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -34,6 +37,14 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const { events, setEvents, teams, fields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+
+  const [whatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
+    enabled: false,
+    preferNativeShare: true
+  })
+
+  // AI Creator toggle
+  const [showAICreator, setShowAICreator] = useState(false)
 
   // Filter state
   const [filterTeam, setFilterTeam] = useState<string>('all')
@@ -236,12 +247,22 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               ...result
             ])
             toast.success(`Event converted to recurring: ${result.length} events created`)
+            
+            // Send WhatsApp notification for recurring events
+            if (whatsappConfig?.enabled) {
+              result.forEach(event => notifyEventCreated(event, teams, fields, sites, whatsappConfig))
+            }
           } else {
             // Single event updated
             setEvents((current = []) =>
               current.map(ev => ev.id === editingEvent.id ? result : ev)
             )
             toast.success('Event updated successfully')
+            
+            // Send WhatsApp notification for updated event
+            if (whatsappConfig?.enabled) {
+              notifyEventUpdated(result, teams, fields, sites, whatsappConfig)
+            }
           }
         }
       } else {
@@ -278,10 +299,22 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           // Multiple events created (recurring)
           setEvents((current = []) => [...current, ...result])
           toast.success(`${result.length} recurring events created successfully`)
+          
+          // Send WhatsApp notification for recurring events
+          if (whatsappConfig?.enabled) {
+            result.forEach(event => notifyEventCreated(event, teams, fields, sites, whatsappConfig))
+          }
         } else {
           // Single event created
           setEvents((current = []) => [...current, result])
           toast.success('Event created successfully')
+          
+          // Send WhatsApp notification for new event
+          if (whatsappConfig?.enabled) {
+            const field = fields.find(f => f.id === result.fieldId)
+            const site = sites.find(s => s.id === field?.siteId)
+            notifyEventCreated(result, teams, field, site, whatsappConfig)
+          }
         }
       }
       
@@ -366,11 +399,35 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Schedule Management</h2>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2" size={16} />
-          Add Event
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant={showAICreator ? "default" : "outline"}
+            onClick={() => setShowAICreator(!showAICreator)}
+            style={showAICreator ? { backgroundColor: COLORS.ACCENT } : {}}
+          >
+            <MagicWand className="mr-2" size={16} />
+            AI Create
+          </Button>
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2" size={16} />
+            Add Event
+          </Button>
+        </div>
       </div>
+
+      {/* AI Event Creator */}
+      {showAICreator && (
+        <NaturalLanguageEventCreator
+          teams={activeTeams.map(t => ({ id: parseInt(t.id), name: t.name }))}
+          fields={fields.map(f => ({ id: parseInt(f.id), name: f.name }))}
+          sites={sites.map(s => ({ id: parseInt(s.id), name: s.name }))}
+          onEventsCreated={() => {
+            // Refresh events
+            api.events.getAll().then(setEvents)
+            setShowAICreator(false)
+          }}
+        />
+      )}
 
       {/* Filter Controls */}
       <Card className="glass-card">
