@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { User, UserRole } from '@/lib/types'
+import { useKV } from '@github/spark/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -7,12 +8,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Plus, UserCircle, Trash, PencilSimple } from '@phosphor-icons/react'
+import { Plus, UserCircle, Trash, PencilSimple, WhatsappLogo } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
+import { WhatsAppConfig } from '@/lib/whatsappService'
+import SpondIntegration from './SpondIntegration'
 
 interface SettingsManagerProps {
   currentUser: User
@@ -26,6 +30,11 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
+
+  const [whatsappConfig, setWhatsappConfig] = useKV<WhatsAppConfig>('whatsapp-config', {
+    groupPhone: '',
+    enabled: false
+  })
 
   const [formData, setFormData] = useState({
     username: '',
@@ -266,12 +275,72 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
   const isAdmin = currentUser.role === 'admin'
 
+  const handleWhatsAppConfigSave = () => {
+    setWhatsappConfig((current) => ({
+      groupPhone: current?.groupPhone || '',
+      enabled: current?.enabled || false
+    }))
+    toast.success('WhatsApp configuration saved')
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Settings</h2>
         <p className="text-sm text-muted-foreground">Manage your account and user settings</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <WhatsappLogo size={24} weight="fill" style={{ color: '#25D366' }} />
+            <CardTitle className="text-base">WhatsApp Integration</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Automatically notify a WhatsApp group when events are created or updated
+          </p>
+          
+          <div className="flex items-center justify-between">
+            <Label htmlFor="whatsapp-enabled" className="text-sm font-medium">
+              Enable WhatsApp notifications
+            </Label>
+            <Switch
+              id="whatsapp-enabled"
+              checked={whatsappConfig?.enabled || false}
+              onCheckedChange={(checked) => setWhatsappConfig((current) => ({ 
+                groupPhone: current?.groupPhone || '', 
+                enabled: checked 
+              }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp-phone">WhatsApp Group Phone Number</Label>
+            <Input
+              id="whatsapp-phone"
+              value={whatsappConfig?.groupPhone || ''}
+              onChange={(e) => setWhatsappConfig((current) => ({ 
+                groupPhone: e.target.value, 
+                enabled: current?.enabled || false 
+              }))}
+              placeholder="e.g., 41791234567 (country code + number, no + or spaces)"
+              disabled={!whatsappConfig?.enabled}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter the phone number in international format without the + symbol (e.g., 41791234567 for Switzerland)
+            </p>
+          </div>
+
+          <Button onClick={handleWhatsAppConfigSave} size="sm">
+            Save Configuration
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Spond Integration */}
+      <SpondIntegration />
 
       <Card>
         <CardHeader>
