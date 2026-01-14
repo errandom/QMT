@@ -8,7 +8,8 @@ Spond is a popular sports team management platform used by clubs to organize tea
 
 - **Import Events**: Automatically sync events from Spond to your local calendar
 - **Import Teams/Groups**: Sync Spond groups as teams in your app
-- **Export Events**: Optionally push local events to Spond
+- **Push Events to Spond**: Create events in your app and push them to Spond
+- **Sync Attendance**: Pull attendance responses from Spond and display them in your app
 - **Link Teams**: Map local teams to Spond groups for bidirectional sync
 
 ## Setup Instructions
@@ -125,14 +126,93 @@ POST /api/spond/sync/events
 
 Triggers synchronization from Spond.
 
-### Export Event to Spond
+### Push Event to Spond
+
+Create a new event in Spond from a local event:
 
 ```
-POST /api/spond/export/event/:id
+POST /api/spond/push/event/:id
 Content-Type: application/json
 
 {
-  "spondGroupId": "group-uuid-from-spond"
+  "spondGroupId": "group-uuid-from-spond",
+  "sendInvites": true
+}
+```
+
+Update an existing event in Spond:
+
+```
+PUT /api/spond/push/event/:id
+```
+
+Push multiple events to Spond:
+
+```
+POST /api/spond/push/events
+Content-Type: application/json
+
+{
+  "eventIds": [1, 2, 3],
+  "spondGroupId": "group-uuid-from-spond",
+  "sendInvites": false
+}
+```
+
+### Attendance Sync
+
+Get real-time attendance from Spond for an event:
+
+```
+GET /api/spond/attendance/event/:id
+```
+
+Sync and store attendance for a single event:
+
+```
+POST /api/spond/sync/attendance/event/:id
+```
+
+Sync attendance for all Spond-linked events:
+
+```
+POST /api/spond/sync/attendance
+Content-Type: application/json
+
+{
+  "onlyFutureEvents": true,
+  "daysAhead": 30,
+  "daysBehind": 7
+}
+```
+
+Get stored participants for an event:
+
+```
+GET /api/spond/participants/event/:id
+```
+
+Returns:
+```json
+{
+  "eventId": 123,
+  "spondId": "xxx-xxx-xxx",
+  "counts": {
+    "accepted": 15,
+    "declined": 3,
+    "unanswered": 5,
+    "waiting": 0
+  },
+  "lastSync": "2026-01-14T10:30:00.000Z",
+  "participants": [
+    {
+      "first_name": "John",
+      "last_name": "Smith",
+      "email": "john@example.com",
+      "response": "accepted",
+      "response_time": "2026-01-13T09:00:00.000Z"
+    }
+  ]
 }
 ```
 
