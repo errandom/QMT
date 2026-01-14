@@ -22,7 +22,11 @@ import {
   Gear,
   Warning,
   CheckCircle,
-  Circle
+  Circle,
+  UserCheck,
+  UserMinus,
+  UserPlus,
+  Question
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -34,6 +38,7 @@ interface SpondStatus {
   lastSync: string | null
   syncedGroups: number
   syncedEvents: number
+  attendanceLastSync?: string | null
 }
 
 interface SpondGroup {
@@ -56,6 +61,7 @@ export default function SpondIntegration() {
   const [status, setStatus] = useState<SpondStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [syncingAttendance, setSyncingAttendance] = useState(false)
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [showMappingDialog, setShowMappingDialog] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
@@ -289,6 +295,36 @@ export default function SpondIntegration() {
     setShowMappingDialog(true)
   }
 
+  const syncAttendance = async () => {
+    setSyncingAttendance(true)
+    try {
+      const response = await fetch('/api/spond/sync/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          onlyFutureEvents: true,
+          daysAhead: 30,
+          daysBehind: 7
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        toast.success(`Attendance synced for ${result.eventsUpdated} events`)
+        fetchStatus()
+      } else {
+        toast.error(result.error || 'Attendance sync failed')
+      }
+    } catch (error) {
+      toast.error('Failed to sync attendance')
+    } finally {
+      setSyncingAttendance(false)
+    }
+  }
+
   if (loading) {
     return (
       <Card className="glass-card border-white/20">
@@ -426,6 +462,20 @@ export default function SpondIntegration() {
                 >
                   <LinkIcon size={16} className="mr-2" />
                   Team Mappings
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={syncAttendance}
+                  disabled={syncingAttendance || syncing}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  {syncingAttendance ? (
+                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
+                  ) : (
+                    <UserCheck size={16} className="mr-2" />
+                  )}
+                  Sync Attendance
                 </Button>
               </div>
             </div>
