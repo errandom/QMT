@@ -1,10 +1,14 @@
 import type { Event } from './types'
 import { Team, Field, Site } from './types'
 
-export interface WhatsAppConfig {
-  groupPhone?: string
+export interface ShareConfig {
+  groupPhone?: string  // Legacy: for fallback wa.me link
   enabled?: boolean
+  preferNativeShare?: boolean  // Use native share sheet (recommended)
 }
+
+// Keep old name for backwards compatibility
+export type WhatsAppConfig = ShareConfig
 
 function formatEventMessage(
   event: Event,
@@ -54,13 +58,51 @@ function formatEventMessage(
   )
 }
 
-function sendWhatsAppNotification(message: string, config: WhatsAppConfig): void {
-  if (!config.groupPhone || !config.enabled) return
-  
-  const encodedMessage = encodeURIComponent(message)
-  const whatsappUrl = `https://wa.me/${config.groupPhone}?text=${encodedMessage}`
-  
-  window.open(whatsappUrl, '_blank')
+/**
+ * Share a message using the native share sheet (works with WhatsApp groups, SMS, email, etc.)
+ * Falls back to WhatsApp direct link or clipboard if native share is unavailable
+ */
+async function shareMessage(message: string, title: string, config: ShareConfig): Promise<boolean> {
+  if (!config.enabled) return false
+
+  // Try native share first (works with WhatsApp groups!)
+  if (navigator.share && config.preferNativeShare !== false) {
+    try {
+      await navigator.share({
+        title: title,
+        text: message
+      })
+      return true
+    } catch (err) {
+      // User cancelled or share failed - try fallback
+      if ((err as Error).name === 'AbortError') {
+        return false // User cancelled, don't fallback
+      }
+    }
+  }
+
+  // Fallback: WhatsApp direct link (only works with individual numbers)
+  if (config.groupPhone) {
+    const encodedMessage = encodeURIComponent(message)
+    const whatsappUrl = `https://wa.me/${config.groupPhone}?text=${encodedMessage}`
+    window.open(whatsappUrl, '_blank')
+    return true
+  }
+
+  // Last resort: Copy to clipboard
+  try {
+    await navigator.clipboard.writeText(message)
+    // Could show a toast here: "Message copied to clipboard"
+    return true
+  } catch {
+    console.error('Failed to copy to clipboard')
+    return false
+  }
+}
+
+// Legacy function name for backwards compatibility
+function sendWhatsAppNotification(message: string, config: ShareConfig): void {
+  shareMessage(message, 'Renegades Event', config)
 }
 
 
@@ -69,12 +111,12 @@ export function notifyEventCreated(
   teams: Team[],
   fields: Field[],
   sites: Site[],
-  config?: WhatsAppConfig
+  config?: ShareConfig
 ): void {
   if (!config) return
 
   const message = `🆕 *New Event Created*\n\n${formatEventMessage(event, teams, fields, sites)}`
-  sendWhatsAppNotification(message, config)
+  shareMessage(message, 'New Event Created', config)
 }
 
 export function notifyEventUpdated(
@@ -82,12 +124,12 @@ export function notifyEventUpdated(
   teams: Team[],
   fields: Field[],
   sites: Site[],
-  config?: WhatsAppConfig
+  config?: ShareConfig
 ): void {
   if (!config) return
 
   const message = `✏️ *Event Updated*\n\n${formatEventMessage(event, teams, fields, sites)}`
-  sendWhatsAppNotification(message, config)
+  shareMessage(message, 'Event Updated', config)
 }
 
 export function notifyEventCancelled(
@@ -95,12 +137,12 @@ export function notifyEventCancelled(
   teams: Team[],
   fields: Field[],
   sites: Site[],
-  config?: WhatsAppConfig
+  config?: ShareConfig
 ): void {
   if (!config) return
 
   const message = `❌ *Event Cancelled*\n\n${formatEventMessage(event, teams, fields, sites)}`
-  sendWhatsAppNotification(message, config)
+  shareMessage(message, 'Event Cancelled', config)
 }
 
 export function notifyWeeklySummary(
@@ -108,7 +150,7 @@ export function notifyWeeklySummary(
   teams: Team[],
   fields: Field[],
   sites: Site[],
-  config?: WhatsAppConfig
+  config?: ShareConfig
 ): void {
   if (!config) return
 
@@ -119,5 +161,44 @@ export function notifyWeeklySummary(
   }).join('\n')
 
   const message = summary + eventsList + `\n\n📅 Total events: ${events.length}`
-  sendWhatsAppNotification(message, config)
+  shareMessage(message, 'Weekly Schedule', config)
+}
+
+/**
+ * Manually share an event - opens native share sheet
+ */
+export async function shareEvent(
+  event: Event,
+  teams: Team[],
+  fields: Field[],
+  sites: Site[]
+): Promise<boolean> {
+  const message = formatEventMessage(event, teams, fields, sites)
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: event.title || event.eventType,
+        text: message
+      })
+      return true
+    } catch {
+      return false
+    }
+  }
+  
+  // Fallback to clipboard
+  try {
+    await navigator.clipboard.writeText(message)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Check if native sharing is supported
+ */
+export function isNativeShareSupported(): boolean {
+  return !!navigator.share
 }
