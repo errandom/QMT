@@ -528,6 +528,22 @@ export const api = {
     method: 'DELETE',
   }),
 
+  // User Settings
+  getSettings: () => apiRequest<Record<string, any>>('/settings'),
+  
+  getSetting: <T = any>(key: string, defaultValue?: T) => 
+    apiRequest<T>(`/settings/${key}`).catch(() => defaultValue as T),
+  
+  saveSetting: <T = any>(key: string, value: T) => 
+    apiRequest<{ success: boolean; key: string }>(`/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify(value),
+    }),
+  
+  deleteSetting: (key: string) => apiRequest<void>(`/settings/${key}`, {
+    method: 'DELETE',
+  }),
+
   // Health check
   healthCheck: () => apiRequest<any>('/health'),
 };
