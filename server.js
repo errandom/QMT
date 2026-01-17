@@ -181,6 +181,14 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+// Middleware to check if user is admin or management
+const requireAdminOrMgmt = (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'mgmt') {
+    return res.status(403).json({ error: 'Admin or management access required' });
+  }
+  next();
+};
+
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -1300,6 +1308,333 @@ app.delete('/api/requests/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting request:', err);
     res.status(500).json({ error: 'Failed to delete request' });
+  }
+});
+
+// ------------------------------
+// User Settings API
+// ------------------------------
+
+// Get all settings for current user
+app.get('/api/settings', verifyToken, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('user_id', sql.Int, req.user.id)
+      .query('SELECT setting_key, setting_value FROM user_settings WHERE user_id = @user_id');
+    
+    // Convert to object
+    const settings = {};
+    for (const row of result.recordset) {
+      try {
+        settings[row.setting_key] = JSON.parse(row.setting_value);
+      } catch (e) {
+        settings[row.setting_key] = row.setting_value;
+      }
+    }
+    
+    res.json(settings);
+  } catch (err) {
+    console.error('[Settings] Error fetching settings:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Get specific setting
+app.get('/api/settings/:key', verifyToken, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('user_id', sql.Int, req.user.id)
+      .input('setting_key', sql.NVarChar, req.params.key)
+      .query('SELECT setting_value FROM user_settings WHERE user_id = @user_id AND setting_key = @setting_key');
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Setting not found' });
+    }
+    
+    try {
+      res.json(JSON.parse(result.recordset[0].setting_value));
+    } catch (e) {
+      res.json({ value: result.recordset[0].setting_value });
+    }
+  } catch (err) {
+    console.error('[Settings] Error fetching setting:', err);
+    res.status(500).json({ error: 'Failed to fetch setting' });
+  }
+});
+
+// Save/update a setting (upsert)
+app.put('/api/settings/:key', verifyToken, async (req, res) => {
+  try {
+    const settingKey = req.params.key;
+    const settingValue = JSON.stringify(req.body);
+    
+    console.log('[Settings] Saving setting:', settingKey, 'for user:', req.user.id);
+    
+    const pool = await getPool();
+    
+    // Use MERGE for upsert
+    await pool.request()
+      .input('user_id', sql.Int, req.user.id)
+      .input('setting_key', sql.NVarChar, settingKey)
+      .input('setting_value', sql.NVarChar, settingValue)
+      .query(`
+        MERGE user_settings AS target
+        USING (SELECT @user_id AS user_id, @setting_key AS setting_key) AS source
+        ON target.user_id = source.user_id AND target.setting_key = source.setting_key
+        WHEN MATCHED THEN
+          UPDATE SET setting_value = @setting_value, updated_at = GETDATE()
+        WHEN NOT MATCHED THEN
+          INSERT (user_id, setting_key, setting_value)
+          VALUES (@user_id, @setting_key, @setting_value);
+      `);
+    
+    console.log('[Settings] Setting saved successfully');
+    res.json({ success: true, key: settingKey });
+  } catch (err) {
+    console.error('[Settings] Error saving setting:', err);
+    res.status(500).json({ error: 'Failed to save setting' });
+  }
+});
+
+// Delete a setting
+app.delete('/api/settings/:key', verifyToken, async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('user_id', sql.Int, req.user.id)
+      .input('setting_key', sql.NVarChar, req.params.key)
+      .query('DELETE FROM user_settings WHERE user_id = @user_id AND setting_key = @setting_key');
+    
+    res.status(204).send();
+  } catch (err) {
+    console.error('[Settings] Error deleting setting:', err);
+    res.status(500).json({ error: 'Failed to delete setting' });
+  }
+});
+
+// ------------------------------
+// Spond Integration API
+// ------------------------------
+
+// Spond API client (simplified for server.js)
+const SPOND_API_BASE = 'https://api.spond.com/core/v1/';
+let spondToken = null;
+let spondTokenExpiry = null;
+
+async function spondLogin(username, password) {
+  const response = await fetch(`${SPOND_API_BASE}login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: username, password })
+  });
+  
+  if (!response.ok) {
+    throw new Error('Invalid Spond credentials');
+  }
+  
+  const data = await response.json();
+  return data.loginToken;
+}
+
+async function spondRequest(token, endpoint) {
+  const response = await fetch(`${SPOND_API_BASE}${endpoint}`, {
+    headers: { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Spond API error: ${response.status}`);
+  }
+  
+  return response.json();
+}
+
+// Get Spond integration status
+app.get('/api/spond/status', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const pool = await getPool();
+    
+    // Check if spond_config table exists
+    const tableCheck = await pool.request().query(`
+      SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_NAME = 'spond_config'
+    `);
+    
+    if (tableCheck.recordset[0].count === 0) {
+      return res.json({
+        configured: false,
+        connected: false,
+        lastSync: null,
+        syncedGroups: 0,
+        syncedEvents: 0
+      });
+    }
+    
+    const configResult = await pool.request()
+      .query('SELECT id, created_at, last_sync FROM spond_config WHERE is_active = 1');
+    
+    const isConfigured = configResult.recordset.length > 0;
+    
+    res.json({
+      configured: isConfigured,
+      connected: isConfigured && spondToken !== null,
+      lastSync: isConfigured ? configResult.recordset[0]?.last_sync : null,
+      syncedGroups: 0,
+      syncedEvents: 0
+    });
+  } catch (err) {
+    console.error('[Spond] Error getting status:', err);
+    res.status(500).json({ error: 'Failed to get Spond status' });
+  }
+});
+
+// Test Spond connection
+app.post('/api/spond/test', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    
+    console.log('[Spond] Testing connection for:', username);
+    
+    // Try to login
+    const token = await spondLogin(username, password);
+    
+    // Try to fetch groups to verify access
+    const groups = await spondRequest(token, 'groups');
+    
+    console.log('[Spond] Test successful, found', groups.length, 'groups');
+    
+    res.json({
+      success: true,
+      message: 'Connection successful',
+      groupCount: groups.length
+    });
+  } catch (err) {
+    console.error('[Spond] Test connection error:', err);
+    res.json({
+      success: false,
+      message: err.message || 'Connection test failed'
+    });
+  }
+});
+
+// Configure Spond credentials
+app.post('/api/spond/configure', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const { username, password, autoSync, syncIntervalMinutes } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    
+    // Test credentials first
+    const token = await spondLogin(username, password);
+    const groups = await spondRequest(token, 'groups');
+    
+    const pool = await getPool();
+    
+    // Check if spond_config table exists, create if not
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'spond_config')
+      BEGIN
+        CREATE TABLE spond_config (
+          id INT PRIMARY KEY IDENTITY(1,1),
+          username NVARCHAR(255) NOT NULL,
+          password NVARCHAR(255) NOT NULL,
+          auto_sync BIT DEFAULT 0,
+          sync_interval_minutes INT DEFAULT 60,
+          is_active BIT DEFAULT 1,
+          last_sync DATETIME,
+          created_at DATETIME DEFAULT GETDATE(),
+          updated_at DATETIME DEFAULT GETDATE()
+        )
+      END
+    `);
+    
+    // Deactivate existing config
+    await pool.request()
+      .query('UPDATE spond_config SET is_active = 0 WHERE is_active = 1');
+    
+    // Insert new config
+    await pool.request()
+      .input('username', sql.NVarChar, username)
+      .input('password', sql.NVarChar, password)
+      .input('auto_sync', sql.Bit, autoSync || false)
+      .input('sync_interval', sql.Int, syncIntervalMinutes || 60)
+      .query(`
+        INSERT INTO spond_config (username, password, auto_sync, sync_interval_minutes, is_active)
+        VALUES (@username, @password, @auto_sync, @sync_interval, 1)
+      `);
+    
+    // Store token for session
+    spondToken = token;
+    
+    console.log('[Spond] Configuration saved successfully');
+    
+    res.json({
+      success: true,
+      message: 'Spond configured successfully',
+      groupCount: groups.length
+    });
+  } catch (err) {
+    console.error('[Spond] Configuration error:', err);
+    res.status(500).json({ error: err.message || 'Failed to configure Spond' });
+  }
+});
+
+// Remove Spond configuration
+app.delete('/api/spond/configure', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .query('UPDATE spond_config SET is_active = 0 WHERE is_active = 1');
+    
+    spondToken = null;
+    
+    res.json({ success: true, message: 'Spond configuration removed' });
+  } catch (err) {
+    console.error('[Spond] Error removing configuration:', err);
+    res.status(500).json({ error: 'Failed to remove Spond configuration' });
+  }
+});
+
+// Get Spond groups
+app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    if (!spondToken) {
+      // Try to load from database
+      const pool = await getPool();
+      const configResult = await pool.request()
+        .query('SELECT username, password FROM spond_config WHERE is_active = 1');
+      
+      if (configResult.recordset.length === 0) {
+        return res.status(400).json({ error: 'Spond not configured' });
+      }
+      
+      const { username, password } = configResult.recordset[0];
+      spondToken = await spondLogin(username, password);
+    }
+    
+    const groups = await spondRequest(spondToken, 'groups');
+    
+    res.json(groups.map(group => ({
+      id: group.id,
+      name: group.name,
+      activity: group.activity,
+      memberCount: group.members?.length || 0,
+      subGroupCount: group.subGroups?.length || 0
+    })));
+  } catch (err) {
+    console.error('[Spond] Error fetching groups:', err);
+    spondToken = null; // Reset token on error
+    res.status(500).json({ error: 'Failed to fetch Spond groups' });
   }
 });
 
