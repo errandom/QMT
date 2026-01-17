@@ -62,11 +62,9 @@ function formatEventMessage(
  * Share a message using the native share sheet (works with WhatsApp groups, SMS, email, etc.)
  * Falls back to WhatsApp direct link or clipboard if native share is unavailable
  */
-async function shareMessage(message: string, title: string, config: ShareConfig): Promise<boolean> {
-  if (!config.enabled) return false
-
+async function shareMessage(message: string, title: string, config?: ShareConfig): Promise<boolean> {
   // Try native share first (works with WhatsApp groups!)
-  if (navigator.share && config.preferNativeShare !== false) {
+  if (navigator.share && config?.preferNativeShare !== false) {
     try {
       await navigator.share({
         title: title,
@@ -82,7 +80,7 @@ async function shareMessage(message: string, title: string, config: ShareConfig)
   }
 
   // Fallback: WhatsApp direct link (only works with individual numbers)
-  if (config.groupPhone) {
+  if (config?.groupPhone) {
     const encodedMessage = encodeURIComponent(message)
     const whatsappUrl = `https://wa.me/${config.groupPhone}?text=${encodedMessage}`
     window.open(whatsappUrl, '_blank')
@@ -113,8 +111,6 @@ export function notifyEventCreated(
   sites: Site[],
   config?: ShareConfig
 ): void {
-  if (!config) return
-
   const message = `🆕 *New Event Created*\n\n${formatEventMessage(event, teams, fields, sites)}`
   shareMessage(message, 'New Event Created', config)
 }
@@ -126,8 +122,6 @@ export function notifyEventUpdated(
   sites: Site[],
   config?: ShareConfig
 ): void {
-  if (!config) return
-
   const message = `✏️ *Event Updated*\n\n${formatEventMessage(event, teams, fields, sites)}`
   shareMessage(message, 'Event Updated', config)
 }
@@ -139,10 +133,22 @@ export function notifyEventCancelled(
   sites: Site[],
   config?: ShareConfig
 ): void {
-  if (!config) return
-
   const message = `❌ *Event Cancelled*\n\n${formatEventMessage(event, teams, fields, sites)}`
   shareMessage(message, 'Event Cancelled', config)
+}
+
+/**
+ * Share an event directly using the native share sheet
+ * This is called when user clicks the share button on an event card
+ */
+export async function shareEvent(
+  event: Event,
+  teams: Team[],
+  fields: Field[],
+  sites: Site[]
+): Promise<boolean> {
+  const message = formatEventMessage(event, teams, fields, sites)
+  return shareMessage(message, event.title || event.eventType)
 }
 
 export function notifyWeeklySummary(
