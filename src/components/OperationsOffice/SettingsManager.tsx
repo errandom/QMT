@@ -31,10 +31,12 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
 
+  // Share notifications config - synced with both useKV (for reactive updates) and API (for persistence)
   const [whatsappConfig, setWhatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
     enabled: false,
     preferNativeShare: true
   })
+  const [settingsLoading, setSettingsLoading] = useState(true)
 
   const [formData, setFormData] = useState({
     username: '',
@@ -55,6 +57,28 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
     newPassword: '',
     confirmPassword: ''
   })
+
+  // Load settings from API on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        console.log('[SettingsManager] Loading share config from API...')
+        const savedConfig = await api.getSetting<ShareConfig>('share-notifications', {
+          enabled: false,
+          preferNativeShare: true
+        })
+        console.log('[SettingsManager] Loaded share config:', savedConfig)
+        if (savedConfig) {
+          setWhatsappConfig(savedConfig)
+        }
+      } catch (error) {
+        console.log('[SettingsManager] No saved settings found, using defaults')
+      } finally {
+        setSettingsLoading(false)
+      }
+    }
+    loadSettings()
+  }, [])
 
   // Fetch users on mount if admin
   useEffect(() => {
@@ -275,12 +299,24 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
   const isAdmin = currentUser.role === 'admin'
 
-  const handleWhatsAppConfigSave = () => {
-    setWhatsappConfig((current) => ({
-      enabled: current?.enabled || false,
-      preferNativeShare: true
-    }))
-    toast.success('Share notifications settings saved')
+  const handleWhatsAppConfigSave = async () => {
+    try {
+      const configToSave: ShareConfig = {
+        enabled: whatsappConfig?.enabled || false,
+        preferNativeShare: true
+      }
+      
+      console.log('[SettingsManager] Saving share config to API:', configToSave)
+      await api.saveSetting('share-notifications', configToSave)
+      
+      // Also update local state to keep useKV in sync
+      setWhatsappConfig(configToSave)
+      
+      toast.success('Share notifications settings saved')
+    } catch (error: any) {
+      console.error('[SettingsManager] Error saving share config:', error)
+      toast.error('Failed to save settings')
+    }
   }
 
   return (
