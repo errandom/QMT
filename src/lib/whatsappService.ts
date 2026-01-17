@@ -171,38 +171,6 @@ export function notifyWeeklySummary(
 }
 
 /**
- * Manually share an event - opens native share sheet
- */
-export async function shareEvent(
-  event: Event,
-  teams: Team[],
-  fields: Field[],
-  sites: Site[]
-): Promise<boolean> {
-  const message = formatEventMessage(event, teams, fields, sites)
-  
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: event.title || event.eventType,
-        text: message
-      })
-      return true
-    } catch {
-      return false
-    }
-  }
-  
-  // Fallback to clipboard
-  try {
-    await navigator.clipboard.writeText(message)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
  * Check if native sharing is supported
  */
 export function isNativeShareSupported(): boolean {
