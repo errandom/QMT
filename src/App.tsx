@@ -29,30 +29,32 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header 
-        currentUser={currentUser}
-        onLogin={handleSetUser}
-        onLogout={handleLogout}
-        onNavigate={setView}
-        currentView={view}
-      />
-      <main className="container mx-auto px-4 py-6 max-w-7xl">
-        {view === 'dashboard' ? (
-          <Dashboard 
-            currentUser={currentUser} 
-            onLogin={handleSetUser}
-            onNavigateToOffice={() => setView('office')}
-          />
-        ) : (
-          <OperationsOffice 
-            currentUser={currentUser!} 
-            onNavigateToDashboard={() => setView('dashboard')}
-          />
-        )}
-      </main>
+    <>
       <Toaster />
-    </div>
+      <div className="min-h-screen bg-background">
+        <Header 
+          currentUser={currentUser}
+          onLogin={handleSetUser}
+          onLogout={handleLogout}
+          onNavigate={setView}
+          currentView={view}
+        />
+        <main className="container mx-auto px-4 py-6 max-w-7xl">
+          {view === 'dashboard' ? (
+            <Dashboard 
+              currentUser={currentUser} 
+              onLogin={handleSetUser}
+              onNavigateToOffice={() => setView('office')}
+            />
+          ) : (
+            <OperationsOffice 
+              currentUser={currentUser!} 
+              onNavigateToDashboard={() => setView('dashboard')}
+            />
+          )}
+        </main>
+      </div>
+    </>
   )
 }
 
