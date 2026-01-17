@@ -49,16 +49,26 @@
 }
 
 /* Toast notifications - must appear above everything including dialogs */
+[data-sonner-toaster] {
+  z-index: 2147483647 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  pointer-events: auto !important;
+}
+
 [data-sonner-toaster],
 .toaster,
 .toast-message,
 [data-sonner-toast] {
   z-index: 2147483647 !important;
-  position: fixed !important;
 }
 
 [data-sonner-toast] {
   z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
 }
 
 [data-slot="dialog-content"].glass-card {
