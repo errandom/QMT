@@ -12,6 +12,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position="top-center"
       expand={true}
       richColors
+      visibleToasts={5}
+      offset={80}
+      duration={4000}
       style={
         {
           "--normal-bg": "#1a1a2e",
@@ -22,6 +25,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--error-bg": "#991b1b",
           "--error-text": "#ffffff",
           "zIndex": "2147483647",
+          "position": "fixed",
+          "top": "0",
+          "left": "50%",
+          "transform": "translateX(-50%)",
         } as CSSProperties
       }
       toastOptions={{
@@ -30,6 +37,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           background: '#1a1a2e',
           color: '#ffffff',
           border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
+          fontSize: '14px',
+          padding: '12px 16px',
         },
         className: 'toast-message',
       }}
