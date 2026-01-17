@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { useKV } from '@github/spark/hooks'
 import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
@@ -38,10 +38,29 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
 
-  const [whatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
+  // Share notifications config - synced with both useKV (for reactive updates) and API (for persistence)
+  const [whatsappConfig, setWhatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
     enabled: false,
     preferNativeShare: true
   })
+
+  // Load share config from API on mount
+  useEffect(() => {
+    const loadShareConfig = async () => {
+      try {
+        const savedConfig = await api.getSetting<ShareConfig>('share-notifications', {
+          enabled: false,
+          preferNativeShare: true
+        })
+        if (savedConfig) {
+          setWhatsappConfig(savedConfig)
+        }
+      } catch (error) {
+        console.log('[ScheduleManager] Using default share config')
+      }
+    }
+    loadShareConfig()
+  }, [])
 
   // AI Creator toggle
   const [showAICreator, setShowAICreator] = useState(false)
