@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { User, UserRole } from '@/lib/types'
-import { useKV } from '@github/spark/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,11 +10,10 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Plus, UserCircle, Trash, PencilSimple, ShareNetwork } from '@phosphor-icons/react'
+import { Plus, UserCircle, Trash, PencilSimple } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
-import { ShareConfig } from '@/lib/whatsappService'
 import SpondIntegration from './SpondIntegration'
 
 interface SettingsManagerProps {
@@ -30,13 +28,6 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
-
-  // Share notifications config - synced with both useKV (for reactive updates) and API (for persistence)
-  const [whatsappConfig, setWhatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
-    enabled: false,
-    preferNativeShare: true
-  })
-  const [settingsLoading, setSettingsLoading] = useState(true)
 
   const [formData, setFormData] = useState({
     username: '',
@@ -57,28 +48,6 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
     newPassword: '',
     confirmPassword: ''
   })
-
-  // Load settings from API on mount
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        console.log('[SettingsManager] Loading share config from API...')
-        const savedConfig = await api.getSetting<ShareConfig>('share-notifications', {
-          enabled: false,
-          preferNativeShare: true
-        })
-        console.log('[SettingsManager] Loaded share config:', savedConfig)
-        if (savedConfig) {
-          setWhatsappConfig(savedConfig)
-        }
-      } catch (error) {
-        console.log('[SettingsManager] No saved settings found, using defaults')
-      } finally {
-        setSettingsLoading(false)
-      }
-    }
-    loadSettings()
-  }, [])
 
   // Fetch users on mount if admin
   useEffect(() => {
@@ -299,65 +268,12 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
 
   const isAdmin = currentUser.role === 'admin'
 
-  const handleWhatsAppConfigSave = async () => {
-    try {
-      const configToSave: ShareConfig = {
-        enabled: whatsappConfig?.enabled || false,
-        preferNativeShare: true
-      }
-      
-      console.log('[SettingsManager] Saving share config to API:', configToSave)
-      await api.saveSetting('share-notifications', configToSave)
-      
-      // Also update local state to keep useKV in sync
-      setWhatsappConfig(configToSave)
-      
-      toast.success('Share notifications settings saved')
-    } catch (error: any) {
-      console.error('[SettingsManager] Error saving share config:', error)
-      toast.error('Failed to save settings')
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Settings</h2>
         <p className="text-sm text-muted-foreground">Manage your account and user settings</p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShareNetwork size={24} weight="fill" style={{ color: COLORS.ACCENT }} />
-            <CardTitle className="text-base">Share Notifications</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            When enabled, a share dialog will appear after creating or updating events, 
-            allowing you to share to WhatsApp groups, SMS, email, or any other app.
-          </p>
-          
-          <div className="flex items-center justify-between">
-            <Label htmlFor="whatsapp-enabled" className="text-sm font-medium">
-              Enable share prompts
-            </Label>
-            <Switch
-              id="whatsapp-enabled"
-              checked={whatsappConfig?.enabled || false}
-              onCheckedChange={(checked) => setWhatsappConfig((current) => ({ 
-                ...current,
-                enabled: checked 
-              }))}
-            />
-          </div>
-
-          <Button onClick={handleWhatsAppConfigSave} size="sm">
-            Save Settings
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Spond Integration */}
       <SpondIntegration />
