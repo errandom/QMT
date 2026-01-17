@@ -1,6 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
-import { useKV } from '@github/spark/hooks'
 import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -13,10 +12,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
-import { ShareConfig, notifyEventCreated, notifyEventUpdated } from '@/lib/whatsappService'
+import { shareEvent } from '@/lib/whatsappService'
 import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
 
 const WEEKDAYS = [
@@ -37,30 +36,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const { events, setEvents, teams, fields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
-
-  // Share notifications config - synced with both useKV (for reactive updates) and API (for persistence)
-  const [whatsappConfig, setWhatsappConfig] = useKV<ShareConfig>('whatsapp-config', {
-    enabled: false,
-    preferNativeShare: true
-  })
-
-  // Load share config from API on mount
-  useEffect(() => {
-    const loadShareConfig = async () => {
-      try {
-        const savedConfig = await api.getSetting<ShareConfig>('share-notifications', {
-          enabled: false,
-          preferNativeShare: true
-        })
-        if (savedConfig) {
-          setWhatsappConfig(savedConfig)
-        }
-      } catch (error) {
-        console.log('[ScheduleManager] Using default share config')
-      }
-    }
-    loadShareConfig()
-  }, [])
 
   // AI Creator toggle
   const [showAICreator, setShowAICreator] = useState(false)
@@ -196,6 +171,18 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     setShowDialog(true)
   }
 
+  const handleShare = async (event: Event) => {
+    try {
+      const success = await shareEvent(event, teams, fields, sites)
+      if (success) {
+        toast.success('Event shared!')
+      }
+    } catch (error) {
+      console.error('Error sharing event:', error)
+      toast.error('Failed to share event')
+    }
+  }
+
   const handleDelete = async (eventId: string) => {
     if (confirm('Are you sure you want to delete this event?')) {
       try {
@@ -266,22 +253,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               ...result
             ])
             toast.success(`Event converted to recurring: ${result.length} events created`)
-            
-            // Send WhatsApp notification for recurring events
-            if (whatsappConfig?.enabled) {
-              result.forEach(event => notifyEventCreated(event, teams, fields, sites, whatsappConfig))
-            }
           } else {
             // Single event updated
             setEvents((current = []) =>
               current.map(ev => ev.id === editingEvent.id ? result : ev)
             )
             toast.success('Event updated successfully')
-            
-            // Send WhatsApp notification for updated event
-            if (whatsappConfig?.enabled) {
-              notifyEventUpdated(result, teams, fields, sites, whatsappConfig)
-            }
           }
         }
       } else {
@@ -318,22 +295,10 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           // Multiple events created (recurring)
           setEvents((current = []) => [...current, ...result])
           toast.success(`${result.length} recurring events created successfully`)
-          
-          // Send WhatsApp notification for recurring events
-          if (whatsappConfig?.enabled) {
-            result.forEach(event => notifyEventCreated(event, teams, fields, sites, whatsappConfig))
-          }
         } else {
           // Single event created
           setEvents((current = []) => [...current, result])
           toast.success('Event created successfully')
-          
-          // Send WhatsApp notification for new event
-          if (whatsappConfig?.enabled) {
-            const field = fields.find(f => f.id === result.fieldId)
-            const site = sites.find(s => s.id === field?.siteId)
-            notifyEventCreated(result, teams, field, site, whatsappConfig)
-          }
         }
       }
       
@@ -442,7 +407,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           sites={sites.map(s => ({ id: parseInt(s.id), name: s.name }))}
           onEventsCreated={() => {
             // Refresh events
-            api.events.getAll().then(setEvents)
+            api.getEvents().then(setEvents)
             setShowAICreator(false)
           }}
         />
@@ -542,6 +507,15 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 </div>
                 {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
                   <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-600/10"
+                      onClick={() => handleShare(event)}
+                      title="Share event"
+                    >
+                      <ShareNetwork size={18} weight="bold" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
