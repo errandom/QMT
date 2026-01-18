@@ -3,9 +3,11 @@
  * 
  * Uses AI to parse natural language descriptions into structured event data.
  * Supports creating single events or recurring event series.
+ * 
+ * Supports Azure OpenAI (preferred) or Anthropic as AI providers.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { AzureOpenAI } from '@azure/openai';
 
 export interface ParsedEvent {
   title: string;
@@ -93,57 +95,78 @@ export async function parseNaturalLanguageEvent(
     currentDate?: string;
   }
 ): Promise<ParseResult> {
-  // Check if Anthropic API key is available
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  
-  if (!apiKey) {
-    // Fallback to basic regex parsing if no API key
-    return parseWithRegex(input);
+  // Check for Azure OpenAI first (preferred)
+  const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
+  const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
+
+  // Build context string for the AI
+  let contextStr = '';
+  if (context?.teams?.length) {
+    contextStr += `\nAvailable teams: ${context.teams.map(t => t.name).join(', ')}`;
+  }
+  if (context?.sites?.length) {
+    contextStr += `\nAvailable sites: ${context.sites.map(s => s.name).join(', ')}`;
+  }
+  if (context?.currentDate) {
+    contextStr += `\nCurrent date: ${context.currentDate}`;
   }
 
-  try {
-    const anthropic = new Anthropic({ apiKey });
+  const userMessage = contextStr 
+    ? `Context:${contextStr}\n\nParse this event description:\n"${input}"`
+    : `Parse this event description:\n"${input}"`;
 
-    // Build context string for the AI
-    let contextStr = '';
-    if (context?.teams?.length) {
-      contextStr += `\nAvailable teams: ${context.teams.map(t => t.name).join(', ')}`;
+  // Try Azure OpenAI first
+  if (azureEndpoint && azureApiKey) {
+    try {
+      console.log('[EventParser] Using Azure OpenAI');
+      
+      const client = new AzureOpenAI({
+        endpoint: azureEndpoint,
+        apiKey: azureApiKey,
+        apiVersion: '2024-08-01-preview',
+      });
+
+      const response = await client.chat.completions.create({
+        model: azureDeployment,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userMessage }
+        ],
+        max_tokens: 1024,
+        temperature: 0.3,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response content from Azure OpenAI');
+      }
+
+      // Clean the response - remove markdown code blocks if present
+      let cleanedContent = content.trim();
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.slice(7);
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.slice(3);
+      }
+      if (cleanedContent.endsWith('```')) {
+        cleanedContent = cleanedContent.slice(0, -3);
+      }
+      cleanedContent = cleanedContent.trim();
+
+      const parsed = JSON.parse(cleanedContent) as ParseResult;
+      parsed.rawResponse = content;
+      
+      return parsed;
+    } catch (error) {
+      console.error('[EventParser] Azure OpenAI parsing failed:', error);
+      // Fall through to regex parsing
     }
-    if (context?.sites?.length) {
-      contextStr += `\nAvailable sites: ${context.sites.map(s => s.name).join(', ')}`;
-    }
-    if (context?.currentDate) {
-      contextStr += `\nCurrent date: ${context.currentDate}`;
-    }
-
-    const userMessage = contextStr 
-      ? `Context:${contextStr}\n\nParse this event description:\n"${input}"`
-      : `Parse this event description:\n"${input}"`;
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [
-        { role: 'user', content: userMessage }
-      ]
-    });
-
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
-
-    const parsed = JSON.parse(content.text) as ParseResult;
-    parsed.rawResponse = content.text;
-    
-    return parsed;
-  } catch (error) {
-    console.error('[EventParser] AI parsing failed:', error);
-    
-    // Fallback to regex parsing
-    return parseWithRegex(input);
   }
+
+  // Fallback to regex parsing if no AI provider is configured or AI fails
+  console.log('[EventParser] Using regex fallback parser');
+  return parseWithRegex(input);
 }
 
 /**
