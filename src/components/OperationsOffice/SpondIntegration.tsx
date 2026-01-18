@@ -340,38 +340,44 @@ export default function SpondIntegration() {
 
   return (
     <>
-      <Card className="glass-card border-white/20">
-        <CardHeader className="pb-2">
+      <Card className="glass-card border-white/20 overflow-hidden">
+        {/* Spond branded header */}
+        <div className="bg-gradient-to-r from-[#00C853] via-[#00E676] to-[#69F0AE] p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
-                <Lightning size={24} weight="fill" className="text-white" />
+            <div className="flex items-center gap-4">
+              {/* Spond Logo */}
+              <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center">
+                <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M50 10C27.91 10 10 27.91 10 50C10 72.09 27.91 90 50 90C72.09 90 90 72.09 90 50C90 27.91 72.09 10 50 10ZM65 55C65 60.52 60.52 65 55 65H35V55H55V45H35C29.48 45 25 40.52 25 35C25 29.48 29.48 25 35 25H65V35H45V45H55C60.52 45 65 49.48 65 55Z" fill="#00C853"/>
+                </svg>
               </div>
               <div>
-                <CardTitle className="text-white flex items-center gap-2">
-                  Spond Integration
+                <h3 className="text-white font-bold text-xl flex items-center gap-2 drop-shadow-sm">
+                  Spond
                   {status?.configured && (
                     <Badge 
                       variant="secondary" 
-                      className={status.connected ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'}
+                      className={status.connected 
+                        ? 'bg-white/30 text-white border border-white/50' 
+                        : 'bg-yellow-400/30 text-white border border-yellow-400/50'}
                     >
-                      {status.connected ? 'Connected' : 'Configured'}
+                      {status.connected ? '● Connected' : '○ Configured'}
                     </Badge>
                   )}
-                </CardTitle>
-                <CardDescription className="text-white/60">
-                  Sync events and teams with Spond.com
-                </CardDescription>
+                </h3>
+                <p className="text-white/90 text-sm drop-shadow-sm">
+                  Team & event management platform
+                </p>
               </div>
             </div>
             
             {!status?.configured ? (
               <Button 
                 onClick={() => setShowConfigDialog(true)}
-                className="bg-[#248bcc] hover:bg-[#1a6a9a]"
+                className="bg-white text-[#00C853] hover:bg-white/90 font-semibold shadow-lg"
               >
                 <Gear size={16} className="mr-2" />
-                Configure
+                Connect
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -379,19 +385,37 @@ export default function SpondIntegration() {
                   variant="outline" 
                   size="sm"
                   onClick={() => setShowConfigDialog(true)}
-                  className="border-white/20 text-white hover:bg-white/10"
+                  className="border-white/50 text-white hover:bg-white/20 bg-white/10"
                 >
                   <Gear size={16} />
                 </Button>
                 <Button 
-                  variant="destructive" 
                   size="sm"
                   onClick={removeConfiguration}
+                  className="bg-red-500/80 hover:bg-red-500 text-white border-0"
                 >
                   <X size={16} />
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+
+        <CardHeader className="pb-2 pt-4">
+          {/* Feature description */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div className="flex items-start gap-2 text-white/70">
+              <CloudArrowDown size={18} className="text-[#00E676] mt-0.5 flex-shrink-0" />
+              <span>Import events and training sessions from Spond automatically</span>
+            </div>
+            <div className="flex items-start gap-2 text-white/70">
+              <Users size={18} className="text-[#00E676] mt-0.5 flex-shrink-0" />
+              <span>Link Spond groups to your teams for seamless data sync</span>
+            </div>
+            <div className="flex items-start gap-2 text-white/70">
+              <UserCheck size={18} className="text-[#00E676] mt-0.5 flex-shrink-0" />
+              <span>Track attendance responses (accepted, declined, pending)</span>
+            </div>
           </div>
         </CardHeader>
 
@@ -483,11 +507,23 @@ export default function SpondIntegration() {
         )}
 
         {!status?.configured && (
-          <CardContent className="pt-0">
-            <p className="text-white/60 text-sm">
-              Connect your Spond account to automatically sync events and team information 
-              between Spond and this application.
-            </p>
+          <CardContent className="pt-4">
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#00C853]/20 flex items-center justify-center flex-shrink-0">
+                  <Lightning size={20} weight="fill" className="text-[#00E676]" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm mb-2">
+                    <strong className="text-white">Spond</strong> is a popular team management app used by sports clubs worldwide. 
+                    Connect your account to automatically import events, sync team data, and track attendance.
+                  </p>
+                  <p className="text-white/50 text-xs">
+                    You'll need your Spond login credentials (email and password) to set up the integration.
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         )}
       </Card>
