@@ -48,19 +48,22 @@ Azure OpenAI requires approval for new accounts:
 
 1. Once the resource is created, click **"Go to resource"**
 
-2. In the left menu, click **"Model deployments"** → **"Manage Deployments"**
+2. Find the deployment option (Azure Portal UI varies, try one of these):
+   - Click **"Go to Azure AI Foundry portal"** (blue button at the top)
+   - Or click **"Explore"** in the Overview page
+   - Or click **"Deployments"** in the left menu under "Resource Management"
    
-   This opens Azure OpenAI Studio.
-
-3. Click **"+ Create new deployment"**
+3. In Azure AI Foundry (formerly Azure OpenAI Studio):
+   - Click **"Deployments"** in the left sidebar
+   - Click **"+ Deploy model"** → **"Deploy base model"**
 
 4. Configure the deployment:
    - **Model:** Select `gpt-4o` (recommended) or `gpt-4`
-   - **Deployment name:** Enter a name (e.g., `gpt-4o`)
+   - **Deployment name:** Enter a name (e.g., `gpt-4o`) - **remember this name!**
    - **Deployment type:** Standard
    - **Tokens per minute rate limit:** Start with 10K (can increase later)
 
-5. Click **"Create"**
+5. Click **"Deploy"**
 
 ---
 
