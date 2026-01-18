@@ -1,11 +1,12 @@
 import { useTheme } from "next-themes"
 import { CSSProperties } from "react"
+import { createPortal } from "react-dom"
 import { Toaster as Sonner, ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
-  return (
+  const toaster = (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
@@ -46,6 +47,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       {...props}
     />
   )
+
+  // Use portal to render at the very end of the DOM, outside any stacking context
+  return createPortal(toaster, document.body)
 }
 
 export { Toaster }
