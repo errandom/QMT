@@ -17,6 +17,7 @@ import {
   MapPin
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { getToken } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 
 interface ParsedEventPreview {
@@ -76,7 +77,7 @@ export default function NaturalLanguageEventCreator({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ input, confirm: false }),
       })
@@ -117,7 +118,7 @@ export default function NaturalLanguageEventCreator({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ input, confirm: true }),
       })
