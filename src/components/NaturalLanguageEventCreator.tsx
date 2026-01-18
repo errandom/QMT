@@ -81,6 +81,13 @@ export default function NaturalLanguageEventCreator({
         body: JSON.stringify({ input, confirm: false }),
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[NLP] Server error:', response.status, errorText)
+        toast.error(`Server error: ${response.status}`)
+        return
+      }
+
       const result = await response.json()
 
       if (!result.success) {
@@ -94,7 +101,8 @@ export default function NaturalLanguageEventCreator({
         events: result.events,
       })
     } catch (error) {
-      toast.error('Failed to parse event description')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to parse event: ${errorMessage}`)
       console.error('[NLP] Parse error:', error)
     } finally {
       setLoading(false)
@@ -114,6 +122,13 @@ export default function NaturalLanguageEventCreator({
         body: JSON.stringify({ input, confirm: true }),
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[NLP] Server error:', response.status, errorText)
+        toast.error(`Server error: ${response.status}`)
+        return
+      }
+
       const result = await response.json()
 
       if (!result.success) {
@@ -126,7 +141,8 @@ export default function NaturalLanguageEventCreator({
       setPreview(null)
       onEventsCreated?.()
     } catch (error) {
-      toast.error('Failed to create events')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to create events: ${errorMessage}`)
       console.error('[NLP] Create error:', error)
     } finally {
       setLoading(false)
