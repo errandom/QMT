@@ -17,8 +17,6 @@ const TIME_SLOTS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00
 export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewProps) {
   const { events, teams, fields, sites } = useData()
 
-  const activeSites = sites
-  
   const allEvents = events.filter((event) => {
     if (teamFilter !== 'all') {
       if (!event.teamIds || !event.teamIds.includes(teamFilter)) return false
@@ -36,6 +34,18 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
   // Show all events - both recurring and one-time events
   const displayEvents = allEvents
+
+  // Filter sites to only show those with events, sorted by event count (most events first)
+  const activeSites = sites
+    .map(site => {
+      const siteFields = fields.filter(f => f.siteId === site.id)
+      const siteFieldIds = siteFields.map(f => f.id)
+      const eventCount = displayEvents.filter(e => siteFieldIds.includes(e.fieldId)).length
+      return { site, eventCount }
+    })
+    .filter(({ eventCount }) => eventCount > 0)
+    .sort((a, b) => b.eventCount - a.eventCount)
+    .map(({ site }) => site)
 
   const getEventPosition = (startTime: string, endTime: string) => {
     const start = timeToMinutes(startTime)
