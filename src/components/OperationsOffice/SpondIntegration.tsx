@@ -44,9 +44,9 @@ interface SpondStatus {
 interface SpondGroup {
   id: string
   name: string
+  parentGroup?: string | null
   activity?: string
   memberCount: number
-  subGroupCount: number
   linkedTeam: { id: number; name: string } | null
 }
 
@@ -620,7 +620,10 @@ export default function SpondIntegration() {
                           {group.memberCount} members
                         </Badge>
                       </div>
-                      {group.activity && (
+                      {group.parentGroup && (
+                        <span className="text-sm text-gray-500">in {group.parentGroup}</span>
+                      )}
+                      {!group.parentGroup && group.activity && (
                         <span className="text-sm text-gray-500">{group.activity}</span>
                       )}
                     </div>
