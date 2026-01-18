@@ -4,10 +4,10 @@
  * Uses AI to parse natural language descriptions into structured event data.
  * Supports creating single events or recurring event series.
  * 
- * Supports Azure OpenAI (preferred) or Anthropic as AI providers.
+ * Supports Azure OpenAI (preferred) as AI provider.
  */
 
-import { AzureOpenAI } from '@azure/openai';
+import { AzureOpenAI } from 'openai';
 
 export interface ParsedEvent {
   title: string;
