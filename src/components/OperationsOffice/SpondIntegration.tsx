@@ -29,7 +29,7 @@ import {
   Question
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { api } from '@/lib/api'
+import { api, getToken } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 
 interface SpondStatus {
@@ -85,7 +85,7 @@ export default function SpondIntegration() {
     try {
       const response = await fetch('/api/spond/status', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         }
       })
       if (response.ok) {
@@ -111,7 +111,7 @@ export default function SpondIntegration() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify({
           username: credentials.username,
@@ -143,7 +143,7 @@ export default function SpondIntegration() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify(credentials)
       })
@@ -170,7 +170,7 @@ export default function SpondIntegration() {
       const response = await fetch('/api/spond/configure', {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         }
       })
 
@@ -199,7 +199,7 @@ export default function SpondIntegration() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify({})
       })
@@ -225,10 +225,10 @@ export default function SpondIntegration() {
     try {
       const [groupsResponse, teamsResponse] = await Promise.all([
         fetch('/api/spond/groups', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+          headers: { 'Authorization': `Bearer ${getToken()}` }
         }),
         fetch('/api/teams', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+          headers: { 'Authorization': `Bearer ${getToken()}` }
         })
       ])
 
@@ -254,7 +254,7 @@ export default function SpondIntegration() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify({ teamId, spondGroupId })
       })
@@ -275,7 +275,7 @@ export default function SpondIntegration() {
       const response = await fetch(`/api/spond/link/team/${teamId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         }
       })
 
@@ -302,7 +302,7 @@ export default function SpondIntegration() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify({
           onlyFutureEvents: true,
