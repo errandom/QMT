@@ -327,9 +327,9 @@ export default function SpondIntegration() {
 
   if (loading) {
     return (
-      <Card className="glass-card border-white/20">
+      <Card>
         <CardContent className="p-6">
-          <div className="flex items-center gap-2 text-white/70">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <ArrowsClockwise className="animate-spin" size={20} />
             Loading Spond status...
           </div>
@@ -340,44 +340,40 @@ export default function SpondIntegration() {
 
   return (
     <>
-      <Card className="glass-card border-white/20 overflow-hidden">
-        {/* Spond branded header - coral to pink gradient */}
-        <div className="bg-gradient-to-br from-[#F86A5C] via-[#F4556F] to-[#E54885] p-4">
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Spond Logo - matching actual branding */}
-              <div className="w-12 h-12 bg-gradient-to-br from-[#F86A5C] to-[#E54885] rounded-xl shadow-lg flex items-center justify-center border-2 border-white/30">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Intertwined S shape */}
+            <div className="flex items-center gap-3">
+              {/* Spond Logo */}
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
+              >
+                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M70 25C70 25 60 25 50 25C35 25 25 35 25 50C25 58 29 65 35 70" stroke="white" strokeWidth="8" strokeLinecap="round" fill="none"/>
                   <path d="M30 75C30 75 40 75 50 75C65 75 75 65 75 50C75 42 71 35 65 30" stroke="white" strokeWidth="8" strokeLinecap="round" fill="none"/>
                 </svg>
               </div>
               <div>
-                <h3 className="text-white font-bold text-xl flex items-center gap-2 drop-shadow-sm">
-                  Spond
+                <CardTitle className="text-base flex items-center gap-2">
+                  Spond Integration
                   {status?.configured && (
                     <Badge 
-                      variant="secondary" 
-                      className={status.connected 
-                        ? 'bg-white/30 text-white border border-white/50' 
-                        : 'bg-yellow-400/30 text-white border border-yellow-400/50'}
+                      variant={status.connected ? 'default' : 'secondary'}
+                      className={status.connected ? 'bg-green-600' : ''}
                     >
-                      {status.connected ? '● Connected' : '○ Configured'}
+                      {status.connected ? 'Connected' : 'Configured'}
                     </Badge>
                   )}
-                </h3>
-                <p className="text-white/90 text-sm drop-shadow-sm">
-                  Team & event management platform
-                </p>
+                </CardTitle>
+                <CardDescription>
+                  Sync events and teams with Spond.com
+                </CardDescription>
               </div>
             </div>
             
             {!status?.configured ? (
-              <Button 
-                onClick={() => setShowConfigDialog(true)}
-                className="bg-white text-[#E54885] hover:bg-white/90 font-semibold shadow-lg"
-              >
+              <Button onClick={() => setShowConfigDialog(true)} style={{ backgroundColor: COLORS.ACCENT }}>
                 <Gear size={16} className="mr-2" />
                 Connect
               </Button>
@@ -387,56 +383,57 @@ export default function SpondIntegration() {
                   variant="outline" 
                   size="sm"
                   onClick={() => setShowConfigDialog(true)}
-                  className="border-white/50 text-white hover:bg-white/20 bg-white/10"
                 >
-                  <Gear size={16} />
+                  <Gear size={16} className="mr-2" />
+                  Settings
                 </Button>
                 <Button 
+                  variant="outline"
                   size="sm"
                   onClick={removeConfiguration}
-                  className="bg-white/20 hover:bg-white/30 text-white border border-white/30"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <X size={16} />
                 </Button>
               </div>
             )}
           </div>
-        </div>
-
-        <CardHeader className="pb-2 pt-4">
-          {/* Feature description */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-            <div className="flex items-start gap-2 text-white/70">
-              <CloudArrowDown size={18} className="text-[#F4556F] mt-0.5 flex-shrink-0" />
-              <span>Import events and training sessions from Spond automatically</span>
-            </div>
-            <div className="flex items-start gap-2 text-white/70">
-              <Users size={18} className="text-[#F4556F] mt-0.5 flex-shrink-0" />
-              <span>Link Spond teams to your local teams for seamless data sync</span>
-            </div>
-            <div className="flex items-start gap-2 text-white/70">
-              <UserCheck size={18} className="text-[#F4556F] mt-0.5 flex-shrink-0" />
-              <span>Track attendance responses (accepted, declined, pending)</span>
-            </div>
-          </div>
         </CardHeader>
 
-        {status?.configured && (
-          <CardContent className="pt-4">
-            <div className="space-y-4">
+        <CardContent className="space-y-4">
+          {/* Features list */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-muted-foreground">
+            <div className="flex items-start gap-2">
+              <CloudArrowDown size={18} className="mt-0.5 flex-shrink-0" style={{ color: COLORS.ACCENT }} />
+              <span>Import events and training sessions automatically</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Users size={18} className="mt-0.5 flex-shrink-0" style={{ color: COLORS.ACCENT }} />
+              <span>Link Spond teams/subgroups to local teams</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <UserCheck size={18} className="mt-0.5 flex-shrink-0" style={{ color: COLORS.ACCENT }} />
+              <span>Track attendance (accepted, declined, pending)</span>
+            </div>
+          </div>
+
+          {status?.configured && (
+            <>
+              <Separator />
+              
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white/5 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-white">{status.syncedGroups}</div>
-                  <div className="text-xs text-white/60">Synced Teams</div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <div className="text-2xl font-bold">{status.syncedGroups}</div>
+                  <div className="text-xs text-muted-foreground">Synced Teams</div>
                 </div>
-                <div className="bg-white/5 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-white">{status.syncedEvents}</div>
-                  <div className="text-xs text-white/60">Synced Events</div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <div className="text-2xl font-bold">{status.syncedEvents}</div>
+                  <div className="text-xs text-muted-foreground">Synced Events</div>
                 </div>
-                <div className="bg-white/5 rounded-lg p-3 text-center">
-                  <div className="text-xs text-white/60 mb-1">Last Sync</div>
-                  <div className="text-sm text-white">
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <div className="text-xs text-muted-foreground mb-1">Last Sync</div>
+                  <div className="text-sm font-medium">
                     {status.lastSync 
                       ? new Date(status.lastSync).toLocaleString() 
                       : 'Never'}
@@ -444,10 +441,82 @@ export default function SpondIntegration() {
                 </div>
               </div>
 
-              <Separator className="bg-white/10" />
+              <Separator />
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => triggerSync('full')}
+                  disabled={syncing}
+                  style={{ backgroundColor: COLORS.ACCENT }}
+                >
+                  {syncing ? (
+                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
+                  ) : (
+                    <CloudArrowDown size={16} className="mr-2" />
+                  )}
+                  Sync All
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => triggerSync('events')}
+                  disabled={syncing}
+                >
+                  <CalendarBlank size={16} className="mr-2" />
+                  Sync Events
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => triggerSync('groups')}
+                  disabled={syncing}
+                >
+                  <Users size={16} className="mr-2" />
+                  Sync Teams
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={openMappingDialog}
+                >
+                  <LinkIcon size={16} className="mr-2" />
+                  Link Teams
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={syncAttendance}
+                  disabled={syncingAttendance || syncing}
+                >
+                  {syncingAttendance ? (
+                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
+                  ) : (
+                    <UserCheck size={16} className="mr-2" />
+                  )}
+                  Sync Attendance
+                </Button>
+              </div>
+            </>
+          )}
+
+          {!status?.configured && (
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-start gap-3">
+                <Lightning size={20} weight="fill" style={{ color: COLORS.ACCENT }} className="mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm mb-1">
+                    <strong>Spond</strong> is a team management app used by sports clubs worldwide.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Spond account to import events, sync teams, and track attendance automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
                 <Button
                   onClick={() => triggerSync('full')}
                   disabled={syncing}
