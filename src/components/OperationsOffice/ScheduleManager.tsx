@@ -387,7 +387,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           <Button 
             variant={showAICreator ? "default" : "outline"}
             onClick={() => setShowAICreator(!showAICreator)}
-            style={showAICreator ? { backgroundColor: COLORS.ACCENT } : {}}
+            style={showAICreator ? { backgroundColor: '#8B5CF6' } : {}}
+            className={!showAICreator ? 'border-purple-400 text-purple-600 hover:bg-purple-50' : ''}
           >
             <MagicWand className="mr-2" size={16} />
             AI Create
