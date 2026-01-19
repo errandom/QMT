@@ -5,6 +5,15 @@ const sql = require('mssql');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Azure OpenAI for AI event creation
+let AzureOpenAI;
+try {
+  const openai = require('openai');
+  AzureOpenAI = openai.AzureOpenAI;
+} catch (e) {
+  console.log('[AI] OpenAI package not available - AI features disabled');
+}
+
 const app = express();
 
 // --- Log early and clearly so you see it in Log Stream ---
@@ -766,6 +775,381 @@ app.delete('/api/events/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete event' });
   }
 });
+
+// AI Event Creation - Natural Language Parsing
+const AI_SYSTEM_PROMPT = `You are an AI assistant that parses natural language event descriptions for a sports team management app. 
+The app is for "Renegades," an American Football club in Oslo, Norway.
+
+Your task is to extract structured event information from natural language input.
+
+IMPORTANT RULES:
+1. Always respond with valid JSON only - no markdown, no explanations
+2. Times should be in 24-hour format (HH:mm)
+3. Dates should be in ISO format (YYYY-MM-DD)
+4. For recurring days, use: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+5. Event types: "Practice", "Game", "Meeting", "Other"
+6. If duration is mentioned but not end time, calculate end time
+7. Default duration is 90 minutes for Practice, 180 minutes for Game, 60 minutes for Meeting
+8. If no year is specified, assume 2026
+9. Parse team names as they appear (e.g., "U19", "Seniors", "U15")
+10. For games, extract opponent if mentioned
+
+Return a JSON object with this structure:
+{
+  "success": true,
+  "events": [
+    {
+      "title": "string - event title",
+      "eventType": "Practice" | "Game" | "Meeting" | "Other",
+      "startTime": "HH:mm",
+      "endTime": "HH:mm",
+      "teamNames": ["array of team names"],
+      "siteName": "venue/site name if mentioned",
+      "fieldName": "specific field if mentioned",
+      "opponent": "opponent name for games",
+      "notes": "any additional notes",
+      "isRecurring": boolean,
+      "date": "YYYY-MM-DD for single events",
+      "recurringDays": [1-7 array for recurring],
+      "startDate": "YYYY-MM-DD for recurring series start",
+      "endDate": "YYYY-MM-DD for recurring series end"
+    }
+  ],
+  "summary": "Human-readable summary of what will be created"
+}
+
+If you cannot parse the input, return:
+{
+  "success": false,
+  "events": [],
+  "summary": "",
+  "error": "Description of what's missing or unclear"
+}`;
+
+app.post('/api/events/create-from-natural-language', async (req, res) => {
+  try {
+    const { input, confirm } = req.body;
+    
+    if (!input || typeof input !== 'string') {
+      return res.status(400).json({ error: 'Input text is required' });
+    }
+
+    console.log('[AI Events] Processing:', input.substring(0, 100));
+
+    // Check if AI is available
+    const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+    const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
+    const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
+
+    if (!AzureOpenAI || !azureEndpoint || !azureApiKey) {
+      console.log('[AI Events] Azure OpenAI not configured, using fallback parser');
+      // Fallback to regex-based parsing
+      const parsed = parseEventWithRegex(input);
+      return res.json(parsed);
+    }
+
+    // Get context from database
+    const pool = await getPool();
+    const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
+      pool.request().query('SELECT id, name FROM teams WHERE is_active = 1'),
+      pool.request().query('SELECT id, name FROM sites'),
+      pool.request().query('SELECT id, name, site_id FROM fields'),
+    ]);
+
+    const context = {
+      teams: teamsResult.recordset,
+      sites: sitesResult.recordset,
+      fields: fieldsResult.recordset,
+      currentDate: new Date().toISOString().split('T')[0],
+    };
+
+    // Build context for AI
+    let contextStr = '';
+    if (context.teams.length) {
+      contextStr += `\\nAvailable teams: ${context.teams.map(t => t.name).join(', ')}`;
+    }
+    if (context.sites.length) {
+      contextStr += `\\nAvailable sites: ${context.sites.map(s => s.name).join(', ')}`;
+    }
+    contextStr += `\\nCurrent date: ${context.currentDate}`;
+
+    const userMessage = `Context:${contextStr}\\n\\nParse this event description:\\n"${input}"`;
+
+    try {
+      const client = new AzureOpenAI({
+        endpoint: azureEndpoint,
+        apiKey: azureApiKey,
+        apiVersion: '2024-08-01-preview',
+      });
+
+      const response = await client.chat.completions.create({
+        model: azureDeployment,
+        messages: [
+          { role: 'system', content: AI_SYSTEM_PROMPT },
+          { role: 'user', content: userMessage }
+        ],
+        max_tokens: 1024,
+        temperature: 0.3,
+      });
+
+      let content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from AI');
+      }
+
+      // Clean markdown if present
+      content = content.trim();
+      if (content.startsWith('\`\`\`json')) content = content.slice(7);
+      else if (content.startsWith('\`\`\`')) content = content.slice(3);
+      if (content.endsWith('\`\`\`')) content = content.slice(0, -3);
+      content = content.trim();
+
+      const parsed = JSON.parse(content);
+
+      if (!parsed.success) {
+        return res.json(parsed);
+      }
+
+      // Convert parsed events to API format
+      const apiEvents = convertParsedToApiEvents(parsed.events, context);
+
+      if (!confirm) {
+        // Preview mode - return what would be created
+        const totalEvents = calculateTotalEvents(apiEvents);
+        return res.json({
+          success: true,
+          summary: parsed.summary,
+          totalEvents,
+          events: apiEvents,
+        });
+      }
+
+      // Create events
+      const created = await createEventsFromParsed(pool, apiEvents);
+      return res.json({
+        success: true,
+        created,
+        message: `Created ${created} event(s)`,
+      });
+
+    } catch (aiError) {
+      console.error('[AI Events] AI parsing failed:', aiError);
+      // Fallback to regex
+      const parsed = parseEventWithRegex(input);
+      return res.json(parsed);
+    }
+
+  } catch (err) {
+    console.error('[AI Events] Error:', err);
+    res.status(500).json({ error: 'Failed to process event', details: err.message });
+  }
+});
+
+// Helper function: Regex-based fallback parser
+function parseEventWithRegex(input) {
+  const lowerInput = input.toLowerCase();
+  
+  // Detect event type
+  let eventType = 'Other';
+  if (/practice|training|workout/i.test(input)) eventType = 'Practice';
+  else if (/game|match|vs|versus|against/i.test(input)) eventType = 'Game';
+  else if (/meeting|meet/i.test(input)) eventType = 'Meeting';
+
+  // Extract time
+  const timeMatch = input.match(/(\\d{1,2})(:\\d{2})?\\s*(am|pm)?/i);
+  let startTime = '18:00';
+  if (timeMatch) {
+    let hours = parseInt(timeMatch[1]);
+    const minutes = timeMatch[2] ? timeMatch[2].slice(1) : '00';
+    const meridiem = timeMatch[3]?.toLowerCase();
+    if (meridiem === 'pm' && hours < 12) hours += 12;
+    if (meridiem === 'am' && hours === 12) hours = 0;
+    startTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
+  }
+
+  // Calculate end time based on event type
+  const [sh, sm] = startTime.split(':').map(Number);
+  const duration = eventType === 'Practice' ? 90 : eventType === 'Game' ? 180 : 60;
+  const endMinutes = sh * 60 + sm + duration;
+  const endTime = `${Math.floor(endMinutes / 60).toString().padStart(2, '0')}:${(endMinutes % 60).toString().padStart(2, '0')}`;
+
+  // Detect team names
+  const teamPatterns = ['seniors', 'juniors', 'u19', 'u17', 'u15', 'u13', 'u11', 'veterans', 'ladies', 'women', 'men'];
+  const teamNames = teamPatterns.filter(t => lowerInput.includes(t.toLowerCase()));
+
+  // Detect recurring pattern
+  const isRecurring = /every|weekly|each/i.test(input);
+  const dayMap = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
+  const recurringDays = [];
+  for (const [day, num] of Object.entries(dayMap)) {
+    if (lowerInput.includes(day)) recurringDays.push(num);
+  }
+
+  // Create title
+  const title = `${teamNames.length > 0 ? teamNames[0].charAt(0).toUpperCase() + teamNames[0].slice(1) : ''} ${eventType}`.trim();
+
+  return {
+    success: true,
+    summary: `Will create ${isRecurring ? 'recurring ' : ''}${eventType.toLowerCase()} event${isRecurring ? 's' : ''}`,
+    totalEvents: isRecurring ? 10 : 1,
+    events: [{
+      title: title || eventType,
+      eventType,
+      startTime,
+      endTime,
+      teamIds: [],
+      teamNames,
+      isRecurring,
+      recurringDays: recurringDays.length > 0 ? recurringDays : undefined,
+      date: isRecurring ? undefined : new Date().toISOString().split('T')[0],
+    }]
+  };
+}
+
+// Helper function: Convert parsed events to API format
+function convertParsedToApiEvents(events, context) {
+  const teamMap = new Map(context.teams.map(t => [t.name.toLowerCase(), t.id]));
+  const fieldMap = new Map(context.fields.map(f => [f.name.toLowerCase(), { id: f.id, siteId: f.site_id }]));
+
+  return events.map(event => {
+    // Match team names to IDs
+    const teamIds = (event.teamNames || [])
+      .map(name => {
+        // Try exact match first, then partial match
+        for (const [teamName, id] of teamMap.entries()) {
+          if (teamName.includes(name.toLowerCase()) || name.toLowerCase().includes(teamName)) {
+            return id;
+          }
+        }
+        return null;
+      })
+      .filter(id => id !== null);
+
+    // Match field
+    let fieldId = null;
+    if (event.fieldName) {
+      for (const [fieldName, data] of fieldMap.entries()) {
+        if (fieldName.includes(event.fieldName.toLowerCase())) {
+          fieldId = data.id;
+          break;
+        }
+      }
+    }
+
+    return {
+      title: event.title,
+      eventType: event.eventType,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      teamIds,
+      fieldId,
+      isRecurring: event.isRecurring,
+      recurringDays: event.recurringDays,
+      date: event.date || event.startDate,
+      recurringEndDate: event.endDate,
+      notes: event.notes,
+      opponent: event.opponent,
+    };
+  });
+}
+
+// Helper function: Calculate total events including recurring
+function calculateTotalEvents(events) {
+  let total = 0;
+  for (const event of events) {
+    if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
+      const start = new Date(event.date);
+      const end = new Date(event.recurringEndDate);
+      let current = new Date(start);
+      while (current <= end) {
+        const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
+        if (event.recurringDays.includes(dayOfWeek)) {
+          total++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+    } else {
+      total++;
+    }
+  }
+  return total || 1;
+}
+
+// Helper function: Create events in database
+async function createEventsFromParsed(pool, events) {
+  let created = 0;
+  
+  for (const event of events) {
+    try {
+      if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
+        // Create recurring events
+        const start = new Date(event.date);
+        const end = new Date(event.recurringEndDate);
+        let current = new Date(start);
+        
+        while (current <= end) {
+          const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
+          if (event.recurringDays.includes(dayOfWeek)) {
+            const [sh, sm] = event.startTime.split(':');
+            const [eh, em] = event.endTime.split(':');
+            
+            const startDateTime = new Date(current);
+            startDateTime.setHours(parseInt(sh), parseInt(sm), 0);
+            
+            const endDateTime = new Date(current);
+            endDateTime.setHours(parseInt(eh), parseInt(em), 0);
+
+            await pool.request()
+              .input('team_ids', sql.NVarChar, event.teamIds.join(',') || null)
+              .input('field_id', sql.Int, event.fieldId || null)
+              .input('event_type', sql.NVarChar, event.eventType)
+              .input('start_time', sql.DateTime, startDateTime)
+              .input('end_time', sql.DateTime, endDateTime)
+              .input('description', sql.NVarChar, event.title)
+              .input('notes', sql.NVarChar, event.notes || null)
+              .input('status', sql.NVarChar, 'Planned')
+              .query(`
+                INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status)
+                VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status)
+              `);
+            created++;
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      } else {
+        // Create single event
+        const eventDate = new Date(event.date);
+        const [sh, sm] = event.startTime.split(':');
+        const [eh, em] = event.endTime.split(':');
+        
+        const startDateTime = new Date(eventDate);
+        startDateTime.setHours(parseInt(sh), parseInt(sm), 0);
+        
+        const endDateTime = new Date(eventDate);
+        endDateTime.setHours(parseInt(eh), parseInt(em), 0);
+
+        await pool.request()
+          .input('team_ids', sql.NVarChar, event.teamIds.join(',') || null)
+          .input('field_id', sql.Int, event.fieldId || null)
+          .input('event_type', sql.NVarChar, event.eventType)
+          .input('start_time', sql.DateTime, startDateTime)
+          .input('end_time', sql.DateTime, endDateTime)
+          .input('description', sql.NVarChar, event.title)
+          .input('notes', sql.NVarChar, event.notes || null)
+          .input('status', sql.NVarChar, 'Planned')
+          .query(`
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status)
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status)
+          `);
+        created++;
+      }
+    } catch (err) {
+      console.error('[AI Events] Error creating event:', err);
+    }
+  }
+  
+  return created;
+}
 
 // Sites
 app.get('/api/sites', async (_req, res) => {
