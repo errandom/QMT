@@ -341,14 +341,16 @@ export default function SpondIntegration() {
   return (
     <>
       <Card className="glass-card border-white/20 overflow-hidden">
-        {/* Spond branded header */}
-        <div className="bg-gradient-to-r from-[#00C853] via-[#00E676] to-[#69F0AE] p-4">
+        {/* Spond branded header - coral to pink gradient */}
+        <div className="bg-gradient-to-br from-[#F86A5C] via-[#F4556F] to-[#E54885] p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Spond Logo */}
-              <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M50 10C27.91 10 10 27.91 10 50C10 72.09 27.91 90 50 90C72.09 90 90 72.09 90 50C90 27.91 72.09 10 50 10ZM65 55C65 60.52 60.52 65 55 65H35V55H55V45H35C29.48 45 25 40.52 25 35C25 29.48 29.48 25 35 25H65V35H45V45H55C60.52 45 65 49.48 65 55Z" fill="#00C853"/>
+              {/* Spond Logo - matching actual branding */}
+              <div className="w-12 h-12 bg-gradient-to-br from-[#F86A5C] to-[#E54885] rounded-xl shadow-lg flex items-center justify-center border-2 border-white/30">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Intertwined S shape */}
+                  <path d="M70 25C70 25 60 25 50 25C35 25 25 35 25 50C25 58 29 65 35 70" stroke="white" strokeWidth="8" strokeLinecap="round" fill="none"/>
+                  <path d="M30 75C30 75 40 75 50 75C65 75 75 65 75 50C75 42 71 35 65 30" stroke="white" strokeWidth="8" strokeLinecap="round" fill="none"/>
                 </svg>
               </div>
               <div>
@@ -374,7 +376,7 @@ export default function SpondIntegration() {
             {!status?.configured ? (
               <Button 
                 onClick={() => setShowConfigDialog(true)}
-                className="bg-white text-[#00C853] hover:bg-white/90 font-semibold shadow-lg"
+                className="bg-white text-[#E54885] hover:bg-white/90 font-semibold shadow-lg"
               >
                 <Gear size={16} className="mr-2" />
                 Connect
@@ -392,7 +394,7 @@ export default function SpondIntegration() {
                 <Button 
                   size="sm"
                   onClick={removeConfiguration}
-                  className="bg-red-500/80 hover:bg-red-500 text-white border-0"
+                  className="bg-white/20 hover:bg-white/30 text-white border border-white/30"
                 >
                   <X size={16} />
                 </Button>
@@ -405,15 +407,15 @@ export default function SpondIntegration() {
           {/* Feature description */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div className="flex items-start gap-2 text-white/70">
-              <CloudArrowDown size={18} className="text-[#00E676] mt-0.5 flex-shrink-0" />
+              <CloudArrowDown size={18} className="text-[#F4556F] mt-0.5 flex-shrink-0" />
               <span>Import events and training sessions from Spond automatically</span>
             </div>
             <div className="flex items-start gap-2 text-white/70">
-              <Users size={18} className="text-[#00E676] mt-0.5 flex-shrink-0" />
-              <span>Link Spond groups to your teams for seamless data sync</span>
+              <Users size={18} className="text-[#F4556F] mt-0.5 flex-shrink-0" />
+              <span>Link Spond teams to your local teams for seamless data sync</span>
             </div>
             <div className="flex items-start gap-2 text-white/70">
-              <UserCheck size={18} className="text-[#00E676] mt-0.5 flex-shrink-0" />
+              <UserCheck size={18} className="text-[#F4556F] mt-0.5 flex-shrink-0" />
               <span>Track attendance responses (accepted, declined, pending)</span>
             </div>
           </div>
@@ -510,8 +512,8 @@ export default function SpondIntegration() {
           <CardContent className="pt-4">
             <div className="bg-white/5 rounded-lg p-4 border border-white/10">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#00C853]/20 flex items-center justify-center flex-shrink-0">
-                  <Lightning size={20} weight="fill" className="text-[#00E676]" />
+                <div className="w-10 h-10 rounded-full bg-[#F4556F]/20 flex items-center justify-center flex-shrink-0">
+                  <Lightning size={20} weight="fill" className="text-[#F4556F]" />
                 </div>
                 <div>
                   <p className="text-white/80 text-sm mb-2">
@@ -533,7 +535,7 @@ export default function SpondIntegration() {
         <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-900">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F86A5C] to-[#E54885] flex items-center justify-center">
                 <Lightning size={18} weight="fill" className="text-white" />
               </div>
               Configure Spond Integration
@@ -627,20 +629,33 @@ export default function SpondIntegration() {
         <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-900">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#248bcc] to-[#1a6a9a] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F86A5C] to-[#E54885] flex items-center justify-center">
                 <LinkIcon size={18} weight="bold" className="text-white" />
               </div>
-              Team Mappings
+              Link Teams
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Link your local teams to Spond groups for synchronized data.
+              Connect your Spond teams to local teams. Events from linked Spond teams will sync to the corresponding local team.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Legend */}
+          <div className="flex items-center gap-6 py-2 px-3 bg-gray-50 rounded-lg text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-gradient-to-br from-[#F86A5C] to-[#E54885]"></div>
+              <span className="text-gray-600 font-medium">Spond Team</span>
+            </div>
+            <div className="text-gray-400">→</div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#248bcc]"></div>
+              <span className="text-gray-600 font-medium">Local Team</span>
+            </div>
+          </div>
 
           <ScrollArea className="max-h-[50vh]">
             {loadingGroups ? (
               <div className="flex items-center justify-center py-8">
-                <ArrowsClockwise className="animate-spin text-[#248bcc]" size={32} />
+                <ArrowsClockwise className="animate-spin text-[#F4556F]" size={32} />
               </div>
             ) : (
               <div className="space-y-3">
@@ -651,23 +666,24 @@ export default function SpondIntegration() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-gradient-to-br from-[#F86A5C] to-[#E54885]"></div>
                         <span className="font-medium text-gray-900">{group.name}</span>
                         <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white">
                           {group.memberCount} members
                         </Badge>
                       </div>
                       {group.parentGroup && (
-                        <span className="text-sm text-gray-500">in {group.parentGroup}</span>
+                        <span className="text-sm text-gray-500 ml-4">in {group.parentGroup}</span>
                       )}
                       {!group.parentGroup && group.activity && (
-                        <span className="text-sm text-gray-500">{group.activity}</span>
+                        <span className="text-sm text-gray-500 ml-4">{group.activity}</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       {group.linkedTeam ? (
                         <>
-                          <Badge className="bg-green-100 text-green-700 border border-green-200">
+                          <Badge className="bg-[#248bcc]/10 text-[#248bcc] border border-[#248bcc]/30">
                             <CheckCircle size={12} className="mr-1" />
                             {group.linkedTeam.name}
                           </Badge>
@@ -682,7 +698,7 @@ export default function SpondIntegration() {
                         </>
                       ) : (
                         <select
-                          className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-[#248bcc] focus:ring-1 focus:ring-[#248bcc]"
+                          className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-[#F4556F] focus:ring-1 focus:ring-[#F4556F]"
                           defaultValue=""
                           onChange={(e) => {
                             if (e.target.value) {
@@ -690,7 +706,7 @@ export default function SpondIntegration() {
                             }
                           }}
                         >
-                          <option value="">Link to team...</option>
+                          <option value="">Select local team...</option>
                           {teams
                             .filter(t => !t.spond_group_id)
                             .map(team => (
@@ -710,8 +726,8 @@ export default function SpondIntegration() {
                     <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
                       <Warning size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-700 font-medium">No Spond groups found</p>
-                    <p className="text-sm text-gray-500">Make sure you're a member of at least one group in Spond</p>
+                    <p className="text-gray-700 font-medium">No Spond teams found</p>
+                    <p className="text-sm text-gray-500">Make sure you're a member of at least one team in Spond</p>
                   </div>
                 )}
               </div>
