@@ -1989,7 +1989,7 @@ app.delete('/api/spond/configure', verifyToken, requireAdminOrMgmt, async (req, 
   }
 });
 
-// Get Spond groups
+// Get Spond groups with subgroups for team mapping
 app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) => {
   try {
     if (!spondToken) {
@@ -2008,17 +2008,88 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
     
     const groups = await spondRequest(spondToken, 'groups');
     
-    res.json(groups.map(group => ({
-      id: group.id,
-      name: group.name,
-      activity: group.activity,
-      memberCount: group.members?.length || 0,
-      subGroupCount: group.subGroups?.length || 0
-    })));
+    // Get local team mappings
+    const pool = await getPool();
+    const mappings = await pool.request()
+      .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+    
+    const mappingMap = new Map(
+      mappings.recordset.map(m => [m.spond_group_id, { id: m.id, name: m.name }])
+    );
+
+    // Flatten groups and subgroups - return subgroups as the linkable items
+    const subgroupsWithMappings = [];
+    
+    for (const group of groups) {
+      // If there are subgroups, use those as the teams
+      if (group.subGroups && group.subGroups.length > 0) {
+        for (const subgroup of group.subGroups) {
+          subgroupsWithMappings.push({
+            id: subgroup.id,
+            name: subgroup.name,
+            parentGroup: group.name,
+            activity: group.activity,
+            memberCount: subgroup.members?.length || 0,
+            linkedTeam: mappingMap.get(subgroup.id) || null,
+          });
+        }
+      } else {
+        // If no subgroups, use the group itself
+        subgroupsWithMappings.push({
+          id: group.id,
+          name: group.name,
+          parentGroup: null,
+          activity: group.activity,
+          memberCount: group.members?.length || 0,
+          linkedTeam: mappingMap.get(group.id) || null,
+        });
+      }
+    }
+    
+    res.json(subgroupsWithMappings);
   } catch (err) {
     console.error('[Spond] Error fetching groups:', err);
     spondToken = null; // Reset token on error
     res.status(500).json({ error: 'Failed to fetch Spond groups' });
+  }
+});
+
+// Link a local team to a Spond group/subgroup
+app.post('/api/spond/link/team', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const { teamId, spondGroupId } = req.body;
+
+    if (!teamId || !spondGroupId) {
+      return res.status(400).json({ error: 'teamId and spondGroupId are required' });
+    }
+
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, teamId)
+      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .query('UPDATE teams SET spond_group_id = @spond_group_id WHERE id = @id');
+
+    res.json({ success: true, message: 'Team linked to Spond group' });
+  } catch (err) {
+    console.error('[Spond] Link team error:', err);
+    res.status(500).json({ error: 'Failed to link team' });
+  }
+});
+
+// Unlink a team from Spond
+app.delete('/api/spond/link/team/:id', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.id);
+
+    const pool = await getPool();
+    await pool.request()
+      .input('id', sql.Int, teamId)
+      .query('UPDATE teams SET spond_group_id = NULL WHERE id = @id');
+
+    res.json({ success: true, message: 'Team unlinked from Spond' });
+  } catch (err) {
+    console.error('[Spond] Unlink team error:', err);
+    res.status(500).json({ error: 'Failed to unlink team' });
   }
 });
 
