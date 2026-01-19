@@ -517,94 +517,16 @@ export default function SpondIntegration() {
           )}
         </CardContent>
       </Card>
-                <Button
-                  onClick={() => triggerSync('full')}
-                  disabled={syncing}
-                  className="bg-[#248bcc] hover:bg-[#1a6a9a]"
-                >
-                  {syncing ? (
-                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
-                  ) : (
-                    <CloudArrowDown size={16} className="mr-2" />
-                  )}
-                  Sync All
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => triggerSync('events')}
-                  disabled={syncing}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <CalendarBlank size={16} className="mr-2" />
-                  Sync Events
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => triggerSync('groups')}
-                  disabled={syncing}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <Users size={16} className="mr-2" />
-                  Sync Teams
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={openMappingDialog}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <LinkIcon size={16} className="mr-2" />
-                  Team Mappings
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={syncAttendance}
-                  disabled={syncingAttendance || syncing}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  {syncingAttendance ? (
-                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
-                  ) : (
-                    <UserCheck size={16} className="mr-2" />
-                  )}
-                  Sync Attendance
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        )}
-
-        {!status?.configured && (
-          <CardContent className="pt-4">
-            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#F4556F]/20 flex items-center justify-center flex-shrink-0">
-                  <Lightning size={20} weight="fill" className="text-[#F4556F]" />
-                </div>
-                <div>
-                  <p className="text-white/80 text-sm mb-2">
-                    <strong className="text-white">Spond</strong> is a popular team management app used by sports clubs worldwide. 
-                    Connect your account to automatically import events, sync team data, and track attendance.
-                  </p>
-                  <p className="text-white/50 text-xs">
-                    You'll need your Spond login credentials (email and password) to set up the integration.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
 
       {/* Configuration Dialog */}
       <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
         <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-900">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F86A5C] to-[#E54885] flex items-center justify-center">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
+              >
                 <Lightning size={18} weight="fill" className="text-white" />
               </div>
               Configure Spond Integration
@@ -698,25 +620,28 @@ export default function SpondIntegration() {
         <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-900">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F86A5C] to-[#E54885] flex items-center justify-center">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
+              >
                 <LinkIcon size={18} weight="bold" className="text-white" />
               </div>
               Link Teams
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Connect your Spond teams to local teams. Events from linked Spond teams will sync to the corresponding local team.
+              Connect your Spond teams and subgroups to local teams. Events from linked Spond teams will sync to the corresponding local team.
             </DialogDescription>
           </DialogHeader>
 
           {/* Legend */}
           <div className="flex items-center gap-6 py-2 px-3 bg-gray-50 rounded-lg text-xs">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-br from-[#F86A5C] to-[#E54885]"></div>
-              <span className="text-gray-600 font-medium">Spond Team</span>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
+              <span className="text-gray-600 font-medium">Spond Team/Subgroup</span>
             </div>
             <div className="text-gray-400">→</div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#248bcc]"></div>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
               <span className="text-gray-600 font-medium">Local Team</span>
             </div>
           </div>
@@ -724,7 +649,7 @@ export default function SpondIntegration() {
           <ScrollArea className="max-h-[50vh]">
             {loadingGroups ? (
               <div className="flex items-center justify-center py-8">
-                <ArrowsClockwise className="animate-spin text-[#F4556F]" size={32} />
+                <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
               </div>
             ) : (
               <div className="space-y-3">
@@ -735,8 +660,13 @@ export default function SpondIntegration() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-gradient-to-br from-[#F86A5C] to-[#E54885]"></div>
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
                         <span className="font-medium text-gray-900">{group.name}</span>
+                        {group.parentGroup && (
+                          <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            Subgroup
+                          </Badge>
+                        )}
                         <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white">
                           {group.memberCount} members
                         </Badge>
@@ -767,7 +697,7 @@ export default function SpondIntegration() {
                         </>
                       ) : (
                         <select
-                          className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-[#F4556F] focus:ring-1 focus:ring-[#F4556F]"
+                          className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-[#248bcc] focus:ring-1 focus:ring-[#248bcc]"
                           defaultValue=""
                           onChange={(e) => {
                             if (e.target.value) {
