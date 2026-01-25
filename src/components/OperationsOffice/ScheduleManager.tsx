@@ -385,10 +385,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         <h2 className="text-xl font-semibold">Schedule Management</h2>
         <div className="flex gap-2">
           <Button 
-            variant={showAICreator ? "default" : "outline"}
             onClick={() => setShowAICreator(!showAICreator)}
-            style={showAICreator ? { backgroundColor: '#8B5CF6' } : {}}
-            className={!showAICreator ? 'border-purple-400 text-purple-600 hover:bg-purple-50' : ''}
+            style={{ backgroundColor: '#8B5CF6', color: 'white' }}
+            className="hover:opacity-90"
           >
             <MagicWand className="mr-2" size={16} />
             AI Create
