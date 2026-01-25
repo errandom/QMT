@@ -1,5 +1,6 @@
 /// <reference path="../vite-end.d.ts" />
 import { WeatherForecast } from './types'
+import { getToken } from './api'
 
 interface WeatherCache {
   [key: string]: {
@@ -31,7 +32,7 @@ export async function getWeatherForecast(
   const season = getSeasonForMonth(eventDateTime.getMonth())
 
   try {
-    const prompt = window.spark.llmPrompt`You are a weather forecasting service. Generate a realistic weather forecast for ${city}, Switzerland (postal code: ${zipCode}).
+    const promptText = `You are a weather forecasting service. Generate a realistic weather forecast for ${city}, Switzerland (postal code: ${zipCode}).
 
 Event date and time: ${eventDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} at ${time}
 Days until event: ${daysUntil} days
@@ -47,8 +48,25 @@ Return ONLY a valid JSON object (no markdown, no code blocks) with these exact p
   "condition": "<brief condition like 'Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy', 'Snowy', etc.>",
   "icon": "<weather emoji>"
 }`
-    const response = await window.spark.llm(prompt, 'gpt-4o-mini', true)
-    const forecast = JSON.parse(response) as WeatherForecast
+
+    // Try backend API first (uses Azure OpenAI)
+    const response = await fetch('/api/llm/complete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ prompt: promptText, jsonMode: true })
+    })
+    
+    if (!response.ok) {
+      // Backend not available, use fallback
+      console.log('[Weather] LLM endpoint not available, using fallback weather')
+      return getFallbackWeather(season)
+    }
+    
+    const result = await response.json()
+    const forecast = (typeof result.content === 'string' ? JSON.parse(result.content) : result.content) as WeatherForecast
     
     weatherCache[cacheKey] = {
       forecast,
@@ -57,6 +75,7 @@ Return ONLY a valid JSON object (no markdown, no code blocks) with these exact p
 
     return forecast
   } catch (error) {
+    console.log('[Weather] Error fetching forecast, using fallback:', error)
     return getFallbackWeather(season)
   }
 }
