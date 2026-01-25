@@ -3146,6 +3146,60 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
+// ------------------------------
+// Generic LLM endpoint for frontend use
+// ------------------------------
+app.post('/api/llm/complete', async (req, res) => {
+  try {
+    const { prompt, jsonMode } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+    const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
+    const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
+
+    if (!AzureOpenAI || !azureEndpoint || !azureApiKey) {
+      return res.status(503).json({ error: 'LLM service not configured' });
+    }
+
+    const client = new AzureOpenAI({
+      endpoint: azureEndpoint,
+      apiKey: azureApiKey,
+      apiVersion: '2024-08-01-preview',
+    });
+
+    const response = await client.chat.completions.create({
+      model: azureDeployment,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+      ...(jsonMode && { response_format: { type: 'json_object' } })
+    });
+
+    let content = response.choices[0]?.message?.content;
+    if (!content) {
+      return res.status(500).json({ error: 'No response from LLM' });
+    }
+
+    // Clean markdown code blocks if present
+    content = content.trim();
+    if (content.startsWith('```json')) content = content.slice(7);
+    else if (content.startsWith('```')) content = content.slice(3);
+    if (content.endsWith('```')) content = content.slice(0, -3);
+    content = content.trim();
+
+    res.json({ content });
+  } catch (error) {
+    console.error('[LLM] Error:', error);
+    res.status(500).json({ error: 'LLM request failed' });
+  }
+});
+
 // Extra safety: log unhandled promise rejections / exceptions
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION:', err);
