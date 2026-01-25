@@ -234,13 +234,15 @@ router.post('/parse', async (req: Request, res: Response) => {
  */
 router.post('/create-from-natural-language', async (req: Request, res: Response) => {
   try {
-    const { input, confirm } = req.body;
+    const { input, confirm, defaultTeamId, defaultFieldId } = req.body;
     
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: 'Input text is required' });
     }
 
     console.log('[Events] Creating events from natural language:', input.substring(0, 100));
+    if (defaultTeamId) console.log('[Events] Default team ID:', defaultTeamId);
+    if (defaultFieldId) console.log('[Events] Default field ID:', defaultFieldId);
 
     // Get context
     const pool = await getPool();
@@ -284,6 +286,18 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
       sites: new Map(),
       fields: fieldMap,
     });
+
+    // Apply defaults if not specified in the parsed events
+    for (const event of apiEvents) {
+      // Apply default team if no teams were parsed
+      if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
+        event.teamIds = [defaultTeamId];
+      }
+      // Apply default field if no field was parsed
+      if (defaultFieldId && !event.fieldId) {
+        event.fieldId = defaultFieldId;
+      }
+    }
 
     // If not confirmed, return preview
     if (!confirm) {
