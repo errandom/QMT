@@ -828,13 +828,15 @@ If you cannot parse the input, return:
 
 app.post('/api/events/create-from-natural-language', async (req, res) => {
   try {
-    const { input, confirm } = req.body;
+    const { input, confirm, defaultTeamId, defaultFieldId } = req.body;
     
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: 'Input text is required' });
     }
 
     console.log('[AI Events] Processing:', input.substring(0, 100));
+    if (defaultTeamId) console.log('[AI Events] Default team ID:', defaultTeamId);
+    if (defaultFieldId) console.log('[AI Events] Default field ID:', defaultFieldId);
 
     // Check if AI is available
     const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
@@ -845,6 +847,17 @@ app.post('/api/events/create-from-natural-language', async (req, res) => {
       console.log('[AI Events] Azure OpenAI not configured, using fallback parser');
       // Fallback to regex-based parsing
       const parsed = parseEventWithRegex(input);
+      // Apply defaults to fallback parser results
+      if (parsed.success && parsed.events) {
+        for (const event of parsed.events) {
+          if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
+            event.teamIds = [defaultTeamId];
+          }
+          if (defaultFieldId && !event.fieldId) {
+            event.fieldId = defaultFieldId;
+          }
+        }
+      }
       return res.json(parsed);
     }
 
@@ -913,6 +926,18 @@ app.post('/api/events/create-from-natural-language', async (req, res) => {
       // Convert parsed events to API format
       const apiEvents = convertParsedToApiEvents(parsed.events, context);
 
+      // Apply defaults if not specified in the parsed events
+      for (const event of apiEvents) {
+        // Apply default team if no teams were parsed
+        if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
+          event.teamIds = [defaultTeamId];
+        }
+        // Apply default field if no field was parsed
+        if (defaultFieldId && !event.fieldId) {
+          event.fieldId = defaultFieldId;
+        }
+      }
+
       if (!confirm) {
         // Preview mode - return what would be created
         const totalEvents = calculateTotalEvents(apiEvents);
@@ -936,6 +961,17 @@ app.post('/api/events/create-from-natural-language', async (req, res) => {
       console.error('[AI Events] AI parsing failed:', aiError);
       // Fallback to regex
       const parsed = parseEventWithRegex(input);
+      // Apply defaults to fallback parser results
+      if (parsed.success && parsed.events) {
+        for (const event of parsed.events) {
+          if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
+            event.teamIds = [defaultTeamId];
+          }
+          if (defaultFieldId && !event.fieldId) {
+            event.fieldId = defaultFieldId;
+          }
+        }
+      }
       return res.json(parsed);
     }
 
