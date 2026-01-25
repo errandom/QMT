@@ -1,450 +1,119 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Cube, MapPin, ListBullets, Calendar, Football, FootballHelmet, Plus, Briefcase } from '@phosphor-icons/react'
-import EventList from './EventList'
-import ScheduleView from './ScheduleView'
-import FacilityRequestDialog from './FacilityRequestDialog'
-import EquipmentRequestDialog from './EquipmentRequestDialog'
-import LoginDialog from './LoginDialog'
-import { User, SportType } from '@/lib/types'
-import { useData } from '@/contexts/DataContext'
-import { hasAccess } from '@/lib/auth'
-import { COLORS, SIZES, STYLES } from '@/lib/constants'
-import { getTeamsBySportType } from '@/lib/teamUtils'
-
-interface DashboardProps {
-  currentUser: User | null
-  onLogin?: (user: User) => void
-  onNavigateToOffice?: () => void
-}
-
-export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: DashboardProps) {
-  const [sportFilter, setSportFilter] = useState<'All Sports' | SportType>('All Sports')
-  const [teamFilter, setTeamFilter] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'list' | 'schedule'>('list')
-  const [showFacilityDialog, setShowFacilityDialog] = useState(false)
-  const [showEquipmentDialog, setShowEquipmentDialog] = useState(false)
-  const [showLoginDialog, setShowLoginDialog] = useState(false)
-  const { teams } = useData()
-
-  const handleOfficeClick = () => {
-    if (currentUser && hasAccess(currentUser)) {
-      onNavigateToOffice?.()
-    } else {
-      setShowLoginDialog(true)
-    }
+{
+  "name": "spark-template",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "dev:full": "concurrently \"PORT=3001 npm run start\" \"npm run dev\"",
+    "dev:api": "PORT=3001 node server.js",
+    "build": "tsc -b --noCheck && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "optimize": "vite optimize",
+    "start": "node server.js",
+    "migrate": "node migrate-db.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@azure/openai": "^2.0.0",
+    "@github/spark": "^0.39.0",
+    "@heroicons/react": "^2.2.0",
+    "@hookform/resolvers": "^4.1.3",
+    "@octokit/core": "^6.1.4",
+    "@phosphor-icons/react": "^2.1.7",
+    "@radix-ui/colors": "^3.0.0",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-aspect-ratio": "^1.1.2",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.3",
+    "@radix-ui/react-context-menu": "^2.2.6",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-hover-card": "^1.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-navigation-menu": "^1.2.5",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.9",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toggle": "^1.1.2",
+    "@radix-ui/react-toggle-group": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/react-query": "^5.83.1",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "cors": "^2.8.5",
+    "d3": "^7.9.0",
+    "date-fns": "^3.6.0",
+    "dotenv": "^17.2.3",
+    "embla-carousel-react": "^8.5.2",
+    "express": "^4.19.2",
+    "framer-motion": "^12.6.2",
+    "input-otp": "^1.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.484.0",
+    "marked": "^15.0.7",
+    "mssql": "^12.1.0",
+    "next-themes": "^0.4.6",
+    "octokit": "^4.1.2",
+    "openai": "^6.16.0",
+    "react": "^19.0.0",
+    "react-day-picker": "^9.6.7",
+    "react-dom": "^19.0.0",
+    "react-error-boundary": "^6.0.0",
+    "react-hook-form": "^7.54.2",
+    "react-resizable-panels": "^2.1.7",
+    "recharts": "^2.15.1",
+    "sonner": "^2.0.1",
+    "tailwind-merge": "^3.0.2",
+    "three": "^0.175.0",
+    "tw-animate-css": "^1.2.4",
+    "uuid": "^11.1.0",
+    "vaul": "^1.1.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@tailwindcss/postcss": "^4.1.8",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mssql": "^9.1.8",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react-swc": "^3.10.1",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.28.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "tailwindcss": "^4.1.11",
+    "tsx": "^4.20.6",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^7.3.0"
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "engines": {
+    "node": ">=20"
   }
-
-  const handleLoginSuccess = (user: User) => {
-    onLogin?.(user)
-    setShowLoginDialog(false)
-    if (hasAccess(user)) {
-      onNavigateToOffice?.()
-    }
-  }
-
-  const filteredTeams = (teams || []).filter((team: any) => {
-    if (!team.isActive) return false
-    if (sportFilter === 'All Sports') return true
-    return team.sportType === sportFilter
-  })
-
-  // Get teams by sport type (only active teams)
-  const tackle: any[] = (teams || []).filter(t => t.sportType === 'Tackle Football' && t.isActive)
-  const flag: any[] = (teams || []).filter(t => t.sportType === 'Flag Football' && t.isActive)
-  const tackleTeams = tackle
-  const flagTeams = flag
-
-  const sportOptions = [
-    { 
-      value: 'All Sports', 
-      label: 'All Sports', 
-      icon: (
-        <div className="flex items-center gap-1">
-          <FootballHelmet size={SIZES.ICON_SIZE_LARGE} weight="duotone" />
-          <Football size={SIZES.ICON_SIZE_LARGE} weight="duotone" />
-        </div>
-      )
-    },
-    { 
-      value: 'Tackle Football', 
-      label: 'Tackle Football', 
-      icon: <FootballHelmet size={SIZES.ICON_SIZE_LARGE} weight="duotone" />
-    },
-    { 
-      value: 'Flag Football', 
-      label: 'Flag Football', 
-      icon: <Football size={SIZES.ICON_SIZE_LARGE} weight="duotone" />
-    }
-  ]
-
-  const activeIndex = sportOptions.findIndex(opt => opt.value === sportFilter)
-
-  return (
-    <>
-      <div className="space-y-6">
-        <div className="space-y-6">
-          <div className="relative w-full h-20 px-1.5 py-0.5" style={{ borderRadius: SIZES.BORDER_RADIUS }}>
-            <div className="relative h-full backdrop-blur-sm px-2 py-1 shadow-inner" style={{
-              background: COLORS.CHARCOAL,
-              borderRadius: SIZES.BORDER_RADIUS
-            }}>
-              <div className="relative grid grid-cols-3 gap-2 h-full">
-                <div 
-                  className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
-                  style={{
-                    left: `calc(${activeIndex * 33.333}% + 0.5rem)`,
-                    top: '0.125rem',
-                    bottom: '0.125rem',
-                    width: 'calc(33.333% - 1rem)',
-                    background: 'rgba(36, 139, 204, 0.75)',
-                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-                    borderRadius: SIZES.BORDER_RADIUS
-                  }}
-                />
-                
-                {sportOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setSportFilter(option.value as any)}
-                    className={`group relative z-10 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${
-                      sportFilter === option.value 
-                        ? 'drop-shadow-lg' 
-                        : 'opacity-70 hover:opacity-90'
-                    }`}
-                    style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                  >
-                    <div className="flex flex-col items-center gap-0.5 group-hover:scale-110 transition-transform duration-200">
-                      <span>{option.icon}</span>
-                      <span className="text-sm font-bold tracking-tight hidden md:inline">{option.label}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden sm:flex flex-row items-center gap-2 w-full">
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger 
-                className="group w-auto flex-1 border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" 
-                style={{ 
-                  ...STYLES.BUTTON_BASE, 
-                  ...STYLES.NAVY_BUTTON 
-                }}
-              >
-                <div className="group-hover:scale-110 transition-transform duration-200">
-                  <SelectValue placeholder="All Teams" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="glass-card border-white/20">
-                <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
-                {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
-                  <>
-                    <SelectItem value="divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                      {sportFilter}
-                    </SelectItem>
-                    {filteredTeams.map((team: any) => (
-                      <SelectItem key={team.id} value={team.id} className="text-foreground">
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </>
-                )}
-                {sportFilter === 'All Sports' && (
-                  <>
-                    {tackleTeams.length > 0 && (
-                      <>
-                        <SelectItem value="tackle-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                          Tackle Football
-                        </SelectItem>
-                        {tackleTeams.map((team: any) => (
-                          <SelectItem key={team.id} value={team.id} className="text-foreground">
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                    {flagTeams.length > 0 && (
-                      <>
-                        <SelectItem value="flag-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                          Flag Football
-                        </SelectItem>
-                        {flagTeams.map((team: any) => (
-                          <SelectItem key={team.id} value={team.id} className="text-foreground">
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-
-            <Button 
-              onClick={() => setShowFacilityDialog(true)} 
-              className="group w-[140px] h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
-              style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
-            >
-              <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
-                <MapPin className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                <span>Facility</span>
-              </div>
-            </Button>
-
-            <Button 
-              onClick={() => setShowEquipmentDialog(true)} 
-              className="group w-[140px] h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
-              style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
-            >
-              <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
-                <Cube className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                <span>Equipment</span>
-              </div>
-            </Button>
-
-            <Button 
-              onClick={handleOfficeClick} 
-              className="group h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(62,67,71,0.8)]" 
-              style={{ ...STYLES.BUTTON_BASE, ...STYLES.CHARCOAL_BUTTON }}
-            >
-              <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                <Briefcase className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                <span>Office</span>
-              </div>
-            </Button>
-
-            <div className="relative w-auto flex-1 h-10 backdrop-blur-sm" style={{
-              borderRadius: SIZES.BORDER_RADIUS,
-              background: COLORS.NAVY,
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
-              padding: '2px 4px'
-            }}>
-              <div className="relative w-full h-full flex gap-1">
-                <div 
-                  className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
-                  style={{
-                    left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
-                    top: '2px',
-                    bottom: '2px',
-                    width: 'calc(50% - 8px)',
-                    borderRadius: SIZES.BORDER_RADIUS,
-                    background: 'rgba(36, 139, 204, 0.75)',
-                    boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
-                  }}
-                />
-                
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
-                    viewMode === 'list' 
-                      ? 'drop-shadow-lg' 
-                      : 'opacity-70 hover:opacity-90'
-                  }`}
-                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                >
-                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                    <ListBullets size={SIZES.ICON_SIZE} weight="duotone" />
-                    <span className="font-bold text-sm hidden sm:inline">List</span>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => setViewMode('schedule')}
-                  className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
-                    viewMode === 'schedule' 
-                      ? 'drop-shadow-lg' 
-                      : 'opacity-70 hover:opacity-90'
-                  }`}
-                  style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                >
-                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                    <Calendar size={SIZES.ICON_SIZE} weight="duotone" />
-                    <span className="font-bold text-sm hidden sm:inline">Schedule</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:hidden">
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setShowFacilityDialog(true)} 
-                className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
-                style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
-              >
-                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                  <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
-                  <MapPin className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                  <span>Facility</span>
-                </div>
-              </Button>
-
-              <Button 
-                onClick={() => setShowEquipmentDialog(true)} 
-                className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
-                style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
-              >
-                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                  <Plus className="mr-2" size={SIZES.ICON_SIZE} weight="bold" />
-                  <Cube className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                  <span>Equipment</span>
-                </div>
-              </Button>
-
-              <Button 
-                onClick={handleOfficeClick} 
-                className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(62,67,71,0.8)]" 
-                style={{ ...STYLES.BUTTON_BASE, ...STYLES.CHARCOAL_BUTTON }}
-              >
-                <div className="flex items-center group-hover:scale-110 transition-transform duration-200">
-                  <Briefcase className="mr-2 hidden md:inline" size={SIZES.ICON_SIZE} weight="duotone" />
-                  <span>Office</span>
-                </div>
-              </Button>
-            </div>
-
-            <div className="flex gap-2">
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger 
-                  className="group flex-1 border-white/20 text-white hover:shadow-[0_0_20px_rgba(0,31,63,0.8)] transition-all" 
-                  style={{ 
-                    ...STYLES.BUTTON_BASE, 
-                    ...STYLES.NAVY_BUTTON 
-                  }}
-                >
-                  <div className="group-hover:scale-110 transition-transform duration-200">
-                    <SelectValue placeholder="All Teams" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="glass-card border-white/20">
-                  <SelectItem value="all" className="text-foreground">All Teams</SelectItem>
-                  {sportFilter !== 'All Sports' && filteredTeams.length > 0 && (
-                    <>
-                      <SelectItem value="divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                        {sportFilter}
-                      </SelectItem>
-                      {filteredTeams.map((team: any) => (
-                        <SelectItem key={team.id} value={team.id} className="text-foreground">
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </>
-                  )}
-                  {sportFilter === 'All Sports' && (
-                    <>
-                      {tackleTeams.length > 0 && (
-                        <>
-                          <SelectItem value="tackle-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                            Tackle Football
-                          </SelectItem>
-                          {tackleTeams.map((team: any) => (
-                            <SelectItem key={team.id} value={team.id} className="text-foreground">
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                      {flagTeams.length > 0 && (
-                        <>
-                          <SelectItem value="flag-divider" disabled className="text-xs font-semibold" style={{ color: COLORS.ACCENT }}>
-                            Flag Football
-                          </SelectItem>
-                          {flagTeams.map((team: any) => (
-                            <SelectItem key={team.id} value={team.id} className="text-foreground">
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-
-              <div className="relative flex-1 h-10 backdrop-blur-sm" style={{
-                borderRadius: SIZES.BORDER_RADIUS,
-                background: COLORS.NAVY,
-                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
-                padding: '2px 4px'
-              }}>
-                <div className="relative w-full h-full flex gap-1">
-                  <div 
-                    className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
-                    style={{
-                      left: viewMode === 'list' ? '4px' : 'calc(50% + 4px)',
-                      top: '2px',
-                      bottom: '2px',
-                      width: 'calc(50% - 8px)',
-                      borderRadius: SIZES.BORDER_RADIUS,
-                      background: 'rgba(36, 139, 204, 0.75)',
-                      boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
-                    }}
-                  />
-                  
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
-                      viewMode === 'list' 
-                        ? 'drop-shadow-lg' 
-                        : 'opacity-70 hover:opacity-90'
-                    }`}
-                    style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                  >
-                    <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                      <ListBullets size={SIZES.ICON_SIZE} weight="duotone" />
-                    </div>
-                  </button>
-                  
-                  <button
-                    onClick={() => setViewMode('schedule')}
-                    className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
-                      viewMode === 'schedule' 
-                        ? 'drop-shadow-lg' 
-                        : 'opacity-70 hover:opacity-90'
-                    }`}
-                    style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
-                  >
-                    <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
-                      <Calendar size={SIZES.ICON_SIZE} weight="duotone" />
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold mb-4 drop-shadow-lg" style={{ color: COLORS.NAVY }}>Upcoming Events</h2>
-          {viewMode === 'list' ? (
-            <EventList sportFilter={sportFilter} teamFilter={teamFilter} />
-          ) : (
-            <ScheduleView sportFilter={sportFilter} teamFilter={teamFilter} />
-          )}
-        </div>
-      </div>
-
-      <FacilityRequestDialog
-        open={showFacilityDialog}
-        onOpenChange={setShowFacilityDialog}
-      />
-
-      <EquipmentRequestDialog
-        open={showEquipmentDialog}
-        onOpenChange={setShowEquipmentDialog}
-      />
-
-      <LoginDialog
-        open={showLoginDialog}
-        onOpenChange={setShowLoginDialog}
-        onLoginSuccess={handleLoginSuccess}
-      />
-    </>
-  )
 }
