@@ -1859,7 +1859,13 @@ async function spondLogin(username, password) {
 }
 
 async function spondRequest(token, endpoint) {
-  const response = await fetch(`${SPOND_API_BASE}${endpoint}`, {
+  // Add query params to include member data for groups endpoint
+  let url = `${SPOND_API_BASE}${endpoint}`;
+  if (endpoint === 'groups') {
+    url += '?includeMembers=true';
+  }
+  
+  const response = await fetch(url, {
     headers: { 
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -2057,15 +2063,29 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
     const subgroupsWithMappings = [];
     
     for (const group of groups) {
+      // Log the group structure for debugging
+      console.log('[Spond Groups] Group:', group.name, 
+        'members:', group.members?.length || 0,
+        'subGroups:', group.subGroups?.length || 0);
+      
       // If there are subgroups, use those as the teams
       if (group.subGroups && group.subGroups.length > 0) {
         for (const subgroup of group.subGroups) {
+          // Subgroup members is an array of member IDs (strings)
+          // Count them directly, or if it's empty, try to count from parent group
+          const subgroupMemberIds = subgroup.members || [];
+          const memberCount = Array.isArray(subgroupMemberIds) ? subgroupMemberIds.length : 0;
+          
+          console.log('[Spond Groups]   Subgroup:', subgroup.name, 
+            'memberIds:', subgroupMemberIds.length,
+            'raw members:', JSON.stringify(subgroup.members)?.substring(0, 100));
+          
           subgroupsWithMappings.push({
             id: subgroup.id,
             name: subgroup.name,
             parentGroup: group.name,
             activity: group.activity,
-            memberCount: subgroup.members?.length || 0,
+            memberCount: memberCount,
             linkedTeam: mappingMap.get(subgroup.id) || null,
           });
         }
