@@ -167,15 +167,27 @@ export default function NaturalLanguageEventCreator({
       })
 
       if (response.status === 404) {
-        toast.error('AI service not available. Please check server configuration.')
-        console.error('[NLP] 404 - Endpoint not found. Make sure the server is running with the events routes.')
+        toast.error('AI service not available. The backend API server is not running. Please start it with: npm run start')
+        console.error('[NLP] 404 - Endpoint not found. The backend server (server.js) needs to be running for AI features.')
         return
       }
 
       if (!response.ok) {
-        const errorText = await response.text()
+        let errorText = ''
+        try {
+          errorText = await response.text()
+        } catch (e) {
+          // Ignore text parsing errors
+        }
         console.error('[NLP] Server error:', response.status, errorText)
-        toast.error(`Server error: ${response.status}`)
+        
+        if (response.status === 401 || response.status === 403) {
+          toast.error('Authentication required. Please log in to use AI event creation.')
+        } else if (response.status >= 500) {
+          toast.error('Server error. Please check the server logs for details.')
+        } else {
+          toast.error(`Server error: ${response.status}`)
+        }
         return
       }
 
@@ -233,9 +245,21 @@ export default function NaturalLanguageEventCreator({
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
+        let errorText = ''
+        try {
+          errorText = await response.text()
+        } catch (e) {
+          // Ignore text parsing errors
+        }
         console.error('[NLP] Server error:', response.status, errorText)
-        toast.error(`Server error: ${response.status}`)
+        
+        if (response.status === 404) {
+          toast.error('AI service not available. The backend API server is not running.')
+        } else if (response.status === 401 || response.status === 403) {
+          toast.error('Authentication required. Please log in to use AI event creation.')
+        } else {
+          toast.error(`Server error: ${response.status}`)
+        }
         return
       }
 
