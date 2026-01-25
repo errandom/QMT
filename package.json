@@ -6,7 +6,7 @@
     "dev": "vite",
     "dev:full": "concurrently \"PORT=3001 npm run start\" \"npm run dev\"",
     "dev:api": "PORT=3001 node server.js",
-    "build": "tsc -b --noCheck && vite build --config vite.config.build.ts",
+    "build": "tsc -b --noCheck && vite build --config vite.config.build.mts",
     "build:spark": "tsc -b --noCheck && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
