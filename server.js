@@ -2557,6 +2557,536 @@ app.get('/api/spond/events', verifyToken, requireAdminOrMgmt, async (req, res) =
   }
 });
 
+// =====================================================
+// Spond Sync Settings - Granular per-team configuration
+// =====================================================
+
+// Get all sync settings
+app.get('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT ss.*, t.name as team_name
+      FROM spond_sync_settings ss
+      JOIN teams t ON ss.team_id = t.id
+      ORDER BY t.name
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('[Spond] Error fetching sync settings:', err);
+    res.status(500).json({ error: 'Failed to fetch sync settings' });
+  }
+});
+
+// Get sync settings for a specific team
+app.get('/api/spond/sync-settings/:teamId', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('SELECT * FROM spond_sync_settings WHERE team_id = @team_id');
+    
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Sync settings not found' });
+    }
+    
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('[Spond] Error fetching sync settings:', err);
+    res.status(500).json({ error: 'Failed to fetch sync settings' });
+  }
+});
+
+// Create or update sync settings for a team
+app.post('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const {
+      teamId,
+      spondGroupId,
+      spondGroupName,
+      spondParentGroupName,
+      isSubgroup,
+      syncEventsImport,
+      syncEventsExport,
+      syncAttendanceImport,
+      syncEventTitle,
+      syncEventDescription,
+      syncEventTime,
+      syncEventLocation,
+      syncEventType,
+      isActive
+    } = req.body;
+
+    if (!teamId || !spondGroupId) {
+      return res.status(400).json({ error: 'teamId and spondGroupId are required' });
+    }
+
+    const pool = await getPool();
+    
+    // Check if settings already exist
+    const existing = await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('SELECT id FROM spond_sync_settings WHERE team_id = @team_id');
+    
+    if (existing.recordset.length > 0) {
+      // Update existing
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup || false)
+        .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+        .input('sync_events_export', sql.Bit, syncEventsExport || false)
+        .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+        .input('sync_event_title', sql.Bit, syncEventTitle !== false)
+        .input('sync_event_description', sql.Bit, syncEventDescription !== false)
+        .input('sync_event_time', sql.Bit, syncEventTime !== false)
+        .input('sync_event_location', sql.Bit, syncEventLocation !== false)
+        .input('sync_event_type', sql.Bit, syncEventType !== false)
+        .input('is_active', sql.Bit, isActive !== false)
+        .query(`
+          UPDATE spond_sync_settings SET
+            spond_group_id = @spond_group_id,
+            spond_group_name = @spond_group_name,
+            spond_parent_group_name = @spond_parent_group_name,
+            is_subgroup = @is_subgroup,
+            sync_events_import = @sync_events_import,
+            sync_events_export = @sync_events_export,
+            sync_attendance_import = @sync_attendance_import,
+            sync_event_title = @sync_event_title,
+            sync_event_description = @sync_event_description,
+            sync_event_time = @sync_event_time,
+            sync_event_location = @sync_event_location,
+            sync_event_type = @sync_event_type,
+            is_active = @is_active,
+            updated_at = GETDATE()
+          WHERE team_id = @team_id
+        `);
+    } else {
+      // Insert new
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup || false)
+        .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+        .input('sync_events_export', sql.Bit, syncEventsExport || false)
+        .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+        .input('sync_event_title', sql.Bit, syncEventTitle !== false)
+        .input('sync_event_description', sql.Bit, syncEventDescription !== false)
+        .input('sync_event_time', sql.Bit, syncEventTime !== false)
+        .input('sync_event_location', sql.Bit, syncEventLocation !== false)
+        .input('sync_event_type', sql.Bit, syncEventType !== false)
+        .input('is_active', sql.Bit, isActive !== false)
+        .query(`
+          INSERT INTO spond_sync_settings (
+            team_id, spond_group_id, spond_group_name, spond_parent_group_name, is_subgroup,
+            sync_events_import, sync_events_export, sync_attendance_import,
+            sync_event_title, sync_event_description, sync_event_time, sync_event_location, sync_event_type,
+            is_active
+          ) VALUES (
+            @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_name, @is_subgroup,
+            @sync_events_import, @sync_events_export, @sync_attendance_import,
+            @sync_event_title, @sync_event_description, @sync_event_time, @sync_event_location, @sync_event_type,
+            @is_active
+          )
+        `);
+    }
+    
+    // Also update the teams table spond_group_id for backwards compatibility
+    await pool.request()
+      .input('id', sql.Int, teamId)
+      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .query('UPDATE teams SET spond_group_id = @spond_group_id WHERE id = @id');
+    
+    res.json({ success: true, message: 'Sync settings saved' });
+  } catch (err) {
+    console.error('[Spond] Error saving sync settings:', err);
+    res.status(500).json({ error: 'Failed to save sync settings' });
+  }
+});
+
+// Delete sync settings for a team
+app.delete('/api/spond/sync-settings/:teamId', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+    const pool = await getPool();
+    
+    await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('DELETE FROM spond_sync_settings WHERE team_id = @team_id');
+    
+    // Also clear spond_group_id from teams table
+    await pool.request()
+      .input('id', sql.Int, teamId)
+      .query('UPDATE teams SET spond_group_id = NULL WHERE id = @id');
+    
+    res.json({ success: true, message: 'Sync settings deleted' });
+  } catch (err) {
+    console.error('[Spond] Error deleting sync settings:', err);
+    res.status(500).json({ error: 'Failed to delete sync settings' });
+  }
+});
+
+// =====================================================
+// Import Teams from Spond
+// =====================================================
+
+// Get Spond groups/subgroups available for import (not yet linked)
+app.get('/api/spond/groups-for-import', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+    
+    const groups = await spondRequest(token, 'groups');
+    const pool = await getPool();
+    
+    // Get already linked group IDs
+    const linkedResult = await pool.request()
+      .query('SELECT spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+    const linkedIds = new Set(linkedResult.recordset.map(r => r.spond_group_id));
+    
+    // Build list of importable groups/subgroups
+    const importableGroups = [];
+    
+    for (const group of groups) {
+      if (group.subGroups && group.subGroups.length > 0) {
+        for (const subgroup of group.subGroups) {
+          if (!linkedIds.has(subgroup.id)) {
+            importableGroups.push({
+              id: subgroup.id,
+              name: subgroup.name,
+              parentGroup: group.name,
+              isSubgroup: true,
+              memberCount: subgroup.members?.length || 0,
+              activity: group.activity
+            });
+          }
+        }
+      } else {
+        if (!linkedIds.has(group.id)) {
+          importableGroups.push({
+            id: group.id,
+            name: group.name,
+            parentGroup: null,
+            isSubgroup: false,
+            memberCount: group.members?.length || 0,
+            activity: group.activity
+          });
+        }
+      }
+    }
+    
+    res.json(importableGroups);
+  } catch (err) {
+    console.error('[Spond] Error fetching groups for import:', err);
+    spondToken = null;
+    res.status(500).json({ error: 'Failed to fetch Spond groups' });
+  }
+});
+
+// Import a team from Spond (creates new local team + sync settings)
+app.post('/api/spond/import-team', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const {
+      spondGroupId,
+      spondGroupName,
+      spondParentGroupName,
+      isSubgroup,
+      sport,
+      syncEventsImport,
+      syncEventsExport,
+      syncAttendanceImport
+    } = req.body;
+
+    if (!spondGroupId || !spondGroupName) {
+      return res.status(400).json({ error: 'spondGroupId and spondGroupName are required' });
+    }
+
+    const pool = await getPool();
+    
+    // Check if group is already linked
+    const existing = await pool.request()
+      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .query('SELECT id FROM teams WHERE spond_group_id = @spond_group_id');
+    
+    if (existing.recordset.length > 0) {
+      return res.status(400).json({ error: 'This Spond group is already linked to a team' });
+    }
+    
+    // Create new team
+    const teamResult = await pool.request()
+      .input('name', sql.NVarChar, spondGroupName)
+      .input('sport', sql.NVarChar, sport || 'Tackle Football')
+      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .input('imported_from_spond', sql.Bit, 1)
+      .input('is_active', sql.Bit, 1)
+      .query(`
+        INSERT INTO teams (name, sport, spond_group_id, imported_from_spond, spond_import_date, is_active)
+        OUTPUT INSERTED.id, INSERTED.name
+        VALUES (@name, @sport, @spond_group_id, @imported_from_spond, GETDATE(), @is_active)
+      `);
+    
+    const newTeamId = teamResult.recordset[0].id;
+    
+    // Create sync settings
+    await pool.request()
+      .input('team_id', sql.Int, newTeamId)
+      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .input('spond_group_name', sql.NVarChar, spondGroupName)
+      .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+      .input('is_subgroup', sql.Bit, isSubgroup || false)
+      .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+      .input('sync_events_export', sql.Bit, syncEventsExport || false)
+      .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+      .query(`
+        INSERT INTO spond_sync_settings (
+          team_id, spond_group_id, spond_group_name, spond_parent_group_name, is_subgroup,
+          sync_events_import, sync_events_export, sync_attendance_import, is_active
+        ) VALUES (
+          @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_name, @is_subgroup,
+          @sync_events_import, @sync_events_export, @sync_attendance_import, 1
+        )
+      `);
+    
+    res.json({
+      success: true,
+      message: `Team "${spondGroupName}" imported from Spond`,
+      team: { id: newTeamId, name: spondGroupName }
+    });
+  } catch (err) {
+    console.error('[Spond] Error importing team:', err);
+    res.status(500).json({ error: 'Failed to import team from Spond' });
+  }
+});
+
+// Bulk import teams from Spond
+app.post('/api/spond/import-teams', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const { groups, sport, syncEventsImport, syncEventsExport, syncAttendanceImport } = req.body;
+
+    if (!groups || !Array.isArray(groups) || groups.length === 0) {
+      return res.status(400).json({ error: 'groups array is required' });
+    }
+
+    const pool = await getPool();
+    const results = { imported: 0, skipped: 0, errors: [] };
+    
+    for (const group of groups) {
+      try {
+        // Check if already linked
+        const existing = await pool.request()
+          .input('spond_group_id', sql.NVarChar, group.id)
+          .query('SELECT id FROM teams WHERE spond_group_id = @spond_group_id');
+        
+        if (existing.recordset.length > 0) {
+          results.skipped++;
+          continue;
+        }
+        
+        // Create team
+        const teamResult = await pool.request()
+          .input('name', sql.NVarChar, group.name)
+          .input('sport', sql.NVarChar, sport || 'Tackle Football')
+          .input('spond_group_id', sql.NVarChar, group.id)
+          .input('imported_from_spond', sql.Bit, 1)
+          .input('is_active', sql.Bit, 1)
+          .query(`
+            INSERT INTO teams (name, sport, spond_group_id, imported_from_spond, spond_import_date, is_active)
+            OUTPUT INSERTED.id
+            VALUES (@name, @sport, @spond_group_id, @imported_from_spond, GETDATE(), @is_active)
+          `);
+        
+        const newTeamId = teamResult.recordset[0].id;
+        
+        // Create sync settings
+        await pool.request()
+          .input('team_id', sql.Int, newTeamId)
+          .input('spond_group_id', sql.NVarChar, group.id)
+          .input('spond_group_name', sql.NVarChar, group.name)
+          .input('spond_parent_group_name', sql.NVarChar, group.parentGroup || null)
+          .input('is_subgroup', sql.Bit, group.isSubgroup || false)
+          .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+          .input('sync_events_export', sql.Bit, syncEventsExport || false)
+          .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+          .query(`
+            INSERT INTO spond_sync_settings (
+              team_id, spond_group_id, spond_group_name, spond_parent_group_name, is_subgroup,
+              sync_events_import, sync_events_export, sync_attendance_import, is_active
+            ) VALUES (
+              @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_name, @is_subgroup,
+              @sync_events_import, @sync_events_export, @sync_attendance_import, 1
+            )
+          `);
+        
+        results.imported++;
+      } catch (err) {
+        console.error(`[Spond] Error importing team ${group.name}:`, err.message);
+        results.errors.push({ name: group.name, error: err.message });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Imported ${results.imported} teams, skipped ${results.skipped}`,
+      ...results
+    });
+  } catch (err) {
+    console.error('[Spond] Error bulk importing teams:', err);
+    res.status(500).json({ error: 'Failed to import teams' });
+  }
+});
+
+// Sync with granular settings (respects per-team import/export settings)
+app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { daysAhead, daysBehind, direction } = req.body;
+    const pool = await getPool();
+    
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() - (daysBehind || 7));
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + (daysAhead || 60));
+    
+    // Get all active sync settings
+    const settingsResult = await pool.request().query(`
+      SELECT ss.*, t.id as team_id, t.name as team_name
+      FROM spond_sync_settings ss
+      JOIN teams t ON ss.team_id = t.id
+      WHERE ss.is_active = 1
+    `);
+    
+    const results = {
+      imported: 0,
+      exported: 0,
+      attendanceUpdated: 0,
+      errors: []
+    };
+    
+    for (const settings of settingsResult.recordset) {
+      try {
+        // Import events from Spond
+        if (settings.sync_events_import && (direction === 'import' || direction === 'both' || !direction)) {
+          const events = await spondRequest(token, 
+            `sponds?groupId=${settings.spond_group_id}&minEndTimestamp=${minDate.toISOString()}&maxEndTimestamp=${maxDate.toISOString()}&includeComments=false&includeHidden=false`
+          );
+          
+          for (const spondEvent of events) {
+            await pool.request()
+              .input('spond_id', sql.NVarChar, spondEvent.id)
+              .input('name', sql.NVarChar, settings.sync_event_title ? (spondEvent.heading || 'Spond Event') : null)
+              .input('description', sql.NVarChar, settings.sync_event_description ? (spondEvent.description || '') : null)
+              .input('team_id', sql.Int, settings.team_id)
+              .input('start_time', sql.DateTime, settings.sync_event_time ? new Date(spondEvent.startTimestamp) : null)
+              .input('end_time', sql.DateTime, settings.sync_event_time ? new Date(spondEvent.endTimestamp) : null)
+              .input('event_type', sql.NVarChar, settings.sync_event_type ? (spondEvent.type === 'MATCH' ? 'game' : 'practice') : null)
+              .input('status', sql.NVarChar, spondEvent.cancelled ? 'cancelled' : 'scheduled')
+              .input('spond_group_id', sql.NVarChar, settings.spond_group_id)
+              .query(`
+                MERGE events AS target
+                USING (SELECT @spond_id AS spond_id) AS source
+                ON target.spond_id = source.spond_id
+                WHEN MATCHED THEN
+                  UPDATE SET 
+                    name = COALESCE(@name, target.name),
+                    description = COALESCE(@description, target.description),
+                    start_time = COALESCE(@start_time, target.start_time),
+                    end_time = COALESCE(@end_time, target.end_time),
+                    event_type = COALESCE(@event_type, target.event_type),
+                    status = @status,
+                    updated_at = GETDATE()
+                WHEN NOT MATCHED THEN
+                  INSERT (spond_id, name, description, team_id, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
+                  VALUES (@spond_id, COALESCE(@name, 'Spond Event'), @description, @team_id, @start_time, @end_time, COALESCE(@event_type, 'practice'), @status, @spond_group_id, GETDATE(), GETDATE());
+              `);
+            results.imported++;
+          }
+          
+          // Update last import timestamp
+          await pool.request()
+            .input('team_id', sql.Int, settings.team_id)
+            .query('UPDATE spond_sync_settings SET last_import_sync = GETDATE() WHERE team_id = @team_id');
+        }
+        
+        // Sync attendance
+        if (settings.sync_attendance_import && (direction === 'import' || direction === 'both' || !direction)) {
+          const eventsWithSpond = await pool.request()
+            .input('team_id', sql.Int, settings.team_id)
+            .input('min_date', sql.DateTime, minDate)
+            .input('max_date', sql.DateTime, maxDate)
+            .query(`
+              SELECT id, spond_id FROM events 
+              WHERE team_id = @team_id 
+              AND spond_id IS NOT NULL
+              AND start_time >= @min_date AND start_time <= @max_date
+            `);
+          
+          for (const event of eventsWithSpond.recordset) {
+            try {
+              const spondEvent = await spondRequest(token, `sponds/${event.spond_id}`);
+              const responses = spondEvent.responses || {};
+              
+              await pool.request()
+                .input('id', sql.Int, event.id)
+                .input('accepted', sql.Int, responses.acceptedIds?.length || 0)
+                .input('declined', sql.Int, responses.declinedIds?.length || 0)
+                .input('unanswered', sql.Int, responses.unansweredIds?.length || 0)
+                .input('waiting', sql.Int, responses.waitinglistIds?.length || 0)
+                .query(`
+                  UPDATE events SET 
+                    attendance_accepted = @accepted,
+                    attendance_declined = @declined,
+                    attendance_unanswered = @unanswered,
+                    attendance_waiting = @waiting,
+                    attendance_last_sync = GETDATE()
+                  WHERE id = @id
+                `);
+              results.attendanceUpdated++;
+            } catch (e) {
+              // Skip individual attendance errors
+            }
+          }
+          
+          // Update last attendance timestamp
+          await pool.request()
+            .input('team_id', sql.Int, settings.team_id)
+            .query('UPDATE spond_sync_settings SET last_attendance_sync = GETDATE() WHERE team_id = @team_id');
+        }
+        
+        // TODO: Export events to Spond (when settings.sync_events_export is true)
+        // This would require Spond API write access
+        
+      } catch (err) {
+        console.error(`[Spond] Error syncing team ${settings.team_name}:`, err.message);
+        results.errors.push({ team: settings.team_name, error: err.message });
+      }
+    }
+    
+    // Update global last sync
+    await pool.request().query('UPDATE spond_config SET last_sync = GETDATE() WHERE is_active = 1');
+    
+    res.json({
+      success: true,
+      message: `Sync complete`,
+      ...results
+    });
+  } catch (err) {
+    console.error('[Spond] Sync with settings error:', err);
+    spondToken = null;
+    res.status(500).json({ error: 'Sync failed' });
+  }
+});
+
 // ------------------------------
 // Static assets + SPA fallback
 // ------------------------------
