@@ -238,7 +238,8 @@ export class SpondClient {
   async getGroups(): Promise<SpondGroup[]> {
     await this.ensureAuthenticated();
 
-    const url = `${this.API_BASE_URL}groups/`;
+    // Include members in the response to get member counts
+    const url = `${this.API_BASE_URL}groups/?includeMembers=true`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -251,6 +252,15 @@ export class SpondClient {
 
     this.groups = await response.json() as SpondGroup[];
     console.log(`[Spond] Retrieved ${this.groups?.length || 0} groups`);
+    
+    // Log member counts for debugging
+    for (const group of this.groups || []) {
+      console.log(`[Spond] Group "${group.name}": ${group.members?.length || 0} members, ${group.subGroups?.length || 0} subgroups`);
+      for (const subgroup of group.subGroups || []) {
+        console.log(`[Spond]   Subgroup "${subgroup.name}": ${subgroup.members?.length || 0} member IDs`);
+      }
+    }
+    
     return this.groups || [];
   }
 
