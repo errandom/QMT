@@ -344,16 +344,6 @@ export default function SpondIntegration() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Spond Logo */}
-              <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
-              >
-                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M70 25C70 25 60 25 50 25C35 25 25 35 25 50C25 58 29 65 35 70" stroke="white" strokeWidth="8" strokeLinecap="round" fill="none"/>
-                  <path d="M30 75C30 75 40 75 50 75C65 75 75 65 75 50C75 42 71 35 65 30" stroke="white" strokeWidth="8" strokeLinecap="round" fill="none"/>
-                </svg>
-              </div>
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
                   Spond Integration
