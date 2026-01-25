@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   MagicWand, 
   Lightning, 
@@ -66,6 +68,8 @@ export default function NaturalLanguageEventCreator({
     totalEvents: number
     events: ParsedEventPreview[]
   } | null>(null)
+  const [defaultTeamId, setDefaultTeamId] = useState<string>('')
+  const [defaultFieldId, setDefaultFieldId] = useState<string>('')
 
   const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -154,7 +158,12 @@ export default function NaturalLanguageEventCreator({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getToken()}`,
         },
-        body: JSON.stringify({ input, confirm: false }),
+        body: JSON.stringify({ 
+          input, 
+          confirm: false,
+          defaultTeamId: defaultTeamId ? parseInt(defaultTeamId) : undefined,
+          defaultFieldId: defaultFieldId ? parseInt(defaultFieldId) : undefined,
+        }),
       })
 
       if (response.status === 404) {
@@ -215,7 +224,12 @@ export default function NaturalLanguageEventCreator({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getToken()}`,
         },
-        body: JSON.stringify({ input, confirm: true }),
+        body: JSON.stringify({ 
+          input, 
+          confirm: true,
+          defaultTeamId: defaultTeamId ? parseInt(defaultTeamId) : undefined,
+          defaultFieldId: defaultFieldId ? parseInt(defaultFieldId) : undefined,
+        }),
       })
 
       if (!response.ok) {
@@ -281,6 +295,50 @@ export default function NaturalLanguageEventCreator({
               className="min-h-[100px] resize-none"
               disabled={loading}
             />
+
+            {/* Default Team and Field Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="defaultTeam" className="text-sm flex items-center gap-2">
+                  <Users size={14} />
+                  Default Team
+                  <span className="text-xs text-gray-400">(if not specified)</span>
+                </Label>
+                <Select value={defaultTeamId} onValueChange={setDefaultTeamId}>
+                  <SelectTrigger id="defaultTeam">
+                    <SelectValue placeholder="Select a team..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={String(team.id)}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="defaultField" className="text-sm flex items-center gap-2">
+                  <MapPin size={14} />
+                  Default Location
+                  <span className="text-xs text-gray-400">(if not specified)</span>
+                </Label>
+                <Select value={defaultFieldId} onValueChange={setDefaultFieldId}>
+                  <SelectTrigger id="defaultField">
+                    <SelectValue placeholder="Select a location..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {fields.map((field) => (
+                      <SelectItem key={field.id} value={String(field.id)}>
+                        {field.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* Completeness indicators */}
             {completeness && (
