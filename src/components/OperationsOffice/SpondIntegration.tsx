@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   ArrowsClockwise, 
   Check, 
@@ -26,7 +29,14 @@ import {
   UserCheck,
   UserMinus,
   UserPlus,
-  Question
+  Question,
+  Download,
+  Upload,
+  Sliders,
+  ArrowRight,
+  ArrowLeft,
+  ArrowsLeftRight,
+  Plus
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api, getToken } from '@/lib/api'
@@ -48,6 +58,38 @@ interface SpondGroup {
   activity?: string
   memberCount: number
   linkedTeam: { id: number; name: string } | null
+  isSubgroup?: boolean
+}
+
+interface ImportableGroup {
+  id: string
+  name: string
+  parentGroup: string | null
+  isSubgroup: boolean
+  memberCount: number
+  activity?: string
+}
+
+interface SyncSettings {
+  id?: number
+  team_id: number
+  team_name?: string
+  spond_group_id: string
+  spond_group_name?: string
+  spond_parent_group_name?: string
+  is_subgroup: boolean
+  sync_events_import: boolean
+  sync_events_export: boolean
+  sync_attendance_import: boolean
+  sync_event_title: boolean
+  sync_event_description: boolean
+  sync_event_time: boolean
+  sync_event_location: boolean
+  sync_event_type: boolean
+  is_active: boolean
+  last_import_sync?: string
+  last_export_sync?: string
+  last_attendance_sync?: string
 }
 
 interface Team {
@@ -64,6 +106,8 @@ export default function SpondIntegration() {
   const [syncingAttendance, setSyncingAttendance] = useState(false)
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [showMappingDialog, setShowMappingDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [showSyncSettingsDialog, setShowSyncSettingsDialog] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   
   const [credentials, setCredentials] = useState({
@@ -76,6 +120,22 @@ export default function SpondIntegration() {
   const [spondGroups, setSpondGroups] = useState<SpondGroup[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
+  
+  // New state for import and sync settings
+  const [importableGroups, setImportableGroups] = useState<ImportableGroup[]>([])
+  const [loadingImportable, setLoadingImportable] = useState(false)
+  const [selectedForImport, setSelectedForImport] = useState<Set<string>>(new Set())
+  const [importSport, setImportSport] = useState('Tackle Football')
+  const [importSettings, setImportSettings] = useState({
+    syncEventsImport: true,
+    syncEventsExport: false,
+    syncAttendanceImport: true
+  })
+  const [importing, setImporting] = useState(false)
+  
+  const [syncSettings, setSyncSettings] = useState<SyncSettings[]>([])
+  const [loadingSyncSettings, setLoadingSyncSettings] = useState(false)
+  const [editingSyncSettings, setEditingSyncSettings] = useState<SyncSettings | null>(null)
 
   useEffect(() => {
     fetchStatus()
@@ -325,6 +385,205 @@ export default function SpondIntegration() {
     }
   }
 
+  // Fetch groups available for import
+  const fetchImportableGroups = async () => {
+    setLoadingImportable(true)
+    try {
+      const response = await fetch('/api/spond/groups-for-import', {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+      if (response.ok) {
+        const groups = await response.json()
+        setImportableGroups(groups)
+      } else {
+        toast.error('Failed to fetch groups')
+      }
+    } catch (error) {
+      toast.error('Failed to fetch groups')
+    } finally {
+      setLoadingImportable(false)
+    }
+  }
+
+  // Open import dialog
+  const openImportDialog = () => {
+    fetchImportableGroups()
+    setSelectedForImport(new Set())
+    setShowImportDialog(true)
+  }
+
+  // Toggle group selection for import
+  const toggleImportSelection = (groupId: string) => {
+    const newSet = new Set(selectedForImport)
+    if (newSet.has(groupId)) {
+      newSet.delete(groupId)
+    } else {
+      newSet.add(groupId)
+    }
+    setSelectedForImport(newSet)
+  }
+
+  // Import selected teams
+  const importSelectedTeams = async () => {
+    if (selectedForImport.size === 0) {
+      toast.error('Please select at least one team to import')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const groupsToImport = importableGroups.filter(g => selectedForImport.has(g.id))
+      const response = await fetch('/api/spond/import-teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          groups: groupsToImport,
+          sport: importSport,
+          ...importSettings
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        toast.success(`Imported ${result.imported} teams`)
+        setShowImportDialog(false)
+        fetchStatus()
+      } else {
+        toast.error(result.error || 'Import failed')
+      }
+    } catch (error) {
+      toast.error('Failed to import teams')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // Fetch sync settings
+  const fetchSyncSettings = async () => {
+    setLoadingSyncSettings(true)
+    try {
+      const response = await fetch('/api/spond/sync-settings', {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+      if (response.ok) {
+        const settings = await response.json()
+        setSyncSettings(settings)
+      }
+    } catch (error) {
+      toast.error('Failed to fetch sync settings')
+    } finally {
+      setLoadingSyncSettings(false)
+    }
+  }
+
+  // Open sync settings dialog
+  const openSyncSettingsDialog = () => {
+    fetchSyncSettings()
+    setEditingSyncSettings(null)
+    setShowSyncSettingsDialog(true)
+  }
+
+  // Save sync settings
+  const saveSyncSettings = async (settings: SyncSettings) => {
+    try {
+      const response = await fetch('/api/spond/sync-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          teamId: settings.team_id,
+          spondGroupId: settings.spond_group_id,
+          spondGroupName: settings.spond_group_name,
+          spondParentGroupName: settings.spond_parent_group_name,
+          isSubgroup: settings.is_subgroup,
+          syncEventsImport: settings.sync_events_import,
+          syncEventsExport: settings.sync_events_export,
+          syncAttendanceImport: settings.sync_attendance_import,
+          syncEventTitle: settings.sync_event_title,
+          syncEventDescription: settings.sync_event_description,
+          syncEventTime: settings.sync_event_time,
+          syncEventLocation: settings.sync_event_location,
+          syncEventType: settings.sync_event_type,
+          isActive: settings.is_active
+        })
+      })
+
+      if (response.ok) {
+        toast.success('Sync settings saved')
+        setEditingSyncSettings(null)
+        fetchSyncSettings()
+      } else {
+        toast.error('Failed to save settings')
+      }
+    } catch (error) {
+      toast.error('Failed to save settings')
+    }
+  }
+
+  // Delete sync settings (unlink)
+  const deleteSyncSettings = async (teamId: number) => {
+    if (!confirm('Are you sure you want to unlink this team from Spond?')) {
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/spond/sync-settings/${teamId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+
+      if (response.ok) {
+        toast.success('Team unlinked from Spond')
+        fetchSyncSettings()
+      } else {
+        toast.error('Failed to unlink team')
+      }
+    } catch (error) {
+      toast.error('Failed to unlink team')
+    }
+  }
+
+  // Sync with settings (respects per-team configuration)
+  const syncWithSettings = async (direction: 'import' | 'export' | 'both') => {
+    setSyncing(true)
+    try {
+      const response = await fetch('/api/spond/sync-with-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          direction,
+          daysAhead: 60,
+          daysBehind: 7
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        const message = direction === 'import' 
+          ? `Imported ${result.imported} events, updated ${result.attendanceUpdated} attendance records`
+          : direction === 'export'
+          ? `Exported ${result.exported} events`
+          : `Synced: ${result.imported} imported, ${result.exported} exported, ${result.attendanceUpdated} attendance`
+        toast.success(message)
+        fetchStatus()
+      } else {
+        toast.error(result.error || 'Sync failed')
+      }
+    } catch (error) {
+      toast.error('Sync failed')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   if (loading) {
     return (
       <Card>
@@ -434,58 +693,81 @@ export default function SpondIntegration() {
               <Separator />
 
               {/* Actions */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={() => triggerSync('full')}
-                  disabled={syncing}
-                  style={{ backgroundColor: COLORS.ACCENT }}
-                >
-                  {syncing ? (
-                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
-                  ) : (
+              <div className="space-y-3">
+                {/* Primary sync actions */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => syncWithSettings('both')}
+                    disabled={syncing}
+                    style={{ backgroundColor: COLORS.ACCENT }}
+                  >
+                    {syncing ? (
+                      <ArrowsClockwise className="animate-spin mr-2" size={16} />
+                    ) : (
+                      <ArrowsLeftRight size={16} className="mr-2" />
+                    )}
+                    Sync All
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => syncWithSettings('import')}
+                    disabled={syncing}
+                  >
                     <CloudArrowDown size={16} className="mr-2" />
-                  )}
-                  Sync All
-                </Button>
+                    Import from Spond
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={() => triggerSync('events')}
-                  disabled={syncing}
-                >
-                  <CalendarBlank size={16} className="mr-2" />
-                  Sync Events
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => syncWithSettings('export')}
+                    disabled={syncing}
+                    title="Export events to Spond (requires Spond API write access)"
+                  >
+                    <CloudArrowUp size={16} className="mr-2" />
+                    Export to Spond
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={() => triggerSync('groups')}
-                  disabled={syncing}
-                >
-                  <Users size={16} className="mr-2" />
-                  Sync Teams
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={syncAttendance}
+                    disabled={syncingAttendance || syncing}
+                  >
+                    {syncingAttendance ? (
+                      <ArrowsClockwise className="animate-spin mr-2" size={16} />
+                    ) : (
+                      <UserCheck size={16} className="mr-2" />
+                    )}
+                    Sync Attendance
+                  </Button>
+                </div>
+                
+                {/* Team management actions */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={openImportDialog}
+                  >
+                    <Download size={16} className="mr-2" />
+                    Import Teams from Spond
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={openMappingDialog}
+                  >
+                    <LinkIcon size={16} className="mr-2" />
+                    Link Teams
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={openMappingDialog}
-                >
-                  <LinkIcon size={16} className="mr-2" />
-                  Link Teams
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={syncAttendance}
-                  disabled={syncingAttendance || syncing}
-                >
-                  {syncingAttendance ? (
-                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
-                  ) : (
-                    <UserCheck size={16} className="mr-2" />
-                  )}
-                  Sync Attendance
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={openSyncSettingsDialog}
+                  >
+                    <Sliders size={16} className="mr-2" />
+                    Sync Settings
+                  </Button>
+                </div>
               </div>
             </>
           )}
@@ -619,21 +901,32 @@ export default function SpondIntegration() {
               Link Teams
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Connect your Spond teams and subgroups to local teams. Events from linked Spond teams will sync to the corresponding local team.
+              Connect your Spond teams and subgroups to existing local teams, or import new teams from Spond.
             </DialogDescription>
           </DialogHeader>
 
-          {/* Legend */}
-          <div className="flex items-center gap-6 py-2 px-3 bg-gray-50 rounded-lg text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
-              <span className="text-gray-600 font-medium">Spond Team/Subgroup</span>
+          {/* Legend and Import button */}
+          <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-6 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
+                <span className="text-gray-600 font-medium">Spond Team/Subgroup</span>
+              </div>
+              <div className="text-gray-400">→</div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
+                <span className="text-gray-600 font-medium">Local Team</span>
+              </div>
             </div>
-            <div className="text-gray-400">→</div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
-              <span className="text-gray-600 font-medium">Local Team</span>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setShowMappingDialog(false); openImportDialog(); }}
+              className="text-xs"
+            >
+              <Download size={14} className="mr-1" />
+              Import from Spond
+            </Button>
           </div>
 
           <ScrollArea className="max-h-[50vh]">
@@ -727,6 +1020,336 @@ export default function SpondIntegration() {
             <Button
               variant="outline"
               onClick={() => setShowMappingDialog(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Teams from Spond Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-2xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-gray-900">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
+              >
+                <Download size={18} className="text-white" />
+              </div>
+              Import Teams from Spond
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Create local teams from your Spond groups and subgroups. Select the teams you want to import and configure their sync settings.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Import settings */}
+            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Import Settings</Label>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-500">Sport Type</Label>
+                  <Select value={importSport} onValueChange={setImportSport}>
+                    <SelectTrigger className="bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tackle Football">Tackle Football</SelectItem>
+                      <SelectItem value="Flag Football">Flag Football</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 pt-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox 
+                    checked={importSettings.syncEventsImport}
+                    onCheckedChange={(checked) => setImportSettings({...importSettings, syncEventsImport: !!checked})}
+                  />
+                  <span className="flex items-center gap-1">
+                    <CloudArrowDown size={14} />
+                    Import events
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox 
+                    checked={importSettings.syncEventsExport}
+                    onCheckedChange={(checked) => setImportSettings({...importSettings, syncEventsExport: !!checked})}
+                  />
+                  <span className="flex items-center gap-1">
+                    <CloudArrowUp size={14} />
+                    Export events
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox 
+                    checked={importSettings.syncAttendanceImport}
+                    onCheckedChange={(checked) => setImportSettings({...importSettings, syncAttendanceImport: !!checked})}
+                  />
+                  <span className="flex items-center gap-1">
+                    <UserCheck size={14} />
+                    Sync attendance
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <ScrollArea className="max-h-[40vh]">
+              {loadingImportable ? (
+                <div className="flex items-center justify-center py-8">
+                  <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
+                </div>
+              ) : importableGroups.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle size={32} className="text-green-600" />
+                  </div>
+                  <p className="text-gray-700 font-medium">All Spond teams are already imported!</p>
+                  <p className="text-sm text-gray-500">No new teams available to import</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-2 py-1 text-xs text-gray-500">
+                    <span>{selectedForImport.size} of {importableGroups.length} selected</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs"
+                      onClick={() => {
+                        if (selectedForImport.size === importableGroups.length) {
+                          setSelectedForImport(new Set())
+                        } else {
+                          setSelectedForImport(new Set(importableGroups.map(g => g.id)))
+                        }
+                      }}
+                    >
+                      {selectedForImport.size === importableGroups.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  </div>
+                  
+                  {importableGroups.map((group) => (
+                    <label
+                      key={group.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedForImport.has(group.id) 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Checkbox 
+                        checked={selectedForImport.has(group.id)}
+                        onCheckedChange={() => toggleImportSelection(group.id)}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{group.name}</span>
+                          {group.isSubgroup && (
+                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                              Subgroup
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white">
+                            {group.memberCount} members
+                          </Badge>
+                        </div>
+                        {group.parentGroup && (
+                          <span className="text-sm text-gray-500">in {group.parentGroup}</span>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportDialog(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={importSelectedTeams}
+              disabled={importing || selectedForImport.size === 0}
+              className="bg-[#248bcc] hover:bg-[#1a6a9a] text-white"
+            >
+              {importing ? (
+                <ArrowsClockwise className="animate-spin mr-2" size={16} />
+              ) : (
+                <Plus size={16} className="mr-2" />
+              )}
+              Import {selectedForImport.size} Team{selectedForImport.size !== 1 ? 's' : ''}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sync Settings Dialog */}
+      <Dialog open={showSyncSettingsDialog} onOpenChange={setShowSyncSettingsDialog}>
+        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-3xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-gray-900">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
+              >
+                <Sliders size={18} className="text-white" />
+              </div>
+              Sync Settings
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Configure what to sync for each team-Spond group connection. Control import/export direction and which attributes to sync.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh]">
+            {loadingSyncSettings ? (
+              <div className="flex items-center justify-center py-8">
+                <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
+              </div>
+            ) : syncSettings.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                  <LinkIcon size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-700 font-medium">No teams linked to Spond</p>
+                <p className="text-sm text-gray-500 mb-4">Link teams or import from Spond to configure sync settings</p>
+                <div className="flex justify-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { setShowSyncSettingsDialog(false); openMappingDialog(); }}>
+                    <LinkIcon size={14} className="mr-2" />
+                    Link Teams
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => { setShowSyncSettingsDialog(false); openImportDialog(); }}>
+                    <Download size={14} className="mr-2" />
+                    Import from Spond
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {syncSettings.map((settings) => (
+                  <div
+                    key={settings.team_id}
+                    className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{settings.team_name}</span>
+                          <ArrowRight size={14} className="text-gray-400" />
+                          <span className="text-gray-600">{settings.spond_group_name || settings.spond_group_id}</span>
+                          {settings.is_subgroup && (
+                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                              Subgroup
+                            </Badge>
+                          )}
+                        </div>
+                        {settings.spond_parent_group_name && (
+                          <span className="text-xs text-gray-500">in {settings.spond_parent_group_name}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch 
+                          checked={settings.is_active}
+                          onCheckedChange={(checked) => saveSyncSettings({...settings, is_active: checked})}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteSyncSettings(settings.team_id)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <LinkBreak size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Sync direction controls */}
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <label className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                        <Checkbox 
+                          checked={settings.sync_events_import}
+                          onCheckedChange={(checked) => saveSyncSettings({...settings, sync_events_import: !!checked})}
+                        />
+                        <CloudArrowDown size={16} className="text-green-600" />
+                        <span className="text-sm">Import Events</span>
+                      </label>
+                      <label className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                        <Checkbox 
+                          checked={settings.sync_events_export}
+                          onCheckedChange={(checked) => saveSyncSettings({...settings, sync_events_export: !!checked})}
+                        />
+                        <CloudArrowUp size={16} className="text-blue-600" />
+                        <span className="text-sm">Export Events</span>
+                      </label>
+                      <label className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                        <Checkbox 
+                          checked={settings.sync_attendance_import}
+                          onCheckedChange={(checked) => saveSyncSettings({...settings, sync_attendance_import: !!checked})}
+                        />
+                        <UserCheck size={16} className="text-purple-600" />
+                        <span className="text-sm">Attendance</span>
+                      </label>
+                    </div>
+                    
+                    {/* Attribute sync controls */}
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="text-gray-500 py-1">Sync attributes:</span>
+                      {[
+                        { key: 'sync_event_title', label: 'Title' },
+                        { key: 'sync_event_description', label: 'Description' },
+                        { key: 'sync_event_time', label: 'Time' },
+                        { key: 'sync_event_location', label: 'Location' },
+                        { key: 'sync_event_type', label: 'Type' },
+                      ].map(attr => (
+                        <label 
+                          key={attr.key}
+                          className={`flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-colors ${
+                            (settings as any)[attr.key] 
+                              ? 'bg-green-100 text-green-700 border border-green-200' 
+                              : 'bg-gray-100 text-gray-500 border border-gray-200'
+                          }`}
+                        >
+                          <Checkbox 
+                            checked={(settings as any)[attr.key]}
+                            onCheckedChange={(checked) => saveSyncSettings({...settings, [attr.key]: !!checked})}
+                            className="h-3 w-3"
+                          />
+                          {attr.label}
+                        </label>
+                      ))}
+                    </div>
+                    
+                    {/* Last sync info */}
+                    {(settings.last_import_sync || settings.last_export_sync || settings.last_attendance_sync) && (
+                      <div className="flex gap-4 mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+                        {settings.last_import_sync && (
+                          <span>Last import: {new Date(settings.last_import_sync).toLocaleString()}</span>
+                        )}
+                        {settings.last_attendance_sync && (
+                          <span>Last attendance: {new Date(settings.last_attendance_sync).toLocaleString()}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSyncSettingsDialog(false)}
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Close
