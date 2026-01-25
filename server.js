@@ -2093,6 +2093,414 @@ app.delete('/api/spond/link/team/:id', verifyToken, requireAdminOrMgmt, async (r
   }
 });
 
+// Helper to ensure Spond token is available
+async function ensureSpondToken() {
+  if (spondToken) return spondToken;
+  
+  const pool = await getPool();
+  const configResult = await pool.request()
+    .query('SELECT username, password FROM spond_config WHERE is_active = 1');
+  
+  if (configResult.recordset.length === 0) {
+    return null;
+  }
+  
+  const { username, password } = configResult.recordset[0];
+  spondToken = await spondLogin(username, password);
+  return spondToken;
+}
+
+// Full sync from Spond
+app.post('/api/spond/sync', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { syncGroups, syncEvents, daysAhead } = req.body;
+    const results = { groups: { imported: 0 }, events: { imported: 0, updated: 0 } };
+    const pool = await getPool();
+
+    // Sync groups if requested
+    if (syncGroups !== false) {
+      const groups = await spondRequest(token, 'groups');
+      results.groups.imported = groups.length;
+    }
+
+    // Sync events if requested
+    if (syncEvents !== false) {
+      const days = daysAhead || 60;
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() - 7);
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + days);
+      
+      // Get events from Spond for linked teams
+      const teamsResult = await pool.request()
+        .query('SELECT id, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+      
+      for (const team of teamsResult.recordset) {
+        try {
+          const events = await spondRequest(token, 
+            `sponds?groupId=${team.spond_group_id}&minEndTimestamp=${minDate.toISOString()}&maxEndTimestamp=${maxDate.toISOString()}&includeComments=false&includeHidden=false`
+          );
+          
+          for (const spondEvent of events) {
+            // Check if event exists
+            const existing = await pool.request()
+              .input('spond_id', sql.NVarChar, spondEvent.id)
+              .query('SELECT id FROM events WHERE spond_id = @spond_id');
+            
+            if (existing.recordset.length > 0) {
+              results.events.updated++;
+            } else {
+              results.events.imported++;
+            }
+            
+            // Upsert event
+            await pool.request()
+              .input('spond_id', sql.NVarChar, spondEvent.id)
+              .input('name', sql.NVarChar, spondEvent.heading || 'Spond Event')
+              .input('description', sql.NVarChar, spondEvent.description || '')
+              .input('team_id', sql.Int, team.id)
+              .input('start_time', sql.DateTime, new Date(spondEvent.startTimestamp))
+              .input('end_time', sql.DateTime, new Date(spondEvent.endTimestamp))
+              .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'game' : 'practice')
+              .input('status', sql.NVarChar, spondEvent.cancelled ? 'cancelled' : 'scheduled')
+              .input('spond_group_id', sql.NVarChar, team.spond_group_id)
+              .query(`
+                MERGE events AS target
+                USING (SELECT @spond_id AS spond_id) AS source
+                ON target.spond_id = source.spond_id
+                WHEN MATCHED THEN
+                  UPDATE SET 
+                    name = @name,
+                    description = @description,
+                    start_time = @start_time,
+                    end_time = @end_time,
+                    event_type = @event_type,
+                    status = @status,
+                    updated_at = GETDATE()
+                WHEN NOT MATCHED THEN
+                  INSERT (spond_id, name, description, team_id, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
+                  VALUES (@spond_id, @name, @description, @team_id, @start_time, @end_time, @event_type, @status, @spond_group_id, GETDATE(), GETDATE());
+              `);
+          }
+        } catch (err) {
+          console.error(`[Spond] Error syncing events for team ${team.id}:`, err.message);
+        }
+      }
+    }
+
+    // Update last sync time
+    await pool.request().query('UPDATE spond_config SET last_sync = GETDATE() WHERE is_active = 1');
+
+    res.json({
+      success: true,
+      groups: results.groups,
+      events: results.events
+    });
+  } catch (err) {
+    console.error('[Spond] Sync error:', err);
+    spondToken = null;
+    res.status(500).json({ error: 'Sync failed', details: err.message });
+  }
+});
+
+// Sync only groups from Spond
+app.post('/api/spond/sync/groups', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const groups = await spondRequest(token, 'groups');
+    
+    res.json({
+      success: true,
+      imported: groups.length,
+      groups: groups.map(g => ({
+        id: g.id,
+        name: g.name,
+        subGroups: g.subGroups?.length || 0
+      }))
+    });
+  } catch (err) {
+    console.error('[Spond] Groups sync error:', err);
+    spondToken = null;
+    res.status(500).json({ error: 'Groups sync failed' });
+  }
+});
+
+// Sync only events from Spond
+app.post('/api/spond/sync/events', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { groupId, daysAhead, daysBehind } = req.body;
+    const pool = await getPool();
+    
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() - (daysBehind || 7));
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + (daysAhead || 60));
+    
+    let teamsToSync = [];
+    
+    if (groupId) {
+      teamsToSync = [{ id: null, spond_group_id: groupId }];
+    } else {
+      const teamsResult = await pool.request()
+        .query('SELECT id, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+      teamsToSync = teamsResult.recordset;
+    }
+    
+    const results = { imported: 0, updated: 0, errors: [] };
+    
+    for (const team of teamsToSync) {
+      try {
+        const events = await spondRequest(token, 
+          `sponds?groupId=${team.spond_group_id}&minEndTimestamp=${minDate.toISOString()}&maxEndTimestamp=${maxDate.toISOString()}&includeComments=false&includeHidden=false`
+        );
+        
+        for (const spondEvent of events) {
+          const existing = await pool.request()
+            .input('spond_id', sql.NVarChar, spondEvent.id)
+            .query('SELECT id FROM events WHERE spond_id = @spond_id');
+          
+          if (existing.recordset.length > 0) {
+            results.updated++;
+          } else {
+            results.imported++;
+          }
+          
+          await pool.request()
+            .input('spond_id', sql.NVarChar, spondEvent.id)
+            .input('name', sql.NVarChar, spondEvent.heading || 'Spond Event')
+            .input('description', sql.NVarChar, spondEvent.description || '')
+            .input('team_id', sql.Int, team.id)
+            .input('start_time', sql.DateTime, new Date(spondEvent.startTimestamp))
+            .input('end_time', sql.DateTime, new Date(spondEvent.endTimestamp))
+            .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'game' : 'practice')
+            .input('status', sql.NVarChar, spondEvent.cancelled ? 'cancelled' : 'scheduled')
+            .input('spond_group_id', sql.NVarChar, team.spond_group_id)
+            .query(`
+              MERGE events AS target
+              USING (SELECT @spond_id AS spond_id) AS source
+              ON target.spond_id = source.spond_id
+              WHEN MATCHED THEN
+                UPDATE SET 
+                  name = @name,
+                  description = @description,
+                  start_time = @start_time,
+                  end_time = @end_time,
+                  event_type = @event_type,
+                  status = @status,
+                  updated_at = GETDATE()
+              WHEN NOT MATCHED THEN
+                INSERT (spond_id, name, description, team_id, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
+                VALUES (@spond_id, @name, @description, @team_id, @start_time, @end_time, @event_type, @status, @spond_group_id, GETDATE(), GETDATE());
+            `);
+        }
+      } catch (err) {
+        console.error(`[Spond] Error syncing events for group ${team.spond_group_id}:`, err.message);
+        results.errors.push({ groupId: team.spond_group_id, error: err.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      imported: results.imported,
+      updated: results.updated,
+      errors: results.errors
+    });
+  } catch (err) {
+    console.error('[Spond] Events sync error:', err);
+    spondToken = null;
+    res.status(500).json({ error: 'Events sync failed' });
+  }
+});
+
+// Sync attendance for a single event
+app.post('/api/spond/sync/attendance/event/:id', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const eventId = parseInt(req.params.id);
+    const pool = await getPool();
+    
+    // Get event with spond_id
+    const eventResult = await pool.request()
+      .input('id', sql.Int, eventId)
+      .query('SELECT id, spond_id, spond_group_id FROM events WHERE id = @id');
+    
+    if (eventResult.recordset.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    const event = eventResult.recordset[0];
+    
+    if (!event.spond_id) {
+      return res.status(400).json({ error: 'Event not linked to Spond' });
+    }
+    
+    // Fetch event details from Spond
+    const spondEvent = await spondRequest(token, `sponds/${event.spond_id}`);
+    
+    // Count attendance
+    const responses = spondEvent.responses || {};
+    const accepted = responses.acceptedIds?.length || 0;
+    const declined = responses.declinedIds?.length || 0;
+    const unanswered = responses.unansweredIds?.length || 0;
+    const waiting = responses.waitinglistIds?.length || 0;
+    
+    // Update event with attendance counts
+    await pool.request()
+      .input('id', sql.Int, eventId)
+      .input('accepted', sql.Int, accepted)
+      .input('declined', sql.Int, declined)
+      .input('unanswered', sql.Int, unanswered)
+      .input('waiting', sql.Int, waiting)
+      .query(`
+        UPDATE events SET 
+          attendance_accepted = @accepted,
+          attendance_declined = @declined,
+          attendance_unanswered = @unanswered,
+          attendance_waiting = @waiting,
+          attendance_last_sync = GETDATE()
+        WHERE id = @id
+      `);
+
+    res.json({
+      success: true,
+      eventId,
+      attendance: { accepted, declined, unanswered, waiting },
+      message: 'Attendance synced successfully'
+    });
+  } catch (err) {
+    console.error('[Spond] Sync attendance error:', err);
+    res.status(500).json({ error: 'Failed to sync attendance' });
+  }
+});
+
+// Sync attendance for all Spond-linked events
+app.post('/api/spond/sync/attendance', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { onlyFutureEvents, daysAhead, daysBehind } = req.body;
+    const pool = await getPool();
+    
+    // Get events with spond_id
+    let query = 'SELECT id, spond_id FROM events WHERE spond_id IS NOT NULL';
+    
+    if (onlyFutureEvents !== false) {
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() - (daysBehind || 7));
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + (daysAhead || 30));
+      query += ` AND start_time >= '${minDate.toISOString()}' AND start_time <= '${maxDate.toISOString()}'`;
+    }
+    
+    const eventsResult = await pool.request().query(query);
+    
+    const results = { updated: 0, errors: [] };
+    
+    for (const event of eventsResult.recordset) {
+      try {
+        const spondEvent = await spondRequest(token, `sponds/${event.spond_id}`);
+        
+        const responses = spondEvent.responses || {};
+        const accepted = responses.acceptedIds?.length || 0;
+        const declined = responses.declinedIds?.length || 0;
+        const unanswered = responses.unansweredIds?.length || 0;
+        const waiting = responses.waitinglistIds?.length || 0;
+        
+        await pool.request()
+          .input('id', sql.Int, event.id)
+          .input('accepted', sql.Int, accepted)
+          .input('declined', sql.Int, declined)
+          .input('unanswered', sql.Int, unanswered)
+          .input('waiting', sql.Int, waiting)
+          .query(`
+            UPDATE events SET 
+              attendance_accepted = @accepted,
+              attendance_declined = @declined,
+              attendance_unanswered = @unanswered,
+              attendance_waiting = @waiting,
+              attendance_last_sync = GETDATE()
+            WHERE id = @id
+          `);
+        
+        results.updated++;
+      } catch (err) {
+        console.error(`[Spond] Error syncing attendance for event ${event.id}:`, err.message);
+        results.errors.push({ eventId: event.id, error: err.message });
+      }
+    }
+
+    res.json({
+      success: results.errors.length === 0,
+      message: `Synced attendance for ${results.updated} events`,
+      eventsUpdated: results.updated,
+      errors: results.errors
+    });
+  } catch (err) {
+    console.error('[Spond] Sync all attendance error:', err);
+    res.status(500).json({ error: 'Failed to sync attendance' });
+  }
+});
+
+// Get Spond events directly (for preview before sync)
+app.get('/api/spond/events', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const token = await ensureSpondToken();
+    if (!token) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { groupId, daysAhead, daysBehind } = req.query;
+    
+    if (!groupId) {
+      return res.status(400).json({ error: 'groupId is required' });
+    }
+    
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() - (parseInt(daysBehind) || 7));
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + (parseInt(daysAhead) || 60));
+    
+    const events = await spondRequest(token, 
+      `sponds?groupId=${groupId}&minEndTimestamp=${minDate.toISOString()}&maxEndTimestamp=${maxDate.toISOString()}&includeComments=false&includeHidden=false`
+    );
+    
+    res.json(events.map(e => ({
+      id: e.id,
+      heading: e.heading,
+      description: e.description,
+      startTimestamp: e.startTimestamp,
+      endTimestamp: e.endTimestamp,
+      type: e.type,
+      cancelled: e.cancelled
+    })));
+  } catch (err) {
+    console.error('[Spond] Error fetching events:', err);
+    spondToken = null;
+    res.status(500).json({ error: 'Failed to fetch Spond events' });
+  }
+});
+
 // ------------------------------
 // Static assets + SPA fallback
 // ------------------------------
