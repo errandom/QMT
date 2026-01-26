@@ -65,6 +65,14 @@ BEGIN
 END
 GO
 
+-- Add name column to events table (for storing Spond event heading)
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'name')
+BEGIN
+    ALTER TABLE events ADD name NVARCHAR(255) NULL;
+    PRINT 'Added name column to events table';
+END
+GO
+
 -- =====================================================
 -- 3b. Add Attendance columns to Events table
 -- =====================================================
