@@ -246,7 +246,7 @@ export default function SpondSetupWizard({
       setTestPhase('permissions')
       
       // Save credentials temporarily to enable API calls
-      await fetch('/api/spond/configure', {
+      const configResponse = await fetch('/api/spond/configure', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,6 +259,11 @@ export default function SpondSetupWizard({
           syncIntervalMinutes: 60
         })
       })
+
+      if (!configResponse.ok) {
+        const errorData = await configResponse.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to configure Spond connection')
+      }
 
       // Check what we can access
       const permissionChecks = await Promise.allSettled([
@@ -310,9 +315,10 @@ export default function SpondSetupWizard({
         setStep(3)
       }, 2500)
     } catch (error) {
+      console.error('[Spond Setup] Connection test error:', error)
       setConnectionTestResult({
         success: false,
-        message: 'Connection test failed. Please check your credentials.'
+        message: error instanceof Error ? error.message : 'Connection test failed. Please check your credentials.'
       })
     } finally {
       setTestingConnection(false)
