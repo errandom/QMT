@@ -2354,6 +2354,14 @@ app.post('/api/spond/sync/events', verifyToken, requireAdminOrMgmt, async (req, 
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + (daysAhead || 60));
     
+    // Ensure name column exists in events table (for Spond event heading)
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'name')
+      BEGIN
+        ALTER TABLE events ADD name NVARCHAR(255) NULL;
+      END
+    `);
+    
     let teamsToSync = [];
     
     if (groupId) {
@@ -2390,8 +2398,8 @@ app.post('/api/spond/sync/events', verifyToken, requireAdminOrMgmt, async (req, 
             .input('team_id', sql.Int, team.id)
             .input('start_time', sql.DateTime, new Date(spondEvent.startTimestamp))
             .input('end_time', sql.DateTime, new Date(spondEvent.endTimestamp))
-            .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'game' : 'practice')
-            .input('status', sql.NVarChar, spondEvent.cancelled ? 'cancelled' : 'scheduled')
+            .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'Game' : 'Practice')
+            .input('status', sql.NVarChar, spondEvent.cancelled ? 'Cancelled' : 'Confirmed')
             .input('spond_group_id', sql.NVarChar, team.spond_group_id)
             .query(`
               MERGE events AS target
