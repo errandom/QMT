@@ -22,6 +22,10 @@ import {
   Warning,
   Gear,
   ShieldCheck,
+  CaretDown,
+  CaretUp,
+  PencilSimple,
+  LinkBreak,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { getToken } from '@/lib/api'
@@ -91,10 +95,12 @@ export default function SpondSetupWizard({
   } | null>(null)
   
   // Step 3: Team mapping
-  const [teams, setTeams] = useState<Team[]>([])
+  const [allTeams, setAllTeams] = useState<Team[]>([])
   const [spondGroups, setSpondGroups] = useState<SpondGroup[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
   const [teamMappings, setTeamMappings] = useState<Map<number, TeamMapping>>(new Map())
+  const [showMappingSummary, setShowMappingSummary] = useState(false)
+  const [editingTeamId, setEditingTeamId] = useState<number | null>(null)
   
   // Saving state
   const [saving, setSaving] = useState(false)
@@ -138,7 +144,7 @@ export default function SpondSetupWizard({
 
       if (teamsResponse.ok) {
         const teamsData = await teamsResponse.json()
-        setTeams(teamsData.filter((t: Team) => !t.spond_group_id))
+        setAllTeams(teamsData)
         
         // Pre-populate mappings for already linked teams
         const linkedTeams = teamsData.filter((t: Team) => t.spond_group_id)
@@ -232,16 +238,16 @@ export default function SpondSetupWizard({
   }
 
   const handleTeamMappingChange = (teamId: number, spondGroupId: string) => {
-    const team = teams.find(t => t.id === teamId)
+    const team = allTeams.find(t => t.id === teamId)
     const spondGroup = spondGroups.find(g => g.id === spondGroupId)
     
-    if (!team || !spondGroup) return
+    if (!team) return
     
     const newMappings = new Map(teamMappings)
     
     if (spondGroupId === 'none') {
       newMappings.delete(teamId)
-    } else {
+    } else if (spondGroup) {
       newMappings.set(teamId, {
         teamId: team.id,
         teamName: team.name,
@@ -253,6 +259,7 @@ export default function SpondSetupWizard({
     }
     
     setTeamMappings(newMappings)
+    setEditingTeamId(null)
   }
 
   const saveConfiguration = async () => {
@@ -498,6 +505,65 @@ export default function SpondSetupWizard({
     </div>
   )
 
+  // Helper to get Spond group name by ID
+  const getSpondGroupName = (groupId: string) => {
+    const group = spondGroups.find(g => g.id === groupId)
+    if (!group) return groupId
+    if (group.parentGroup) {
+      return `${group.name} (${group.parentGroup})`
+    }
+    return group.name
+  }
+
+  // Separate teams into unlinked and linked
+  const unlinkedTeams = allTeams.filter(t => !t.spond_group_id && !teamMappings.has(t.id))
+  const linkedOrPendingTeams = allTeams.filter(t => t.spond_group_id || teamMappings.has(t.id))
+
+  const renderSpondGroupSelect = (teamId: number, currentValue: string) => (
+    <Select
+      value={currentValue}
+      onValueChange={(value) => handleTeamMappingChange(teamId, value)}
+    >
+      <SelectTrigger className="w-[220px] bg-white">
+        <SelectValue placeholder="Select Spond group..." />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">
+          <span className="text-gray-500">Don't link</span>
+        </SelectItem>
+        {/* Group the items by parent group */}
+        {(() => {
+          const parentGroups = spondGroups.filter(g => g.isParentGroup)
+          return parentGroups.map((parentGroup) => {
+            const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name)
+            return (
+              <div key={parentGroup.id}>
+                {/* Parent Group - styled as a label/header */}
+                <SelectItem value={parentGroup.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{parentGroup.name}</span>
+                    {parentGroup.hasSubgroups && (
+                      <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
+                    )}
+                  </div>
+                </SelectItem>
+                {/* Subgroups - indented */}
+                {subgroups.map((subgroup) => (
+                  <SelectItem key={subgroup.id} value={subgroup.id}>
+                    <div className="flex items-center gap-2 pl-4">
+                      <span className="text-gray-400">└</span>
+                      <span>{subgroup.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </div>
+            )
+          })
+        })()}
+      </SelectContent>
+    </Select>
+  )
+
   const renderStep3 = () => (
     <div className="space-y-4">
       <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
@@ -518,104 +584,141 @@ export default function SpondSetupWizard({
           <ArrowsClockwise className="animate-spin text-gray-400" size={32} />
         </div>
       ) : (
-        <ScrollArea className="h-[300px] pr-4">
-          <div className="space-y-3">
-            {teams.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users size={32} className="mx-auto mb-2 text-gray-300" />
-                <p>No unlinked teams found</p>
-                <p className="text-xs mt-1">All teams are already linked or you haven't created any teams yet.</p>
-              </div>
-            ) : (
-              teams.map((team) => {
-                const currentMapping = teamMappings.get(team.id)
-                return (
-                  <div
-                    key={team.id}
-                    className="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
+        <>
+          {/* Linked/Pending Teams Summary - Expandable */}
+          {teamMappings.size > 0 && (
+            <div className="border border-green-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setShowMappingSummary(!showMappingSummary)}
+                className="w-full p-3 bg-green-50 hover:bg-green-100 transition-colors flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2 text-sm text-green-700">
+                  <CheckCircle size={16} weight="fill" />
+                  <span className="font-medium">{teamMappings.size} team(s) linked to Spond groups</span>
+                </div>
+                <div className="flex items-center gap-2 text-green-600">
+                  <span className="text-xs">Click to {showMappingSummary ? 'collapse' : 'view & edit'}</span>
+                  {showMappingSummary ? <CaretUp size={16} /> : <CaretDown size={16} />}
+                </div>
+              </button>
+              
+              {showMappingSummary && (
+                <div className="bg-white border-t border-green-200">
+                  <ScrollArea className="max-h-[200px]">
+                    <div className="divide-y divide-gray-100">
+                      {Array.from(teamMappings.values()).map((mapping) => {
+                        const team = allTeams.find(t => t.id === mapping.teamId)
+                        const isEditing = editingTeamId === mapping.teamId
+                        
+                        return (
+                          <div
+                            key={mapping.teamId}
+                            className="p-3 hover:bg-gray-50 transition-colors"
+                          >
+                            {isEditing ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="font-medium text-gray-900 truncate">{mapping.teamName}</span>
+                                  <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
+                                </div>
+                                {renderSpondGroupSelect(mapping.teamId, mapping.spondGroupId)}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingTeamId(null)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X size={14} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="font-medium text-gray-900 truncate">{mapping.teamName}</span>
+                                  <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-600 truncate">
+                                    {getSpondGroupName(mapping.spondGroupId)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingTeamId(mapping.teamId)}
+                                    className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
+                                    title="Edit mapping"
+                                  >
+                                    <PencilSimple size={14} />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleTeamMappingChange(mapping.teamId, 'none')}
+                                    className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                                    title="Remove link"
+                                  >
+                                    <LinkBreak size={14} />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Unlinked Teams */}
+          <ScrollArea className="h-[220px] pr-4">
+            <div className="space-y-3">
+              {unlinkedTeams.length === 0 && teamMappings.size === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                  <p>No teams found</p>
+                  <p className="text-xs mt-1">Create teams first or import them from Spond.</p>
+                </div>
+              ) : unlinkedTeams.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <CheckCircle size={24} className="mx-auto mb-2 text-green-500" />
+                  <p className="text-sm">All teams are linked!</p>
+                  <p className="text-xs mt-1">Expand the section above to view or edit mappings.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="text-xs text-gray-500 font-medium uppercase tracking-wide px-1">
+                    Unlinked Teams ({unlinkedTeams.length})
+                  </div>
+                  {unlinkedTeams.map((team) => (
+                    <div
+                      key={team.id}
+                      className="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 truncate">{team.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {team.sport}
+                            </Badge>
+                          </div>
+                        </div>
+                        
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 truncate">{team.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {team.sport}
-                          </Badge>
+                          <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
+                          {renderSpondGroupSelect(team.id, 'none')}
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
-                        
-                        <Select
-                          value={currentMapping?.spondGroupId || 'none'}
-                          onValueChange={(value) => handleTeamMappingChange(team.id, value)}
-                        >
-                          <SelectTrigger className="w-[220px] bg-white">
-                            <SelectValue placeholder="Select Spond group..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              <span className="text-gray-500">Don't link</span>
-                            </SelectItem>
-                            {/* Group the items by parent group */}
-                            {(() => {
-                              const parentGroups = spondGroups.filter(g => g.isParentGroup)
-                              return parentGroups.map((parentGroup) => {
-                                const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name)
-                                return (
-                                  <div key={parentGroup.id}>
-                                    {/* Parent Group - styled as a label/header */}
-                                    <SelectItem value={parentGroup.id}>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-semibold">{parentGroup.name}</span>
-                                        {parentGroup.hasSubgroups && (
-                                          <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                    {/* Subgroups - indented */}
-                                    {subgroups.map((subgroup) => (
-                                      <SelectItem key={subgroup.id} value={subgroup.id}>
-                                        <div className="flex items-center gap-2 pl-4">
-                                          <span className="text-gray-400">└</span>
-                                          <span>{subgroup.name}</span>
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                )
-                              })
-                            })()}
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
-                    
-                    {currentMapping && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
-                        <CheckCircle size={14} weight="fill" />
-                        <span>
-                          Will link to "{currentMapping.spondGroupName}"
-                          {currentMapping.spondParentGroupName && ` (${currentMapping.spondParentGroupName})`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </ScrollArea>
-      )}
-
-      {teamMappings.size > 0 && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-green-700">
-            <CheckCircle size={16} weight="fill" />
-            <span>{teamMappings.size} team(s) will be linked to Spond groups</span>
-          </div>
-        </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </ScrollArea>
+        </>
       )}
     </div>
   )
