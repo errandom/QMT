@@ -41,6 +41,7 @@ import {
 import { toast } from 'sonner'
 import { api, getToken } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
+import SpondSetupWizard from './SpondSetupWizard'
 
 interface SpondStatus {
   configured: boolean
@@ -105,6 +106,7 @@ export default function SpondIntegration() {
   const [syncing, setSyncing] = useState(false)
   const [syncingAttendance, setSyncingAttendance] = useState(false)
   const [showConfigDialog, setShowConfigDialog] = useState(false)
+  const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [showMappingDialog, setShowMappingDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showSyncSettingsDialog, setShowSyncSettingsDialog] = useState(false)
@@ -622,7 +624,7 @@ export default function SpondIntegration() {
             </div>
             
             {!status?.configured ? (
-              <Button onClick={() => setShowConfigDialog(true)} style={{ backgroundColor: COLORS.ACCENT }}>
+              <Button onClick={() => setShowSetupWizard(true)} style={{ backgroundColor: COLORS.ACCENT }}>
                 <Gear size={16} className="mr-2" />
                 Connect
               </Button>
@@ -631,7 +633,7 @@ export default function SpondIntegration() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setShowConfigDialog(true)}
+                  onClick={() => setShowSetupWizard(true)}
                 >
                   <Gear size={16} className="mr-2" />
                   Settings
@@ -1357,6 +1359,15 @@ export default function SpondIntegration() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Spond Setup Wizard */}
+      <SpondSetupWizard
+        open={showSetupWizard}
+        onOpenChange={setShowSetupWizard}
+        onComplete={() => {
+          fetchStatus()
+        }}
+      />
     </>
   )
 }
