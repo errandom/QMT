@@ -53,46 +53,62 @@ const sqlConfig = {
   connectionRetryTimeout: 60000
 };
 
-// Maintain a single pool
-let poolPromise;
+// Maintain a single pool with proper initialization tracking
+let poolPromise = null;
+let poolConnecting = false;
+
 async function getPool() {
-  if (!poolPromise) {
-    console.log('Attempting SQL connection with config:', {
-      server: sqlConfig.server || 'NOT SET',
-      database: sqlConfig.database || 'NOT SET',
-      user: sqlConfig.user || 'NOT SET',
-      passwordSet: !!sqlConfig.password,
-      options: sqlConfig.options
-    });
-
-    // CHECK IF CREDENTIALS ARE MISSING
-    if (!sqlConfig.server || !sqlConfig.database || !sqlConfig.user || !sqlConfig.password) {
-      console.error('❌ CRITICAL: Database credentials missing!');
-      console.error('Missing:', {
-        SQL_SERVER: !sqlConfig.server,
-        SQL_DATABASE: !sqlConfig.database,
-        SQL_USER: !sqlConfig.user,
-        SQL_PASSWORD: !sqlConfig.password
-      });
-      console.error('Set these environment variables in Azure App Service Configuration');
-      poolPromise = Promise.reject(new Error('Database credentials not configured'));
-      return poolPromise;
-    }
-
-    poolPromise = sql.connect(sqlConfig).then(pool => {
-      console.log('✓ SQL Pool connected successfully');
-      return pool;
-    }).catch(err => {
-      console.error('✗ SQL connection failed:', {
-        message: err.message,
-        code: err.code,
-        originalError: err.originalError?.message
-      });
-      poolPromise = null; // Reset so it can retry
-      throw err;
-    });
+  // If we already have a connected pool, return it
+  if (poolPromise) {
+    return poolPromise;
   }
-  return poolPromise;
+  
+  // If another request is currently connecting, wait for it
+  if (poolConnecting) {
+    // Wait a bit and retry - the other request will set poolPromise
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return getPool();
+  }
+
+  // CHECK IF CREDENTIALS ARE MISSING
+  if (!sqlConfig.server || !sqlConfig.database || !sqlConfig.user || !sqlConfig.password) {
+    console.error('❌ CRITICAL: Database credentials missing!');
+    console.error('Missing:', {
+      SQL_SERVER: !sqlConfig.server,
+      SQL_DATABASE: !sqlConfig.database,
+      SQL_USER: !sqlConfig.user,
+      SQL_PASSWORD: !sqlConfig.password
+    });
+    console.error('Set these environment variables in Azure App Service Configuration');
+    throw new Error('Database credentials not configured');
+  }
+
+  // Mark that we're connecting
+  poolConnecting = true;
+  
+  console.log('Attempting SQL connection with config:', {
+    server: sqlConfig.server || 'NOT SET',
+    database: sqlConfig.database || 'NOT SET',
+    user: sqlConfig.user || 'NOT SET',
+    passwordSet: !!sqlConfig.password,
+    options: sqlConfig.options
+  });
+
+  try {
+    const pool = await sql.connect(sqlConfig);
+    console.log('✓ SQL Pool connected successfully');
+    poolPromise = Promise.resolve(pool);
+    return pool;
+  } catch (err) {
+    console.error('✗ SQL connection failed:', {
+      message: err.message,
+      code: err.code,
+      originalError: err.originalError?.message
+    });
+    throw err;
+  } finally {
+    poolConnecting = false;
+  }
 }
 
 // ------------------------------
@@ -1844,17 +1860,49 @@ let spondToken = null;
 let spondTokenExpiry = null;
 
 async function spondLogin(username, password) {
+  console.log('[Spond] Attempting login for:', username);
+  
   const response = await fetch(`${SPOND_API_BASE}login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
     body: JSON.stringify({ email: username, password })
   });
   
+  console.log('[Spond] Login response status:', response.status);
+  
   if (!response.ok) {
-    throw new Error('Invalid Spond credentials');
+    let errorMessage = 'Invalid Spond credentials';
+    try {
+      const errorData = await response.json();
+      console.error('[Spond] Login error response:', errorData);
+      
+      // Handle specific Spond error messages
+      if (errorData.errorKey === 'userDoesntHavePassword') {
+        errorMessage = 'This account uses Facebook/social login. Please create a password in the Spond app first, or use an account with email/password login.';
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (response.status === 401 || response.status === 403) {
+        errorMessage = 'Invalid email or password. Please check your Spond credentials.';
+      } else if (response.status === 429) {
+        errorMessage = 'Too many login attempts. Please wait a few minutes and try again.';
+      }
+    } catch (e) {
+      console.error('[Spond] Could not parse error response');
+    }
+    throw new Error(errorMessage);
   }
   
   const data = await response.json();
+  
+  if (!data.loginToken) {
+    console.error('[Spond] No token in response:', JSON.stringify(data).substring(0, 200));
+    throw new Error('Spond login failed: No authentication token received.');
+  }
+  
+  console.log('[Spond] Successfully authenticated');
   return data.loginToken;
 }
 
