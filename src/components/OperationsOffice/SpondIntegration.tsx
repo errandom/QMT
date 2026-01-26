@@ -636,7 +636,7 @@ export default function SpondIntegration() {
                   onClick={() => setShowSetupWizard(true)}
                 >
                   <Gear size={16} className="mr-2" />
-                  Settings
+                  Setup
                 </Button>
                 <Button 
                   variant="outline"
