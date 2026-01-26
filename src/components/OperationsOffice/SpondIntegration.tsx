@@ -57,10 +57,13 @@ interface SpondGroup {
   id: string
   name: string
   parentGroup?: string | null
+  parentGroupId?: string
   activity?: string
   memberCount: number
   linkedTeam: { id: number; name: string } | null
   isSubgroup?: boolean
+  isParentGroup?: boolean
+  hasSubgroups?: boolean
 }
 
 interface ImportableGroup {
@@ -713,14 +716,6 @@ export default function SpondIntegration() {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
-                    onClick={openImportDialog}
-                  >
-                    <Download size={16} className="mr-2" />
-                    Import Teams from Spond
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
                     onClick={openMappingDialog}
                   >
                     <LinkIcon size={16} className="mr-2" />
@@ -868,7 +863,7 @@ export default function SpondIntegration() {
               Link Teams
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Connect your Spond teams and subgroups to existing local teams, or import new teams from Spond.
+              Connect your local teams to Spond groups or subgroups. You can link to nothing, a parent group, or a specific subgroup.
             </DialogDescription>
           </DialogHeader>
 
@@ -876,13 +871,13 @@ export default function SpondIntegration() {
           <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-6 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
-                <span className="text-gray-600 font-medium">Spond Team/Subgroup</span>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
+                <span className="text-gray-600 font-medium">Local Team</span>
               </div>
               <div className="text-gray-400">→</div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
-                <span className="text-gray-600 font-medium">Local Team</span>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
+                <span className="text-gray-600 font-medium">Spond Group/Subgroup</span>
               </div>
             </div>
             <Button 
@@ -903,80 +898,106 @@ export default function SpondIntegration() {
               </div>
             ) : (
               <div className="space-y-3">
-                {spondGroups.map((group) => (
-                  <div
-                    key={group.id}
-                    className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
-                        <span className="font-medium text-gray-900">{group.name}</span>
-                        {group.parentGroup && (
-                          <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
-                            Subgroup
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white">
-                          {group.memberCount} members
-                        </Badge>
+                {teams.map((team) => {
+                  const linkedGroup = spondGroups.find(g => g.linkedTeam?.id === team.id)
+                  return (
+                    <div
+                      key={team.id}
+                      className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
+                            <span className="font-medium text-gray-900 truncate">{team.name}</span>
+                            <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white">
+                              {team.sport}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
+                          
+                          {linkedGroup ? (
+                            <>
+                              <Badge className="bg-[#248bcc]/10 text-[#248bcc] border border-[#248bcc]/30">
+                                <CheckCircle size={12} className="mr-1" />
+                                {linkedGroup.name}
+                                {linkedGroup.parentGroup && (
+                                  <span className="text-xs ml-1 opacity-70">({linkedGroup.parentGroup})</span>
+                                )}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => unlinkTeam(team.id)}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              >
+                                <LinkBreak size={16} />
+                              </Button>
+                            </>
+                          ) : (
+                            <Select
+                              value=""
+                              onValueChange={(value) => {
+                                if (value && value !== 'none') {
+                                  linkTeam(team.id, value)
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-[220px] bg-white">
+                                <SelectValue placeholder="Select Spond group..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">
+                                  <span className="text-gray-500">Don't link</span>
+                                </SelectItem>
+                                {/* Group the items by parent group */}
+                                {(() => {
+                                  const parentGroups = spondGroups.filter(g => g.isParentGroup && !g.linkedTeam)
+                                  return parentGroups.map((parentGroup) => {
+                                    const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name && !g.linkedTeam)
+                                    return (
+                                      <div key={parentGroup.id}>
+                                        {/* Parent Group - styled as a selectable option */}
+                                        <SelectItem value={parentGroup.id}>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold">{parentGroup.name}</span>
+                                            {parentGroup.hasSubgroups && (
+                                              <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
+                                            )}
+                                          </div>
+                                        </SelectItem>
+                                        {/* Subgroups - indented */}
+                                        {subgroups.map((subgroup) => (
+                                          <SelectItem key={subgroup.id} value={subgroup.id}>
+                                            <div className="flex items-center gap-2 pl-4">
+                                              <span className="text-gray-400">└</span>
+                                              <span>{subgroup.name}</span>
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </div>
+                                    )
+                                  })
+                                })()}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                       </div>
-                      {group.parentGroup && (
-                        <span className="text-sm text-gray-500 ml-4">in {group.parentGroup}</span>
-                      )}
-                      {!group.parentGroup && group.activity && (
-                        <span className="text-sm text-gray-500 ml-4">{group.activity}</span>
-                      )}
                     </div>
+                  )
+                })}
 
-                    <div className="flex items-center gap-2">
-                      {group.linkedTeam ? (
-                        <>
-                          <Badge className="bg-[#248bcc]/10 text-[#248bcc] border border-[#248bcc]/30">
-                            <CheckCircle size={12} className="mr-1" />
-                            {group.linkedTeam.name}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => unlinkTeam(group.linkedTeam!.id)}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                          >
-                            <LinkBreak size={16} />
-                          </Button>
-                        </>
-                      ) : (
-                        <select
-                          className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-[#248bcc] focus:ring-1 focus:ring-[#248bcc]"
-                          defaultValue=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              linkTeam(parseInt(e.target.value), group.id)
-                            }
-                          }}
-                        >
-                          <option value="">Select local team...</option>
-                          {teams
-                            .filter(t => !t.spond_group_id)
-                            .map(team => (
-                              <option key={team.id} value={team.id}>
-                                {team.name} ({team.sport})
-                              </option>
-                            ))
-                          }
-                        </select>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {spondGroups.length === 0 && (
+                {teams.length === 0 && (
                   <div className="text-center py-8">
                     <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Warning size={32} className="text-gray-400" />
+                      <Users size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-700 font-medium">No Spond teams found</p>
-                    <p className="text-sm text-gray-500">Make sure you're a member of at least one team in Spond</p>
+                    <p className="text-gray-700 font-medium">No local teams found</p>
+                    <p className="text-sm text-gray-500">Create teams first, or import them from Spond</p>
                   </div>
                 )}
               </div>
@@ -1241,36 +1262,39 @@ export default function SpondIntegration() {
                     </div>
                     
                     {/* Sync direction controls */}
-                    <div className="grid grid-cols-3 gap-3 mb-3">
-                      <label className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
                         <Checkbox 
                           checked={settings.sync_events_import}
                           onCheckedChange={(checked) => saveSyncSettings({...settings, sync_events_import: !!checked})}
+                          className="h-5 w-5"
                         />
-                        <CloudArrowDown size={16} className="text-green-600" />
-                        <span className="text-sm">Import Events</span>
+                        <CloudArrowDown size={20} className="text-green-600" />
+                        <span className="text-sm font-medium text-gray-700">Import Events</span>
                       </label>
-                      <label className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
                         <Checkbox 
                           checked={settings.sync_events_export}
                           onCheckedChange={(checked) => saveSyncSettings({...settings, sync_events_export: !!checked})}
+                          className="h-5 w-5"
                         />
-                        <CloudArrowUp size={16} className="text-blue-600" />
-                        <span className="text-sm">Export Events</span>
+                        <CloudArrowUp size={20} className="text-blue-600" />
+                        <span className="text-sm font-medium text-gray-700">Export Events</span>
                       </label>
-                      <label className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                      <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
                         <Checkbox 
                           checked={settings.sync_attendance_import}
                           onCheckedChange={(checked) => saveSyncSettings({...settings, sync_attendance_import: !!checked})}
+                          className="h-5 w-5"
                         />
-                        <UserCheck size={16} className="text-purple-600" />
-                        <span className="text-sm">Attendance</span>
+                        <UserCheck size={20} className="text-purple-600" />
+                        <span className="text-sm font-medium text-gray-700">Attendance</span>
                       </label>
                     </div>
                     
                     {/* Attribute sync controls */}
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <span className="text-gray-500 py-1">Sync attributes:</span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-gray-600 py-1.5 font-medium">Sync attributes:</span>
                       {[
                         { key: 'sync_event_title', label: 'Title' },
                         { key: 'sync_event_description', label: 'Description' },
@@ -1280,16 +1304,16 @@ export default function SpondIntegration() {
                       ].map(attr => (
                         <label 
                           key={attr.key}
-                          className={`flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-colors ${
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm ${
                             (settings as any)[attr.key] 
-                              ? 'bg-green-100 text-green-700 border border-green-200' 
-                              : 'bg-gray-100 text-gray-500 border border-gray-200'
+                              ? 'bg-green-100 text-green-800 border border-green-300 font-medium' 
+                              : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-150'
                           }`}
                         >
                           <Checkbox 
                             checked={(settings as any)[attr.key]}
                             onCheckedChange={(checked) => saveSyncSettings({...settings, [attr.key]: !!checked})}
-                            className="h-3 w-3"
+                            className="h-4 w-4"
                           />
                           {attr.label}
                         </label>
