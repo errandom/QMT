@@ -38,9 +38,12 @@ interface SpondGroup {
   id: string
   name: string
   parentGroup?: string | null
+  parentGroupId?: string
   activity?: string
   memberCount: number
   isSubgroup?: boolean
+  isParentGroup?: boolean
+  hasSubgroups?: boolean
 }
 
 interface TeamMapping {
@@ -555,18 +558,35 @@ export default function SpondSetupWizard({
                             <SelectItem value="none">
                               <span className="text-gray-500">Don't link</span>
                             </SelectItem>
-                            {spondGroups.map((group) => (
-                              <SelectItem key={group.id} value={group.id}>
-                                <div className="flex items-center gap-2">
-                                  <span>{group.name}</span>
-                                  {group.parentGroup && (
-                                    <span className="text-xs text-gray-400">
-                                      ({group.parentGroup})
-                                    </span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
+                            {/* Group the items by parent group */}
+                            {(() => {
+                              const parentGroups = spondGroups.filter(g => g.isParentGroup)
+                              return parentGroups.map((parentGroup) => {
+                                const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name)
+                                return (
+                                  <div key={parentGroup.id}>
+                                    {/* Parent Group - styled as a label/header */}
+                                    <SelectItem value={parentGroup.id}>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-semibold">{parentGroup.name}</span>
+                                        {parentGroup.hasSubgroups && (
+                                          <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                    {/* Subgroups - indented */}
+                                    {subgroups.map((subgroup) => (
+                                      <SelectItem key={subgroup.id} value={subgroup.id}>
+                                        <div className="flex items-center gap-2 pl-4">
+                                          <span className="text-gray-400">└</span>
+                                          <span>{subgroup.name}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </div>
+                                )
+                              })
+                            })()}
                           </SelectContent>
                         </Select>
                       </div>
