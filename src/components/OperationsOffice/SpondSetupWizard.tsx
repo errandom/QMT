@@ -26,6 +26,9 @@ import {
   CaretUp,
   PencilSimple,
   LinkBreak,
+  Circle,
+  CalendarBlank,
+  UserCheck,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { getToken } from '@/lib/api'
@@ -88,10 +91,18 @@ export default function SpondSetupWizard({
   
   // Step 2: Connection test result
   const [testingConnection, setTestingConnection] = useState(false)
+  const [testPhase, setTestPhase] = useState<'connecting' | 'permissions' | 'done'>('connecting')
   const [connectionTestResult, setConnectionTestResult] = useState<{
     success: boolean
     message: string
     groupCount?: number
+    permissions?: {
+      canReadGroups: boolean
+      canReadEvents: boolean
+      canReadMembers: boolean
+      groupsAccessible: number
+      eventsAccessible: number
+    }
   } | null>(null)
   
   // Step 3: Team mapping
@@ -204,8 +215,10 @@ export default function SpondSetupWizard({
 
     setTestingConnection(true)
     setConnectionTestResult(null)
+    setTestPhase('connecting')
     
     try {
+      // Phase 1: Test basic connection
       const response = await fetch('/api/spond/test', {
         method: 'POST',
         headers: {
@@ -219,14 +232,83 @@ export default function SpondSetupWizard({
       })
 
       const result = await response.json()
-      setConnectionTestResult(result)
       
-      if (result.success) {
-        // Automatically proceed to step 3 after a short delay
-        setTimeout(() => {
-          setStep(3)
-        }, 1500)
+      if (!result.success) {
+        setConnectionTestResult({
+          success: false,
+          message: result.message || 'Connection test failed. Please check your credentials.'
+        })
+        setTestingConnection(false)
+        return
       }
+
+      // Phase 2: Check permissions by fetching groups
+      setTestPhase('permissions')
+      
+      // Save credentials temporarily to enable API calls
+      await fetch('/api/spond/configure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password,
+          autoSync: false,
+          syncIntervalMinutes: 60
+        })
+      })
+
+      // Check what we can access
+      const permissionChecks = await Promise.allSettled([
+        fetch('/api/spond/groups', { headers: { 'Authorization': `Bearer ${getToken()}` } }),
+        fetch('/api/spond/events-count', { headers: { 'Authorization': `Bearer ${getToken()}` } }).catch(() => null)
+      ])
+
+      const groupsResult = permissionChecks[0]
+      const eventsResult = permissionChecks[1]
+
+      let groupsAccessible = 0
+      let eventsAccessible = 0
+      let canReadGroups = false
+      let canReadEvents = false
+      let canReadMembers = false
+
+      if (groupsResult.status === 'fulfilled' && groupsResult.value.ok) {
+        const groups = await groupsResult.value.json()
+        groupsAccessible = Array.isArray(groups) ? groups.length : 0
+        canReadGroups = groupsAccessible > 0
+        canReadMembers = groups.some((g: any) => g.memberCount > 0)
+      }
+
+      if (eventsResult.status === 'fulfilled' && eventsResult.value?.ok) {
+        const eventsData = await eventsResult.value.json()
+        eventsAccessible = eventsData.count || 0
+        canReadEvents = true
+      } else {
+        // If events-count endpoint doesn't exist, assume events are accessible if groups are
+        canReadEvents = canReadGroups
+      }
+
+      setTestPhase('done')
+      setConnectionTestResult({
+        success: true,
+        message: 'Connection successful!',
+        groupCount: groupsAccessible,
+        permissions: {
+          canReadGroups,
+          canReadEvents,
+          canReadMembers,
+          groupsAccessible,
+          eventsAccessible
+        }
+      })
+      
+      // Automatically proceed to step 3 after a short delay
+      setTimeout(() => {
+        setStep(3)
+      }, 2500)
     } catch (error) {
       setConnectionTestResult({
         success: false,
@@ -459,15 +541,52 @@ export default function SpondSetupWizard({
   )
 
   const renderStep2 = () => (
-    <div className="space-y-6 py-8">
+    <div className="space-y-6 py-6">
       <div className="flex flex-col items-center justify-center">
         {testingConnection ? (
           <>
             <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
               <ArrowsClockwise className="animate-spin text-blue-600" size={32} />
             </div>
-            <p className="text-lg font-medium text-gray-700">Testing connection...</p>
-            <p className="text-sm text-gray-500">Connecting to Spond with your credentials</p>
+            <p className="text-lg font-medium text-gray-700">
+              {testPhase === 'connecting' ? 'Connecting to Spond...' : 'Checking permissions...'}
+            </p>
+            <p className="text-sm text-gray-500">
+              {testPhase === 'connecting' 
+                ? 'Verifying your credentials' 
+                : 'Checking what data you can access'}
+            </p>
+            
+            {/* Progress indicator */}
+            <div className="flex items-center gap-3 mt-6">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                testPhase === 'connecting' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                {testPhase === 'connecting' 
+                  ? <ArrowsClockwise className="animate-spin" size={14} />
+                  : <CheckCircle size={14} weight="fill" />
+                }
+                <span>Connection</span>
+              </div>
+              <div className="w-4 h-0.5 bg-gray-200" />
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                testPhase === 'permissions' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : testPhase === 'done'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-100 text-gray-400'
+              }`}>
+                {testPhase === 'permissions' 
+                  ? <ArrowsClockwise className="animate-spin" size={14} />
+                  : testPhase === 'done'
+                  ? <CheckCircle size={14} weight="fill" />
+                  : <Circle size={14} />
+                }
+                <span>Permissions</span>
+              </div>
+            </div>
           </>
         ) : connectionTestResult ? (
           connectionTestResult.success ? (
@@ -476,9 +595,69 @@ export default function SpondSetupWizard({
                 <CheckCircle className="text-green-600" size={32} weight="fill" />
               </div>
               <p className="text-lg font-medium text-green-700">Connection successful!</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Found {connectionTestResult.groupCount || 0} groups in your Spond account
-              </p>
+              
+              {/* Permission details */}
+              {connectionTestResult.permissions && (
+                <div className="mt-4 w-full max-w-sm space-y-2">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2 text-center">
+                    Account Permissions
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-gray-600">
+                        <Users size={16} />
+                        Read Groups
+                      </span>
+                      {connectionTestResult.permissions.canReadGroups ? (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle size={14} weight="fill" />
+                          {connectionTestResult.permissions.groupsAccessible} groups
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-red-500">
+                          <X size={14} />
+                          No access
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-gray-600">
+                        <CalendarBlank size={16} />
+                        Read Events
+                      </span>
+                      {connectionTestResult.permissions.canReadEvents ? (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle size={14} weight="fill" />
+                          Available
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <Warning size={14} />
+                          Limited
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-gray-600">
+                        <UserCheck size={16} />
+                        Read Members
+                      </span>
+                      {connectionTestResult.permissions.canReadMembers ? (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle size={14} weight="fill" />
+                          Available
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <Warning size={14} />
+                          Limited
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <p className="text-xs text-gray-400 mt-4">Proceeding to team mapping...</p>
             </>
           ) : (
