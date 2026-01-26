@@ -2270,8 +2270,8 @@ app.post('/api/spond/sync', verifyToken, requireAdminOrMgmt, async (req, res) =>
               .input('team_id', sql.Int, team.id)
               .input('start_time', sql.DateTime, new Date(spondEvent.startTimestamp))
               .input('end_time', sql.DateTime, new Date(spondEvent.endTimestamp))
-              .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'game' : 'practice')
-              .input('status', sql.NVarChar, spondEvent.cancelled ? 'cancelled' : 'scheduled')
+              .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'Game' : 'Practice')
+              .input('status', sql.NVarChar, spondEvent.cancelled ? 'Cancelled' : 'Confirmed')
               .input('spond_group_id', sql.NVarChar, team.spond_group_id)
               .query(`
                 MERGE events AS target
@@ -3045,8 +3045,8 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
               .input('team_id', sql.Int, settings.team_id)
               .input('start_time', sql.DateTime, settings.sync_event_time ? new Date(spondEvent.startTimestamp) : null)
               .input('end_time', sql.DateTime, settings.sync_event_time ? new Date(spondEvent.endTimestamp) : null)
-              .input('event_type', sql.NVarChar, settings.sync_event_type ? (spondEvent.type === 'MATCH' ? 'game' : 'practice') : null)
-              .input('status', sql.NVarChar, spondEvent.cancelled ? 'cancelled' : 'scheduled')
+              .input('event_type', sql.NVarChar, settings.sync_event_type ? (spondEvent.type === 'MATCH' ? 'Game' : 'Practice') : null)
+              .input('status', sql.NVarChar, spondEvent.cancelled ? 'Cancelled' : 'Confirmed')
               .input('spond_group_id', sql.NVarChar, settings.spond_group_id)
               .query(`
                 MERGE events AS target
@@ -3063,7 +3063,7 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
                     updated_at = GETDATE()
                 WHEN NOT MATCHED THEN
                   INSERT (spond_id, name, description, team_id, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
-                  VALUES (@spond_id, COALESCE(@name, 'Spond Event'), @description, @team_id, @start_time, @end_time, COALESCE(@event_type, 'practice'), @status, @spond_group_id, GETDATE(), GETDATE());
+                  VALUES (@spond_id, COALESCE(@name, 'Spond Event'), @description, @team_id, @start_time, @end_time, COALESCE(@event_type, 'Practice'), @status, @spond_group_id, GETDATE(), GETDATE());
               `);
             results.imported++;
           }
