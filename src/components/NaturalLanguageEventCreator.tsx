@@ -161,8 +161,8 @@ export default function NaturalLanguageEventCreator({
         body: JSON.stringify({ 
           input, 
           confirm: false,
-          defaultTeamId: defaultTeamId ? parseInt(defaultTeamId) : undefined,
-          defaultFieldId: defaultFieldId ? parseInt(defaultFieldId) : undefined,
+          defaultTeamId: defaultTeamId && defaultTeamId !== 'none' ? parseInt(defaultTeamId) : undefined,
+          defaultFieldId: defaultFieldId && defaultFieldId !== 'none' ? parseInt(defaultFieldId) : undefined,
         }),
       })
 
@@ -239,8 +239,8 @@ export default function NaturalLanguageEventCreator({
         body: JSON.stringify({ 
           input, 
           confirm: true,
-          defaultTeamId: defaultTeamId ? parseInt(defaultTeamId) : undefined,
-          defaultFieldId: defaultFieldId ? parseInt(defaultFieldId) : undefined,
+          defaultTeamId: defaultTeamId && defaultTeamId !== 'none' ? parseInt(defaultTeamId) : undefined,
+          defaultFieldId: defaultFieldId && defaultFieldId !== 'none' ? parseInt(defaultFieldId) : undefined,
         }),
       })
 
@@ -333,7 +333,7 @@ export default function NaturalLanguageEventCreator({
                     <SelectValue placeholder="Select a team..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {teams.map((team) => (
                       <SelectItem key={team.id} value={String(team.id)}>
                         {team.name}
@@ -353,7 +353,7 @@ export default function NaturalLanguageEventCreator({
                     <SelectValue placeholder="Select a location..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {fields.map((field) => (
                       <SelectItem key={field.id} value={String(field.id)}>
                         {field.name}
