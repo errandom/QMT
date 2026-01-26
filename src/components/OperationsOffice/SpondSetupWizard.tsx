@@ -112,6 +112,8 @@ export default function SpondSetupWizard({
   const [teamMappings, setTeamMappings] = useState<Map<number, TeamMapping>>(new Map())
   const [showMappingSummary, setShowMappingSummary] = useState(false)
   const [editingTeamId, setEditingTeamId] = useState<number | null>(null)
+  // Track selected parent group per team for cascading selection
+  const [selectedParentGroup, setSelectedParentGroup] = useState<Map<number, string>>(new Map())
   
   // Saving state
   const [saving, setSaving] = useState(false)
@@ -128,6 +130,7 @@ export default function SpondSetupWizard({
         syncIntervalMinutes: 60
       })
       setTeamMappings(new Map())
+      setSelectedParentGroup(new Map())
     }
   }, [open, existingCredentials])
 
@@ -153,8 +156,11 @@ export default function SpondSetupWizard({
         })
       ])
 
+      let teamsData: Team[] = []
+      let groups: SpondGroup[] = []
+
       if (teamsResponse.ok) {
-        const teamsData = await teamsResponse.json()
+        teamsData = await teamsResponse.json()
         setAllTeams(teamsData)
         
         // Pre-populate mappings for already linked teams
@@ -173,8 +179,28 @@ export default function SpondSetupWizard({
       }
 
       if (groupsResponse.ok) {
-        const groups = await groupsResponse.json()
+        groups = await groupsResponse.json()
         setSpondGroups(groups)
+        
+        // Set the selected parent group for any existing mappings
+        const linkedTeams = teamsData.filter((t: Team) => t.spond_group_id)
+        const parentSelections = new Map<number, string>()
+        
+        linkedTeams.forEach((t: Team) => {
+          if (t.spond_group_id) {
+            // Find this group in the groups list
+            const matchedGroup = groups.find((g: SpondGroup) => g.id === t.spond_group_id)
+            if (matchedGroup) {
+              // If it's a parent group, select it directly
+              // If it's a subgroup, select its parent
+              const parentId = matchedGroup.isParentGroup ? matchedGroup.id : matchedGroup.parentGroupId
+              if (parentId) {
+                parentSelections.set(t.id, parentId)
+              }
+            }
+          }
+        })
+        setSelectedParentGroup(parentSelections)
       } else {
         toast.error('Failed to fetch Spond groups')
       }
@@ -732,50 +758,148 @@ export default function SpondSetupWizard({
   const unlinkedTeams = allTeams.filter(t => !t.spond_group_id && !teamMappings.has(t.id))
   const linkedOrPendingTeams = allTeams.filter(t => t.spond_group_id || teamMappings.has(t.id))
 
-  const renderSpondGroupSelect = (teamId: number, currentValue: string) => (
-    <Select
-      value={currentValue}
-      onValueChange={(value) => handleTeamMappingChange(teamId, value)}
-    >
-      <SelectTrigger className="w-[220px] bg-white">
-        <SelectValue placeholder="Select Spond group..." />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">
-          <span className="text-gray-500">Don't link</span>
-        </SelectItem>
-        {/* Group the items by parent group */}
-        {(() => {
-          const parentGroups = spondGroups.filter(g => g.isParentGroup)
-          return parentGroups.map((parentGroup) => {
-            const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name)
-            return (
-              <div key={parentGroup.id}>
-                {/* Parent Group - styled as a label/header */}
-                <SelectItem value={parentGroup.id}>
+  // Get parent groups only (for first dropdown)
+  const parentGroups = spondGroups.filter(g => g.isParentGroup)
+  
+  // Get subgroups for a specific parent group
+  const getSubgroupsForParent = (parentGroupId: string) => {
+    return spondGroups.filter(g => g.parentGroupId === parentGroupId && !g.isParentGroup)
+  }
+
+  // Handle parent group selection
+  const handleParentGroupSelect = (teamId: number, parentGroupId: string) => {
+    const newSelectedParent = new Map(selectedParentGroup)
+    
+    if (parentGroupId === 'none') {
+      // Clear the selection
+      newSelectedParent.delete(teamId)
+      setSelectedParentGroup(newSelectedParent)
+      // Also remove any mapping
+      handleTeamMappingChange(teamId, 'none')
+      return
+    }
+    
+    newSelectedParent.set(teamId, parentGroupId)
+    setSelectedParentGroup(newSelectedParent)
+    
+    // Check if this parent group has subgroups
+    const subgroups = getSubgroupsForParent(parentGroupId)
+    if (subgroups.length === 0) {
+      // No subgroups, directly map to parent group
+      handleTeamMappingChange(teamId, parentGroupId)
+    } else {
+      // Has subgroups, clear the mapping (user needs to select subgroup or confirm parent)
+      // By default, we'll select the parent group itself
+      handleTeamMappingChange(teamId, parentGroupId)
+    }
+  }
+
+  // Handle subgroup selection (or selecting 'entire group')
+  const handleSubgroupSelect = (teamId: number, subgroupId: string) => {
+    const parentGroupId = selectedParentGroup.get(teamId)
+    if (!parentGroupId) return
+    
+    if (subgroupId === 'entire-group') {
+      // Map to the parent group itself
+      handleTeamMappingChange(teamId, parentGroupId)
+    } else {
+      // Map to the subgroup
+      handleTeamMappingChange(teamId, subgroupId)
+    }
+  }
+
+  // Get the current subgroup selection for a team
+  const getCurrentSubgroupSelection = (teamId: number): string => {
+    const mapping = teamMappings.get(teamId)
+    if (!mapping) return 'entire-group'
+    
+    const parentGroupId = selectedParentGroup.get(teamId)
+    if (!parentGroupId) return 'entire-group'
+    
+    // Check if the mapping is to the parent group or a subgroup
+    if (mapping.spondGroupId === parentGroupId) {
+      return 'entire-group'
+    }
+    return mapping.spondGroupId
+  }
+
+  const renderSpondGroupSelect = (teamId: number, currentValue: string) => {
+    // Find which parent group this current value belongs to
+    const currentGroup = spondGroups.find(g => g.id === currentValue)
+    const currentParentId = selectedParentGroup.get(teamId) || 
+      (currentGroup?.isParentGroup ? currentGroup.id : currentGroup?.parentGroupId) || 
+      ''
+    const subgroups = currentParentId ? getSubgroupsForParent(currentParentId) : []
+    const hasSubgroups = subgroups.length > 0
+    
+    return (
+      <div className="flex flex-col gap-2">
+        {/* Parent Group Dropdown */}
+        <Select
+          value={currentParentId || 'none'}
+          onValueChange={(value) => handleParentGroupSelect(teamId, value)}
+        >
+          <SelectTrigger className="w-[220px] bg-white">
+            <SelectValue placeholder="Select Spond group..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">
+              <span className="text-gray-500">Don't link</span>
+            </SelectItem>
+            {parentGroups.map((group) => (
+              <SelectItem key={group.id} value={group.id}>
+                <div className="flex items-center gap-2">
+                  <Users size={14} className="text-gray-400" />
+                  <span>{group.name}</span>
+                  {group.hasSubgroups && (
+                    <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded ml-1">
+                      {getSubgroupsForParent(group.id).length} subgroups
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-400">
+                    ({group.memberCount} members)
+                  </span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        {/* Subgroup Dropdown - only shown if parent group has subgroups */}
+        {currentParentId && currentParentId !== 'none' && hasSubgroups && (
+          <Select
+            value={getCurrentSubgroupSelection(teamId)}
+            onValueChange={(value) => handleSubgroupSelect(teamId, value)}
+          >
+            <SelectTrigger className="w-[220px] bg-white">
+              <SelectValue placeholder="Select subgroup (optional)..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="entire-group">
+                <div className="flex items-center gap-2">
+                  <Users size={14} className="text-blue-500" />
+                  <span className="font-medium">Entire group</span>
+                  <span className="text-xs text-gray-400">(all members)</span>
+                </div>
+              </SelectItem>
+              <Separator className="my-1" />
+              {subgroups.map((subgroup) => (
+                <SelectItem key={subgroup.id} value={subgroup.id}>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">{parentGroup.name}</span>
-                    {parentGroup.hasSubgroups && (
-                      <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
-                    )}
+                    <span className="text-gray-400">└</span>
+                    <span>{subgroup.name}</span>
+                    <span className="text-xs text-gray-400">
+                      ({subgroup.memberCount} members)
+                    </span>
                   </div>
                 </SelectItem>
-                {/* Subgroups - indented */}
-                {subgroups.map((subgroup) => (
-                  <SelectItem key={subgroup.id} value={subgroup.id}>
-                    <div className="flex items-center gap-2 pl-4">
-                      <span className="text-gray-400">└</span>
-                      <span>{subgroup.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </div>
-            )
-          })
-        })()}
-      </SelectContent>
-    </Select>
-  )
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    )
+  }
 
   const renderStep3 = () => (
     <div className="space-y-4">
