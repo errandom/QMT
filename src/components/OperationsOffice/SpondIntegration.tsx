@@ -42,6 +42,7 @@ import { toast } from 'sonner'
 import { api, getToken } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 import SpondSetupWizard from './SpondSetupWizard'
+import SpondSyncWizard from './SpondSyncWizard'
 
 interface SpondStatus {
   configured: boolean
@@ -107,6 +108,7 @@ export default function SpondIntegration() {
   const [syncingAttendance, setSyncingAttendance] = useState(false)
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
+  const [showSyncWizard, setShowSyncWizard] = useState(false)
   const [showMappingDialog, setShowMappingDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showSyncSettingsDialog, setShowSyncSettingsDialog] = useState(false)
@@ -696,51 +698,14 @@ export default function SpondIntegration() {
 
               {/* Actions */}
               <div className="space-y-3">
-                {/* Primary sync actions */}
+                {/* Primary sync action */}
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => syncWithSettings('both')}
-                    disabled={syncing}
+                    onClick={() => setShowSyncWizard(true)}
                     style={{ backgroundColor: COLORS.ACCENT }}
                   >
-                    {syncing ? (
-                      <ArrowsClockwise className="animate-spin mr-2" size={16} />
-                    ) : (
-                      <ArrowsLeftRight size={16} className="mr-2" />
-                    )}
-                    Sync All
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => syncWithSettings('import')}
-                    disabled={syncing}
-                  >
-                    <CloudArrowDown size={16} className="mr-2" />
-                    Import from Spond
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => syncWithSettings('export')}
-                    disabled={syncing}
-                    title="Export events to Spond (requires Spond API write access)"
-                  >
-                    <CloudArrowUp size={16} className="mr-2" />
-                    Export to Spond
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={syncAttendance}
-                    disabled={syncingAttendance || syncing}
-                  >
-                    {syncingAttendance ? (
-                      <ArrowsClockwise className="animate-spin mr-2" size={16} />
-                    ) : (
-                      <UserCheck size={16} className="mr-2" />
-                    )}
-                    Sync Attendance
+                    <ArrowsClockwise size={16} className="mr-2" />
+                    Sync Now
                   </Button>
                 </div>
                 
@@ -1364,6 +1329,15 @@ export default function SpondIntegration() {
       <SpondSetupWizard
         open={showSetupWizard}
         onOpenChange={setShowSetupWizard}
+        onComplete={() => {
+          fetchStatus()
+        }}
+      />
+
+      {/* Spond Sync Wizard */}
+      <SpondSyncWizard
+        open={showSyncWizard}
+        onOpenChange={setShowSyncWizard}
         onComplete={() => {
           fetchStatus()
         }}
