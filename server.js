@@ -2107,8 +2107,9 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
       mappings.recordset.map(m => [m.spond_group_id, { id: m.id, name: m.name }])
     );
 
-    // Flatten groups and subgroups - return subgroups as the linkable items
-    const subgroupsWithMappings = [];
+    // Return both parent groups AND subgroups as selectable items
+    // This allows users to map to either a group or a subgroup
+    const allGroupsWithMappings = [];
     
     for (const group of groups) {
       // Log the group structure for debugging
@@ -2116,41 +2117,46 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
         'members:', group.members?.length || 0,
         'subGroups:', group.subGroups?.length || 0);
       
-      // If there are subgroups, use those as the teams
-      if (group.subGroups && group.subGroups.length > 0) {
+      const hasSubgroups = group.subGroups && group.subGroups.length > 0;
+      
+      // Always add the parent group as a selectable item
+      allGroupsWithMappings.push({
+        id: group.id,
+        name: group.name,
+        parentGroup: null,
+        parentGroupId: null,
+        activity: group.activity,
+        memberCount: group.members?.length || 0,
+        linkedTeam: mappingMap.get(group.id) || null,
+        isParentGroup: true,
+        hasSubgroups: hasSubgroups,
+      });
+      
+      // If there are subgroups, also add them as selectable items
+      if (hasSubgroups) {
         for (const subgroup of group.subGroups) {
-          // Subgroup members is an array of member IDs (strings)
-          // Count them directly, or if it's empty, try to count from parent group
           const subgroupMemberIds = subgroup.members || [];
           const memberCount = Array.isArray(subgroupMemberIds) ? subgroupMemberIds.length : 0;
           
           console.log('[Spond Groups]   Subgroup:', subgroup.name, 
-            'memberIds:', subgroupMemberIds.length,
-            'raw members:', JSON.stringify(subgroup.members)?.substring(0, 100));
+            'memberIds:', subgroupMemberIds.length);
           
-          subgroupsWithMappings.push({
+          allGroupsWithMappings.push({
             id: subgroup.id,
             name: subgroup.name,
             parentGroup: group.name,
+            parentGroupId: group.id,
             activity: group.activity,
             memberCount: memberCount,
             linkedTeam: mappingMap.get(subgroup.id) || null,
+            isParentGroup: false,
+            hasSubgroups: false,
           });
         }
-      } else {
-        // If no subgroups, use the group itself
-        subgroupsWithMappings.push({
-          id: group.id,
-          name: group.name,
-          parentGroup: null,
-          activity: group.activity,
-          memberCount: group.members?.length || 0,
-          linkedTeam: mappingMap.get(group.id) || null,
-        });
       }
     }
     
-    res.json(subgroupsWithMappings);
+    res.json(allGroupsWithMappings);
   } catch (err) {
     console.error('[Spond] Error fetching groups:', err);
     spondToken = null; // Reset token on error
