@@ -1,0 +1,703 @@
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { 
+  ArrowsClockwise, 
+  Check, 
+  X, 
+  Lightning, 
+  ArrowRight,
+  ArrowLeft,
+  Users,
+  LinkSimple,
+  CheckCircle,
+  Warning,
+  Gear,
+  ShieldCheck,
+} from '@phosphor-icons/react'
+import { toast } from 'sonner'
+import { getToken } from '@/lib/api'
+import { COLORS } from '@/lib/constants'
+
+interface Team {
+  id: number
+  name: string
+  sport: string
+  spond_group_id?: string
+}
+
+interface SpondGroup {
+  id: string
+  name: string
+  parentGroup?: string | null
+  activity?: string
+  memberCount: number
+  isSubgroup?: boolean
+}
+
+interface TeamMapping {
+  teamId: number
+  teamName: string
+  spondGroupId: string
+  spondGroupName: string
+  spondParentGroupName?: string
+  isSubgroup: boolean
+}
+
+interface SpondSetupWizardProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onComplete: () => void
+  existingCredentials?: {
+    username: string
+    hasPassword: boolean
+  }
+}
+
+export default function SpondSetupWizard({
+  open,
+  onOpenChange,
+  onComplete,
+  existingCredentials,
+}: SpondSetupWizardProps) {
+  const [step, setStep] = useState(1)
+  const totalSteps = 3
+  
+  // Step 1: Credentials
+  const [credentials, setCredentials] = useState({
+    username: existingCredentials?.username || '',
+    password: '',
+    autoSync: false,
+    syncIntervalMinutes: 60
+  })
+  
+  // Step 2: Connection test result
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean
+    message: string
+    groupCount?: number
+  } | null>(null)
+  
+  // Step 3: Team mapping
+  const [teams, setTeams] = useState<Team[]>([])
+  const [spondGroups, setSpondGroups] = useState<SpondGroup[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
+  const [teamMappings, setTeamMappings] = useState<Map<number, TeamMapping>>(new Map())
+  
+  // Saving state
+  const [saving, setSaving] = useState(false)
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setStep(1)
+      setConnectionTestResult(null)
+      setCredentials({
+        username: existingCredentials?.username || '',
+        password: '',
+        autoSync: false,
+        syncIntervalMinutes: 60
+      })
+      setTeamMappings(new Map())
+    }
+  }, [open, existingCredentials])
+
+  // Fetch teams and Spond groups when entering step 3
+  useEffect(() => {
+    if (step === 3 && connectionTestResult?.success) {
+      fetchTeamsAndGroups()
+    }
+  }, [step, connectionTestResult])
+
+  const fetchTeamsAndGroups = async () => {
+    setLoadingGroups(true)
+    try {
+      // First save credentials temporarily to allow groups fetch
+      await saveTempCredentials()
+      
+      const [teamsResponse, groupsResponse] = await Promise.all([
+        fetch('/api/teams', {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        }),
+        fetch('/api/spond/groups', {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        })
+      ])
+
+      if (teamsResponse.ok) {
+        const teamsData = await teamsResponse.json()
+        setTeams(teamsData.filter((t: Team) => !t.spond_group_id))
+        
+        // Pre-populate mappings for already linked teams
+        const linkedTeams = teamsData.filter((t: Team) => t.spond_group_id)
+        const existingMappings = new Map<number, TeamMapping>()
+        linkedTeams.forEach((t: Team) => {
+          existingMappings.set(t.id, {
+            teamId: t.id,
+            teamName: t.name,
+            spondGroupId: t.spond_group_id!,
+            spondGroupName: '',
+            isSubgroup: false
+          })
+        })
+        setTeamMappings(existingMappings)
+      }
+
+      if (groupsResponse.ok) {
+        const groups = await groupsResponse.json()
+        setSpondGroups(groups)
+      } else {
+        toast.error('Failed to fetch Spond groups')
+      }
+    } catch (error) {
+      console.error('Error fetching teams/groups:', error)
+      toast.error('Failed to load data')
+    } finally {
+      setLoadingGroups(false)
+    }
+  }
+
+  const saveTempCredentials = async () => {
+    // Save credentials to enable API calls
+    const response = await fetch('/api/spond/configure', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({
+        username: credentials.username,
+        password: credentials.password,
+        autoSync: false,
+        syncIntervalMinutes: 60
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to save credentials')
+    }
+  }
+
+  const testConnection = async () => {
+    if (!credentials.username || !credentials.password) {
+      toast.error('Please enter your Spond credentials')
+      return
+    }
+
+    setTestingConnection(true)
+    setConnectionTestResult(null)
+    
+    try {
+      const response = await fetch('/api/spond/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password
+        })
+      })
+
+      const result = await response.json()
+      setConnectionTestResult(result)
+      
+      if (result.success) {
+        // Automatically proceed to step 3 after a short delay
+        setTimeout(() => {
+          setStep(3)
+        }, 1500)
+      }
+    } catch (error) {
+      setConnectionTestResult({
+        success: false,
+        message: 'Connection test failed. Please check your credentials.'
+      })
+    } finally {
+      setTestingConnection(false)
+    }
+  }
+
+  const handleTeamMappingChange = (teamId: number, spondGroupId: string) => {
+    const team = teams.find(t => t.id === teamId)
+    const spondGroup = spondGroups.find(g => g.id === spondGroupId)
+    
+    if (!team || !spondGroup) return
+    
+    const newMappings = new Map(teamMappings)
+    
+    if (spondGroupId === 'none') {
+      newMappings.delete(teamId)
+    } else {
+      newMappings.set(teamId, {
+        teamId: team.id,
+        teamName: team.name,
+        spondGroupId: spondGroup.id,
+        spondGroupName: spondGroup.name,
+        spondParentGroupName: spondGroup.parentGroup || undefined,
+        isSubgroup: !!spondGroup.parentGroup
+      })
+    }
+    
+    setTeamMappings(newMappings)
+  }
+
+  const saveConfiguration = async () => {
+    setSaving(true)
+    
+    try {
+      // 1. Save the final configuration with auto-sync settings
+      const configResponse = await fetch('/api/spond/configure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify(credentials)
+      })
+
+      if (!configResponse.ok) {
+        throw new Error('Failed to save configuration')
+      }
+
+      // 2. Save all team mappings
+      const mappingPromises = Array.from(teamMappings.values()).map(mapping =>
+        fetch('/api/spond/link/team', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            teamId: mapping.teamId,
+            spondGroupId: mapping.spondGroupId
+          })
+        })
+      )
+
+      await Promise.all(mappingPromises)
+
+      toast.success('Spond integration configured successfully!')
+      onComplete()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error saving configuration:', error)
+      toast.error('Failed to save configuration')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const canProceed = () => {
+    switch (step) {
+      case 1:
+        return credentials.username && credentials.password
+      case 2:
+        return connectionTestResult?.success
+      case 3:
+        return true // Mappings are optional
+      default:
+        return false
+    }
+  }
+
+  const handleNext = () => {
+    if (step === 1) {
+      // Go to step 2 and test connection
+      setStep(2)
+      testConnection()
+    } else if (step === 2 && connectionTestResult?.success) {
+      setStep(3)
+    } else if (step === 3) {
+      saveConfiguration()
+    }
+  }
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1)
+      if (step === 2) {
+        setConnectionTestResult(null)
+      }
+    }
+  }
+
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {[1, 2, 3].map((s) => (
+        <div key={s} className="flex items-center">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+              s === step
+                ? 'bg-[#248bcc] text-white'
+                : s < step
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}
+          >
+            {s < step ? <Check size={16} weight="bold" /> : s}
+          </div>
+          {s < 3 && (
+            <div
+              className={`w-12 h-0.5 mx-1 ${
+                s < step ? 'bg-green-500' : 'bg-gray-200'
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+
+  const renderStepTitle = () => {
+    switch (step) {
+      case 1:
+        return { title: 'Enter Credentials', description: 'Enter your Spond login credentials' }
+      case 2:
+        return { title: 'Test Connection', description: 'Verifying your Spond account' }
+      case 3:
+        return { title: 'Link Teams', description: 'Map your teams to Spond groups' }
+      default:
+        return { title: '', description: '' }
+    }
+  }
+
+  const renderStep1 = () => (
+    <div className="space-y-4">
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <ShieldCheck size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-blue-800">
+            <p className="font-medium">Secure Connection</p>
+            <p className="text-blue-600 mt-1">
+              Your credentials are used only to connect to Spond and are stored securely.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="spond-email" className="text-gray-700 font-medium">
+          Spond Email
+        </Label>
+        <Input
+          id="spond-email"
+          type="email"
+          placeholder="your-email@example.com"
+          value={credentials.username}
+          onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+          className="bg-gray-50 border-gray-300"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="spond-password" className="text-gray-700 font-medium">
+          Spond Password
+        </Label>
+        <Input
+          id="spond-password"
+          type="password"
+          placeholder="••••••••"
+          value={credentials.password}
+          onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+          className="bg-gray-50 border-gray-300"
+        />
+      </div>
+
+      <Separator />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div>
+            <Label className="text-sm text-gray-700 font-medium">Auto-sync enabled</Label>
+            <p className="text-xs text-gray-500">Automatically sync data periodically</p>
+          </div>
+          <Switch
+            checked={credentials.autoSync}
+            onCheckedChange={(checked) => setCredentials({ ...credentials, autoSync: checked })}
+          />
+        </div>
+
+        {credentials.autoSync && (
+          <div className="space-y-2">
+            <Label htmlFor="sync-interval" className="text-gray-700 font-medium">
+              Sync Interval (minutes)
+            </Label>
+            <Input
+              id="sync-interval"
+              type="number"
+              min={15}
+              max={1440}
+              value={credentials.syncIntervalMinutes}
+              onChange={(e) => setCredentials({ ...credentials, syncIntervalMinutes: parseInt(e.target.value) || 60 })}
+              className="bg-gray-50 border-gray-300"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const renderStep2 = () => (
+    <div className="space-y-6 py-8">
+      <div className="flex flex-col items-center justify-center">
+        {testingConnection ? (
+          <>
+            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+              <ArrowsClockwise className="animate-spin text-blue-600" size={32} />
+            </div>
+            <p className="text-lg font-medium text-gray-700">Testing connection...</p>
+            <p className="text-sm text-gray-500">Connecting to Spond with your credentials</p>
+          </>
+        ) : connectionTestResult ? (
+          connectionTestResult.success ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle className="text-green-600" size={32} weight="fill" />
+              </div>
+              <p className="text-lg font-medium text-green-700">Connection successful!</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Found {connectionTestResult.groupCount || 0} groups in your Spond account
+              </p>
+              <p className="text-xs text-gray-400 mt-4">Proceeding to team mapping...</p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <Warning className="text-red-600" size={32} weight="fill" />
+              </div>
+              <p className="text-lg font-medium text-red-700">Connection failed</p>
+              <p className="text-sm text-gray-500 mt-1 text-center max-w-sm">
+                {connectionTestResult.message}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => { setStep(1); setConnectionTestResult(null) }}
+                className="mt-4"
+              >
+                <ArrowLeft size={16} className="mr-2" />
+                Try again
+              </Button>
+            </>
+          )
+        ) : null}
+      </div>
+    </div>
+  )
+
+  const renderStep3 = () => (
+    <div className="space-y-4">
+      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <LinkSimple size={20} className="text-gray-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-gray-700">
+            <p className="font-medium">Link Your Teams</p>
+            <p className="text-gray-500 mt-1">
+              Connect your local teams to Spond groups or subgroups to sync events and attendance.
+              You can skip this step and set up mappings later.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {loadingGroups ? (
+        <div className="flex items-center justify-center py-12">
+          <ArrowsClockwise className="animate-spin text-gray-400" size={32} />
+        </div>
+      ) : (
+        <ScrollArea className="h-[300px] pr-4">
+          <div className="space-y-3">
+            {teams.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                <p>No unlinked teams found</p>
+                <p className="text-xs mt-1">All teams are already linked or you haven't created any teams yet.</p>
+              </div>
+            ) : (
+              teams.map((team) => {
+                const currentMapping = teamMappings.get(team.id)
+                return (
+                  <div
+                    key={team.id}
+                    className="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900 truncate">{team.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {team.sport}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
+                        
+                        <Select
+                          value={currentMapping?.spondGroupId || 'none'}
+                          onValueChange={(value) => handleTeamMappingChange(team.id, value)}
+                        >
+                          <SelectTrigger className="w-[220px] bg-white">
+                            <SelectValue placeholder="Select Spond group..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-gray-500">Don't link</span>
+                            </SelectItem>
+                            {spondGroups.map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                <div className="flex items-center gap-2">
+                                  <span>{group.name}</span>
+                                  {group.parentGroup && (
+                                    <span className="text-xs text-gray-400">
+                                      ({group.parentGroup})
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    {currentMapping && (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
+                        <CheckCircle size={14} weight="fill" />
+                        <span>
+                          Will link to "{currentMapping.spondGroupName}"
+                          {currentMapping.spondParentGroupName && ` (${currentMapping.spondParentGroupName})`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </ScrollArea>
+      )}
+
+      {teamMappings.size > 0 && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-green-700">
+            <CheckCircle size={16} weight="fill" />
+            <span>{teamMappings.size} team(s) will be linked to Spond groups</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const stepInfo = renderStepTitle()
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-lg max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-gray-900">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
+            >
+              <Lightning size={18} weight="fill" className="text-white" />
+            </div>
+            {stepInfo.title}
+          </DialogTitle>
+          <DialogDescription className="text-gray-600">
+            {stepInfo.description}
+          </DialogDescription>
+        </DialogHeader>
+
+        {renderStepIndicator()}
+
+        <div className="overflow-y-auto">
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
+          {step > 1 && step !== 2 && (
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={saving}
+              className="border-gray-300"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Back
+            </Button>
+          )}
+          
+          <div className="flex-1" />
+          
+          {step === 1 && (
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed()}
+              className="bg-[#248bcc] hover:bg-[#1a6a9a] text-white"
+            >
+              Test Connection
+              <ArrowRight size={16} className="ml-2" />
+            </Button>
+          )}
+          
+          {step === 2 && connectionTestResult?.success && (
+            <Button
+              onClick={handleNext}
+              className="bg-[#248bcc] hover:bg-[#1a6a9a] text-white"
+            >
+              Continue to Team Mapping
+              <ArrowRight size={16} className="ml-2" />
+            </Button>
+          )}
+          
+          {step === 3 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTeamMappings(new Map())
+                  saveConfiguration()
+                }}
+                disabled={saving}
+                className="border-gray-300"
+              >
+                Skip Mapping
+              </Button>
+              <Button
+                onClick={saveConfiguration}
+                disabled={saving}
+                className="bg-[#248bcc] hover:bg-[#1a6a9a] text-white"
+              >
+                {saving ? (
+                  <>
+                    <ArrowsClockwise className="animate-spin mr-2" size={16} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} className="mr-2" />
+                    {teamMappings.size > 0 ? 'Save & Link Teams' : 'Complete Setup'}
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
