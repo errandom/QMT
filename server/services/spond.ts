@@ -182,36 +182,41 @@ router.get('/groups', async (req: Request, res: Response) => {
       mappings.recordset.map(m => [m.spond_group_id, { id: m.id, name: m.name }])
     );
 
-    // Flatten groups and subgroups - return subgroups as the linkable items
-    const subgroupsWithMappings: any[] = [];
+    // Flatten groups and subgroups - return both groups and subgroups as linkable items
+    const allGroupsWithMappings: any[] = [];
     
     for (const group of groups) {
-      // If there are subgroups, use those as the teams
+      // Always add the parent group first
+      allGroupsWithMappings.push({
+        id: group.id,
+        name: group.name,
+        parentGroup: null,
+        activity: group.activity,
+        memberCount: group.members?.length || 0,
+        linkedTeam: mappingMap.get(group.id) || null,
+        isParentGroup: true,
+        hasSubgroups: group.subGroups && group.subGroups.length > 0,
+      });
+      
+      // Then add all subgroups if they exist
       if (group.subGroups && group.subGroups.length > 0) {
         for (const subgroup of group.subGroups) {
-          subgroupsWithMappings.push({
+          allGroupsWithMappings.push({
             id: subgroup.id,
             name: subgroup.name,
             parentGroup: group.name,
+            parentGroupId: group.id,
             activity: group.activity,
             memberCount: subgroup.members?.length || 0,
             linkedTeam: mappingMap.get(subgroup.id) || null,
+            isParentGroup: false,
+            hasSubgroups: false,
           });
         }
-      } else {
-        // If no subgroups, use the group itself
-        subgroupsWithMappings.push({
-          id: group.id,
-          name: group.name,
-          parentGroup: null,
-          activity: group.activity,
-          memberCount: group.members?.length || 0,
-          linkedTeam: mappingMap.get(group.id) || null,
-        });
       }
     }
 
-    res.json(subgroupsWithMappings);
+    res.json(allGroupsWithMappings);
   } catch (error) {
     console.error('[Spond] Error fetching groups:', error);
     res.status(500).json({ error: 'Failed to fetch Spond groups' });
