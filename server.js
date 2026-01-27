@@ -1906,12 +1906,22 @@ async function spondLogin(username, password) {
   return data.loginToken;
 }
 
-async function spondRequest(token, endpoint) {
+async function spondRequest(token, endpoint, params = {}) {
   // Add query params to include member data for groups endpoint
   let url = `${SPOND_API_BASE}${endpoint}`;
+  const queryParams = new URLSearchParams(params);
+  
   if (endpoint === 'groups') {
-    url += '?includeMembers=true';
+    // Request full member data from Spond
+    queryParams.set('includeMembers', 'true');
   }
+  
+  const queryString = queryParams.toString();
+  if (queryString) {
+    url += '?' + queryString;
+  }
+  
+  console.log('[Spond] Request URL:', url);
   
   const response = await fetch(url, {
     headers: { 
@@ -1924,7 +1934,36 @@ async function spondRequest(token, endpoint) {
     throw new Error(`Spond API error: ${response.status}`);
   }
   
-  return response.json();
+  const data = await response.json();
+  
+  // Log first group structure for debugging member data
+  if (endpoint === 'groups' && Array.isArray(data) && data.length > 0) {
+    const sampleGroup = data[0];
+    console.log('[Spond] Sample group structure:', {
+      name: sampleGroup.name,
+      membersType: typeof sampleGroup.members,
+      membersIsArray: Array.isArray(sampleGroup.members),
+      membersCount: sampleGroup.members?.length || 0,
+      membersSample: sampleGroup.members?.[0] ? Object.keys(sampleGroup.members[0]) : 'no members',
+      subGroupsCount: sampleGroup.subGroups?.length || 0
+    });
+    
+    // Log subgroup structure if available
+    if (sampleGroup.subGroups?.length > 0) {
+      const sampleSubgroup = sampleGroup.subGroups[0];
+      console.log('[Spond] Sample subgroup structure:', {
+        name: sampleSubgroup.name,
+        membersType: typeof sampleSubgroup.members,
+        membersIsArray: Array.isArray(sampleSubgroup.members),
+        membersCount: sampleSubgroup.members?.length || 0,
+        membersSample: sampleSubgroup.members?.[0] 
+          ? (typeof sampleSubgroup.members[0] === 'string' ? 'string IDs' : Object.keys(sampleSubgroup.members[0]))
+          : 'no members'
+      });
+    }
+  }
+  
+  return data;
 }
 
 // Get Spond integration status
@@ -2111,14 +2150,25 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
       mappingMap.set(m.spond_group_id, existing);
     }
 
+    // Helper to count members - handles both array of objects and array of IDs
+    const countMembers = (members) => {
+      if (!members) return 0;
+      if (Array.isArray(members)) return members.length;
+      if (typeof members === 'object') return Object.keys(members).length;
+      return 0;
+    };
+
     // Return both parent groups AND subgroups as selectable items
     // This allows users to map to either a group or a subgroup
     const allGroupsWithMappings = [];
     
     for (const group of groups) {
+      // Get member count - Spond returns members as array of member objects
+      const parentMemberCount = countMembers(group.members);
+      
       // Log the group structure for debugging
       console.log('[Spond Groups] Group:', group.name, 
-        'members:', group.members?.length || 0,
+        'members:', parentMemberCount,
         'subGroups:', group.subGroups?.length || 0);
       
       const hasSubgroups = group.subGroups && group.subGroups.length > 0;
@@ -2131,22 +2181,36 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
         parentGroup: null,
         parentGroupId: null,
         activity: group.activity,
-        memberCount: group.members?.length || 0,
-        linkedTeam: linkedTeams.length > 0 ? linkedTeams[0] : null, // Keep for backward compatibility
-        linkedTeams: linkedTeams, // New field for 1:n support
+        memberCount: parentMemberCount,
+        linkedTeam: linkedTeams.length > 0 ? linkedTeams[0] : null,
+        linkedTeams: linkedTeams,
         isParentGroup: true,
         hasSubgroups: hasSubgroups,
       });
       
       // If there are subgroups, also add them as selectable items
       if (hasSubgroups) {
+        // Build a map of member IDs to count subgroup members
+        // Parent group members have full profile data, subgroups reference by ID
+        const parentMemberIds = new Set(
+          (group.members || []).map(m => m.id || m)
+        );
+        
         for (const subgroup of group.subGroups) {
-          const subgroupMemberIds = subgroup.members || [];
-          const memberCount = Array.isArray(subgroupMemberIds) ? subgroupMemberIds.length : 0;
+          // Subgroup members can be either:
+          // 1. Array of member IDs (strings) that reference parent group members
+          // 2. Array of member objects with full data
+          const subgroupMembers = subgroup.members || [];
+          let subMemberCount = 0;
+          
+          if (Array.isArray(subgroupMembers)) {
+            subMemberCount = subgroupMembers.length;
+          }
+          
           const subLinkedTeams = mappingMap.get(subgroup.id) || [];
           
           console.log('[Spond Groups]   Subgroup:', subgroup.name, 
-            'memberIds:', subgroupMemberIds.length);
+            'members:', subMemberCount);
           
           allGroupsWithMappings.push({
             id: subgroup.id,
@@ -2154,9 +2218,9 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
             parentGroup: group.name,
             parentGroupId: group.id,
             activity: group.activity,
-            memberCount: memberCount,
-            linkedTeam: subLinkedTeams.length > 0 ? subLinkedTeams[0] : null, // Keep for backward compatibility
-            linkedTeams: subLinkedTeams, // New field for 1:n support
+            memberCount: subMemberCount,
+            linkedTeam: subLinkedTeams.length > 0 ? subLinkedTeams[0] : null,
+            linkedTeams: subLinkedTeams,
             isParentGroup: false,
             hasSubgroups: false,
           });
@@ -2821,6 +2885,14 @@ app.get('/api/spond/groups-for-import', verifyToken, requireAdminOrMgmt, async (
       .query('SELECT spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
     const linkedIds = new Set(linkedResult.recordset.map(r => r.spond_group_id));
     
+    // Helper to count members - handles both array of objects and array of IDs
+    const countMembers = (members) => {
+      if (!members) return 0;
+      if (Array.isArray(members)) return members.length;
+      if (typeof members === 'object') return Object.keys(members).length;
+      return 0;
+    };
+    
     // Build list of importable groups/subgroups
     const importableGroups = [];
     
@@ -2833,7 +2905,7 @@ app.get('/api/spond/groups-for-import', verifyToken, requireAdminOrMgmt, async (
               name: subgroup.name,
               parentGroup: group.name,
               isSubgroup: true,
-              memberCount: subgroup.members?.length || 0,
+              memberCount: countMembers(subgroup.members),
               activity: group.activity
             });
           }
@@ -2845,7 +2917,7 @@ app.get('/api/spond/groups-for-import', verifyToken, requireAdminOrMgmt, async (
             name: group.name,
             parentGroup: null,
             isSubgroup: false,
-            memberCount: group.members?.length || 0,
+            memberCount: countMembers(group.members),
             activity: group.activity
           });
         }
