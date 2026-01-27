@@ -48,6 +48,8 @@ interface SpondGroup {
   parentGroupId?: string
   activity?: string
   memberCount: number
+  linkedTeam?: { id: number; name: string } | null
+  linkedTeams?: { id: number; name: string }[] // Support for 1:n mapping
   isSubgroup?: boolean
   isParentGroup?: boolean
   hasSubgroups?: boolean
@@ -845,35 +847,40 @@ export default function SpondSetupWizard({
     const hasSubgroups = subgroups.length > 0
     
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full">
         {/* Parent Group Dropdown */}
         <Select
           value={currentParentId || 'none'}
           onValueChange={(value) => handleParentGroupSelect(teamId, value)}
         >
-          <SelectTrigger className="w-[220px] bg-white">
+          <SelectTrigger className="w-full bg-white text-sm h-9">
             <SelectValue placeholder="Select Spond group..." />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">
               <span className="text-gray-500">Don't link</span>
             </SelectItem>
-            {parentGroups.map((group) => (
-              <SelectItem key={group.id} value={group.id}>
-                <div className="flex items-center gap-2">
-                  <Users size={14} className="text-gray-400" />
-                  <span>{group.name}</span>
-                  {group.hasSubgroups && (
-                    <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded ml-1">
-                      {getSubgroupsForParent(group.id).length} subgroups
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-400">
-                    ({group.memberCount} members)
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
+            {parentGroups.map((group) => {
+              const linkedCount = group.linkedTeams?.length || 0
+              return (
+                <SelectItem key={group.id} value={group.id}>
+                  <div className="flex items-center gap-2">
+                    <Users size={14} className="text-gray-400 flex-shrink-0" />
+                    <span className="truncate">{group.name}</span>
+                    {group.hasSubgroups && (
+                      <span className="text-xs text-blue-600 bg-blue-100 px-1 py-0.5 rounded flex-shrink-0">
+                        {getSubgroupsForParent(group.id).length}
+                      </span>
+                    )}
+                    {linkedCount > 0 && (
+                      <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded flex-shrink-0">
+                        {linkedCount} linked
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
         
@@ -883,29 +890,33 @@ export default function SpondSetupWizard({
             value={getCurrentSubgroupSelection(teamId)}
             onValueChange={(value) => handleSubgroupSelect(teamId, value)}
           >
-            <SelectTrigger className="w-[220px] bg-white">
-              <SelectValue placeholder="Select subgroup (optional)..." />
+            <SelectTrigger className="w-full bg-white text-sm h-9">
+              <SelectValue placeholder="Select subgroup..." />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="entire-group">
                 <div className="flex items-center gap-2">
-                  <Users size={14} className="text-blue-500" />
+                  <Users size={14} className="text-blue-500 flex-shrink-0" />
                   <span className="font-medium">Entire group</span>
-                  <span className="text-xs text-gray-400">(all members)</span>
                 </div>
               </SelectItem>
               <Separator className="my-1" />
-              {subgroups.map((subgroup) => (
-                <SelectItem key={subgroup.id} value={subgroup.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400">└</span>
-                    <span>{subgroup.name}</span>
-                    <span className="text-xs text-gray-400">
-                      ({subgroup.memberCount} members)
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
+              {subgroups.map((subgroup) => {
+                const linkedCount = subgroup.linkedTeams?.length || 0
+                return (
+                  <SelectItem key={subgroup.id} value={subgroup.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">└</span>
+                      <span className="truncate">{subgroup.name}</span>
+                      {linkedCount > 0 && (
+                        <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded flex-shrink-0">
+                          {linkedCount}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         )}
@@ -965,36 +976,44 @@ export default function SpondSetupWizard({
                             className="p-3 hover:bg-gray-50 transition-colors"
                           >
                             {isEditing ? (
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-2">
                                   <span className="font-medium text-gray-900 truncate">{mapping.teamName}</span>
-                                  <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingTeamId(null)}
+                                    className="h-7 w-7 p-0 flex-shrink-0"
+                                  >
+                                    <X size={14} />
+                                  </Button>
                                 </div>
-                                {renderSpondGroupSelect(mapping.teamId, mapping.spondGroupId)}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingTeamId(null)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <X size={14} />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    {renderSpondGroupSelect(mapping.teamId, mapping.spondGroupId)}
+                                  </div>
+                                </div>
                               </div>
                             ) : (
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="font-medium text-gray-900 truncate">{mapping.teamName}</span>
-                                  <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
-                                  <span className="text-gray-600 truncate">
-                                    {getSpondGroupName(mapping.spondGroupId)}
-                                  </span>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900 truncate">{mapping.teamName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <ArrowRight size={12} className="text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-600 truncate">
+                                      {getSpondGroupName(mapping.spondGroupId)}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 flex-shrink-0">
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setEditingTeamId(mapping.teamId)}
-                                    className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
+                                    className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600"
                                     title="Edit mapping"
                                   >
                                     <PencilSimple size={14} />
@@ -1003,7 +1022,7 @@ export default function SpondSetupWizard({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleTeamMappingChange(mapping.teamId, 'none')}
-                                    className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                                    className="h-7 w-7 p-0 text-gray-500 hover:text-red-600"
                                     title="Remove link"
                                   >
                                     <LinkBreak size={14} />
@@ -1044,20 +1063,20 @@ export default function SpondSetupWizard({
                   {unlinkedTeams.map((team) => (
                     <div
                       key={team.id}
-                      className="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                      className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900 truncate">{team.name}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {team.sport}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
+                      {/* Team name row */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium text-gray-900 truncate">{team.name}</span>
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                          {team.sport}
+                        </Badge>
+                      </div>
+                      
+                      {/* Select row */}
+                      <div className="flex items-center gap-2">
+                        <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
                           {renderSpondGroupSelect(team.id, 'none')}
                         </div>
                       </div>
