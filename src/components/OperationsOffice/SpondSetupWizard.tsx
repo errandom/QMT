@@ -867,6 +867,11 @@ export default function SpondSetupWizard({
                   <div className="flex items-center gap-2">
                     <Users size={14} className="text-gray-400 flex-shrink-0" />
                     <span className="truncate">{group.name}</span>
+                    {group.memberCount > 0 && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">
+                        ({group.memberCount})
+                      </span>
+                    )}
                     {group.hasSubgroups && (
                       <span className="text-xs text-blue-600 bg-blue-100 px-1 py-0.5 rounded flex-shrink-0">
                         {getSubgroupsForParent(group.id).length}
@@ -908,6 +913,11 @@ export default function SpondSetupWizard({
                     <div className="flex items-center gap-2">
                       <span className="text-gray-400">└</span>
                       <span className="truncate">{subgroup.name}</span>
+                      {subgroup.memberCount > 0 && (
+                        <span className="text-xs text-gray-400 flex-shrink-0">
+                          ({subgroup.memberCount})
+                        </span>
+                      )}
                       {linkedCount > 0 && (
                         <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded flex-shrink-0">
                           {linkedCount}
