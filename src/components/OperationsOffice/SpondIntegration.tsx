@@ -186,6 +186,14 @@ export default function SpondIntegration() {
         })
       })
 
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[Spond] Server returned non-JSON response:', response.status)
+        toast.error('Server error: Unable to connect to Spond API. Please try again later.')
+        return
+      }
+
       const result = await response.json()
       if (result.success) {
         toast.success(result.message)
@@ -193,6 +201,7 @@ export default function SpondIntegration() {
         toast.error(result.message || 'Connection test failed')
       }
     } catch (error) {
+      console.error('[Spond] Test connection error:', error)
       toast.error('Failed to test connection')
     } finally {
       setTestingConnection(false)
