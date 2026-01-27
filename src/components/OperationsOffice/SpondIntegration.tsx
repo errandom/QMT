@@ -710,36 +710,30 @@ export default function SpondIntegration() {
               <Separator />
 
               {/* Actions */}
-              <div className="space-y-3">
-                {/* Primary sync action */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => setShowSyncWizard(true)}
-                    style={{ backgroundColor: COLORS.ACCENT }}
-                  >
-                    <ArrowsClockwise size={16} className="mr-2" />
-                    Sync Now
-                  </Button>
-                </div>
-                
-                {/* Team management actions */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={openMappingDialog}
-                  >
-                    <LinkIcon size={16} className="mr-2" />
-                    Link Teams
-                  </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => setShowSyncWizard(true)}
+                  style={{ backgroundColor: COLORS.ACCENT }}
+                >
+                  <ArrowsClockwise size={16} className="mr-2" />
+                  Sync Now
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    onClick={openSyncSettingsDialog}
-                  >
-                    <Sliders size={16} className="mr-2" />
-                    Sync Settings
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={openMappingDialog}
+                >
+                  <LinkIcon size={16} className="mr-2" />
+                  Link Teams
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={openSyncSettingsDialog}
+                >
+                  <Sliders size={16} className="mr-2" />
+                  Sync Settings
+                </Button>
               </div>
             </>
           )}
@@ -1082,7 +1076,7 @@ export default function SpondIntegration() {
               </div>
               
               <div className="flex flex-wrap gap-4 pt-2">
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
                   <Checkbox 
                     checked={importSettings.syncEventsImport}
                     onCheckedChange={(checked) => setImportSettings({...importSettings, syncEventsImport: !!checked})}
@@ -1092,7 +1086,7 @@ export default function SpondIntegration() {
                     Import events
                   </span>
                 </label>
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
                   <Checkbox 
                     checked={importSettings.syncEventsExport}
                     onCheckedChange={(checked) => setImportSettings({...importSettings, syncEventsExport: !!checked})}
@@ -1102,7 +1096,7 @@ export default function SpondIntegration() {
                     Export events
                   </span>
                 </label>
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
                   <Checkbox 
                     checked={importSettings.syncAttendanceImport}
                     onCheckedChange={(checked) => setImportSettings({...importSettings, syncAttendanceImport: !!checked})}
