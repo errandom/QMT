@@ -3192,22 +3192,6 @@ app.post('/_spark/loaded', (_req, res) => {
   res.json({ ok: true });
 });
 
-// Serve the Vite production build (must come before fallback)
-app.use(express.static(distDir, { maxAge: '1h' }));
-
-// SPA fallback for client-side routing
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(distDir, 'index.html'));
-});
-
-// ------------------------------
-// Error handling (last)
-// ------------------------------
-app.use((err, _req, res, _next) => {
-  console.error('UNHANDLED ERROR:', err);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
-
 // ------------------------------
 // Generic LLM endpoint for frontend use
 // ------------------------------
@@ -3260,6 +3244,27 @@ app.post('/api/llm/complete', async (req, res) => {
     console.error('[LLM] Error:', error);
     res.status(500).json({ error: 'LLM request failed' });
   }
+});
+
+// Serve the Vite production build (must come before fallback)
+app.use(express.static(distDir, { maxAge: '1h' }));
+
+// Handle unmatched API routes (return JSON 404 instead of HTML)
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
+});
+
+// SPA fallback for client-side routing (only for non-API routes)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distDir, 'index.html'));
+});
+
+// ------------------------------
+// Error handling (last)
+// ------------------------------
+app.use((err, _req, res, _next) => {
+  console.error('UNHANDLED ERROR:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 // Extra safety: log unhandled promise rejections / exceptions
