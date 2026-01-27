@@ -61,6 +61,7 @@ interface SpondGroup {
   activity?: string
   memberCount: number
   linkedTeam: { id: number; name: string } | null
+  linkedTeams?: { id: number; name: string }[] // Support for 1:n mapping
   isSubgroup?: boolean
   isParentGroup?: boolean
   hasSubgroups?: boolean
@@ -860,8 +861,8 @@ export default function SpondIntegration() {
 
       {/* Team Mapping Dialog */}
       <Dialog open={showMappingDialog} onOpenChange={setShowMappingDialog}>
-        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-2xl max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-gray-900">
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -872,101 +873,101 @@ export default function SpondIntegration() {
               Link Teams
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Connect your local teams to Spond groups or subgroups. You can link to nothing, a parent group, or a specific subgroup.
+              Connect your local teams to Spond groups or subgroups.
             </DialogDescription>
           </DialogHeader>
 
           {/* Legend and Import button */}
-          <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-6 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
-                <span className="text-gray-600 font-medium">Local Team</span>
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
+                <span className="text-gray-600">Local</span>
               </div>
-              <div className="text-gray-400">→</div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
-                <span className="text-gray-600 font-medium">Spond Group/Subgroup</span>
+              <span className="text-gray-400">→</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
+                <span className="text-gray-600">Spond</span>
               </div>
             </div>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => { setShowMappingDialog(false); openImportDialog(); }}
-              className="text-xs"
+              className="text-xs h-7"
             >
-              <Download size={14} className="mr-1" />
-              Import from Spond
+              <Download size={12} className="mr-1" />
+              Import
             </Button>
           </div>
 
-          <ScrollArea className="max-h-[50vh]">
+          <ScrollArea className="flex-1 min-h-0">
             {loadingGroups ? (
               <div className="flex items-center justify-center py-8">
                 <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 pr-4">
                 {teams.map((team) => {
                   const linkedGroup = spondGroups.find(g => g.linkedTeam?.id === team.id)
                   return (
                     <div
                       key={team.id}
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                      className="bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
-                            <span className="font-medium text-gray-900 truncate">{team.name}</span>
-                            <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white">
-                              {team.sport}
-                            </Badge>
-                          </div>
-                        </div>
+                      {/* Team name row */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS.ACCENT }}></div>
+                        <span className="font-medium text-gray-900 truncate">{team.name}</span>
+                        <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white flex-shrink-0">
+                          {team.sport}
+                        </Badge>
+                      </div>
 
-                        <div className="flex items-center gap-2">
-                          <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
-                          
-                          {linkedGroup ? (
-                            <>
-                              <Badge className="bg-[#248bcc]/10 text-[#248bcc] border border-[#248bcc]/30">
-                                <CheckCircle size={12} className="mr-1" />
-                                {linkedGroup.name}
-                                {linkedGroup.parentGroup && (
-                                  <span className="text-xs ml-1 opacity-70">({linkedGroup.parentGroup})</span>
-                                )}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => unlinkTeam(team.id)}
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                              >
-                                <LinkBreak size={16} />
-                              </Button>
-                            </>
-                          ) : (
-                            <Select
-                              value=""
-                              onValueChange={(value) => {
-                                if (value && value !== 'none') {
-                                  linkTeam(team.id, value)
-                                }
-                              }}
+                      {/* Link row */}
+                      <div className="flex items-center gap-2 pl-4">
+                        <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
+                        
+                        {linkedGroup ? (
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Badge className="bg-[#248bcc]/10 text-[#248bcc] border border-[#248bcc]/30 truncate max-w-[200px]">
+                              <CheckCircle size={12} className="mr-1 flex-shrink-0" />
+                              <span className="truncate">{linkedGroup.name}</span>
+                              {linkedGroup.parentGroup && (
+                                <span className="text-xs ml-1 opacity-70 truncate">({linkedGroup.parentGroup})</span>
+                              )}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => unlinkTeam(team.id)}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50 h-7 w-7 p-0 flex-shrink-0"
                             >
-                              <SelectTrigger className="w-[220px] bg-white">
-                                <SelectValue placeholder="Select Spond group..." />
-                              </SelectTrigger>
+                              <LinkBreak size={14} />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select
+                            value=""
+                            onValueChange={(value) => {
+                              if (value && value !== 'none') {
+                                linkTeam(team.id, value)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="flex-1 max-w-full bg-white h-8 text-sm">
+                              <SelectValue placeholder="Select Spond group..." />
+                            </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">
                                   <span className="text-gray-500">Don't link</span>
                                 </SelectItem>
-                                {/* Group the items by parent group */}
+                                {/* Group the items by parent group - allow selecting already-linked groups (1:n) */}
                                 {(() => {
-                                  const parentGroups = spondGroups.filter(g => g.isParentGroup && !g.linkedTeam)
+                                  const parentGroups = spondGroups.filter(g => g.isParentGroup)
                                   return parentGroups.map((parentGroup) => {
-                                    const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name && !g.linkedTeam)
+                                    const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name)
+                                    const linkedCount = parentGroup.linkedTeams?.length || 0
                                     return (
                                       <div key={parentGroup.id}>
                                         {/* Parent Group - styled as a selectable option */}
@@ -976,17 +977,26 @@ export default function SpondIntegration() {
                                             {parentGroup.hasSubgroups && (
                                               <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
                                             )}
+                                            {linkedCount > 0 && (
+                                              <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">{linkedCount} linked</span>
+                                            )}
                                           </div>
                                         </SelectItem>
                                         {/* Subgroups - indented */}
-                                        {subgroups.map((subgroup) => (
-                                          <SelectItem key={subgroup.id} value={subgroup.id}>
-                                            <div className="flex items-center gap-2 pl-4">
-                                              <span className="text-gray-400">└</span>
-                                              <span>{subgroup.name}</span>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
+                                        {subgroups.map((subgroup) => {
+                                          const subLinkedCount = subgroup.linkedTeams?.length || 0
+                                          return (
+                                            <SelectItem key={subgroup.id} value={subgroup.id}>
+                                              <div className="flex items-center gap-2 pl-4">
+                                                <span className="text-gray-400">└</span>
+                                                <span>{subgroup.name}</span>
+                                                {subLinkedCount > 0 && (
+                                                  <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded">{subLinkedCount}</span>
+                                                )}
+                                              </div>
+                                            </SelectItem>
+                                          )
+                                        })}
                                       </div>
                                     )
                                   })
@@ -996,17 +1006,16 @@ export default function SpondIntegration() {
                           )}
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
 
                 {teams.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Users size={32} className="text-gray-400" />
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Users size={24} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-700 font-medium">No local teams found</p>
-                    <p className="text-sm text-gray-500">Create teams first, or import them from Spond</p>
+                    <p className="text-gray-700 font-medium text-sm">No local teams found</p>
+                    <p className="text-xs text-gray-500">Create teams first, or import from Spond</p>
                   </div>
                 )}
               </div>
