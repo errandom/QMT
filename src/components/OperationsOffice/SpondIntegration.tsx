@@ -909,7 +909,10 @@ export default function SpondIntegration() {
             ) : (
               <div className="space-y-2 pr-4">
                 {teams.map((team) => {
-                  const linkedGroup = spondGroups.find(g => g.linkedTeam?.id === team.id)
+                  // Find the linked group - check linkedTeams array for 1:n support
+                  const linkedGroup = spondGroups.find(g => 
+                    g.linkedTeams?.some(lt => lt.id === team.id) || g.linkedTeam?.id === team.id
+                  )
                   return (
                     <div
                       key={team.id}
@@ -974,6 +977,9 @@ export default function SpondIntegration() {
                                         <SelectItem value={parentGroup.id}>
                                           <div className="flex items-center gap-2">
                                             <span className="font-semibold">{parentGroup.name}</span>
+                                            {parentGroup.memberCount > 0 && (
+                                              <span className="text-xs text-gray-400">({parentGroup.memberCount})</span>
+                                            )}
                                             {parentGroup.hasSubgroups && (
                                               <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
                                             )}
@@ -990,6 +996,9 @@ export default function SpondIntegration() {
                                               <div className="flex items-center gap-2 pl-4">
                                                 <span className="text-gray-400">└</span>
                                                 <span>{subgroup.name}</span>
+                                                {subgroup.memberCount > 0 && (
+                                                  <span className="text-xs text-gray-400">({subgroup.memberCount})</span>
+                                                )}
                                                 {subLinkedCount > 0 && (
                                                   <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded">{subLinkedCount}</span>
                                                 )}
@@ -1036,8 +1045,8 @@ export default function SpondIntegration() {
 
       {/* Import Teams from Spond Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-2xl max-h-[85vh]">
-          <DialogHeader>
+        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-gray-900">
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -1048,13 +1057,13 @@ export default function SpondIntegration() {
               Import Teams from Spond
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Create local teams from your Spond groups and subgroups. Select the teams you want to import and configure their sync settings.
+              Create local teams from your Spond groups and subgroups.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 overflow-hidden">
             {/* Import settings */}
-            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+            <div className="flex-shrink-0 p-4 bg-gray-50 rounded-lg space-y-3">
               <Label className="text-sm font-medium text-gray-700">Import Settings</Label>
               
               <div className="grid grid-cols-2 gap-4">
@@ -1106,7 +1115,7 @@ export default function SpondIntegration() {
               </div>
             </div>
 
-            <ScrollArea className="max-h-[40vh]">
+            <ScrollArea className="flex-1 min-h-0">
               {loadingImportable ? (
                 <div className="flex items-center justify-center py-8">
                   <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
@@ -1175,7 +1184,7 @@ export default function SpondIntegration() {
             </ScrollArea>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex-shrink-0 gap-2 border-t pt-4">
             <Button
               variant="outline"
               onClick={() => setShowImportDialog(false)}
