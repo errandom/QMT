@@ -973,10 +973,9 @@ export default function SpondSetupWizard({
               </button>
               
               {showMappingSummary && (
-                <div className="bg-white border-t border-green-200">
-                  <ScrollArea className="max-h-[200px]">
-                    <div className="divide-y divide-gray-100">
-                      {Array.from(teamMappings.values()).map((mapping) => {
+                <div className="bg-white border-t border-green-200 max-h-[300px] overflow-y-auto">
+                  <div className="divide-y divide-gray-100">
+                    {Array.from(teamMappings.values()).map((mapping) => {
                         const team = allTeams.find(t => t.id === mapping.teamId)
                         const isEditing = editingTeamId === mapping.teamId
                         
@@ -1044,14 +1043,13 @@ export default function SpondSetupWizard({
                         )
                       })}
                     </div>
-                  </ScrollArea>
                 </div>
               )}
             </div>
           )}
 
           {/* Unlinked Teams */}
-          <ScrollArea className="h-[220px] pr-4">
+          <div className="max-h-[350px] overflow-y-auto pr-2">
             <div className="space-y-3">
               {unlinkedTeams.length === 0 && teamMappings.size === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -1095,7 +1093,7 @@ export default function SpondSetupWizard({
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </>
       )}
     </div>
