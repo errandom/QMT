@@ -2098,14 +2098,18 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
     
     const groups = await spondRequest(spondToken, 'groups');
     
-    // Get local team mappings
+    // Get local team mappings - now supports 1:n (one Spond group to many teams)
     const pool = await getPool();
     const mappings = await pool.request()
       .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
     
-    const mappingMap = new Map(
-      mappings.recordset.map(m => [m.spond_group_id, { id: m.id, name: m.name }])
-    );
+    // Build a map of spond_group_id -> array of linked teams
+    const mappingMap = new Map();
+    for (const m of mappings.recordset) {
+      const existing = mappingMap.get(m.spond_group_id) || [];
+      existing.push({ id: m.id, name: m.name });
+      mappingMap.set(m.spond_group_id, existing);
+    }
 
     // Return both parent groups AND subgroups as selectable items
     // This allows users to map to either a group or a subgroup
@@ -2118,6 +2122,7 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
         'subGroups:', group.subGroups?.length || 0);
       
       const hasSubgroups = group.subGroups && group.subGroups.length > 0;
+      const linkedTeams = mappingMap.get(group.id) || [];
       
       // Always add the parent group as a selectable item
       allGroupsWithMappings.push({
@@ -2127,7 +2132,8 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
         parentGroupId: null,
         activity: group.activity,
         memberCount: group.members?.length || 0,
-        linkedTeam: mappingMap.get(group.id) || null,
+        linkedTeam: linkedTeams.length > 0 ? linkedTeams[0] : null, // Keep for backward compatibility
+        linkedTeams: linkedTeams, // New field for 1:n support
         isParentGroup: true,
         hasSubgroups: hasSubgroups,
       });
@@ -2137,6 +2143,7 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
         for (const subgroup of group.subGroups) {
           const subgroupMemberIds = subgroup.members || [];
           const memberCount = Array.isArray(subgroupMemberIds) ? subgroupMemberIds.length : 0;
+          const subLinkedTeams = mappingMap.get(subgroup.id) || [];
           
           console.log('[Spond Groups]   Subgroup:', subgroup.name, 
             'memberIds:', subgroupMemberIds.length);
@@ -2148,7 +2155,8 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
             parentGroupId: group.id,
             activity: group.activity,
             memberCount: memberCount,
-            linkedTeam: mappingMap.get(subgroup.id) || null,
+            linkedTeam: subLinkedTeams.length > 0 ? subLinkedTeams[0] : null, // Keep for backward compatibility
+            linkedTeams: subLinkedTeams, // New field for 1:n support
             isParentGroup: false,
             hasSubgroups: false,
           });
