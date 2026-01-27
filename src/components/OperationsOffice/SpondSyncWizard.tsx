@@ -31,7 +31,14 @@ interface SyncResult {
   imported?: number
   exported?: number
   attendanceUpdated?: number
+  eventsProcessed?: number
   error?: string
+  errors?: string[]
+  details?: {
+    eventsImported?: string[]
+    eventsExported?: string[]
+    attendanceSynced?: string[]
+  }
 }
 
 interface SpondSyncWizardProps {
@@ -442,7 +449,7 @@ export default function SpondSyncWizard({
   )
 
   const renderSyncProgress = () => (
-    <div className="space-y-6 py-8">
+    <div className="space-y-6 py-4">
       <div className="flex flex-col items-center justify-center">
         {syncing ? (
           <>
@@ -459,27 +466,73 @@ export default function SpondSyncWizard({
                 <CheckCircle className="text-green-600" size={32} weight="fill" />
               </div>
               <p className="text-lg font-medium text-green-700">Sync complete!</p>
-              <div className="mt-4 space-y-2 text-sm text-gray-600">
-                {syncResult.imported !== undefined && syncResult.imported > 0 && (
-                  <div className="flex items-center gap-2">
-                    <CloudArrowDown size={16} className="text-blue-600" />
-                    <span>{syncResult.imported} events imported</span>
+              
+              {/* Summary stats */}
+              <div className="mt-4 w-full max-w-sm">
+                <div className="grid grid-cols-3 gap-2 text-center mb-4">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-semibold text-blue-700">{syncResult.imported || 0}</div>
+                    <div className="text-xs text-blue-600">Imported</div>
                   </div>
-                )}
-                {syncResult.exported !== undefined && syncResult.exported > 0 && (
-                  <div className="flex items-center gap-2">
-                    <CloudArrowUp size={16} className="text-purple-600" />
-                    <span>{syncResult.exported} events exported</span>
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <div className="text-lg font-semibold text-purple-700">{syncResult.exported || 0}</div>
+                    <div className="text-xs text-purple-600">Exported</div>
                   </div>
-                )}
-                {syncResult.attendanceUpdated !== undefined && syncResult.attendanceUpdated > 0 && (
-                  <div className="flex items-center gap-2">
-                    <UserCheck size={16} className="text-green-600" />
-                    <span>{syncResult.attendanceUpdated} attendance records updated</span>
+                  <div className="p-2 bg-green-50 rounded-lg">
+                    <div className="text-lg font-semibold text-green-700">{syncResult.attendanceUpdated || 0}</div>
+                    <div className="text-xs text-green-600">Attendance</div>
                   </div>
-                )}
-                {syncResult.imported === 0 && syncResult.exported === 0 && syncResult.attendanceUpdated === 0 && (
-                  <p className="text-gray-500">Everything is already up to date</p>
+                </div>
+                
+                {/* Detailed breakdown */}
+                <div className="space-y-2 text-sm">
+                  {syncResult.imported !== undefined && syncResult.imported > 0 && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <CloudArrowDown size={16} className="text-blue-600 flex-shrink-0" />
+                      <span>{syncResult.imported} events imported/updated from Spond</span>
+                    </div>
+                  )}
+                  {syncResult.exported !== undefined && syncResult.exported > 0 && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <CloudArrowUp size={16} className="text-purple-600 flex-shrink-0" />
+                      <span>{syncResult.exported} events exported to Spond</span>
+                    </div>
+                  )}
+                  {syncResult.attendanceUpdated !== undefined && syncResult.attendanceUpdated > 0 && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <UserCheck size={16} className="text-green-600 flex-shrink-0" />
+                      <span>{syncResult.attendanceUpdated} attendance records synced</span>
+                    </div>
+                  )}
+                  {syncResult.imported === 0 && syncResult.exported === 0 && syncResult.attendanceUpdated === 0 && (
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-gray-600 font-medium">No changes detected</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Everything is already up to date, or no linked teams were found.
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Make sure you have teams linked to Spond groups.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Show any errors/warnings */}
+                {syncResult.errors && syncResult.errors.length > 0 && (
+                  <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700 text-xs font-medium mb-1">
+                      <Warning size={14} />
+                      <span>{syncResult.errors.length} warning(s)</span>
+                    </div>
+                    <div className="text-xs text-amber-600 max-h-20 overflow-y-auto">
+                      {syncResult.errors.slice(0, 3).map((err, i) => (
+                        <div key={i} className="truncate">{err}</div>
+                      ))}
+                      {syncResult.errors.length > 3 && (
+                        <div className="text-amber-500">...and {syncResult.errors.length - 3} more</div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </>
@@ -490,8 +543,17 @@ export default function SpondSyncWizard({
               </div>
               <p className="text-lg font-medium text-red-700">Sync failed</p>
               <p className="text-sm text-gray-500 mt-1 text-center max-w-sm">
-                {syncResult.error}
+                {syncResult.error || 'An unknown error occurred'}
               </p>
+              {syncResult.errors && syncResult.errors.length > 0 && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg max-w-sm w-full">
+                  <div className="text-xs text-red-600 max-h-24 overflow-y-auto space-y-1">
+                    {syncResult.errors.map((err, i) => (
+                      <div key={i}>{err}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )
         ) : null}
