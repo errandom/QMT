@@ -257,6 +257,18 @@ export default function SpondSetupWizard({
         })
       })
 
+      // Check if response is OK and is JSON before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[Spond] Server returned non-JSON response:', response.status, contentType)
+        throw new Error('Server error: Unable to connect to Spond API. Please try again later.')
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || `Connection test failed (${response.status})`)
+      }
+
       const result = await response.json()
       
       if (!result.success) {
