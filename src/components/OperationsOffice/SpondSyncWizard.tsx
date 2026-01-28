@@ -565,8 +565,8 @@ export default function SpondSyncWizard({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-lg max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-gray-900">
             <div 
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -583,7 +583,7 @@ export default function SpondSyncWizard({
 
         {!syncing && !syncResult && renderStepIndicator()}
 
-        <div className="overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {syncing || syncResult ? (
             renderSyncProgress()
           ) : (
@@ -595,7 +595,7 @@ export default function SpondSyncWizard({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
+        <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0 border-t pt-4">
           {!syncing && !syncResult && (
             <>
               {step > 1 && (
