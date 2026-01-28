@@ -128,11 +128,19 @@ export async function importEventsFromSpond(
           .input('spond_id', sql.NVarChar, spondEvent.id)
           .query('SELECT id, updated_at FROM events WHERE spond_id = @spond_id');
 
+        // Parse timestamps - Spond sends ISO strings with timezone
+        // We need to preserve the local time, not convert to UTC
+        const startTime = new Date(spondEvent.startTimestamp);
+        const endTime = new Date(spondEvent.endTimestamp);
+        
+        // Log for debugging
+        console.log(`[Spond Sync] Event ${spondEvent.heading}: Spond time=${spondEvent.startTimestamp}, Parsed=${startTime.toISOString()}`);
+
         const eventData = {
           spond_id: spondEvent.id,
           event_type: mapEventType(spondEvent.type || spondEvent.spilesType, spondEvent.heading),
-          start_time: new Date(spondEvent.startTimestamp),
-          end_time: new Date(spondEvent.endTimestamp),
+          start_time: startTime,
+          end_time: endTime,
           description: spondEvent.heading + (spondEvent.description ? `\n\n${spondEvent.description}` : ''),
           status: mapEventStatus(spondEvent),
           spond_group_id: spondEvent.recipients?.group?.id || null,
@@ -512,7 +520,12 @@ export async function syncEventAttendance(
     // Fetch attendance from Spond
     const attendance = await client.getEventAttendance(event.spond_id);
 
-    // Update the event with attendance counts
+    // Calculate estimated attendance as accepted + waiting (tentatives)
+    const estimatedAttendance = (attendance.counts.accepted || 0) + (attendance.counts.waiting || 0);
+    
+    console.log(`[Spond] Attendance for event ${eventId}: ${attendance.counts.accepted} accepted, ${attendance.counts.waiting} waiting/tentative = ${estimatedAttendance} estimated`);
+
+    // Update the event with attendance counts AND estimated_attendance
     await pool.request()
       .input('id', sql.Int, eventId)
       .input('attendance_accepted', sql.Int, attendance.counts.accepted)
@@ -521,6 +534,7 @@ export async function syncEventAttendance(
       .input('attendance_waiting', sql.Int, attendance.counts.waiting)
       .input('attendance_data', sql.NVarChar, JSON.stringify(attendance))
       .input('attendance_last_sync', sql.DateTime, new Date())
+      .input('estimated_attendance', sql.Int, estimatedAttendance)
       .query(`
         UPDATE events SET
           attendance_accepted = @attendance_accepted,
@@ -529,6 +543,7 @@ export async function syncEventAttendance(
           attendance_waiting = @attendance_waiting,
           attendance_data = @attendance_data,
           attendance_last_sync = @attendance_last_sync,
+          estimated_attendance = @estimated_attendance,
           updated_at = GETDATE()
         WHERE id = @id
       `);
