@@ -224,6 +224,39 @@ router.get('/groups', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/spond/events-count
+ * Get count of events available in Spond (used by setup wizard)
+ */
+router.get('/events-count', async (req: Request, res: Response) => {
+  try {
+    const client = await ensureClient();
+    if (!client) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const now = new Date();
+    const minStart = new Date(now);
+    minStart.setDate(minStart.getDate() - 7);
+    const maxStart = new Date(now);
+    maxStart.setDate(maxStart.getDate() + 60);
+
+    const events = await client.getEvents({
+      minStart,
+      maxStart,
+      maxEvents: 500,
+    });
+
+    res.json({ 
+      count: events.length,
+      message: `Found ${events.length} events in Spond`
+    });
+  } catch (error) {
+    console.error('[Spond] Error fetching events count:', error);
+    res.status(500).json({ error: 'Failed to fetch events count' });
+  }
+});
+
+/**
  * GET /api/spond/events
  * Get Spond events with optional filtering
  */
