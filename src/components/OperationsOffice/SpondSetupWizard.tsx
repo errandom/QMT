@@ -1049,7 +1049,7 @@ export default function SpondSetupWizard({
           )}
 
           {/* Unlinked Teams */}
-          <div className="max-h-[350px] overflow-y-auto pr-2">
+          <div className="pr-2">
             <div className="space-y-3">
               {unlinkedTeams.length === 0 && teamMappings.size === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -1103,8 +1103,8 @@ export default function SpondSetupWizard({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-lg max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-gray-900">
             <div 
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -1121,13 +1121,13 @@ export default function SpondSetupWizard({
 
         {renderStepIndicator()}
 
-        <div className="overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
+        <DialogFooter className="flex-shrink-0 gap-2 sm:gap-0 border-t pt-4">
           {step > 1 && step !== 2 && (
             <Button
               variant="outline"
