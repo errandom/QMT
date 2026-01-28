@@ -60,6 +60,6 @@ export function generateToken(user: { id: number; username: string; role: string
   return jwt.sign(
     { id: user.id, username: user.username, role: user.role },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '7d' }  // Extended to 7 days for better UX
   );
 }
