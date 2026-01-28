@@ -1378,6 +1378,7 @@ export default function SpondIntegration() {
         onOpenChange={setShowSetupWizard}
         onComplete={() => {
           fetchStatus()
+          fetchSpondGroups() // Refresh team links after setup
         }}
       />
 
