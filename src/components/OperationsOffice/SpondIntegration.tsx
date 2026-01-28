@@ -895,14 +895,15 @@ export default function SpondIntegration() {
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0">
-            {loadingGroups ? (
-              <div className="flex items-center justify-center py-8">
-                <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
-              </div>
-            ) : (
-              <div className="space-y-2 pr-4">
-                {teams.map((team) => {
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              {loadingGroups ? (
+                <div className="flex items-center justify-center py-8">
+                  <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
+                </div>
+              ) : (
+                <div className="space-y-2 pr-4">
+                  {teams.map((team) => {
                   // Find the linked group - check linkedTeams array for 1:n support
                   const linkedGroup = spondGroups.find(g => 
                     g.linkedTeams?.some(lt => lt.id === team.id) || g.linkedTeam?.id === team.id
@@ -1023,7 +1024,8 @@ export default function SpondIntegration() {
                 )}
               </div>
             )}
-          </ScrollArea>
+            </ScrollArea>
+          </div>
 
           <DialogFooter className="flex-shrink-0">
             <Button
