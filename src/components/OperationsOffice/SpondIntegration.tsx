@@ -1025,7 +1025,7 @@ export default function SpondIntegration() {
             )}
           </ScrollArea>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setShowMappingDialog(false)}
