@@ -327,6 +327,9 @@ export default function SpondIntegration() {
 
   const linkTeam = async (teamId: number, spondGroupId: string) => {
     try {
+      // Find the group to get its details
+      const group = spondGroups.find(g => g.id === spondGroupId)
+      
       const response = await fetch('/api/spond/link/team', {
         method: 'POST',
         headers: {
@@ -337,6 +340,31 @@ export default function SpondIntegration() {
       })
 
       if (response.ok) {
+        // Also create sync settings for this team
+        await fetch('/api/spond/sync-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            teamId,
+            spondGroupId,
+            spondGroupName: group?.name || null,
+            spondParentGroupName: group?.parentGroup || null,
+            isSubgroup: !group?.isParentGroup,
+            syncEventsImport: true,
+            syncEventsExport: false,
+            syncAttendanceImport: true,
+            syncEventTitle: true,
+            syncEventDescription: true,
+            syncEventTime: true,
+            syncEventLocation: true,
+            syncEventType: true,
+            isActive: true
+          })
+        })
+        
         toast.success('Team linked successfully')
         fetchSpondGroups()
       } else {
@@ -357,6 +385,14 @@ export default function SpondIntegration() {
       })
 
       if (response.ok) {
+        // Also delete sync settings for this team
+        await fetch(`/api/spond/sync-settings/${teamId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`
+          }
+        })
+        
         toast.success('Team unlinked')
         fetchSpondGroups()
       } else {
