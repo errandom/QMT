@@ -90,6 +90,27 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
     const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
 
+    // Collect CC recipients: site contact, team managers and coaches
+    const ccRecipients: string[] = []
+    
+    // Add site contact email to CC
+    if (site.contactEmail) {
+      ccRecipients.push(site.contactEmail)
+    }
+    
+    // Add team managers and coaches emails to CC
+    eventTeams.forEach(team => {
+      if (team.headCoach?.email) {
+        ccRecipients.push(team.headCoach.email)
+      }
+      if (team.teamManager?.email) {
+        ccRecipients.push(team.teamManager.email)
+      }
+    })
+    
+    // Remove duplicates
+    const uniqueCcRecipients = [...new Set(ccRecipients)]
+
     const subject = encodeURIComponent(
       `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
     )
@@ -110,7 +131,8 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       `Renegades Organization`
     )
 
-    window.location.href = `mailto:${site.contactEmail}?subject=${subject}&body=${body}`
+    const ccParam = uniqueCcRecipients.length > 0 ? `&cc=${uniqueCcRecipients.join(',')}` : ''
+    window.location.href = `mailto:sports@renegades.ch?subject=${subject}&body=${body}${ccParam}`
   }
 
   useEffect(() => {
