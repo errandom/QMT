@@ -408,9 +408,10 @@ export default function SpondSetupWizard({
         throw new Error('Failed to save configuration')
       }
 
-      // 2. Save all team mappings
-      const mappingPromises = Array.from(teamMappings.values()).map(mapping =>
-        fetch('/api/spond/link/team', {
+      // 2. Save all team mappings AND sync settings
+      const mappingPromises = Array.from(teamMappings.values()).map(async (mapping) => {
+        // First, link the team
+        await fetch('/api/spond/link/team', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -421,7 +422,32 @@ export default function SpondSetupWizard({
             spondGroupId: mapping.spondGroupId
           })
         })
-      )
+        
+        // Then, create sync settings for this team
+        await fetch('/api/spond/sync-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            teamId: mapping.teamId,
+            spondGroupId: mapping.spondGroupId,
+            spondGroupName: mapping.spondGroupName,
+            spondParentGroupName: mapping.spondParentGroupName || null,
+            isSubgroup: mapping.isSubgroup,
+            syncEventsImport: true,
+            syncEventsExport: false,
+            syncAttendanceImport: true,
+            syncEventTitle: true,
+            syncEventDescription: true,
+            syncEventTime: true,
+            syncEventLocation: true,
+            syncEventType: true,
+            isActive: true
+          })
+        })
+      })
 
       await Promise.all(mappingPromises)
 
