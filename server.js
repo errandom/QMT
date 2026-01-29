@@ -705,32 +705,183 @@ app.get('/api/events/:id', async (req, res) => {
   }
 });
 
+// Helper function to generate recurring event dates
+function generateRecurringDates(startDate, endDate, recurringDays) {
+  const dates = [];
+  const current = new Date(startDate);
+  
+  // Set to start of day to avoid time zone issues
+  current.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+  
+  while (current <= end) {
+    // Get day of week (1=Monday, 7=Sunday)
+    const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay(); // Convert Sunday from 0 to 7
+    
+    if (recurringDays.includes(dayOfWeek)) {
+      dates.push(new Date(current));
+    }
+    
+    // Move to next day
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return dates;
+}
+
 app.post('/api/events', async (req, res) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance } = req.body;
 
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
 
+    console.log('[Events POST] ===== INCOMING REQUEST =====');
+    console.log('[Events POST] recurring_days:', recurring_days, 'type:', typeof recurring_days);
+    console.log('[Events POST] recurring_end_date:', recurring_end_date, 'type:', typeof recurring_end_date);
+    console.log('[Events POST] recurringDaysStr:', recurringDaysStr);
+
     const pool = await getPool();
-    const result = await pool.request()
-      .input('team_ids', sql.NVarChar, team_ids || null)
-      .input('field_id', sql.Int, field_id || null)
-      .input('event_type', sql.NVarChar, event_type)
-      .input('start_time', sql.DateTime, start_time)
-      .input('end_time', sql.DateTime, end_time)
-      .input('description', sql.NVarChar, description || null)
-      .input('notes', sql.NVarChar, notes || null)
-      .input('status', sql.NVarChar, status || 'Planned')
-      .input('recurring_days', sql.NVarChar, recurringDaysStr)
-      .input('recurring_end_date', sql.Date, recurring_end_date || null)
-      .query(`
-        INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date)
-        OUTPUT INSERTED.*
-        VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date)
-      `);
-    console.log('[Events POST] Created event with team_ids:', team_ids, 'notes:', notes, 'recurring_days:', recurringDaysStr);
-    res.status(201).json(result.recordset[0]);
+
+    // Check if this is a recurring event
+    const hasRecurringDays = recurringDaysStr && 
+                              typeof recurringDaysStr === 'string' && 
+                              recurringDaysStr.trim().length > 0;
+    
+    const hasRecurringEndDate = recurring_end_date &&
+                                 recurring_end_date !== null &&
+                                 recurring_end_date !== '' &&
+                                 recurring_end_date !== 'null' &&
+                                 recurring_end_date !== 'undefined';
+    
+    const shouldGenerateRecurring = hasRecurringDays && hasRecurringEndDate;
+
+    console.log('[Events POST] Should generate recurring:', shouldGenerateRecurring);
+    console.log('[Events POST] hasRecurringDays:', hasRecurringDays, 'hasRecurringEndDate:', hasRecurringEndDate);
+
+    if (shouldGenerateRecurring) {
+      console.log('[Events POST] ✅ GENERATING RECURRING EVENTS');
+      
+      // Parse recurring days
+      const daysArray = recurringDaysStr.split(',').map(d => parseInt(d.trim()));
+      
+      // Parse the start time to extract date and time components
+      const startDateTime = new Date(start_time);
+      const endDateTime = new Date(end_time);
+      
+      // Calculate time duration in milliseconds
+      const duration = endDateTime.getTime() - startDateTime.getTime();
+      
+      // Generate all applicable dates
+      const recurringDates = generateRecurringDates(
+        startDateTime,
+        new Date(recurring_end_date),
+        daysArray
+      );
+      
+      console.log('[Events POST] Creating', recurringDates.length, 'recurring events');
+      console.log('[Events POST] Days array:', daysArray);
+      console.log('[Events POST] Date range:', startDateTime.toISOString(), 'to', recurring_end_date);
+      
+      // Create individual events for each date
+      const createdEvents = [];
+      
+      for (const date of recurringDates) {
+        // Set the time from the original start_time
+        const eventStart = new Date(date);
+        eventStart.setHours(startDateTime.getHours(), startDateTime.getMinutes(), startDateTime.getSeconds());
+        
+        // Calculate end time based on duration
+        const eventEnd = new Date(eventStart.getTime() + duration);
+        
+        console.log('[Events POST] Creating event for', eventStart.toISOString());
+        
+        const result = await pool.request()
+          .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_id', sql.Int, field_id || null)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, eventStart)
+          .input('end_time', sql.DateTime, eventEnd)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status || 'Planned')
+          .input('recurring_days', sql.NVarChar, null)  // Set to null for individual events
+          .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .query(`
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            OUTPUT INSERTED.*
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+          `);
+        
+        createdEvents.push(result.recordset[0]);
+      }
+      
+      console.log('[Events POST] Created', createdEvents.length, 'recurring events successfully');
+      
+      // Fetch all created events with joins
+      if (createdEvents.length > 0) {
+        const eventIds = createdEvents.map(e => e.id);
+        const eventsWithDetails = await pool.request()
+          .query(`
+            SELECT 
+              e.*,
+              f.name as field_name,
+              s.name as site_name,
+              s.address as site_address
+            FROM events e
+            LEFT JOIN fields f ON e.field_id = f.id
+            LEFT JOIN sites s ON f.site_id = s.id
+            WHERE e.id IN (${eventIds.join(',')})
+          `);
+        
+        res.status(201).json(eventsWithDetails.recordset);
+      } else {
+        res.status(201).json([]);
+      }
+    } else {
+      console.log('[Events POST] ❌ Creating single event (not recurring)');
+      
+      // Single event (non-recurring)
+      const result = await pool.request()
+        .input('team_ids', sql.NVarChar, team_ids || null)
+        .input('field_id', sql.Int, field_id || null)
+        .input('event_type', sql.NVarChar, event_type)
+        .input('start_time', sql.DateTime, start_time)
+        .input('end_time', sql.DateTime, end_time)
+        .input('description', sql.NVarChar, description || null)
+        .input('notes', sql.NVarChar, notes || null)
+        .input('status', sql.NVarChar, status || 'Planned')
+        .input('recurring_days', sql.NVarChar, recurringDaysStr)
+        .input('recurring_end_date', sql.Date, recurring_end_date || null)
+        .input('other_participants', sql.NVarChar, other_participants || null)
+        .input('estimated_attendance', sql.Int, estimated_attendance || null)
+        .query(`
+          INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+          OUTPUT INSERTED.*
+          VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+        `);
+      
+      // Fetch the created event with joins
+      const createdEvent = await pool.request()
+        .input('id', sql.Int, result.recordset[0].id)
+        .query(`
+          SELECT 
+            e.*,
+            f.name as field_name,
+            s.name as site_name,
+            s.address as site_address
+          FROM events e
+          LEFT JOIN fields f ON e.field_id = f.id
+          LEFT JOIN sites s ON f.site_id = s.id
+          WHERE e.id = @id
+        `);
+      
+      console.log('[Events POST] Created single event:', result.recordset[0].id);
+      res.status(201).json(createdEvent.recordset[0]);
+    }
   } catch (err) {
     console.error('Error creating event:', err);
     res.status(500).json({ error: 'Failed to create event' });
@@ -739,40 +890,156 @@ app.post('/api/events', async (req, res) => {
 
 app.put('/api/events/:id', async (req, res) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance } = req.body;
 
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
 
     const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .input('team_ids', sql.NVarChar, team_ids || null)
-      .input('field_id', sql.Int, field_id || null)
-      .input('event_type', sql.NVarChar, event_type)
-      .input('start_time', sql.DateTime, start_time)
-      .input('end_time', sql.DateTime, end_time)
-      .input('description', sql.NVarChar, description || null)
-      .input('notes', sql.NVarChar, notes || null)
-      .input('status', sql.NVarChar, status)
-      .input('recurring_days', sql.NVarChar, recurringDaysStr)
-      .input('recurring_end_date', sql.Date, recurring_end_date || null)
-      .query(`
-        UPDATE events 
-        SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
-            start_time = @start_time, end_time = @end_time, description = @description,
-            notes = @notes, status = @status, recurring_days = @recurring_days,
-            recurring_end_date = @recurring_end_date, updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `);
 
-    console.log('[Events PUT] Updated event with team_ids:', team_ids, 'notes:', notes, 'recurring_days:', recurringDaysStr);
+    // Check if we should generate recurring events (convert single to recurring)
+    const hasRecurringDays = recurringDaysStr && 
+                              typeof recurringDaysStr === 'string' && 
+                              recurringDaysStr.trim().length > 0;
+    
+    const hasRecurringEndDate = recurring_end_date &&
+                                 recurring_end_date !== null &&
+                                 recurring_end_date !== '' &&
+                                 recurring_end_date !== 'null' &&
+                                 recurring_end_date !== 'undefined';
+    
+    const shouldGenerateRecurring = generate_recurring && hasRecurringDays && hasRecurringEndDate;
 
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
+    console.log('[Events PUT] Should generate recurring:', shouldGenerateRecurring);
+
+    if (shouldGenerateRecurring) {
+      console.log('[Events PUT] ✅ Converting to recurring events');
+      
+      // Delete the original event
+      await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .query('DELETE FROM events WHERE id = @id');
+      
+      // Parse recurring days
+      const daysArray = recurringDaysStr.split(',').map(d => parseInt(d.trim()));
+      
+      // Parse the start time to extract date and time components
+      const startDateTime = new Date(start_time);
+      const endDateTime = new Date(end_time);
+      
+      // Calculate time duration in milliseconds
+      const duration = endDateTime.getTime() - startDateTime.getTime();
+      
+      // Generate all applicable dates
+      const recurringDates = generateRecurringDates(
+        startDateTime,
+        new Date(recurring_end_date),
+        daysArray
+      );
+      
+      console.log('[Events PUT] Creating', recurringDates.length, 'recurring events');
+      
+      // Create individual events for each date
+      const createdEvents = [];
+      
+      for (const date of recurringDates) {
+        const eventStart = new Date(date);
+        eventStart.setHours(startDateTime.getHours(), startDateTime.getMinutes(), startDateTime.getSeconds());
+        const eventEnd = new Date(eventStart.getTime() + duration);
+        
+        const result = await pool.request()
+          .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_id', sql.Int, field_id || null)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, eventStart)
+          .input('end_time', sql.DateTime, eventEnd)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status || 'Planned')
+          .input('recurring_days', sql.NVarChar, null)
+          .input('recurring_end_date', sql.Date, null)
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .query(`
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            OUTPUT INSERTED.*
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+          `);
+        
+        createdEvents.push(result.recordset[0]);
+      }
+      
+      // Fetch all created events with joins
+      if (createdEvents.length > 0) {
+        const eventIds = createdEvents.map(e => e.id);
+        const eventsWithDetails = await pool.request()
+          .query(`
+            SELECT 
+              e.*,
+              f.name as field_name,
+              s.name as site_name,
+              s.address as site_address
+            FROM events e
+            LEFT JOIN fields f ON e.field_id = f.id
+            LEFT JOIN sites s ON f.site_id = s.id
+            WHERE e.id IN (${eventIds.join(',')})
+          `);
+        
+        console.log('[Events PUT] Created', createdEvents.length, 'recurring events');
+        res.json(eventsWithDetails.recordset);
+      } else {
+        res.json([]);
+      }
+    } else {
+      // Regular update (no recurring generation)
+      const result = await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .input('team_ids', sql.NVarChar, team_ids || null)
+        .input('field_id', sql.Int, field_id || null)
+        .input('event_type', sql.NVarChar, event_type)
+        .input('start_time', sql.DateTime, start_time)
+        .input('end_time', sql.DateTime, end_time)
+        .input('description', sql.NVarChar, description || null)
+        .input('notes', sql.NVarChar, notes || null)
+        .input('status', sql.NVarChar, status)
+        .input('recurring_days', sql.NVarChar, recurringDaysStr)
+        .input('recurring_end_date', sql.Date, recurring_end_date || null)
+        .input('other_participants', sql.NVarChar, other_participants || null)
+        .input('estimated_attendance', sql.Int, estimated_attendance || null)
+        .query(`
+          UPDATE events 
+          SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
+              start_time = @start_time, end_time = @end_time, description = @description,
+              notes = @notes, status = @status, recurring_days = @recurring_days,
+              recurring_end_date = @recurring_end_date, other_participants = @other_participants,
+              estimated_attendance = @estimated_attendance, updated_at = GETDATE()
+          OUTPUT INSERTED.*
+          WHERE id = @id
+        `);
+
+      console.log('[Events PUT] Updated event:', req.params.id);
+
+      if (result.recordset.length === 0) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      
+      // Fetch with joins
+      const updatedEvent = await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .query(`
+          SELECT 
+            e.*,
+            f.name as field_name,
+            s.name as site_name,
+            s.address as site_address
+          FROM events e
+          LEFT JOIN fields f ON e.field_id = f.id
+          LEFT JOIN sites s ON f.site_id = s.id
+          WHERE e.id = @id
+        `);
+      
+      res.json(updatedEvent.recordset[0]);
     }
-    res.json(result.recordset[0]);
   } catch (err) {
     console.error('Error updating event:', err);
     res.status(500).json({ error: 'Failed to update event' });
@@ -880,7 +1147,7 @@ app.post('/api/events/create-from-natural-language', async (req, res) => {
     // Get context from database
     const pool = await getPool();
     const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
-      pool.request().query('SELECT id, name FROM teams WHERE is_active = 1'),
+      pool.request().query('SELECT id, name FROM teams WHERE active = 1'),
       pool.request().query('SELECT id, name FROM sites'),
       pool.request().query('SELECT id, name, site_id FROM fields'),
     ]);
@@ -2469,13 +2736,35 @@ app.post('/api/spond/sync/events', verifyToken, requireAdminOrMgmt, async (req, 
             results.imported++;
           }
           
+          // Parse timestamps - preserve local time from Spond without timezone conversion
+          // Spond sends ISO strings like "2026-02-15T18:00:00+01:00"
+          // We want to store 18:00 as-is, not convert to UTC
+          const startTimeStr = spondEvent.startTimestamp;
+          const endTimeStr = spondEvent.endTimestamp;
+          
+          // Extract date/time components from ISO string (ignore timezone for storage)
+          const parseLocalTime = (isoStr) => {
+            // Match: YYYY-MM-DDTHH:MM:SS (ignore timezone offset)
+            const match = isoStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+            if (match) {
+              const [, year, month, day, hour, min, sec] = match;
+              return new Date(year, month - 1, day, hour, min, sec);
+            }
+            return new Date(isoStr); // Fallback
+          };
+          
+          const startTime = parseLocalTime(startTimeStr);
+          const endTime = parseLocalTime(endTimeStr);
+          
+          console.log(`[Spond] Event "${spondEvent.heading}": Spond=${startTimeStr}, Stored=${startTime.toISOString()}`);
+          
           await pool.request()
             .input('spond_id', sql.NVarChar, spondEvent.id)
             .input('name', sql.NVarChar, spondEvent.heading || 'Spond Event')
             .input('description', sql.NVarChar, spondEvent.description || '')
             .input('team_id', sql.Int, team.id)
-            .input('start_time', sql.DateTime, new Date(spondEvent.startTimestamp))
-            .input('end_time', sql.DateTime, new Date(spondEvent.endTimestamp))
+            .input('start_time', sql.DateTime, startTime)
+            .input('end_time', sql.DateTime, endTime)
             .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'Game' : 'Practice')
             .input('status', sql.NVarChar, spondEvent.cancelled ? 'Cancelled' : 'Confirmed')
             .input('spond_group_id', sql.NVarChar, team.spond_group_id)
@@ -2551,20 +2840,25 @@ app.post('/api/spond/sync/attendance/event/:id', verifyToken, requireAdminOrMgmt
     const declined = responses.declinedIds?.length || 0;
     const unanswered = responses.unansweredIds?.length || 0;
     const waiting = responses.waitinglistIds?.length || 0;
+    const estimatedAttendance = accepted + waiting;
     
-    // Update event with attendance counts
+    console.log(`[Spond] Attendance for event ${eventId}: ${accepted} accepted, ${waiting} waiting = ${estimatedAttendance} estimated`);
+    
+    // Update event with attendance counts and estimated_attendance
     await pool.request()
       .input('id', sql.Int, eventId)
       .input('accepted', sql.Int, accepted)
       .input('declined', sql.Int, declined)
       .input('unanswered', sql.Int, unanswered)
       .input('waiting', sql.Int, waiting)
+      .input('estimated_attendance', sql.Int, estimatedAttendance)
       .query(`
         UPDATE events SET 
           attendance_accepted = @accepted,
           attendance_declined = @declined,
           attendance_unanswered = @unanswered,
           attendance_waiting = @waiting,
+          estimated_attendance = @estimated_attendance,
           attendance_last_sync = GETDATE()
         WHERE id = @id
       `);
@@ -2572,7 +2866,7 @@ app.post('/api/spond/sync/attendance/event/:id', verifyToken, requireAdminOrMgmt
     res.json({
       success: true,
       eventId,
-      attendance: { accepted, declined, unanswered, waiting },
+      attendance: { accepted, declined, unanswered, waiting, estimatedAttendance },
       message: 'Attendance synced successfully'
     });
   } catch (err) {
@@ -2616,6 +2910,9 @@ app.post('/api/spond/sync/attendance', verifyToken, requireAdminOrMgmt, async (r
         const declined = responses.declinedIds?.length || 0;
         const unanswered = responses.unansweredIds?.length || 0;
         const waiting = responses.waitinglistIds?.length || 0;
+        const estimatedAttendance = accepted + waiting;
+        
+        console.log(`[Spond] Attendance for event ${event.id}: ${accepted} accepted, ${waiting} waiting = ${estimatedAttendance} estimated`);
         
         await pool.request()
           .input('id', sql.Int, event.id)
@@ -2623,12 +2920,14 @@ app.post('/api/spond/sync/attendance', verifyToken, requireAdminOrMgmt, async (r
           .input('declined', sql.Int, declined)
           .input('unanswered', sql.Int, unanswered)
           .input('waiting', sql.Int, waiting)
+          .input('estimated_attendance', sql.Int, estimatedAttendance)
           .query(`
             UPDATE events SET 
               attendance_accepted = @accepted,
               attendance_declined = @declined,
               attendance_unanswered = @unanswered,
               attendance_waiting = @waiting,
+              estimated_attendance = @estimated_attendance,
               attendance_last_sync = GETDATE()
             WHERE id = @id
           `);
@@ -2967,11 +3266,11 @@ app.post('/api/spond/import-team', verifyToken, requireAdminOrMgmt, async (req, 
       .input('sport', sql.NVarChar, sport || 'Tackle Football')
       .input('spond_group_id', sql.NVarChar, spondGroupId)
       .input('imported_from_spond', sql.Bit, 1)
-      .input('is_active', sql.Bit, 1)
+      .input('active', sql.Bit, 1)
       .query(`
-        INSERT INTO teams (name, sport, spond_group_id, imported_from_spond, spond_import_date, is_active)
+        INSERT INTO teams (name, sport, spond_group_id, imported_from_spond, spond_import_date, active)
         OUTPUT INSERTED.id, INSERTED.name
-        VALUES (@name, @sport, @spond_group_id, @imported_from_spond, GETDATE(), @is_active)
+        VALUES (@name, @sport, @spond_group_id, @imported_from_spond, GETDATE(), @active)
       `);
     
     const newTeamId = teamResult.recordset[0].id;
@@ -3037,11 +3336,11 @@ app.post('/api/spond/import-teams', verifyToken, requireAdminOrMgmt, async (req,
           .input('sport', sql.NVarChar, sport || 'Tackle Football')
           .input('spond_group_id', sql.NVarChar, group.id)
           .input('imported_from_spond', sql.Bit, 1)
-          .input('is_active', sql.Bit, 1)
+          .input('active', sql.Bit, 1)
           .query(`
-            INSERT INTO teams (name, sport, spond_group_id, imported_from_spond, spond_import_date, is_active)
+            INSERT INTO teams (name, sport, spond_group_id, imported_from_spond, spond_import_date, active)
             OUTPUT INSERTED.id
-            VALUES (@name, @sport, @spond_group_id, @imported_from_spond, GETDATE(), @is_active)
+            VALUES (@name, @sport, @spond_group_id, @imported_from_spond, GETDATE(), @active)
           `);
         
         const newTeamId = teamResult.recordset[0].id;
@@ -3123,14 +3422,31 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             `sponds?groupId=${settings.spond_group_id}&minEndTimestamp=${minDate.toISOString()}&maxEndTimestamp=${maxDate.toISOString()}&includeComments=false&includeHidden=false`
           );
           
+          // Helper function to parse local time from ISO string (ignore timezone)
+          const parseLocalTime = (isoStr) => {
+            if (!isoStr) return null;
+            const match = isoStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+            if (match) {
+              const [, year, month, day, hour, min, sec] = match;
+              return new Date(year, month - 1, day, hour, min, sec);
+            }
+            return new Date(isoStr);
+          };
+          
           for (const spondEvent of events) {
+            // Parse timestamps preserving local time
+            const startTime = settings.sync_event_time ? parseLocalTime(spondEvent.startTimestamp) : null;
+            const endTime = settings.sync_event_time ? parseLocalTime(spondEvent.endTimestamp) : null;
+            
+            console.log(`[Spond] Syncing event "${spondEvent.heading}": Spond=${spondEvent.startTimestamp}, Stored=${startTime?.toISOString()}`);
+            
             await pool.request()
               .input('spond_id', sql.NVarChar, spondEvent.id)
               .input('name', sql.NVarChar, settings.sync_event_title ? (spondEvent.heading || 'Spond Event') : null)
               .input('description', sql.NVarChar, settings.sync_event_description ? (spondEvent.description || '') : null)
               .input('team_id', sql.Int, settings.team_id)
-              .input('start_time', sql.DateTime, settings.sync_event_time ? new Date(spondEvent.startTimestamp) : null)
-              .input('end_time', sql.DateTime, settings.sync_event_time ? new Date(spondEvent.endTimestamp) : null)
+              .input('start_time', sql.DateTime, startTime)
+              .input('end_time', sql.DateTime, endTime)
               .input('event_type', sql.NVarChar, settings.sync_event_type ? (spondEvent.type === 'MATCH' ? 'Game' : 'Practice') : null)
               .input('status', sql.NVarChar, spondEvent.cancelled ? 'Cancelled' : 'Confirmed')
               .input('spond_group_id', sql.NVarChar, settings.spond_group_id)
@@ -3178,18 +3494,26 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
               const spondEvent = await spondRequest(token, `sponds/${event.spond_id}`);
               const responses = spondEvent.responses || {};
               
+              const acceptedCount = responses.acceptedIds?.length || 0;
+              const waitingCount = responses.waitinglistIds?.length || 0;
+              const estimatedAttendance = acceptedCount + waitingCount;
+              
+              console.log(`[Spond] Attendance for event ${event.id}: ${acceptedCount} accepted, ${waitingCount} waiting = ${estimatedAttendance} estimated`);
+              
               await pool.request()
                 .input('id', sql.Int, event.id)
-                .input('accepted', sql.Int, responses.acceptedIds?.length || 0)
+                .input('accepted', sql.Int, acceptedCount)
                 .input('declined', sql.Int, responses.declinedIds?.length || 0)
                 .input('unanswered', sql.Int, responses.unansweredIds?.length || 0)
-                .input('waiting', sql.Int, responses.waitinglistIds?.length || 0)
+                .input('waiting', sql.Int, waitingCount)
+                .input('estimated_attendance', sql.Int, estimatedAttendance)
                 .query(`
                   UPDATE events SET 
                     attendance_accepted = @accepted,
                     attendance_declined = @declined,
                     attendance_unanswered = @unanswered,
                     attendance_waiting = @waiting,
+                    estimated_attendance = @estimated_attendance,
                     attendance_last_sync = GETDATE()
                   WHERE id = @id
                 `);
