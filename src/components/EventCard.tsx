@@ -24,7 +24,8 @@ import {
   UserCheck,
   UserMinus,
   Question,
-  Lightning
+  Lightning,
+  Envelope
 } from '@phosphor-icons/react'
 import { Event, Team, Field, Site, EventType, WeatherForecast } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
@@ -72,8 +73,45 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
   const canRequestCancellation = hoursUntilEvent > 24 && (event.status === 'Confirmed' || event.status === 'Planned')
   const isPastEvent = hoursUntilEvent < 0
+  const isCancelled = event.status === 'Cancelled'
 
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 72
+
+  // Build cancellation notification email
+  const handleNotifyCancellation = () => {
+    if (!site?.contactEmail) return
+
+    const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })
+    const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
+    const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
+
+    const subject = encodeURIComponent(
+      `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
+    )
+
+    const body = encodeURIComponent(
+      `Dear ${site.contactFirstName} ${site.contactLastName},\n\n` +
+      `We regret to inform you that the following event has been cancelled:\n\n` +
+      `Event: ${event.title}\n` +
+      `Type: ${event.eventType}\n` +
+      `Date: ${formattedDate}\n` +
+      `Time: ${event.startTime} - ${event.endTime}\n` +
+      `Location: ${locationName}\n` +
+      `Address: ${site.address}, ${site.zipCode} ${site.city}\n` +
+      `Team(s): ${teamNames}\n\n` +
+      `We apologize for any inconvenience this may cause.\n\n` +
+      `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
+      `Best regards,\n` +
+      `Renegades Organization`
+    )
+
+    window.location.href = `mailto:${site.contactEmail}?subject=${subject}&body=${body}`
+  }
 
   useEffect(() => {
     if (showWeather && site && !weather && !loadingWeather) {
@@ -115,6 +153,23 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                 <Prohibit className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
                 <span className="hidden sm:inline">Request Cancellation</span>
                 <span className="sm:hidden">Cancel</span>
+              </Button>
+            )}
+            {isCancelled && site?.contactEmail && (
+              <Button 
+                variant="ghost"
+                size="sm" 
+                className="h-[26px] px-3 text-xs transition-all hover:bg-transparent whitespace-nowrap flex-shrink-0"
+                style={{
+                  backgroundColor: 'rgba(36, 139, 204, 0.15)',
+                  color: 'rgb(36, 139, 204)',
+                  border: 'none'
+                }}
+                onClick={handleNotifyCancellation}
+              >
+                <Envelope className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
+                <span className="hidden sm:inline">Notify Site Contact</span>
+                <span className="sm:hidden">Notify</span>
               </Button>
             )}
           </div>
