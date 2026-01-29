@@ -50,7 +50,7 @@ interface CompletenessCheck {
 interface NaturalLanguageEventCreatorProps {
   onEventsCreated?: () => void
   teams?: { id: number; name: string }[]
-  fields?: { id: number; name: string }[]
+  fields?: { id: number; name: string; siteId?: number | string }[]
   sites?: { id: number; name: string }[]
 }
 
@@ -354,11 +354,15 @@ export default function NaturalLanguageEventCreator({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {fields.map((field) => (
-                      <SelectItem key={field.id} value={String(field.id)}>
-                        {field.name}
-                      </SelectItem>
-                    ))}
+                    {fields.map((field) => {
+                      const site = sites.find(s => String(s.id) === String(field.siteId))
+                      const displayName = site ? `${site.name} - ${field.name}` : field.name
+                      return (
+                        <SelectItem key={field.id} value={String(field.id)}>
+                          {displayName}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
