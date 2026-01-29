@@ -168,7 +168,7 @@ router.post('/parse', async (req: Request, res: Response) => {
     const pool = await getPool();
     
     const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
-      pool.request().query('SELECT id, name FROM teams WHERE is_active = 1'),
+      pool.request().query('SELECT id, name FROM teams WHERE active = 1'),
       pool.request().query('SELECT id, name FROM sites'),
       pool.request().query('SELECT id, name, site_id FROM fields'),
     ]);
@@ -248,7 +248,7 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
     const pool = await getPool();
     
     const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
-      pool.request().query('SELECT id, name FROM teams WHERE is_active = 1'),
+      pool.request().query('SELECT id, name FROM teams WHERE active = 1'),
       pool.request().query('SELECT id, name FROM sites'),
       pool.request().query('SELECT id, name, site_id FROM fields'),
     ]);
