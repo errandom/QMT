@@ -467,7 +467,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       {showAICreator && (
         <NaturalLanguageEventCreator
           teams={activeTeams.map(t => ({ id: parseInt(t.id), name: t.name }))}
-          fields={fields.map(f => ({ id: parseInt(f.id), name: f.name }))}
+          fields={fields.map(f => ({ id: parseInt(f.id), name: f.name, siteId: f.siteId }))}
           sites={sites.map(s => ({ id: parseInt(s.id), name: s.name }))}
           onEventsCreated={() => {
             // Refresh events
