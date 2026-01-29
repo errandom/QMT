@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 import { shareEvent } from '@/lib/whatsappService'
@@ -181,6 +181,70 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       console.error('Error sharing event:', error)
       toast.error('Failed to share event')
     }
+  }
+
+  const handleNotifyCancellation = (event: Event) => {
+    const field = fields.find(f => f.id === event.fieldId)
+    const site = field ? sites.find(s => s.id === field.siteId) : null
+    
+    if (!site?.contactEmail) {
+      toast.error('No site contact email available')
+      return
+    }
+
+    const eventTeams = event.teamIds ? teams.filter(t => event.teamIds?.includes(t.id)) : []
+    const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })
+    const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
+    const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
+
+    // Collect CC recipients: site contact, team managers and coaches
+    const ccRecipients: string[] = []
+    
+    // Add site contact email to CC
+    if (site.contactEmail) {
+      ccRecipients.push(site.contactEmail)
+    }
+    
+    // Add team managers and coaches emails to CC
+    eventTeams.forEach(team => {
+      if (team.headCoach?.email) {
+        ccRecipients.push(team.headCoach.email)
+      }
+      if (team.teamManager?.email) {
+        ccRecipients.push(team.teamManager.email)
+      }
+    })
+    
+    // Remove duplicates
+    const uniqueCcRecipients = [...new Set(ccRecipients)]
+
+    const subject = encodeURIComponent(
+      `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
+    )
+
+    const body = encodeURIComponent(
+      `Dear ${site.contactFirstName} ${site.contactLastName},\n\n` +
+      `We regret to inform you that the following event has been cancelled:\n\n` +
+      `Event: ${event.title}\n` +
+      `Type: ${event.eventType}\n` +
+      `Date: ${formattedDate}\n` +
+      `Time: ${event.startTime} - ${event.endTime}\n` +
+      `Location: ${locationName}\n` +
+      `Address: ${site.address}, ${site.zipCode} ${site.city}\n` +
+      `Team(s): ${teamNames}\n\n` +
+      `We apologize for any inconvenience this may cause.\n\n` +
+      `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
+      `Best regards,\n` +
+      `Renegades Organization`
+    )
+
+    const ccParam = uniqueCcRecipients.length > 0 ? `&cc=${uniqueCcRecipients.join(',')}` : ''
+    window.location.href = `mailto:sports@renegades.ch?subject=${subject}&body=${body}${ccParam}`
   }
 
   const handleDelete = async (eventId: string) => {
@@ -507,6 +571,21 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 </div>
                 {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
                   <div className="flex gap-1 shrink-0">
+                    {event.status === 'Cancelled' && (() => {
+                      const field = fields.find(f => f.id === event.fieldId)
+                      const site = field ? sites.find(s => s.id === field.siteId) : null
+                      return site?.contactEmail ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-600 hover:text-amber-600 hover:bg-amber-600/10"
+                          onClick={() => handleNotifyCancellation(event)}
+                          title="Notify site contact of cancellation"
+                        >
+                          <Envelope size={18} weight="bold" />
+                        </Button>
+                      ) : null
+                    })()}
                     <Button
                       variant="ghost"
                       size="icon"
