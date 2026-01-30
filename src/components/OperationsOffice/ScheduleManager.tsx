@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 import { shareEvent } from '@/lib/whatsappService'
 import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
+import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -36,6 +37,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const { events, setEvents, teams, fields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+
+  // Share dialog state
+  const [showShareDialog, setShowShareDialog] = useState(false)
+  const [shareDialogEvent, setShareDialogEvent] = useState<Event | null>(null)
+  const [shareDialogOriginalEvent, setShareDialogOriginalEvent] = useState<Event | null>(null)
+  const [shareDialogUpdateType, setShareDialogUpdateType] = useState<'update' | 'cancel' | 'create'>('update')
 
   // AI Creator toggle
   const [showAICreator, setShowAICreator] = useState(false)
@@ -323,6 +330,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               current.map(ev => ev.id === editingEvent.id ? result : ev)
             )
             toast.success('Event updated successfully')
+            
+            // Show share dialog for event updates
+            const isCancellation = formData.status === 'Cancelled' && editingEvent.status !== 'Cancelled'
+            setShareDialogOriginalEvent(editingEvent)
+            setShareDialogEvent(result)
+            setShareDialogUpdateType(isCancellation ? 'cancel' : 'update')
+            setShowShareDialog(true)
           }
         }
       } else {
@@ -897,6 +911,24 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Event Update Share Dialog */}
+      {shareDialogEvent && (
+        <EventUpdateShareDialog
+          isOpen={showShareDialog}
+          onClose={() => {
+            setShowShareDialog(false)
+            setShareDialogEvent(null)
+            setShareDialogOriginalEvent(null)
+          }}
+          event={shareDialogEvent}
+          originalEvent={shareDialogOriginalEvent}
+          teams={teams}
+          fields={fields}
+          sites={sites}
+          updateType={shareDialogUpdateType}
+        />
+      )}
     </div>
   )
 }
