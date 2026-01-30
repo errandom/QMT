@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { FacilityRequest, EquipmentRequest, CancellationRequest, User, Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,7 @@ import { Separator } from '@/components/ui/separator'
 import { Check, X, ClipboardText, Prohibit } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 
 interface RequestsManagerProps {
   currentUser: User
@@ -17,8 +19,14 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     facilityRequests, setFacilityRequests,
     equipmentRequests, setEquipmentRequests,
     cancellationRequests, setCancellationRequests,
-    teams, events, setEvents 
+    teams, events, setEvents,
+    fields, sites
   } = useData()
+
+  // Share dialog state
+  const [showShareDialog, setShowShareDialog] = useState(false)
+  const [shareDialogEvent, setShareDialogEvent] = useState<Event | null>(null)
+  const [shareDialogOriginalEvent, setShareDialogOriginalEvent] = useState<Event | null>(null)
 
   const handleApproveFacility = async (requestId: string) => {
     const request = facilityRequests.find(r => r.id === requestId)
@@ -123,6 +131,9 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
       const event = events.find(e => e.id === request.eventId)
       
       if (event) {
+        // Store original event for share dialog
+        const originalEvent = { ...event }
+        
         // Update the event status to Cancelled via API
         const updateData = {
           team_ids: event.teamIds && event.teamIds.length > 0 ? event.teamIds.join(',') : null,
@@ -139,6 +150,9 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         
         await api.updateEvent(parseInt(event.id), updateData)
         
+        // Create cancelled event for share dialog
+        const cancelledEvent: Event = { ...event, status: 'Cancelled' }
+        
         // Update local state
         setEvents((current = []) =>
           current.map(e =>
@@ -147,6 +161,11 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
               : e
           )
         )
+        
+        // Show share dialog for cancellation notification
+        setShareDialogOriginalEvent(originalEvent)
+        setShareDialogEvent(cancelledEvent)
+        setShowShareDialog(true)
       }
       
       // Update request status
@@ -450,6 +469,24 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
           </div>
         )}
       </div>
+
+      {/* Event Update Share Dialog for Cancellations */}
+      {shareDialogEvent && (
+        <EventUpdateShareDialog
+          isOpen={showShareDialog}
+          onClose={() => {
+            setShowShareDialog(false)
+            setShareDialogEvent(null)
+            setShareDialogOriginalEvent(null)
+          }}
+          event={shareDialogEvent}
+          originalEvent={shareDialogOriginalEvent}
+          teams={teams}
+          fields={fields}
+          sites={sites}
+          updateType="cancel"
+        />
+      )}
     </div>
   )
 }
