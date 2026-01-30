@@ -2201,36 +2201,29 @@ async function spondRequest(token, endpoint, params = {}) {
     throw new Error(`Spond API error: ${response.status}`);
   }
   
-  const data = await response.json();
+  return await response.json();
+}
+
+// POST request to Spond API (for creating/updating events)
+async function spondPostRequest(token, endpoint, body) {
+  const url = `${SPOND_API_BASE}${endpoint}`;
+  console.log('[Spond] POST Request URL:', url);
   
-  // Log first group structure for debugging member data
-  if (endpoint === 'groups' && Array.isArray(data) && data.length > 0) {
-    const sampleGroup = data[0];
-    console.log('[Spond] Sample group structure:', {
-      name: sampleGroup.name,
-      membersType: typeof sampleGroup.members,
-      membersIsArray: Array.isArray(sampleGroup.members),
-      membersCount: sampleGroup.members?.length || 0,
-      membersSample: sampleGroup.members?.[0] ? Object.keys(sampleGroup.members[0]) : 'no members',
-      subGroupsCount: sampleGroup.subGroups?.length || 0
-    });
-    
-    // Log subgroup structure if available
-    if (sampleGroup.subGroups?.length > 0) {
-      const sampleSubgroup = sampleGroup.subGroups[0];
-      console.log('[Spond] Sample subgroup structure:', {
-        name: sampleSubgroup.name,
-        membersType: typeof sampleSubgroup.members,
-        membersIsArray: Array.isArray(sampleSubgroup.members),
-        membersCount: sampleSubgroup.members?.length || 0,
-        membersSample: sampleSubgroup.members?.[0] 
-          ? (typeof sampleSubgroup.members[0] === 'string' ? 'string IDs' : Object.keys(sampleSubgroup.members[0]))
-          : 'no members'
-      });
-    }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Spond API POST error: ${response.status} - ${errorText}`);
   }
   
-  return data;
+  return await response.json();
 }
 
 // Get Spond integration status
@@ -3383,6 +3376,101 @@ app.post('/api/spond/import-teams', verifyToken, requireAdminOrMgmt, async (req,
   }
 });
 
+// Export diagnostic - check which events can be exported
+app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const daysAhead = parseInt(req.query.daysAhead) || 60;
+    const daysBehind = parseInt(req.query.daysBehind) || 7;
+    
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() - daysBehind);
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + daysAhead);
+    
+    // Get all events with export eligibility status
+    const eventsQuery = await pool.request()
+      .input('min_date', sql.DateTime, minDate)
+      .input('max_date', sql.DateTime, maxDate)
+      .query(`
+        SELECT 
+          e.id, e.name, e.description, e.event_type, e.start_time, e.end_time, e.status,
+          e.spond_id, e.spond_group_id as event_spond_group_id,
+          e.team_id, t.name as team_name, t.spond_group_id as team_spond_group_id
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        WHERE e.start_time >= @min_date AND e.start_time <= @max_date
+        ORDER BY e.start_time
+      `);
+    
+    const teamsQuery = await pool.request().query(`
+      SELECT id, name, spond_group_id FROM teams WHERE active = 1 ORDER BY name
+    `);
+    
+    const events = eventsQuery.recordset.map(evt => {
+      const issues = [];
+      let canExport = true;
+      
+      if (evt.spond_id) {
+        issues.push('Already exported to Spond');
+        canExport = false;
+      }
+      if (!evt.team_id) {
+        issues.push('No team assigned');
+        canExport = false;
+      }
+      if (evt.team_id && !evt.team_spond_group_id) {
+        issues.push('Team not linked to Spond group');
+        canExport = false;
+      }
+      if (evt.status === 'Cancelled') {
+        issues.push('Event is cancelled');
+        canExport = false;
+      }
+      
+      return {
+        id: evt.id,
+        name: evt.name || evt.description?.substring(0, 50),
+        eventType: evt.event_type,
+        startTime: evt.start_time,
+        status: evt.status,
+        spondId: evt.spond_id,
+        teamId: evt.team_id,
+        teamName: evt.team_name,
+        teamSpondGroupId: evt.team_spond_group_id,
+        canExport,
+        issues: issues.length > 0 ? issues : ['Ready to export']
+      };
+    });
+    
+    const teams = teamsQuery.recordset.map(t => ({
+      id: t.id,
+      name: t.name,
+      spondGroupId: t.spond_group_id,
+      isLinked: !!t.spond_group_id
+    }));
+    
+    res.json({
+      summary: {
+        dateRange: { from: minDate.toISOString(), to: maxDate.toISOString() },
+        totalEvents: events.length,
+        exportableEvents: events.filter(e => e.canExport).length,
+        alreadyExported: events.filter(e => e.spondId).length,
+        noTeamAssigned: events.filter(e => !e.teamId).length,
+        teamNotLinked: events.filter(e => e.teamId && !e.teamSpondGroupId).length,
+        totalTeams: teams.length,
+        linkedTeams: teams.filter(t => t.isLinked).length,
+        unlinkedTeams: teams.filter(t => !t.isLinked).length
+      },
+      events,
+      teams
+    });
+  } catch (err) {
+    console.error('[Spond] Export diagnostic error:', err);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
 // Sync with granular settings (respects per-team import/export settings)
 app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async (req, res) => {
   try {
@@ -3399,6 +3487,8 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + (daysAhead || 60));
     
+    console.log(`[Spond] Sync with settings: direction=${direction}, dateRange=${minDate.toISOString()} to ${maxDate.toISOString()}`);
+    
     // Get all active sync settings
     const settingsResult = await pool.request().query(`
       SELECT ss.*, t.id as team_id, t.name as team_name
@@ -3411,8 +3501,96 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
       imported: 0,
       exported: 0,
       attendanceUpdated: 0,
-      errors: []
+      errors: [],
+      exportDiagnostic: null
     };
+    
+    // EXPORT: If direction is 'export' or 'both', also export events from teams with spond_group_id
+    // This is a fallback that doesn't rely on spond_sync_settings
+    if (direction === 'export' || direction === 'both') {
+      console.log('[Spond] Checking for events to export (via teams.spond_group_id)...');
+      
+      // Get all events that: 1) have no spond_id, 2) have a team with spond_group_id, 3) in date range
+      const eventsToExportQuery = await pool.request()
+        .input('min_date', sql.DateTime, minDate)
+        .input('max_date', sql.DateTime, maxDate)
+        .query(`
+          SELECT e.id, e.name, e.description, e.event_type, e.start_time, e.end_time, e.status,
+                 e.team_id, t.name as team_name, t.spond_group_id
+          FROM events e
+          INNER JOIN teams t ON e.team_id = t.id
+          WHERE e.spond_id IS NULL
+            AND t.spond_group_id IS NOT NULL
+            AND e.start_time >= @min_date AND e.start_time <= @max_date
+            AND (e.status IS NULL OR e.status != 'Cancelled')
+        `);
+      
+      console.log(`[Spond] Found ${eventsToExportQuery.recordset.length} events eligible for export`);
+      
+      // Diagnostic info
+      const diagnosticQuery = await pool.request()
+        .input('min_date', sql.DateTime, minDate)
+        .input('max_date', sql.DateTime, maxDate)
+        .query(`
+          SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN e.spond_id IS NOT NULL THEN 1 ELSE 0 END) as alreadyExported,
+            SUM(CASE WHEN e.team_id IS NULL THEN 1 ELSE 0 END) as noTeam,
+            SUM(CASE WHEN e.team_id IS NOT NULL AND t.spond_group_id IS NULL THEN 1 ELSE 0 END) as teamNotLinked
+          FROM events e
+          LEFT JOIN teams t ON e.team_id = t.id
+          WHERE e.start_time >= @min_date AND e.start_time <= @max_date
+        `);
+      
+      const diag = diagnosticQuery.recordset[0];
+      results.exportDiagnostic = {
+        totalInRange: diag.total,
+        eligible: eventsToExportQuery.recordset.length,
+        alreadyExported: diag.alreadyExported,
+        noTeam: diag.noTeam,
+        teamNotLinked: diag.teamNotLinked
+      };
+      console.log('[Spond] Export diagnostic:', results.exportDiagnostic);
+      
+      for (const event of eventsToExportQuery.recordset) {
+        try {
+          const heading = event.name || `${event.event_type || 'Event'} - ${event.team_name}`;
+          const spondPayload = {
+            heading: heading,
+            description: event.description || '',
+            startTimestamp: new Date(event.start_time).toISOString(),
+            endTimestamp: new Date(event.end_time).toISOString(),
+            spilesType: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
+            recipients: {
+              group: { id: event.spond_group_id }
+            },
+            autoAccept: false
+          };
+          
+          console.log(`[Spond] Exporting event ${event.id} "${heading}" to Spond group ${event.spond_group_id}`);
+          
+          const createdEvent = await spondPostRequest(token, 'sponds', spondPayload);
+          
+          await pool.request()
+            .input('id', sql.Int, event.id)
+            .input('spond_id', sql.NVarChar, createdEvent.id)
+            .input('spond_group_id', sql.NVarChar, event.spond_group_id)
+            .query(`
+              UPDATE events SET 
+                spond_id = @spond_id,
+                spond_group_id = @spond_group_id,
+                updated_at = GETDATE()
+              WHERE id = @id
+            `);
+          
+          console.log(`[Spond] Successfully exported event ${event.id} as Spond event ${createdEvent.id}`);
+          results.exported++;
+        } catch (exportErr) {
+          console.error(`[Spond] Failed to export event ${event.id}:`, exportErr.message);
+          results.errors.push({ eventId: event.id, error: exportErr.message });
+        }
+      }
+    }
     
     for (const settings of settingsResult.recordset) {
       try {
@@ -3529,8 +3707,73 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             .query('UPDATE spond_sync_settings SET last_attendance_sync = GETDATE() WHERE team_id = @team_id');
         }
         
-        // TODO: Export events to Spond (when settings.sync_events_export is true)
-        // This would require Spond API write access
+        // Export events to Spond (when direction is export or both)
+        if (settings.sync_events_export && (direction === 'export' || direction === 'both')) {
+          console.log(`[Spond] Checking for events to export for team ${settings.team_name} (spond_group_id: ${settings.spond_group_id})`);
+          
+          // Get local events that need to be exported to this team's Spond group
+          const eventsToExport = await pool.request()
+            .input('team_id', sql.Int, settings.team_id)
+            .input('min_date', sql.DateTime, minDate)
+            .input('max_date', sql.DateTime, maxDate)
+            .query(`
+              SELECT id, name, description, event_type, start_time, end_time, status
+              FROM events 
+              WHERE team_id = @team_id 
+              AND spond_id IS NULL
+              AND start_time >= @min_date AND start_time <= @max_date
+              AND status != 'Cancelled'
+            `);
+          
+          console.log(`[Spond] Found ${eventsToExport.recordset.length} events to export for team ${settings.team_name}`);
+          
+          for (const event of eventsToExport.recordset) {
+            try {
+              // Build event payload for Spond
+              const heading = event.name || `${event.event_type} - ${settings.team_name}`;
+              const spondPayload = {
+                heading: heading,
+                description: event.description || '',
+                startTimestamp: new Date(event.start_time).toISOString(),
+                endTimestamp: new Date(event.end_time).toISOString(),
+                spilesType: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
+                recipients: {
+                  group: { id: settings.spond_group_id }
+                },
+                autoAccept: false
+              };
+              
+              console.log(`[Spond] Exporting event ${event.id} "${heading}" to Spond group ${settings.spond_group_id}`);
+              
+              // Create event in Spond
+              const createdEvent = await spondPostRequest(token, 'sponds', spondPayload);
+              
+              // Update local event with Spond ID
+              await pool.request()
+                .input('id', sql.Int, event.id)
+                .input('spond_id', sql.NVarChar, createdEvent.id)
+                .input('spond_group_id', sql.NVarChar, settings.spond_group_id)
+                .query(`
+                  UPDATE events SET 
+                    spond_id = @spond_id,
+                    spond_group_id = @spond_group_id,
+                    updated_at = GETDATE()
+                  WHERE id = @id
+                `);
+              
+              console.log(`[Spond] Successfully exported event ${event.id} as Spond event ${createdEvent.id}`);
+              results.exported++;
+            } catch (exportErr) {
+              console.error(`[Spond] Failed to export event ${event.id}:`, exportErr.message);
+              results.errors.push({ eventId: event.id, error: exportErr.message });
+            }
+          }
+          
+          // Update last export timestamp
+          await pool.request()
+            .input('team_id', sql.Int, settings.team_id)
+            .query('UPDATE spond_sync_settings SET last_export_sync = GETDATE() WHERE team_id = @team_id');
+        }
         
       } catch (err) {
         console.error(`[Spond] Error syncing team ${settings.team_name}:`, err.message);
