@@ -3388,7 +3388,7 @@ app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + daysAhead);
     
-    // Get all events with export eligibility status
+    // Get all events in date range
     const eventsQuery = await pool.request()
       .input('min_date', sql.DateTime, minDate)
       .input('max_date', sql.DateTime, maxDate)
@@ -3396,9 +3396,8 @@ app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (
         SELECT 
           e.id, e.name, e.description, e.event_type, e.start_time, e.end_time, e.status,
           e.spond_id, e.spond_group_id as event_spond_group_id,
-          e.team_id, t.name as team_name, t.spond_group_id as team_spond_group_id
+          e.team_ids
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
         WHERE e.start_time >= @min_date AND e.start_time <= @max_date
         ORDER BY e.start_time
       `);
@@ -3407,22 +3406,47 @@ app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (
       SELECT id, name, spond_group_id FROM teams WHERE active = 1 ORDER BY name
     `);
     
+    // Build team lookup map
+    const teamsMap = new Map();
+    for (const t of teamsQuery.recordset) {
+      teamsMap.set(String(t.id), { name: t.name, spondGroupId: t.spond_group_id });
+    }
+    
     const events = eventsQuery.recordset.map(evt => {
       const issues = [];
       let canExport = true;
+      let teamNames = [];
+      let hasSpondGroup = false;
+      let spondGroupId = null;
       
       if (evt.spond_id) {
         issues.push('Already exported to Spond');
         canExport = false;
       }
-      if (!evt.team_id) {
+      
+      if (!evt.team_ids || evt.team_ids.trim() === '') {
         issues.push('No team assigned');
         canExport = false;
+      } else {
+        // Check if any team has spond_group_id
+        const teamIdList = evt.team_ids.split(',').map(id => id.trim());
+        for (const tid of teamIdList) {
+          const teamInfo = teamsMap.get(tid);
+          if (teamInfo) {
+            teamNames.push(teamInfo.name);
+            if (teamInfo.spondGroupId) {
+              hasSpondGroup = true;
+              spondGroupId = teamInfo.spondGroupId;
+            }
+          }
+        }
+        
+        if (!hasSpondGroup) {
+          issues.push('No team linked to Spond group');
+          canExport = false;
+        }
       }
-      if (evt.team_id && !evt.team_spond_group_id) {
-        issues.push('Team not linked to Spond group');
-        canExport = false;
-      }
+      
       if (evt.status === 'Cancelled') {
         issues.push('Event is cancelled');
         canExport = false;
@@ -3435,9 +3459,9 @@ app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (
         startTime: evt.start_time,
         status: evt.status,
         spondId: evt.spond_id,
-        teamId: evt.team_id,
-        teamName: evt.team_name,
-        teamSpondGroupId: evt.team_spond_group_id,
+        teamIds: evt.team_ids,
+        teamNames: teamNames.join(', '),
+        teamSpondGroupId: spondGroupId,
         canExport,
         issues: issues.length > 0 ? issues : ['Ready to export']
       };
@@ -3510,51 +3534,83 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
     if (direction === 'export' || direction === 'both') {
       console.log('[Spond] Checking for events to export (via teams.spond_group_id)...');
       
-      // Get all events that: 1) have no spond_id, 2) have a team with spond_group_id, 3) in date range
+      // Get all events that: 1) have no spond_id, 2) are in date range, 3) not cancelled
+      // Note: events use team_ids (comma-separated) not team_id foreign key
       const eventsToExportQuery = await pool.request()
         .input('min_date', sql.DateTime, minDate)
         .input('max_date', sql.DateTime, maxDate)
         .query(`
           SELECT e.id, e.name, e.description, e.event_type, e.start_time, e.end_time, e.status,
-                 e.team_id, t.name as team_name, t.spond_group_id
+                 e.team_ids
           FROM events e
-          INNER JOIN teams t ON e.team_id = t.id
           WHERE e.spond_id IS NULL
-            AND t.spond_group_id IS NOT NULL
+            AND e.team_ids IS NOT NULL AND e.team_ids != ''
             AND e.start_time >= @min_date AND e.start_time <= @max_date
             AND (e.status IS NULL OR e.status != 'Cancelled')
         `);
       
-      console.log(`[Spond] Found ${eventsToExportQuery.recordset.length} events eligible for export`);
+      console.log(`[Spond] Found ${eventsToExportQuery.recordset.length} events with team_ids in date range`);
+      
+      // Now filter to find events where at least one team has spond_group_id
+      // And collect the spond_group_id to export to
+      const teamsResult = await pool.request().query(`
+        SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL
+      `);
+      const teamsWithSpond = new Map();
+      for (const t of teamsResult.recordset) {
+        teamsWithSpond.set(String(t.id), { name: t.name, spondGroupId: t.spond_group_id });
+      }
+      console.log(`[Spond] Found ${teamsWithSpond.size} teams with spond_group_id`);
+      
+      // Filter events that have at least one team with spond_group_id
+      const eligibleEvents = [];
+      for (const event of eventsToExportQuery.recordset) {
+        const teamIdList = event.team_ids.split(',').map(id => id.trim());
+        // Find the first team that has a spond_group_id
+        for (const teamId of teamIdList) {
+          const teamInfo = teamsWithSpond.get(teamId);
+          if (teamInfo) {
+            eligibleEvents.push({
+              ...event,
+              team_name: teamInfo.name,
+              spond_group_id: teamInfo.spondGroupId
+            });
+            break; // Use the first matching team's spond group
+          }
+        }
+      }
+      
+      console.log(`[Spond] ${eligibleEvents.length} events eligible for export (have team with spond_group_id)`);
       
       // Diagnostic info
       const diagnosticQuery = await pool.request()
         .input('min_date', sql.DateTime, minDate)
         .input('max_date', sql.DateTime, maxDate)
         .query(`
-          SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN e.spond_id IS NOT NULL THEN 1 ELSE 0 END) as alreadyExported,
-            SUM(CASE WHEN e.team_id IS NULL THEN 1 ELSE 0 END) as noTeam,
-            SUM(CASE WHEN e.team_id IS NOT NULL AND t.spond_group_id IS NULL THEN 1 ELSE 0 END) as teamNotLinked
-          FROM events e
-          LEFT JOIN teams t ON e.team_id = t.id
+          SELECT COUNT(*) as total FROM events e
           WHERE e.start_time >= @min_date AND e.start_time <= @max_date
         `);
       
-      const diag = diagnosticQuery.recordset[0];
+      const totalInRange = diagnosticQuery.recordset[0].total;
+      const alreadyExported = eventsToExportQuery.recordset.length > 0 ? 
+        (await pool.request()
+          .input('min_date', sql.DateTime, minDate)
+          .input('max_date', sql.DateTime, maxDate)
+          .query(`SELECT COUNT(*) as cnt FROM events WHERE spond_id IS NOT NULL AND start_time >= @min_date AND start_time <= @max_date`)
+        ).recordset[0].cnt : 0;
+      
       results.exportDiagnostic = {
-        totalInRange: diag.total,
-        eligible: eventsToExportQuery.recordset.length,
-        alreadyExported: diag.alreadyExported,
-        noTeam: diag.noTeam,
-        teamNotLinked: diag.teamNotLinked
+        totalInRange: totalInRange,
+        eligible: eligibleEvents.length,
+        alreadyExported: alreadyExported,
+        noTeam: totalInRange - eventsToExportQuery.recordset.length - alreadyExported,
+        teamNotLinked: eventsToExportQuery.recordset.length - eligibleEvents.length
       };
       console.log('[Spond] Export diagnostic:', results.exportDiagnostic);
       
-      for (const event of eventsToExportQuery.recordset) {
+      for (const event of eligibleEvents) {
         try {
-          const heading = event.name || `${event.event_type || 'Event'} - ${event.team_name}`;
+          const heading = event.name || event.description?.substring(0, 100) || `${event.event_type || 'Event'} - ${event.team_name}`;
           const spondPayload = {
             heading: heading,
             description: event.description || '',
