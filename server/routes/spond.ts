@@ -365,7 +365,14 @@ router.post('/sync-with-settings', async (req: Request, res: Response) => {
         eventsImported: [] as string[],
         eventsExported: [] as string[],
         attendanceSynced: [] as string[],
-      }
+      },
+      exportDiagnostic: null as {
+        totalInRange: number;
+        eligible: number;
+        alreadyExported: number;
+        noTeam: number;
+        teamNotLinked: number;
+      } | null,
     };
 
     // Import events from Spond
@@ -434,6 +441,57 @@ router.post('/sync-with-settings', async (req: Request, res: Response) => {
         const maxDate = new Date(now);
         maxDate.setDate(maxDate.getDate() + daysAhead);
         
+        console.log(`[Spond] Looking for events to export between ${minDate.toISOString()} and ${maxDate.toISOString()}`);
+        
+        // First, log diagnostic info about events that could potentially be exported
+        const diagnosticQuery = await pool.request()
+          .input('minDate', sql.DateTime, minDate)
+          .input('maxDate', sql.DateTime, maxDate)
+          .query(`
+            SELECT 
+              e.id,
+              e.description,
+              e.start_time,
+              e.spond_id,
+              e.team_id,
+              t.id as team_table_id,
+              t.name as team_name,
+              t.spond_group_id
+            FROM events e
+            LEFT JOIN teams t ON e.team_id = t.id
+            WHERE e.start_time BETWEEN @minDate AND @maxDate
+          `);
+        
+        console.log(`[Spond] Found ${diagnosticQuery.recordset.length} events in date range`);
+        
+        // Compute diagnostic stats
+        let alreadyExported = 0;
+        let noTeam = 0;
+        let teamNotLinked = 0;
+        
+        // Log why each event can or cannot be exported
+        for (const evt of diagnosticQuery.recordset) {
+          const reasons = [];
+          if (evt.spond_id) {
+            reasons.push('already has spond_id');
+            alreadyExported++;
+          }
+          if (!evt.team_id) {
+            reasons.push('no team_id assigned');
+            noTeam++;
+          }
+          if (evt.team_id && !evt.spond_group_id) {
+            reasons.push('team has no spond_group_id');
+            teamNotLinked++;
+          }
+          
+          if (reasons.length > 0) {
+            console.log(`[Spond] Event ${evt.id} (${evt.description?.substring(0, 30)}...) SKIPPED: ${reasons.join(', ')}`);
+          } else {
+            console.log(`[Spond] Event ${evt.id} (${evt.description?.substring(0, 30)}...) CAN BE EXPORTED to group ${evt.spond_group_id}`);
+          }
+        }
+        
         const eventsToExport = await pool.request()
           .input('minDate', sql.DateTime, minDate)
           .input('maxDate', sql.DateTime, maxDate)
@@ -446,20 +504,37 @@ router.post('/sync-with-settings', async (req: Request, res: Response) => {
               AND e.start_time BETWEEN @minDate AND @maxDate
           `);
         
+        console.log(`[Spond] ${eventsToExport.recordset.length} events eligible for export`);
+        
+        // Add diagnostic info to sync results
+        syncResults.exportDiagnostic = {
+          totalInRange: diagnosticQuery.recordset.length,
+          eligible: eventsToExport.recordset.length,
+          alreadyExported,
+          noTeam,
+          teamNotLinked,
+        };
+        
         for (const event of eventsToExport.recordset) {
           try {
+            console.log(`[Spond] Exporting event ${event.id} to Spond group ${event.spond_group_id}...`);
             const exportResult = await exportEventToSpond(client, event.id, event.spond_group_id);
             if (exportResult.success) {
               syncResults.exported++;
               const eventName = event.description?.split('\n')[0] || `Event ${event.id}`;
               syncResults.details.eventsExported.push(eventName);
+              console.log(`[Spond] Successfully exported event ${event.id} as Spond event ${exportResult.spondEventId}`);
+            } else {
+              console.log(`[Spond] Failed to export event ${event.id}: ${exportResult.error}`);
+              syncResults.errors.push(`Event ${event.id}: ${exportResult.error}`);
             }
           } catch (exportError) {
+            console.error(`[Spond] Exception exporting event ${event.id}:`, exportError);
             syncResults.errors.push(`Failed to export event ${event.id}: ${(exportError as Error).message}`);
           }
         }
         
-        console.log(`[Spond] Events export: ${syncResults.exported} exported`);
+        console.log(`[Spond] Events export complete: ${syncResults.exported} exported`);
       } catch (exportError) {
         syncResults.errors.push(`Event export failed: ${(exportError as Error).message}`);
         console.error('[Spond] Event export error:', exportError);
@@ -890,6 +965,122 @@ router.get('/participants/event/:id', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[Spond] Get participants error:', error);
     res.status(500).json({ error: 'Failed to get participants' });
+  }
+});
+
+/**
+ * GET /api/spond/export-diagnostic
+ * Diagnostic endpoint to check which events can be exported to Spond
+ * This helps troubleshoot export issues
+ */
+router.get('/export-diagnostic', async (req: Request, res: Response) => {
+  try {
+    const pool = await getPool();
+    const daysAhead = parseInt(req.query.daysAhead as string) || 60;
+    const daysBehind = parseInt(req.query.daysBehind as string) || 7;
+    
+    const now = new Date();
+    const minDate = new Date(now);
+    minDate.setDate(minDate.getDate() - daysBehind);
+    const maxDate = new Date(now);
+    maxDate.setDate(maxDate.getDate() + daysAhead);
+    
+    // Get all events in date range with their export eligibility status
+    const eventsQuery = await pool.request()
+      .input('minDate', sql.DateTime, minDate)
+      .input('maxDate', sql.DateTime, maxDate)
+      .query(`
+        SELECT 
+          e.id,
+          e.description,
+          e.event_type,
+          e.start_time,
+          e.end_time,
+          e.status,
+          e.spond_id,
+          e.spond_group_id as event_spond_group_id,
+          e.team_id,
+          t.id as team_table_id,
+          t.name as team_name,
+          t.spond_group_id as team_spond_group_id
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        WHERE e.start_time BETWEEN @minDate AND @maxDate
+        ORDER BY e.start_time
+      `);
+    
+    // Get all teams with their Spond linkage status
+    const teamsQuery = await pool.request()
+      .query(`
+        SELECT id, name, spond_group_id
+        FROM teams
+        WHERE active = 1
+        ORDER BY name
+      `);
+    
+    // Analyze each event
+    const events = eventsQuery.recordset.map(evt => {
+      const issues: string[] = [];
+      let canExport = true;
+      
+      if (evt.spond_id) {
+        issues.push('Already exported to Spond (has spond_id)');
+        canExport = false;
+      }
+      if (!evt.team_id) {
+        issues.push('No team assigned (team_id is NULL)');
+        canExport = false;
+      }
+      if (evt.team_id && !evt.team_spond_group_id) {
+        issues.push('Team is not linked to a Spond group');
+        canExport = false;
+      }
+      
+      return {
+        id: evt.id,
+        description: evt.description?.substring(0, 100),
+        eventType: evt.event_type,
+        startTime: evt.start_time,
+        status: evt.status,
+        spondId: evt.spond_id,
+        teamId: evt.team_id,
+        teamName: evt.team_name,
+        teamSpondGroupId: evt.team_spond_group_id,
+        canExport,
+        issues: issues.length > 0 ? issues : ['Ready to export'],
+      };
+    });
+    
+    const teams = teamsQuery.recordset.map(team => ({
+      id: team.id,
+      name: team.name,
+      spondGroupId: team.spond_group_id,
+      isLinked: !!team.spond_group_id,
+    }));
+    
+    const summary = {
+      dateRange: {
+        from: minDate.toISOString(),
+        to: maxDate.toISOString(),
+      },
+      totalEvents: events.length,
+      exportableEvents: events.filter(e => e.canExport).length,
+      alreadyExported: events.filter(e => e.spondId).length,
+      noTeamAssigned: events.filter(e => !e.teamId).length,
+      teamNotLinked: events.filter(e => e.teamId && !e.teamSpondGroupId).length,
+      totalTeams: teams.length,
+      linkedTeams: teams.filter(t => t.isLinked).length,
+      unlinkedTeams: teams.filter(t => !t.isLinked).length,
+    };
+    
+    res.json({
+      summary,
+      events,
+      teams,
+    });
+  } catch (error) {
+    console.error('[Spond] Export diagnostic error:', error);
+    res.status(500).json({ error: 'Failed to run export diagnostic' });
   }
 });
 
