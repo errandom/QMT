@@ -301,6 +301,86 @@ router.get('/events', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/spond/export-preview
+ * Preview which events can be exported to Spond and why others cannot
+ */
+router.get('/export-preview', async (req: Request, res: Response) => {
+  try {
+    const { daysAhead = 60, daysBehind = 7 } = req.query;
+    
+    const pool = await getPool();
+    const now = new Date();
+    const minDate = new Date(now);
+    minDate.setDate(minDate.getDate() - Number(daysBehind));
+    const maxDate = new Date(now);
+    maxDate.setDate(maxDate.getDate() + Number(daysAhead));
+    
+    const eventsResult = await pool.request()
+      .input('minDate', sql.DateTime, minDate)
+      .input('maxDate', sql.DateTime, maxDate)
+      .query(`
+        SELECT 
+          e.id,
+          e.description,
+          e.event_type,
+          e.start_time,
+          e.spond_id,
+          e.team_id,
+          t.id as team_table_id,
+          t.name as team_name,
+          t.spond_group_id
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        WHERE e.start_time BETWEEN @minDate AND @maxDate
+        ORDER BY e.start_time
+      `);
+    
+    const events = eventsResult.recordset.map(evt => {
+      const issues: string[] = [];
+      let canExport = true;
+      
+      if (evt.spond_id) {
+        issues.push('Already exported to Spond');
+        canExport = false;
+      }
+      if (!evt.team_id) {
+        issues.push('No team assigned to event');
+        canExport = false;
+      }
+      if (evt.team_id && !evt.spond_group_id) {
+        issues.push('Team is not linked to a Spond group');
+        canExport = false;
+      }
+      
+      return {
+        id: evt.id,
+        description: evt.description?.split('\n')[0]?.substring(0, 50) || 'Untitled',
+        eventType: evt.event_type,
+        startTime: evt.start_time,
+        teamName: evt.team_name || null,
+        spondId: evt.spond_id || null,
+        spondGroupId: evt.spond_group_id || null,
+        canExport,
+        issues,
+      };
+    });
+    
+    const summary = {
+      totalEvents: events.length,
+      canExport: events.filter(e => e.canExport).length,
+      alreadyExported: events.filter(e => e.spondId).length,
+      noTeam: events.filter(e => !e.teamName).length,
+      teamNotLinked: events.filter(e => e.teamName && !e.spondGroupId).length,
+    };
+    
+    res.json({ summary, events });
+  } catch (error) {
+    console.error('[Spond] Error generating export preview:', error);
+    res.status(500).json({ error: 'Failed to generate export preview' });
+  }
+});
+
+/**
  * POST /api/spond/sync
  * Trigger a full sync from Spond
  */
