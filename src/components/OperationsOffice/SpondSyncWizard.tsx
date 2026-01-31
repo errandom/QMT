@@ -39,6 +39,13 @@ interface SyncResult {
     eventsExported?: string[]
     attendanceSynced?: string[]
   }
+  exportDiagnostic?: {
+    totalInRange: number
+    eligible: number
+    alreadyExported: number
+    noTeam: number
+    teamNotLinked: number
+  }
 }
 
 interface SpondSyncWizardProps {
@@ -127,6 +134,14 @@ export default function SpondSyncWizard({
     setSyncing(true)
     setSyncResult(null)
     
+    console.log('[SpondSyncWizard] Starting sync with settings:', {
+      direction: syncDirection,
+      syncEvents: syncOptions.events,
+      syncAttendance: syncOptions.attendance,
+      daysAhead: dateOptions.daysAhead,
+      daysBehind: dateOptions.daysBehind,
+    })
+    
     try {
       const response = await fetch('/api/spond/sync-with-settings', {
         method: 'POST',
@@ -143,7 +158,9 @@ export default function SpondSyncWizard({
         })
       })
 
+      console.log('[SpondSyncWizard] API response status:', response.status)
       const result = await response.json()
+      console.log('[SpondSyncWizard] Sync result:', result)
       
       if (result.success) {
         setSyncResult({
@@ -151,14 +168,19 @@ export default function SpondSyncWizard({
           imported: result.imported || 0,
           exported: result.exported || 0,
           attendanceUpdated: result.attendanceUpdated || 0,
+          errors: result.errors,
+          exportDiagnostic: result.exportDiagnostic,
         })
       } else {
         setSyncResult({
           success: false,
-          error: result.error || 'Sync failed'
+          error: result.error || 'Sync failed',
+          errors: result.errors,
+          exportDiagnostic: result.exportDiagnostic,
         })
       }
     } catch (error) {
+      console.error('[SpondSyncWizard] Sync error:', error)
       setSyncResult({
         success: false,
         error: 'Failed to connect to server'
@@ -538,6 +560,49 @@ export default function SpondSyncWizard({
                       </p>
                     </div>
                   )}
+                  
+                  {/* Export diagnostic info - helps user understand why events weren't exported */}
+                  {syncDirection === 'export' && syncResult.exportDiagnostic && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-blue-700 text-xs font-medium mb-2">
+                        <Info size={14} />
+                        <span>Export Diagnostic</span>
+                      </div>
+                      <div className="text-xs text-blue-600 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Events in date range:</span>
+                          <span className="font-medium">{syncResult.exportDiagnostic.totalInRange}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Eligible for export:</span>
+                          <span className="font-medium">{syncResult.exportDiagnostic.eligible}</span>
+                        </div>
+                        {syncResult.exportDiagnostic.alreadyExported > 0 && (
+                          <div className="flex justify-between text-gray-500">
+                            <span>Already exported:</span>
+                            <span>{syncResult.exportDiagnostic.alreadyExported}</span>
+                          </div>
+                        )}
+                        {syncResult.exportDiagnostic.noTeam > 0 && (
+                          <div className="flex justify-between text-amber-600">
+                            <span>No team assigned:</span>
+                            <span>{syncResult.exportDiagnostic.noTeam}</span>
+                          </div>
+                        )}
+                        {syncResult.exportDiagnostic.teamNotLinked > 0 && (
+                          <div className="flex justify-between text-amber-600">
+                            <span>Team not linked to Spond:</span>
+                            <span>{syncResult.exportDiagnostic.teamNotLinked}</span>
+                          </div>
+                        )}
+                      </div>
+                      {(syncResult.exportDiagnostic.noTeam > 0 || syncResult.exportDiagnostic.teamNotLinked > 0) && (
+                        <p className="text-xs text-blue-600 mt-2 pt-2 border-t border-blue-200">
+                          💡 To export events, assign them to teams and link those teams to Spond groups in the Integration settings.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Show any errors/warnings */}
@@ -574,6 +639,31 @@ export default function SpondSyncWizard({
                     {syncResult.errors.map((err, i) => (
                       <div key={i}>{err}</div>
                     ))}
+                  </div>
+                </div>
+              )}
+              {/* Show export diagnostic even on failure to help user understand */}
+              {syncResult.exportDiagnostic && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg max-w-sm w-full">
+                  <div className="flex items-center gap-2 text-blue-700 text-xs font-medium mb-2">
+                    <Info size={14} />
+                    <span>Export Diagnostic</span>
+                  </div>
+                  <div className="text-xs text-blue-600 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Events in range:</span>
+                      <span className="font-medium">{syncResult.exportDiagnostic.totalInRange}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Eligible:</span>
+                      <span className="font-medium">{syncResult.exportDiagnostic.eligible}</span>
+                    </div>
+                    {syncResult.exportDiagnostic.teamNotLinked > 0 && (
+                      <div className="flex justify-between text-amber-600">
+                        <span>Team not linked:</span>
+                        <span>{syncResult.exportDiagnostic.teamNotLinked}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
