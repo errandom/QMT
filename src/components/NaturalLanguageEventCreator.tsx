@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
@@ -227,9 +228,12 @@ export default function NaturalLanguageEventCreator({
   }
 
   const handleConfirm = async () => {
+    if (!preview) return
+    
     setLoading(true)
 
     try {
+      // Send the edited events directly instead of re-parsing the input
       const response = await fetch('/api/events/create-from-natural-language', {
         method: 'POST',
         headers: {
@@ -237,10 +241,8 @@ export default function NaturalLanguageEventCreator({
           'Authorization': `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ 
-          input, 
           confirm: true,
-          defaultTeamId: defaultTeamId && defaultTeamId !== 'none' ? parseInt(defaultTeamId) : undefined,
-          defaultFieldId: defaultFieldId && defaultFieldId !== 'none' ? parseInt(defaultFieldId) : undefined,
+          editedEvents: preview.events,
         }),
       })
 
@@ -456,81 +458,182 @@ export default function NaturalLanguageEventCreator({
         ) : (
           <div className="space-y-4">
             {/* Summary */}
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium mb-2">
-                <Check size={20} weight="bold" />
-                <span>Ready to create {preview.totalEvents} event(s)</span>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-medium mb-2">
+                <Info size={20} weight="bold" />
+                <span>Review & Edit Before Creating</span>
               </div>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {preview.summary}
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                {preview.summary} — Adjust the details below if needed.
               </p>
             </div>
 
-            {/* Event preview cards */}
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            {/* Editable event cards */}
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {preview.events.map((event, index) => (
                 <div 
                   key={index}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-3 border shadow-sm"
+                  className="bg-white dark:bg-gray-800 rounded-lg p-4 border shadow-sm"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{event.title}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <Input
+                      value={event.title}
+                      onChange={(e) => {
+                        const updated = [...preview.events]
+                        updated[index] = { ...updated[index], title: e.target.value }
+                        setPreview({ ...preview, events: updated })
+                      }}
+                      className="font-medium text-base flex-1 mr-2"
+                      placeholder="Event title"
+                    />
                     <Badge variant="secondary">{event.eventType}</Badge>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} />
-                      <span>{event.startTime} - {event.endTime}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Date */}
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1 text-gray-500">
+                        <Calendar size={12} />
+                        {event.isRecurring ? 'Start Date' : 'Date'}
+                      </Label>
+                      <Input
+                        type="date"
+                        value={event.date || ''}
+                        onChange={(e) => {
+                          const updated = [...preview.events]
+                          updated[index] = { ...updated[index], date: e.target.value }
+                          setPreview({ ...preview, events: updated })
+                        }}
+                        className="text-sm"
+                      />
                     </div>
-                    
-                    {event.isRecurring && event.recurringDays ? (
-                      <div className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        <span>
-                          {event.recurringDays.map(d => dayNames[d]).join(', ')}
-                        </span>
-                      </div>
-                    ) : event.date ? (
-                      <div className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        <span>{new Date(event.date).toLocaleDateString()}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 text-amber-500">
-                        <Warning size={14} />
-                        <span className="italic">No date set</span>
-                      </div>
-                    )}
-                    
-                    {event.teamIds.length > 0 ? (
-                      <div className="flex items-center gap-1">
-                        <Users size={14} />
-                        <span>{event.teamIds.map(getTeamName).join(', ')}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 text-amber-500">
-                        <Warning size={14} />
-                        <span className="italic">No team assigned</span>
+
+                    {/* End Date for recurring */}
+                    {event.isRecurring && (
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center gap-1 text-gray-500">
+                          <Calendar size={12} />
+                          End Date
+                        </Label>
+                        <Input
+                          type="date"
+                          value={event.recurringEndDate || ''}
+                          onChange={(e) => {
+                            const updated = [...preview.events]
+                            updated[index] = { ...updated[index], recurringEndDate: e.target.value }
+                            setPreview({ ...preview, events: updated })
+                          }}
+                          className="text-sm"
+                        />
                       </div>
                     )}
-                    
-                    {event.fieldId ? (
-                      <div className="flex items-center gap-1">
-                        <MapPin size={14} />
-                        <span>{getFieldName(event.fieldId)}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 text-amber-500">
-                        <Warning size={14} />
-                        <span className="italic">No venue set</span>
-                      </div>
-                    )}
+
+                    {/* Start Time */}
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1 text-gray-500">
+                        <Clock size={12} />
+                        Start Time
+                      </Label>
+                      <Input
+                        type="time"
+                        value={event.startTime || ''}
+                        onChange={(e) => {
+                          const updated = [...preview.events]
+                          updated[index] = { ...updated[index], startTime: e.target.value }
+                          setPreview({ ...preview, events: updated })
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+
+                    {/* End Time */}
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1 text-gray-500">
+                        <Clock size={12} />
+                        End Time
+                      </Label>
+                      <Input
+                        type="time"
+                        value={event.endTime || ''}
+                        onChange={(e) => {
+                          const updated = [...preview.events]
+                          updated[index] = { ...updated[index], endTime: e.target.value }
+                          setPreview({ ...preview, events: updated })
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+
+                    {/* Team Dropdown */}
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1 text-gray-500">
+                        <Users size={12} />
+                        Team
+                      </Label>
+                      <Select
+                        value={event.teamIds.length > 0 ? String(event.teamIds[0]) : 'none'}
+                        onValueChange={(value) => {
+                          const updated = [...preview.events]
+                          updated[index] = { 
+                            ...updated[index], 
+                            teamIds: value === 'none' ? [] : [parseInt(value)] 
+                          }
+                          setPreview({ ...preview, events: updated })
+                        }}
+                      >
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="Select team..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No team</SelectItem>
+                          {teams.map((team) => (
+                            <SelectItem key={team.id} value={String(team.id)}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Venue/Field Dropdown */}
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1 text-gray-500">
+                        <MapPin size={12} />
+                        Venue
+                      </Label>
+                      <Select
+                        value={event.fieldId ? String(event.fieldId) : 'none'}
+                        onValueChange={(value) => {
+                          const updated = [...preview.events]
+                          updated[index] = { 
+                            ...updated[index], 
+                            fieldId: value === 'none' ? undefined : parseInt(value) 
+                          }
+                          setPreview({ ...preview, events: updated })
+                        }}
+                      >
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="Select venue..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No venue</SelectItem>
+                          {fields.map((field) => {
+                            const site = sites.find(s => String(s.id) === String(field.siteId))
+                            const displayName = site ? `${site.name} - ${field.name}` : field.name
+                            return (
+                              <SelectItem key={field.id} value={String(field.id)}>
+                                {displayName}
+                              </SelectItem>
+                            )
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  {event.isRecurring && event.recurringEndDate && (
-                    <div className="mt-2 text-xs text-gray-500">
-                      Repeats until {new Date(event.recurringEndDate).toLocaleDateString()}
+                  {event.isRecurring && event.recurringDays && (
+                    <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+                      <span className="font-medium">Repeats:</span> Every {event.recurringDays.map(d => dayNames[d]).join(', ')}
                     </div>
                   )}
                 </div>
