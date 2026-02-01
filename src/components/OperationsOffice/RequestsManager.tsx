@@ -1,13 +1,19 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { FacilityRequest, EquipmentRequest, CancellationRequest, User, Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Check, X, ClipboardText, Prohibit } from '@phosphor-icons/react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Check, X, ClipboardText, Prohibit, WhatsappLogo, MapPin } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { COLORS } from '@/lib/constants'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 
 interface RequestsManagerProps {
@@ -28,32 +34,104 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [shareDialogEvent, setShareDialogEvent] = useState<Event | null>(null)
   const [shareDialogOriginalEvent, setShareDialogOriginalEvent] = useState<Event | null>(null)
 
-  const handleApproveFacility = async (requestId: string) => {
-    const request = facilityRequests.find(r => r.id === requestId)
+  // Approval dialog state (for facility requests - to specify location)
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false)
+  const [approvalRequest, setApprovalRequest] = useState<FacilityRequest | null>(null)
+  const [selectedFieldId, setSelectedFieldId] = useState<string>('')
+
+  // Rejection dialog state (for WhatsApp notification)
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false)
+  const [rejectionRequest, setRejectionRequest] = useState<FacilityRequest | EquipmentRequest | CancellationRequest | null>(null)
+  const [rejectionRequestType, setRejectionRequestType] = useState<'facility' | 'equipment' | 'cancellation'>('facility')
+  const [sendWhatsAppNotification, setSendWhatsAppNotification] = useState(true)
+  const [rejectionMessage, setRejectionMessage] = useState('')
+
+  // Get location options for approval dialog
+  const locationOptions = useMemo(() => {
+    return fields
+      .filter((f: any) => {
+        const site = (sites || []).find((s: any) => s.id === f.siteId)
+        return f.isActive && site?.isActive
+      })
+      .map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
+      }))
+  }, [fields, sites])
+
+  // Generate standard rejection message
+  const generateRejectionMessage = (request: FacilityRequest | EquipmentRequest | CancellationRequest, type: string) => {
+    let message = `Hi ${request.requestorName},\n\n`
+    message += `Your ${type} request has been reviewed and unfortunately cannot be approved at this time.\n\n`
     
-    if (!request) {
-      toast.error('Request not found')
-      return
+    if ('eventType' in request) {
+      // FacilityRequest
+      message += `📋 Request Details:\n`
+      message += `• Type: ${request.eventType}\n`
+      message += `• Date: ${request.date}\n`
+      message += `• Time: ${request.startTime} (${request.duration} min)\n`
+      if (request.purpose) message += `• Purpose: ${request.purpose}\n`
+    } else if ('equipmentDescription' in request) {
+      // EquipmentRequest
+      message += `📋 Request Details:\n`
+      message += `• Equipment: ${request.equipmentDescription}\n`
+      message += `• Date Needed: ${request.date}\n`
+    } else if ('eventTitle' in request) {
+      // CancellationRequest
+      message += `📋 Request Details:\n`
+      message += `• Event: ${request.eventTitle}\n`
+      message += `• Date: ${request.eventDate}\n`
+      message += `• Time: ${request.eventTime}\n`
     }
+    
+    message += `\nPlease contact us if you have any questions.\n\n`
+    message += `Quick - Mean - Tough!\nAFC Zurich Renegades`
+    
+    return message
+  }
+
+  // Open approval dialog for facility request
+  const handleOpenApprovalDialog = (request: FacilityRequest) => {
+    setApprovalRequest(request)
+    setSelectedFieldId('')
+    setShowApprovalDialog(true)
+  }
+
+  // Open rejection dialog
+  const handleOpenRejectionDialog = (
+    request: FacilityRequest | EquipmentRequest | CancellationRequest,
+    type: 'facility' | 'equipment' | 'cancellation'
+  ) => {
+    setRejectionRequest(request)
+    setRejectionRequestType(type)
+    setSendWhatsAppNotification(true)
+    setRejectionMessage(generateRejectionMessage(request, type))
+    setShowRejectionDialog(true)
+  }
+
+  // Confirm approval with location
+  const handleConfirmApproval = async () => {
+    if (!approvalRequest) return
 
     try {
-      const endTime = calculateEndTime(request.startTime, request.duration)
+      const endTime = calculateEndTime(approvalRequest.startTime, approvalRequest.duration)
       
-      // Create event via API
+      // Create event via API with selected field
       const eventData = {
-        team_ids: request.teamIds && request.teamIds.length > 0 ? request.teamIds.join(',') : null,
-        field_id: null, // No field selected yet - admin will need to assign
-        event_type: request.eventType,
-        start_time: `${request.date}T${request.startTime}:00`,
-        end_time: `${request.date}T${endTime}:00`,
-        description: request.opponent 
-          ? `${request.eventType} vs ${request.opponent}` 
-          : request.purpose 
-            ? `${request.eventType} - ${request.purpose}`
-            : request.eventType,
-        notes: request.description || '',
-        status: 'Planned',
-        other_participants: request.opponent || null
+        team_ids: approvalRequest.teamIds && approvalRequest.teamIds.length > 0 ? approvalRequest.teamIds.join(',') : null,
+        field_id: selectedFieldId ? parseInt(selectedFieldId) : null,
+        event_type: approvalRequest.eventType,
+        start_time: `${approvalRequest.date}T${approvalRequest.startTime}:00`,
+        end_time: `${approvalRequest.date}T${endTime}:00`,
+        description: approvalRequest.opponent 
+          ? `${approvalRequest.eventType} vs ${approvalRequest.opponent}` 
+          : approvalRequest.purpose 
+            ? `${approvalRequest.eventType} - ${approvalRequest.purpose}`
+            : approvalRequest.eventType,
+        notes: approvalRequest.description || '',
+        status: selectedFieldId ? 'Confirmed' : 'Planned',
+        other_participants: approvalRequest.opponent || null
       }
       
       const newEvent = await api.createEvent(eventData)
@@ -61,20 +139,71 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
       // Update local state
       setEvents((current = []) => [...current, newEvent])
       
-      // Update request status (note: using string ID as per current data structure)
+      // Update request status
       setFacilityRequests((current = []) =>
         current.map(r =>
-          r.id === requestId
+          r.id === approvalRequest.id
             ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
             : r
         )
       )
       
-      toast.success('Facility request approved and event created')
+      toast.success(selectedFieldId 
+        ? 'Facility request approved and event created with location' 
+        : 'Facility request approved - event created without location')
+      
+      setShowApprovalDialog(false)
+      setApprovalRequest(null)
+      setSelectedFieldId('')
     } catch (error: any) {
       console.error('Error approving facility request:', error)
       toast.error(error.message || 'Failed to approve facility request')
     }
+  }
+
+  // Confirm rejection with optional WhatsApp notification
+  const handleConfirmRejection = () => {
+    if (!rejectionRequest) return
+
+    // Update the appropriate request list
+    if (rejectionRequestType === 'facility') {
+      setFacilityRequests((current = []) =>
+        current.map(r =>
+          r.id === rejectionRequest.id
+            ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
+            : r
+        )
+      )
+    } else if (rejectionRequestType === 'equipment') {
+      setEquipmentRequests((current = []) =>
+        current.map(r =>
+          r.id === rejectionRequest.id
+            ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
+            : r
+        )
+      )
+    } else if (rejectionRequestType === 'cancellation') {
+      setCancellationRequests((current = []) =>
+        current.map(r =>
+          r.id === rejectionRequest.id
+            ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
+            : r
+        )
+      )
+    }
+
+    // Send WhatsApp notification if enabled
+    if (sendWhatsAppNotification && rejectionRequest.requestorPhone) {
+      const phone = rejectionRequest.requestorPhone.replace(/[^0-9+]/g, '')
+      const encodedMessage = encodeURIComponent(rejectionMessage)
+      window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank')
+    }
+
+    toast.success(`${rejectionRequestType.charAt(0).toUpperCase() + rejectionRequestType.slice(1)} request rejected`)
+    
+    setShowRejectionDialog(false)
+    setRejectionRequest(null)
+    setRejectionMessage('')
   }
   
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
@@ -83,17 +212,6 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     const endHours = Math.floor(totalMinutes / 60) % 24
     const endMinutes = totalMinutes % 60
     return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
-  }
-
-  const handleRejectFacility = (requestId: string) => {
-    setFacilityRequests((current = []) =>
-      current.map(r =>
-        r.id === requestId
-          ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-          : r
-      )
-    )
-    toast.success('Facility request rejected')
   }
 
   const handleApproveEquipment = (requestId: string) => {
@@ -105,17 +223,6 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
       )
     )
     toast.success('Equipment request approved')
-  }
-
-  const handleRejectEquipment = (requestId: string) => {
-    setEquipmentRequests((current = []) =>
-      current.map(r =>
-        r.id === requestId
-          ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-          : r
-      )
-    )
-    toast.success('Equipment request rejected')
   }
 
   const handleApproveCancellation = async (requestId: string) => {
@@ -184,17 +291,6 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     }
   }
 
-  const handleRejectCancellation = (requestId: string) => {
-    setCancellationRequests((current = []) =>
-      current.map(r =>
-        r.id === requestId
-          ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-          : r
-      )
-    )
-    toast.success('Cancellation request rejected')
-  }
-
   const getTeamNames = (teamIds?: string[]) => {
     if (!teamIds || teamIds.length === 0) return 'N/A'
     return teamIds.map((id: string) => (teams as any[]).find((t: any) => t.id === id)?.name || 'Unknown').join(', ')
@@ -258,7 +354,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleRejectCancellation(request.id)}
+                          onClick={() => handleOpenRejectionDialog(request, 'cancellation')}
                         >
                           <X className="mr-1" size={16} weight="bold" />
                           Reject
@@ -329,7 +425,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                         <Button
                           size="sm"
                           variant="default"
-                          onClick={() => handleApproveFacility(request.id)}
+                          onClick={() => handleOpenApprovalDialog(request)}
                         >
                           <Check className="mr-1" size={16} weight="bold" />
                           Approve
@@ -337,7 +433,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleRejectFacility(request.id)}
+                          onClick={() => handleOpenRejectionDialog(request, 'facility')}
                         >
                           <X className="mr-1" size={16} weight="bold" />
                           Reject
@@ -428,7 +524,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleRejectEquipment(request.id)}
+                          onClick={() => handleOpenRejectionDialog(request, 'equipment')}
                         >
                           <X className="mr-1" size={16} weight="bold" />
                           Reject
@@ -487,6 +583,177 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
           updateType="cancel"
         />
       )}
+
+      {/* Facility Approval Dialog - to specify location */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin size={20} style={{ color: COLORS.ACCENT }} />
+              Approve Facility Request
+            </DialogTitle>
+            <DialogDescription>
+              Specify the location for this event. You can leave it empty and assign later.
+            </DialogDescription>
+          </DialogHeader>
+
+          {approvalRequest && (
+            <div className="space-y-4">
+              {/* Request Summary */}
+              <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
+                <div className="font-medium">{approvalRequest.eventType} Request</div>
+                <div className="text-muted-foreground">
+                  {approvalRequest.date} at {approvalRequest.startTime} ({approvalRequest.duration} min)
+                </div>
+                {approvalRequest.teamIds && approvalRequest.teamIds.length > 0 && (
+                  <div className="text-muted-foreground">
+                    Teams: {getTeamNames(approvalRequest.teamIds)}
+                  </div>
+                )}
+                {approvalRequest.purpose && (
+                  <div className="text-muted-foreground">Purpose: {approvalRequest.purpose}</div>
+                )}
+              </div>
+
+              {/* Location Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="location">Location (Field/Site)</Label>
+                <Select value={selectedFieldId} onValueChange={setSelectedFieldId}>
+                  <SelectTrigger id="location">
+                    <SelectValue placeholder="Select a location (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locationOptions.map((location: any) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.siteName} - {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  If no location is selected, the event will be created with status "Planned". 
+                  With a location, it will be "Confirmed".
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowApprovalDialog(false)
+                setApprovalRequest(null)
+                setSelectedFieldId('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmApproval}
+              style={{ backgroundColor: COLORS.ACCENT }}
+            >
+              <Check size={16} className="mr-2" />
+              Approve & Create Event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog - with WhatsApp notification option */}
+      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <X size={20} />
+              Reject Request
+            </DialogTitle>
+            <DialogDescription>
+              Reject this request and optionally notify the requestor via WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+
+          {rejectionRequest && (
+            <div className="space-y-4">
+              {/* Request Summary */}
+              <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
+                <div className="font-medium">
+                  {rejectionRequestType === 'facility' && 'eventType' in rejectionRequest && `${rejectionRequest.eventType} Request`}
+                  {rejectionRequestType === 'equipment' && 'Equipment Request'}
+                  {rejectionRequestType === 'cancellation' && 'eventTitle' in rejectionRequest && `Cancellation: ${rejectionRequest.eventTitle}`}
+                </div>
+                <div className="text-muted-foreground">
+                  Requestor: {rejectionRequest.requestorName}
+                </div>
+                <div className="text-muted-foreground">
+                  Phone: {rejectionRequest.requestorPhone}
+                </div>
+              </div>
+
+              {/* WhatsApp Notification Option */}
+              <div className="flex items-start gap-3 p-3 border rounded-lg">
+                <Checkbox
+                  id="send-whatsapp"
+                  checked={sendWhatsAppNotification}
+                  onCheckedChange={(checked) => setSendWhatsAppNotification(checked as boolean)}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="send-whatsapp"
+                    className="text-sm font-medium leading-none cursor-pointer flex items-center gap-2"
+                  >
+                    <WhatsappLogo size={18} className="text-green-600" weight="fill" />
+                    Notify via WhatsApp
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Send a message to {rejectionRequest.requestorPhone}
+                  </p>
+                </div>
+              </div>
+
+              {/* Message Editor (only shown when WhatsApp is enabled) */}
+              {sendWhatsAppNotification && (
+                <div className="space-y-2">
+                  <Label htmlFor="rejection-message">Message</Label>
+                  <Textarea
+                    id="rejection-message"
+                    value={rejectionMessage}
+                    onChange={(e) => setRejectionMessage(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You can edit the message above before sending.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRejectionDialog(false)
+                setRejectionRequest(null)
+                setRejectionMessage('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRejection}
+            >
+              <X size={16} className="mr-2" />
+              Reject Request
+              {sendWhatsAppNotification && (
+                <WhatsappLogo size={16} className="ml-2" weight="fill" />
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
