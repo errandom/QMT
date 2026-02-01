@@ -5,6 +5,16 @@ import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -46,6 +56,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   // AI Creator toggle
   const [showAICreator, setShowAICreator] = useState(false)
+
+  // Delete confirmation dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null)
+  const [sendCancellationEmail, setSendCancellationEmail] = useState(false)
 
   // Filter state
   const [filterTeam, setFilterTeam] = useState<string>('all')
@@ -210,10 +225,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
 
     // Collect CC recipients: site contact, team managers and coaches
-    const ccRecipients: string[] = []
+    // Always include bewilligungen@igacr.ch for permit coordination
+    const ccRecipients: string[] = ['bewilligungen@igacr.ch']
     
     // Add site contact email to CC
-    if (site.contactEmail) {
+    if (site?.contactEmail) {
       ccRecipients.push(site.contactEmail)
     }
     
@@ -254,19 +270,35 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     window.location.href = `mailto:sports@renegades.ch?subject=${subject}&body=${body}${ccParam}`
   }
 
-  const handleDelete = async (eventId: string) => {
-    if (confirm('Are you sure you want to delete this event?')) {
-      try {
-        const numericId = parseInt(eventId)
-        if (!isNaN(numericId)) {
-          await api.deleteEvent(numericId)
-        }
-        setEvents((current = []) => current.filter(ev => ev.id !== eventId))
-        toast.success('Event deleted successfully')
-      } catch (error: any) {
-        console.error('Error deleting event:', error)
-        toast.error(error.message || 'Failed to delete event')
+  const handleDeleteClick = (event: Event) => {
+    setEventToDelete(event)
+    setSendCancellationEmail(false)
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!eventToDelete) return
+    
+    try {
+      const numericId = parseInt(eventToDelete.id)
+      if (!isNaN(numericId)) {
+        await api.deleteEvent(numericId)
       }
+      
+      // Send cancellation email if requested
+      if (sendCancellationEmail) {
+        handleNotifyCancellation(eventToDelete)
+      }
+      
+      setEvents((current = []) => current.filter(ev => ev.id !== eventToDelete.id))
+      toast.success('Event deleted successfully')
+    } catch (error: any) {
+      console.error('Error deleting event:', error)
+      toast.error(error.message || 'Failed to delete event')
+    } finally {
+      setShowDeleteDialog(false)
+      setEventToDelete(null)
+      setSendCancellationEmail(false)
     }
   }
 
@@ -622,7 +654,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(event.id)}
+                      onClick={() => handleDeleteClick(event)}
                       title="Delete event"
                     >
                       <Trash size={18} weight="bold" />
@@ -929,6 +961,65 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           updateType={shareDialogUpdateType}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this event? This action cannot be undone.
+              {eventToDelete && (
+                <div className="mt-3 p-3 bg-muted rounded-lg text-sm text-foreground">
+                  <div className="font-medium">{eventToDelete.title}</div>
+                  <div className="text-muted-foreground">
+                    {eventToDelete.date} • {eventToDelete.startTime} - {eventToDelete.endTime}
+                  </div>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {/* Cancellation email option */}
+          {eventToDelete && (() => {
+            const field = fields.find(f => f.id === eventToDelete.fieldId)
+            const site = field ? sites.find(s => s.id === field.siteId) : null
+            const hasContactEmail = site?.contactEmail
+            
+            return hasContactEmail ? (
+              <div className="flex items-start gap-3 py-2 px-1">
+                <Checkbox
+                  id="send-cancellation-email"
+                  checked={sendCancellationEmail}
+                  onCheckedChange={(checked) => setSendCancellationEmail(checked as boolean)}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="send-cancellation-email"
+                    className="text-sm font-medium leading-none cursor-pointer flex items-center gap-2"
+                  >
+                    <Envelope size={16} className="text-amber-600" />
+                    Send cancellation email
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Notify site contact and team staff about this cancellation
+                  </p>
+                </div>
+              </div>
+            ) : null
+          })()}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Event
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
