@@ -125,7 +125,13 @@ export default function EventUpdateShareDialog({
   // Collect recipients for email
   const getEmailRecipients = () => {
     const toRecipients: string[] = []
-    const ccRecipients: string[] = ['sports@renegades.ch']
+    // Always include sports@renegades.ch and bewilligungen@igacr.ch for permit coordination
+    const ccRecipients: string[] = ['sports@renegades.ch', 'bewilligungen@igacr.ch']
+    
+    // Add site contact email to CC if available
+    if (site?.contactEmail) {
+      ccRecipients.push(site.contactEmail)
+    }
     
     eventTeams.forEach(team => {
       // Team managers go to TO
