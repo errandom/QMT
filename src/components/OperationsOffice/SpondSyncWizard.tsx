@@ -33,7 +33,7 @@ interface SyncResult {
   attendanceUpdated?: number
   eventsProcessed?: number
   error?: string
-  errors?: string[]
+  errors?: (string | { team?: string; eventId?: number; error: string })[]
   details?: {
     eventsImported?: string[]
     eventsExported?: string[]
@@ -46,6 +46,20 @@ interface SyncResult {
     noTeam: number
     teamNotLinked: number
   }
+}
+
+// Helper to format error items that can be strings or objects
+function formatError(err: string | { team?: string; eventId?: number; error: string }): string {
+  if (typeof err === 'string') {
+    return err
+  }
+  if (err.team) {
+    return `${err.team}: ${err.error}`
+  }
+  if (err.eventId) {
+    return `Event ${err.eventId}: ${err.error}`
+  }
+  return err.error || 'Unknown error'
 }
 
 interface SpondSyncWizardProps {
@@ -614,7 +628,7 @@ export default function SpondSyncWizard({
                     </div>
                     <div className="text-xs text-amber-600 max-h-20 overflow-y-auto">
                       {syncResult.errors.slice(0, 3).map((err, i) => (
-                        <div key={i} className="truncate">{err}</div>
+                        <div key={i} className="truncate">{formatError(err)}</div>
                       ))}
                       {syncResult.errors.length > 3 && (
                         <div className="text-amber-500">...and {syncResult.errors.length - 3} more</div>
@@ -637,7 +651,7 @@ export default function SpondSyncWizard({
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg max-w-sm w-full">
                   <div className="text-xs text-red-600 max-h-24 overflow-y-auto space-y-1">
                     {syncResult.errors.map((err, i) => (
-                      <div key={i}>{err}</div>
+                      <div key={i}>{formatError(err)}</div>
                     ))}
                   </div>
                 </div>
