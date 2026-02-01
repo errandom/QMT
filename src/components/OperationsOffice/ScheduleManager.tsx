@@ -208,12 +208,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const handleNotifyCancellation = (event: Event) => {
     const field = fields.find(f => f.id === event.fieldId)
     const site = field ? sites.find(s => s.id === field.siteId) : null
-    
-    if (!site?.contactEmail) {
-      toast.error('No site contact email available')
-      return
-    }
-
     const eventTeams = event.teamIds ? teams.filter(t => event.teamIds?.includes(t.id)) : []
     const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
       weekday: 'long', 
@@ -222,7 +216,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       year: 'numeric' 
     })
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
+    const locationName = field && site ? `${site.name} - ${field.name}` : field?.name || site?.name || 'TBD'
 
     // Collect TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
@@ -259,7 +253,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       `Date: ${formattedDate}\n` +
       `Time: ${event.startTime} - ${event.endTime}\n` +
       `Location: ${locationName}\n` +
-      `Address: ${site.address}, ${site.zipCode} ${site.city}\n` +
+      (site ? `Address: ${site.address}, ${site.zipCode} ${site.city}\n` : '') +
       `Team(s): ${teamNames}\n\n` +
       `We apologize for any inconvenience this may cause.\n\n` +
       `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
