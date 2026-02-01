@@ -79,10 +79,10 @@ async function shareMessage(message: string, title: string, config?: ShareConfig
     }
   }
 
-  // Fallback: WhatsApp direct link (only works with individual numbers)
+  // Fallback: WhatsApp Web link (only works with individual numbers)
   if (config?.groupPhone) {
     const encodedMessage = encodeURIComponent(message)
-    const whatsappUrl = `https://wa.me/${config.groupPhone}?text=${encodedMessage}`
+    const whatsappUrl = `https://web.whatsapp.com/send?phone=${config.groupPhone}&text=${encodedMessage}`
     window.open(whatsappUrl, '_blank')
     return true
   }
