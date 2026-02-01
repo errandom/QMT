@@ -79,8 +79,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
   // Build cancellation notification email
   const handleNotifyCancellation = () => {
-    if (!site?.contactEmail) return
-
     const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
       weekday: 'long', 
       month: 'long', 
@@ -88,7 +86,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       year: 'numeric' 
     })
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
+    const locationName = field && site ? `${site.name} - ${field.name}` : field?.name || site?.name || 'TBD'
 
     // Collect TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
@@ -125,7 +123,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       `Date: ${formattedDate}\n` +
       `Time: ${event.startTime} - ${event.endTime}\n` +
       `Location: ${locationName}\n` +
-      `Address: ${site.address}, ${site.zipCode} ${site.city}\n` +
+      (site ? `Address: ${site.address}, ${site.zipCode} ${site.city}\n` : '') +
       `Team(s): ${teamNames}\n\n` +
       `We apologize for any inconvenience this may cause.\n\n` +
       `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
