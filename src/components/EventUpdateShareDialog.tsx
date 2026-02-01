@@ -124,29 +124,30 @@ export default function EventUpdateShareDialog({
 
   // Collect recipients for email
   const getEmailRecipients = () => {
+    // TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
-    // Always include sports@renegades.ch and bewilligungen@igacr.ch for permit coordination
-    const ccRecipients: string[] = ['sports@renegades.ch', 'bewilligungen@igacr.ch']
     
-    // Add site contact email to CC if available
+    // Add site contact email to TO
     if (site?.contactEmail) {
-      ccRecipients.push(site.contactEmail)
+      toRecipients.push(site.contactEmail)
     }
     
+    // Add team coaches and managers to TO
     eventTeams.forEach(team => {
-      // Team managers go to TO
+      if (team.headCoach?.email) {
+        toRecipients.push(team.headCoach.email)
+      }
       if (team.teamManager?.email) {
         toRecipients.push(team.teamManager.email)
       }
-      // Coaches go to CC
-      if (team.headCoach?.email) {
-        ccRecipients.push(team.headCoach.email)
-      }
     })
+    
+    // CC recipients: only bewilligungen and sports
+    const ccRecipients = ['bewilligungen@igacr.ch', 'sports@renegades.ch']
     
     return {
       to: [...new Set(toRecipients)],
-      cc: [...new Set(ccRecipients)]
+      cc: ccRecipients
     }
   }
 
@@ -181,8 +182,7 @@ export default function EventUpdateShareDialog({
     let body = ''
     
     if (updateType === 'cancel') {
-      body = `Dear Team,\n\n` +
-        `The following event has been CANCELLED:\n\n` +
+      body = `The following event has been CANCELLED:\n\n` +
         `📅 Event: ${eventTitle}\n` +
         `📆 Date: ${formattedDate}\n` +
         `⏰ Time: ${event.startTime} - ${event.endTime}\n` +
@@ -190,8 +190,7 @@ export default function EventUpdateShareDialog({
         `👥 Team(s): ${teamNames}\n\n` +
         `We apologize for any inconvenience.\n\n`
     } else if (changes.length > 0) {
-      body = `Dear Team,\n\n` +
-        `The following event has been UPDATED:\n\n` +
+      body = `The following event has been UPDATED:\n\n` +
         `📅 Event: ${eventTitle}\n\n` +
         `CHANGES:\n` +
         `${'─'.repeat(30)}\n`
@@ -210,8 +209,7 @@ export default function EventUpdateShareDialog({
         `👥 Team(s): ${teamNames}\n` +
         `📋 Status: ${event.status}\n\n`
     } else {
-      body = `Dear Team,\n\n` +
-        `Event details for your reference:\n\n` +
+      body = `Event details for your reference:\n\n` +
         `📅 Event: ${eventTitle}\n` +
         `📆 Date: ${formattedDate}\n` +
         `⏰ Time: ${event.startTime} - ${event.endTime}\n` +
@@ -221,8 +219,8 @@ export default function EventUpdateShareDialog({
     }
     
     body += `Please let us know if you have any questions.\n\n` +
-      `Best regards,\n` +
-      `Renegades Organization`
+      `Quick - Mean - Tough!\n` +
+      `AFC Zurich Renegades`
     
     // Build mailto URL
     const toParam = recipients.to.length > 0 ? recipients.to.join(',') : 'sports@renegades.ch'
