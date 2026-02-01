@@ -90,35 +90,36 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
     const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
 
-    // Collect CC recipients: site contact, team managers and coaches
-    // Always include bewilligungen@igacr.ch for permit coordination
-    const ccRecipients: string[] = ['bewilligungen@igacr.ch']
+    // Collect TO recipients: site manager, team coach, team manager
+    const toRecipients: string[] = []
     
-    // Add site contact email to CC
+    // Add site contact email to TO
     if (site?.contactEmail) {
-      ccRecipients.push(site.contactEmail)
+      toRecipients.push(site.contactEmail)
     }
     
-    // Add team managers and coaches emails to CC
+    // Add team coaches and managers to TO
     eventTeams.forEach(team => {
       if (team.headCoach?.email) {
-        ccRecipients.push(team.headCoach.email)
+        toRecipients.push(team.headCoach.email)
       }
       if (team.teamManager?.email) {
-        ccRecipients.push(team.teamManager.email)
+        toRecipients.push(team.teamManager.email)
       }
     })
     
     // Remove duplicates
-    const uniqueCcRecipients = [...new Set(ccRecipients)]
+    const uniqueToRecipients = [...new Set(toRecipients)]
+    
+    // CC recipients: only bewilligungen and sports
+    const ccRecipients = ['bewilligungen@igacr.ch', 'sports@renegades.ch']
 
     const subject = encodeURIComponent(
       `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
     )
 
     const body = encodeURIComponent(
-      `Dear ${site.contactFirstName} ${site.contactLastName},\n\n` +
-      `We regret to inform you that the following event has been cancelled:\n\n` +
+      `The following event has been cancelled:\n\n` +
       `Event: ${event.title}\n` +
       `Type: ${event.eventType}\n` +
       `Date: ${formattedDate}\n` +
@@ -128,12 +129,13 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       `Team(s): ${teamNames}\n\n` +
       `We apologize for any inconvenience this may cause.\n\n` +
       `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
-      `Best regards,\n` +
-      `Renegades Organization`
+      `Quick - Mean - Tough!\n` +
+      `AFC Zurich Renegades`
     )
 
-    const ccParam = uniqueCcRecipients.length > 0 ? `&cc=${uniqueCcRecipients.join(',')}` : ''
-    window.location.href = `mailto:sports@renegades.ch?subject=${subject}&body=${body}${ccParam}`
+    const toParam = uniqueToRecipients.length > 0 ? uniqueToRecipients.join(',') : 'sports@renegades.ch'
+    const ccParam = `&cc=${ccRecipients.join(',')}`
+    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}${ccParam}`
   }
 
   useEffect(() => {
