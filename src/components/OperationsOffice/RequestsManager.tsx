@@ -196,7 +196,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     if (sendWhatsAppNotification && rejectionRequest.requestorPhone) {
       const phone = rejectionRequest.requestorPhone.replace(/[^0-9+]/g, '')
       const encodedMessage = encodeURIComponent(rejectionMessage)
-      window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank')
+      window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`, '_blank')
     }
 
     toast.success(`${rejectionRequestType.charAt(0).toUpperCase() + rejectionRequestType.slice(1)} request rejected`)
