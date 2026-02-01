@@ -33,7 +33,7 @@ interface SyncResult {
   attendanceUpdated?: number
   eventsProcessed?: number
   error?: string
-  errors?: (string | { team?: string; eventId?: number; error: string })[]
+  errors?: (string | { team?: string; eventId?: number; error: string; groupId?: string; name?: string })[]
   details?: {
     eventsImported?: string[]
     eventsExported?: string[]
@@ -49,7 +49,7 @@ interface SyncResult {
 }
 
 // Helper to format error items that can be strings or objects
-function formatError(err: string | { team?: string; eventId?: number; error: string }): string {
+function formatError(err: string | { team?: string; eventId?: number; error: string; groupId?: string; name?: string }): string {
   if (typeof err === 'string') {
     return err
   }
@@ -58,6 +58,12 @@ function formatError(err: string | { team?: string; eventId?: number; error: str
   }
   if (err.eventId) {
     return `Event ${err.eventId}: ${err.error}`
+  }
+  if (err.groupId) {
+    return `Group ${err.groupId}: ${err.error}`
+  }
+  if (err.name) {
+    return `${err.name}: ${err.error}`
   }
   return err.error || 'Unknown error'
 }
