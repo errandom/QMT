@@ -91,10 +91,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
     const locationName = field ? `${site.name} - ${field.name}` : site?.name || 'N/A'
 
     // Collect CC recipients: site contact, team managers and coaches
-    const ccRecipients: string[] = []
+    // Always include bewilligungen@igacr.ch for permit coordination
+    const ccRecipients: string[] = ['bewilligungen@igacr.ch']
     
     // Add site contact email to CC
-    if (site.contactEmail) {
+    if (site?.contactEmail) {
       ccRecipients.push(site.contactEmail)
     }
     
