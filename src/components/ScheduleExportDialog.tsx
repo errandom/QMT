@@ -164,9 +164,9 @@ export default function ScheduleExportDialog({
   }
 
   // Handle export
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
-      exportToExcel(events, { events, teams, fields, sites }, exportFilters)
+      await exportToExcel(events, { events, teams, fields, sites }, exportFilters)
       toast.success(`Exported ${filteredEvents.length} events to Excel`)
       onOpenChange(false)
     } catch (error: any) {
