@@ -1111,7 +1111,83 @@ If you cannot parse the input, return:
 
 app.post('/api/events/create-from-natural-language', async (req, res) => {
   try {
-    const { input, confirm, defaultTeamId, defaultFieldId } = req.body;
+    const { input, confirm, defaultTeamId, defaultFieldId, editedEvents } = req.body;
+    
+    // If editedEvents are provided (user edited the preview), use those directly
+    if (confirm && editedEvents && Array.isArray(editedEvents)) {
+      console.log('[AI Events] Creating events from edited preview:', editedEvents.length, 'events');
+      
+      const pool = await getPool();
+      const createdEvents = [];
+      
+      for (const event of editedEvents) {
+        if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
+          // Create recurring events
+          const start = new Date(event.date);
+          const end = new Date(event.recurringEndDate);
+          const days = event.recurringDays;
+          
+          let current = new Date(start);
+          while (current <= end) {
+            const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
+            if (days.includes(dayOfWeek)) {
+              const eventDate = current.toISOString().split('T')[0];
+              const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
+              const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
+              
+              const insertResult = await pool.request()
+                .input('team_ids', sql.NVarChar, (event.teamIds || []).join(','))
+                .input('field_id', sql.Int, event.fieldId || null)
+                .input('event_type', sql.NVarChar, event.eventType || 'Other')
+                .input('start_time', sql.DateTime, startDateTime)
+                .input('end_time', sql.DateTime, endDateTime)
+                .input('description', sql.NVarChar, event.title)
+                .input('notes', sql.NVarChar, event.notes || null)
+                .input('status', sql.NVarChar, 'Scheduled')
+                .input('other_participants', sql.NVarChar, event.otherParticipants || null)
+                .query(`
+                  INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+                  OUTPUT INSERTED.*
+                  VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+                `);
+              
+              createdEvents.push(insertResult.recordset[0]);
+            }
+            current.setDate(current.getDate() + 1);
+          }
+        } else {
+          // Create single event
+          const eventDate = event.date;
+          const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
+          const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
+          
+          const insertResult = await pool.request()
+            .input('team_ids', sql.NVarChar, (event.teamIds || []).join(','))
+            .input('field_id', sql.Int, event.fieldId || null)
+            .input('event_type', sql.NVarChar, event.eventType || 'Other')
+            .input('start_time', sql.DateTime, startDateTime)
+            .input('end_time', sql.DateTime, endDateTime)
+            .input('description', sql.NVarChar, event.title)
+            .input('notes', sql.NVarChar, event.notes || null)
+            .input('status', sql.NVarChar, 'Scheduled')
+            .input('other_participants', sql.NVarChar, event.otherParticipants || null)
+            .query(`
+              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+            `);
+          
+          createdEvents.push(insertResult.recordset[0]);
+        }
+      }
+
+      return res.json({
+        success: true,
+        summary: `Created ${createdEvents.length} event(s) from edited preview`,
+        created: createdEvents.length,
+        events: createdEvents,
+      });
+    }
     
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: 'Input text is required' });
