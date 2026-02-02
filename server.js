@@ -1143,7 +1143,7 @@ app.post('/api/events/create-from-natural-language', async (req, res) => {
                 .input('end_time', sql.DateTime, endDateTime)
                 .input('description', sql.NVarChar, event.title)
                 .input('notes', sql.NVarChar, event.notes || null)
-                .input('status', sql.NVarChar, 'Scheduled')
+                .input('status', sql.NVarChar, 'Planned')
                 .input('other_participants', sql.NVarChar, event.otherParticipants || null)
                 .query(`
                   INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
@@ -1169,7 +1169,7 @@ app.post('/api/events/create-from-natural-language', async (req, res) => {
             .input('end_time', sql.DateTime, endDateTime)
             .input('description', sql.NVarChar, event.title)
             .input('notes', sql.NVarChar, event.notes || null)
-            .input('status', sql.NVarChar, 'Scheduled')
+            .input('status', sql.NVarChar, 'Planned')
             .input('other_participants', sql.NVarChar, event.otherParticipants || null)
             .query(`
               INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
