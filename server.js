@@ -732,7 +732,7 @@ function generateRecurringDates(startDate, endDate, recurringDays) {
 
 app.post('/api/events', async (req, res) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
 
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
@@ -810,10 +810,15 @@ app.post('/api/events', async (req, res) => {
           .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
           .input('other_participants', sql.NVarChar, other_participants || null)
           .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .input('game_location', sql.NVarChar, game_location || null)
+          .input('away_street', sql.NVarChar, away_street || null)
+          .input('away_zip', sql.NVarChar, away_zip || null)
+          .input('away_city', sql.NVarChar, away_city || null)
+          .input('transport_requested', sql.Bit, transport_requested || false)
           .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
           `);
         
         createdEvents.push(result.recordset[0]);
@@ -858,10 +863,15 @@ app.post('/api/events', async (req, res) => {
         .input('recurring_end_date', sql.Date, recurring_end_date || null)
         .input('other_participants', sql.NVarChar, other_participants || null)
         .input('estimated_attendance', sql.Int, estimated_attendance || null)
+        .input('game_location', sql.NVarChar, game_location || null)
+        .input('away_street', sql.NVarChar, away_street || null)
+        .input('away_zip', sql.NVarChar, away_zip || null)
+        .input('away_city', sql.NVarChar, away_city || null)
+        .input('transport_requested', sql.Bit, transport_requested || false)
         .query(`
-          INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+          INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
           OUTPUT INSERTED.*
-          VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+          VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
         `);
       
       // Fetch the created event with joins
@@ -890,7 +900,7 @@ app.post('/api/events', async (req, res) => {
 
 app.put('/api/events/:id', async (req, res) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance } = req.body;
+    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
 
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
@@ -960,10 +970,15 @@ app.put('/api/events/:id', async (req, res) => {
           .input('recurring_end_date', sql.Date, null)
           .input('other_participants', sql.NVarChar, other_participants || null)
           .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .input('game_location', sql.NVarChar, game_location || null)
+          .input('away_street', sql.NVarChar, away_street || null)
+          .input('away_zip', sql.NVarChar, away_zip || null)
+          .input('away_city', sql.NVarChar, away_city || null)
+          .input('transport_requested', sql.Bit, transport_requested || false)
           .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
           `);
         
         createdEvents.push(result.recordset[0]);
@@ -1006,13 +1021,20 @@ app.put('/api/events/:id', async (req, res) => {
         .input('recurring_end_date', sql.Date, recurring_end_date || null)
         .input('other_participants', sql.NVarChar, other_participants || null)
         .input('estimated_attendance', sql.Int, estimated_attendance || null)
+        .input('game_location', sql.NVarChar, game_location || null)
+        .input('away_street', sql.NVarChar, away_street || null)
+        .input('away_zip', sql.NVarChar, away_zip || null)
+        .input('away_city', sql.NVarChar, away_city || null)
+        .input('transport_requested', sql.Bit, transport_requested || false)
         .query(`
           UPDATE events 
           SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
               start_time = @start_time, end_time = @end_time, description = @description,
               notes = @notes, status = @status, recurring_days = @recurring_days,
               recurring_end_date = @recurring_end_date, other_participants = @other_participants,
-              estimated_attendance = @estimated_attendance, updated_at = GETDATE()
+              estimated_attendance = @estimated_attendance, game_location = @game_location,
+              away_street = @away_street, away_zip = @away_zip, away_city = @away_city,
+              transport_requested = @transport_requested, updated_at = GETDATE()
           OUTPUT INSERTED.*
           WHERE id = @id
         `);
@@ -1056,6 +1078,134 @@ app.delete('/api/events/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting event:', err);
     res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
+// Transport Request Email - sends email for away games
+app.post('/api/events/:id/transport-request', async (req, res) => {
+  try {
+    const pool = await getPool();
+    
+    // Fetch the event with team details
+    const eventResult = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        SELECT e.*, f.name as field_name, s.name as site_name
+        FROM events e
+        LEFT JOIN fields f ON e.field_id = f.id
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.id = @id
+      `);
+    
+    if (eventResult.recordset.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    const event = eventResult.recordset[0];
+    
+    if (event.event_type !== 'Game' || event.game_location !== 'away') {
+      return res.status(400).json({ error: 'Transport request is only available for away games' });
+    }
+    
+    // Get team details with coach and manager emails
+    const teamIds = event.team_ids ? event.team_ids.split(',').map(id => parseInt(id.trim())) : [];
+    
+    const ccRecipients = [];
+    const teamNames = [];
+    
+    if (teamIds.length > 0) {
+      const teamsResult = await pool.request()
+        .query(`
+          SELECT id, name, head_coach_email, head_coach_first_name, head_coach_last_name,
+                 team_manager_email, team_manager_first_name, team_manager_last_name
+          FROM teams 
+          WHERE id IN (${teamIds.join(',')})
+        `);
+      
+      for (const team of teamsResult.recordset) {
+        teamNames.push(team.name);
+        if (team.head_coach_email) {
+          ccRecipients.push(team.head_coach_email);
+        }
+        if (team.team_manager_email) {
+          ccRecipients.push(team.team_manager_email);
+        }
+      }
+    }
+    
+    // Add sports@renegades.ch to CC
+    ccRecipients.push('sports@renegades.ch');
+    
+    // Format event details
+    const eventDate = new Date(event.start_time);
+    const formattedDate = eventDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    const startTime = eventDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    const endTime = new Date(event.end_time).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    // Build the away address
+    const awayAddress = [event.away_street, event.away_zip, event.away_city]
+      .filter(Boolean)
+      .join(', ');
+    
+    // Build email content
+    const subject = `Transport Request: ${teamNames.join(', ')} - Away Game ${formattedDate}`;
+    
+    const body = `Dear Transport Team,
+
+We would like to request transport for an upcoming away game.
+
+EVENT DETAILS:
+Team(s): ${teamNames.join(', ') || 'TBD'}
+Event: ${event.description || 'Away Game'}
+Date: ${formattedDate}
+Time: ${startTime} - ${endTime}
+
+DESTINATION:
+${awayAddress || 'Address not specified'}
+
+Please confirm availability and provide details for the transport arrangement.
+
+Thank you,
+Renegades Operations`;
+
+    // Update event to mark transport request as sent
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('transport_request_sent_at', sql.DateTime, new Date())
+      .query(`
+        UPDATE events
+        SET transport_requested = 1, transport_request_sent_at = @transport_request_sent_at
+        WHERE id = @id
+      `);
+    
+    res.json({
+      success: true,
+      email: {
+        to: 'transport@renegades.ch',
+        cc: [...new Set(ccRecipients)], // Remove duplicates
+        subject: subject,
+        body: body
+      }
+    });
+    
+  } catch (err) {
+    console.error('Error creating transport request:', err);
+    res.status(500).json({ error: 'Failed to create transport request' });
   }
 });
 
