@@ -1,6 +1,7 @@
 export type SportType = 'Tackle Football' | 'Flag Football'
 export type EventType = 'Game' | 'Practice' | 'Meeting' | 'Other'
 export type EventStatus = 'Planned' | 'Confirmed' | 'Cancelled' | 'Completed'
+export type GameLocation = 'home' | 'away'
 export type TurfType = 'Natural Turf' | 'Artificial Turf'
 export type FieldSize = 'Full' | 'Shared'
 export type RosterSize = '< 15' | '16-30' | '> 30'
@@ -87,6 +88,13 @@ export interface Event {
   isRecurring: boolean
   recurringDays?: number[]
   recurringEndDate?: string
+  // Game location fields (for Game events)
+  gameLocation?: GameLocation
+  awayStreet?: string
+  awayZip?: string
+  awayCity?: string
+  transportRequested?: boolean
+  transportRequestSentAt?: string
   // Spond integration fields
   spondId?: string
   spondGroupId?: string
