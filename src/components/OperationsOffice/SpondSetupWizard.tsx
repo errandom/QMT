@@ -60,6 +60,7 @@ interface TeamMapping {
   teamName: string
   spondGroupId: string
   spondGroupName: string
+  spondParentGroupId?: string
   spondParentGroupName?: string
   isSubgroup: boolean
 }
@@ -381,6 +382,7 @@ export default function SpondSetupWizard({
         teamName: team.name,
         spondGroupId: spondGroup.id,
         spondGroupName: spondGroup.name,
+        spondParentGroupId: spondGroup.parentGroupId || undefined,
         spondParentGroupName: spondGroup.parentGroup || undefined,
         isSubgroup: !!spondGroup.parentGroup
       })
@@ -434,6 +436,7 @@ export default function SpondSetupWizard({
             teamId: mapping.teamId,
             spondGroupId: mapping.spondGroupId,
             spondGroupName: mapping.spondGroupName,
+            spondParentGroupId: mapping.spondParentGroupId || null,
             spondParentGroupName: mapping.spondParentGroupName || null,
             isSubgroup: mapping.isSubgroup,
             syncEventsImport: true,
