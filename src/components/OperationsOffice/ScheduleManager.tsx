@@ -22,12 +22,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope, FileXls } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 import { shareEvent } from '@/lib/whatsappService'
 import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
+import ScheduleExportDialog from '@/components/ScheduleExportDialog'
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -67,6 +68,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [filterEventType, setFilterEventType] = useState<string>('all')
   const [filterStartDate, setFilterStartDate] = useState<string>('')
   const [filterEndDate, setFilterEndDate] = useState<string>('')
+
+  // Export dialog state
+  const [showExportDialog, setShowExportDialog] = useState(false)
 
   const [formData, setFormData] = useState<Partial<Event> & { estimatedAttendance?: number | string }>({
     title: '',
@@ -490,6 +494,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Schedule Management</h2>
         <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setShowExportDialog(true)}
+          >
+            <FileXls className="mr-2" size={16} />
+            Export
+          </Button>
           <Button 
             onClick={() => setShowAICreator(!showAICreator)}
             style={{ backgroundColor: '#8B5CF6', color: 'white' }}
@@ -1016,6 +1027,22 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Export Dialog */}
+      <ScheduleExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        events={events}
+        teams={teams}
+        fields={fields}
+        sites={sites}
+        initialFilters={{
+          teamId: filterTeam,
+          eventType: filterEventType,
+          startDate: filterStartDate,
+          endDate: filterEndDate
+        }}
+      />
     </div>
   )
 }
