@@ -24,6 +24,15 @@ export default defineConfig({
     sourcemap: false,
     commonjsOptions: {
       include: [/xlsx/, /node_modules/]
+    },
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress warnings about xlsx dynamic import
+        if (warning.code === 'UNRESOLVED_IMPORT' && warning.exporter === 'xlsx') {
+          return
+        }
+        warn(warning)
+      }
     }
   }
 });
