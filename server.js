@@ -3107,6 +3107,7 @@ app.post('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req
       teamId,
       spondGroupId,
       spondGroupName,
+      spondParentGroupId,
       spondParentGroupName,
       isSubgroup,
       syncEventsImport,
@@ -3137,6 +3138,7 @@ app.post('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req
         .input('team_id', sql.Int, teamId)
         .input('spond_group_id', sql.NVarChar, spondGroupId)
         .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
         .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
         .input('is_subgroup', sql.Bit, isSubgroup || false)
         .input('sync_events_import', sql.Bit, syncEventsImport !== false)
@@ -3152,6 +3154,7 @@ app.post('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req
           UPDATE spond_sync_settings SET
             spond_group_id = @spond_group_id,
             spond_group_name = @spond_group_name,
+            spond_parent_group_id = @spond_parent_group_id,
             spond_parent_group_name = @spond_parent_group_name,
             is_subgroup = @is_subgroup,
             sync_events_import = @sync_events_import,
@@ -3172,6 +3175,7 @@ app.post('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req
         .input('team_id', sql.Int, teamId)
         .input('spond_group_id', sql.NVarChar, spondGroupId)
         .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
         .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
         .input('is_subgroup', sql.Bit, isSubgroup || false)
         .input('sync_events_import', sql.Bit, syncEventsImport !== false)
@@ -3185,12 +3189,12 @@ app.post('/api/spond/sync-settings', verifyToken, requireAdminOrMgmt, async (req
         .input('is_active', sql.Bit, isActive !== false)
         .query(`
           INSERT INTO spond_sync_settings (
-            team_id, spond_group_id, spond_group_name, spond_parent_group_name, is_subgroup,
+            team_id, spond_group_id, spond_group_name, spond_parent_group_id, spond_parent_group_name, is_subgroup,
             sync_events_import, sync_events_export, sync_attendance_import,
             sync_event_title, sync_event_description, sync_event_time, sync_event_location, sync_event_type,
             is_active
           ) VALUES (
-            @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_name, @is_subgroup,
+            @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_id, @spond_parent_group_name, @is_subgroup,
             @sync_events_import, @sync_events_export, @sync_attendance_import,
             @sync_event_title, @sync_event_description, @sync_event_time, @sync_event_location, @sync_event_type,
             @is_active
@@ -3272,6 +3276,7 @@ app.get('/api/spond/groups-for-import', verifyToken, requireAdminOrMgmt, async (
               id: subgroup.id,
               name: subgroup.name,
               parentGroup: group.name,
+              parentGroupId: group.id,
               isSubgroup: true,
               memberCount: countMembers(subgroup.members),
               activity: group.activity
@@ -3284,6 +3289,7 @@ app.get('/api/spond/groups-for-import', verifyToken, requireAdminOrMgmt, async (
             id: group.id,
             name: group.name,
             parentGroup: null,
+            parentGroupId: null,
             isSubgroup: false,
             memberCount: countMembers(group.members),
             activity: group.activity
@@ -3306,6 +3312,7 @@ app.post('/api/spond/import-team', verifyToken, requireAdminOrMgmt, async (req, 
     const {
       spondGroupId,
       spondGroupName,
+      spondParentGroupId,
       spondParentGroupName,
       isSubgroup,
       sport,
@@ -3349,6 +3356,7 @@ app.post('/api/spond/import-team', verifyToken, requireAdminOrMgmt, async (req, 
       .input('team_id', sql.Int, newTeamId)
       .input('spond_group_id', sql.NVarChar, spondGroupId)
       .input('spond_group_name', sql.NVarChar, spondGroupName)
+      .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
       .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
       .input('is_subgroup', sql.Bit, isSubgroup || false)
       .input('sync_events_import', sql.Bit, syncEventsImport !== false)
@@ -3356,10 +3364,10 @@ app.post('/api/spond/import-team', verifyToken, requireAdminOrMgmt, async (req, 
       .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
       .query(`
         INSERT INTO spond_sync_settings (
-          team_id, spond_group_id, spond_group_name, spond_parent_group_name, is_subgroup,
+          team_id, spond_group_id, spond_group_name, spond_parent_group_id, spond_parent_group_name, is_subgroup,
           sync_events_import, sync_events_export, sync_attendance_import, is_active
         ) VALUES (
-          @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_name, @is_subgroup,
+          @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_id, @spond_parent_group_name, @is_subgroup,
           @sync_events_import, @sync_events_export, @sync_attendance_import, 1
         )
       `);
@@ -3419,6 +3427,7 @@ app.post('/api/spond/import-teams', verifyToken, requireAdminOrMgmt, async (req,
           .input('team_id', sql.Int, newTeamId)
           .input('spond_group_id', sql.NVarChar, group.id)
           .input('spond_group_name', sql.NVarChar, group.name)
+          .input('spond_parent_group_id', sql.NVarChar, group.parentGroupId || null)
           .input('spond_parent_group_name', sql.NVarChar, group.parentGroup || null)
           .input('is_subgroup', sql.Bit, group.isSubgroup || false)
           .input('sync_events_import', sql.Bit, syncEventsImport !== false)
@@ -3426,10 +3435,10 @@ app.post('/api/spond/import-teams', verifyToken, requireAdminOrMgmt, async (req,
           .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
           .query(`
             INSERT INTO spond_sync_settings (
-              team_id, spond_group_id, spond_group_name, spond_parent_group_name, is_subgroup,
+              team_id, spond_group_id, spond_group_name, spond_parent_group_id, spond_parent_group_name, is_subgroup,
               sync_events_import, sync_events_export, sync_attendance_import, is_active
             ) VALUES (
-              @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_name, @is_subgroup,
+              @team_id, @spond_group_id, @spond_group_name, @spond_parent_group_id, @spond_parent_group_name, @is_subgroup,
               @sync_events_import, @sync_events_export, @sync_attendance_import, 1
             )
           `);
