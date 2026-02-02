@@ -1,5 +1,15 @@
-import * as XLSX from 'xlsx'
 import { Event, Team, Field, Site } from './types'
+
+// Dynamic import for xlsx to avoid build-time resolution issues
+type XLSX = typeof import('xlsx')
+let xlsxModule: XLSX | null = null
+
+async function getXLSX(): Promise<XLSX> {
+  if (!xlsxModule) {
+    xlsxModule = await import('xlsx')
+  }
+  return xlsxModule
+}
 
 export interface ExportFilters {
   teamIds: string[]
@@ -139,12 +149,12 @@ export function transformEventsForExport(
 /**
  * Generate and download Excel file from events
  */
-export function exportToExcel(
+export async function exportToExcel(
   events: Event[],
   data: ExportData,
   filters: ExportFilters,
   filename?: string
-): void {
+): Promise<void> {
   // Filter events
   const filteredEvents = filterEventsForExport(events, filters)
 
@@ -154,6 +164,9 @@ export function exportToExcel(
 
   // Transform to export rows
   const rows = transformEventsForExport(filteredEvents, data)
+
+  // Load xlsx dynamically
+  const XLSX = await getXLSX()
 
   // Create workbook and worksheet
   const wb = XLSX.utils.book_new()
