@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
-import { Event, EventType, EventStatus, Team, Field, User } from '@/lib/types'
+import { Event, EventType, EventStatus, GameLocation, Team, Field, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,7 +22,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope, FileXls } from '@phosphor-icons/react'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope, FileXls, House, MapPin, Bus } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 import { shareEvent } from '@/lib/whatsappService'
@@ -42,6 +43,32 @@ const WEEKDAYS = [
 
 interface ScheduleManagerProps {
   currentUser: User | null
+}
+
+// Helper function to send transport request email
+async function sendTransportRequest(eventId: string | number): Promise<void> {
+  try {
+    const response = await fetch(`/api/events/${eventId}/transport-request`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    
+    if (response.ok) {
+      const result = await response.json()
+      
+      // Open email client with pre-filled content
+      const { to, cc, subject, body } = result.email
+      const ccParam = cc && cc.length > 0 ? `&cc=${encodeURIComponent(cc.join(','))}` : ''
+      const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}${ccParam}&body=${encodeURIComponent(body)}`
+      
+      window.open(mailtoLink, '_blank')
+    }
+  } catch (error) {
+    console.error('[ScheduleManager] Error sending transport request:', error)
+  }
 }
 
 export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
@@ -86,7 +113,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     notes: '',
     isRecurring: false,
     recurringDays: [],
-    recurringEndDate: ''
+    recurringEndDate: '',
+    // Game location fields
+    gameLocation: undefined,
+    awayStreet: '',
+    awayZip: '',
+    awayCity: '',
+    transportRequested: false
   })
 
   // Calculate how many recurring events will be created
@@ -187,12 +220,17 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   const handleEdit = (event: Event) => {
     setEditingEvent(event)
-    // Populate form including recurring data if it exists
+    // Populate form including recurring data and game location if it exists
     setFormData({
       ...event,
       isRecurring: event.isRecurring || false,
       recurringDays: event.recurringDays || [],
-      recurringEndDate: event.recurringEndDate || ''
+      recurringEndDate: event.recurringEndDate || '',
+      gameLocation: event.gameLocation || undefined,
+      awayStreet: event.awayStreet || '',
+      awayZip: event.awayZip || '',
+      awayCity: event.awayCity || '',
+      transportRequested: event.transportRequested || false
     })
     setShowDialog(true)
   }
@@ -338,7 +376,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           generate_recurring: formData.isRecurring, // Flag to generate recurring events
           other_participants: formData.otherParticipants || null,
           estimated_attendance: formData.estimatedAttendance ? 
-            (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null
+            (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null,
+          // Game location fields
+          game_location: formData.eventType === 'Game' ? (formData.gameLocation || null) : null,
+          away_street: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.awayStreet || null) : null,
+          away_zip: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.awayZip || null) : null,
+          away_city: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.awayCity || null) : null,
+          transport_requested: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.transportRequested || false) : false
         }
 
         console.log('[ScheduleManager] Updating event with data:', apiData)
@@ -386,7 +430,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null,
           other_participants: formData.otherParticipants || null,
           estimated_attendance: formData.estimatedAttendance ? 
-            (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null
+            (typeof formData.estimatedAttendance === 'string' ? parseInt(formData.estimatedAttendance) : formData.estimatedAttendance) : null,
+          // Game location fields
+          game_location: formData.eventType === 'Game' ? (formData.gameLocation || null) : null,
+          away_street: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.awayStreet || null) : null,
+          away_zip: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.awayZip || null) : null,
+          away_city: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.awayCity || null) : null,
+          transport_requested: formData.eventType === 'Game' && formData.gameLocation === 'away' ? (formData.transportRequested || false) : false
         }
 
         console.log('[ScheduleManager] Creating event with data:', apiData)
@@ -405,10 +455,22 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           // Multiple events created (recurring)
           setEvents((current = []) => [...current, ...result])
           toast.success(`${result.length} recurring events created successfully`)
+          
+          // Send transport request for away games
+          if (formData.transportRequested && formData.gameLocation === 'away') {
+            for (const event of result) {
+              await sendTransportRequest(event.id)
+            }
+          }
         } else {
           // Single event created
           setEvents((current = []) => [...current, result])
           toast.success('Event created successfully')
+          
+          // Send transport request for away games
+          if (formData.transportRequested && formData.gameLocation === 'away') {
+            await sendTransportRequest(result.id)
+          }
         }
       }
       
@@ -785,29 +847,158 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>
-                Location
-                {formData.eventType === 'Meeting' || formData.eventType === 'Other' ? ' (Site)' : ' (Field)'}
-              </Label>
-              <Select 
-                value={formData.fieldId || ''} 
-                onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
-              >
-                <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locationOptions.map((location: any) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {formData.eventType === 'Meeting' || formData.eventType === 'Other' 
-                        ? location.siteName 
-                        : `${location.siteName} - ${location.name}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Game Location: Home/Away selection for Game events */}
+            {formData.eventType === 'Game' && (
+              <div className="space-y-4 p-4 rounded-lg border" style={{ borderColor: COLORS.ACCENT, backgroundColor: 'rgba(36, 139, 204, 0.05)' }}>
+                <Label style={{ color: COLORS.CHARCOAL, fontWeight: 600 }}>Game Location *</Label>
+                <RadioGroup
+                  value={formData.gameLocation || ''}
+                  onValueChange={(v) => setFormData({ 
+                    ...formData, 
+                    gameLocation: v as GameLocation,
+                    // Clear field if switching to away, clear away address if switching to home
+                    fieldId: v === 'away' ? '' : formData.fieldId,
+                    awayStreet: v === 'home' ? '' : formData.awayStreet,
+                    awayZip: v === 'home' ? '' : formData.awayZip,
+                    awayCity: v === 'home' ? '' : formData.awayCity,
+                    transportRequested: v === 'home' ? false : formData.transportRequested
+                  })}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="home" id="game-home" />
+                    <Label htmlFor="game-home" className="flex items-center gap-2 cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                      <House size={18} weight="bold" style={{ color: COLORS.ACCENT }} />
+                      Home Game
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="away" id="game-away" />
+                    <Label htmlFor="game-away" className="flex items-center gap-2 cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                      <MapPin size={18} weight="bold" style={{ color: COLORS.NAVY }} />
+                      Away Game
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {/* Home Game: Show field selector */}
+                {formData.gameLocation === 'home' && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>Field *</Label>
+                    <Select 
+                      value={formData.fieldId || ''} 
+                      onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
+                    >
+                      <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
+                        <SelectValue placeholder="Select field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.map((location: any) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {`${location.siteName} - ${location.name}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Away Game: Show address fields and transport request */}
+                {formData.gameLocation === 'away' && (
+                  <div className="space-y-4 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="sm:col-span-2 space-y-2">
+                        <Label htmlFor="awayStreet" style={{ color: COLORS.CHARCOAL }}>Street Address *</Label>
+                        <Input
+                          id="awayStreet"
+                          value={formData.awayStreet || ''}
+                          onChange={(e) => setFormData({ ...formData, awayStreet: e.target.value })}
+                          placeholder="123 Stadium Road"
+                          required
+                          style={{ color: COLORS.CHARCOAL }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="awayZip" style={{ color: COLORS.CHARCOAL }}>ZIP Code *</Label>
+                        <Input
+                          id="awayZip"
+                          value={formData.awayZip || ''}
+                          onChange={(e) => setFormData({ ...formData, awayZip: e.target.value })}
+                          placeholder="8000"
+                          required
+                          style={{ color: COLORS.CHARCOAL }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="awayCity" style={{ color: COLORS.CHARCOAL }}>City *</Label>
+                      <Input
+                        id="awayCity"
+                        value={formData.awayCity || ''}
+                        onChange={(e) => setFormData({ ...formData, awayCity: e.target.value })}
+                        placeholder="Zürich"
+                        required
+                        style={{ color: COLORS.CHARCOAL }}
+                      />
+                    </div>
+                    
+                    {/* Transport Request */}
+                    <div 
+                      className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-amber-50 transition-colors"
+                      style={{ 
+                        borderColor: formData.transportRequested ? '#f59e0b' : '#e5e7eb',
+                        backgroundColor: formData.transportRequested ? 'rgba(245, 158, 11, 0.1)' : 'transparent'
+                      }}
+                      onClick={() => setFormData({ ...formData, transportRequested: !formData.transportRequested })}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Bus size={24} weight={formData.transportRequested ? 'fill' : 'regular'} className="text-amber-600" />
+                        <div>
+                          <Label className="cursor-pointer font-medium" style={{ color: COLORS.CHARCOAL }}>
+                            Request Transport
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Sends email to transport@renegades.ch with team contacts in CC
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={formData.transportRequested || false}
+                        onCheckedChange={(checked) => setFormData({ ...formData, transportRequested: checked })}
+                        style={{ backgroundColor: formData.transportRequested ? '#f59e0b' : undefined }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Location for non-Game events */}
+            {formData.eventType !== 'Game' && (
+              <div className="space-y-2">
+                <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>
+                  Location
+                  {formData.eventType === 'Meeting' || formData.eventType === 'Other' ? ' (Site)' : ' (Field)'}
+                </Label>
+                <Select 
+                  value={formData.fieldId || ''} 
+                  onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
+                >
+                  <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locationOptions.map((location: any) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {formData.eventType === 'Meeting' || formData.eventType === 'Other' 
+                          ? location.siteName 
+                          : `${location.siteName} - ${location.name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label style={{ color: COLORS.CHARCOAL }}>Teams</Label>
