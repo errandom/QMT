@@ -18,7 +18,6 @@ import {
   Lightning, 
   CloudArrowDown, 
   CloudArrowUp,
-  Link as LinkIcon,
   LinkBreak,
   Users,
   CalendarBlank,
@@ -113,7 +112,6 @@ export default function SpondIntegration() {
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [showSyncWizard, setShowSyncWizard] = useState(false)
-  const [showMappingDialog, setShowMappingDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showSyncSettingsDialog, setShowSyncSettingsDialog] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
@@ -403,10 +401,7 @@ export default function SpondIntegration() {
     }
   }
 
-  const openMappingDialog = () => {
-    fetchSpondGroups()
-    setShowMappingDialog(true)
-  }
+
 
   const syncAttendance = async () => {
     setSyncingAttendance(true)
@@ -757,14 +752,6 @@ export default function SpondIntegration() {
 
                 <Button
                   variant="outline"
-                  onClick={openMappingDialog}
-                >
-                  <LinkIcon size={16} className="mr-2" />
-                  Link Teams
-                </Button>
-
-                <Button
-                  variant="outline"
                   onClick={openSyncSettingsDialog}
                 >
                   <Sliders size={16} className="mr-2" />
@@ -884,192 +871,6 @@ export default function SpondIntegration() {
               className="bg-[#248bcc] hover:bg-[#1a6a9a] text-white"
             >
               Save Configuration
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Team Mapping Dialog */}
-      <Dialog open={showMappingDialog} onOpenChange={setShowMappingDialog}>
-        <DialogContent className="bg-white border border-gray-200 shadow-xl sm:max-w-xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-gray-900">
-              <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${COLORS.ACCENT}, ${COLORS.NAVY})` }}
-              >
-                <LinkIcon size={18} weight="bold" className="text-white" />
-              </div>
-              Link Teams
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Connect your local teams to Spond groups or subgroups.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Legend and Import button */}
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 py-2 px-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.ACCENT }}></div>
-                <span className="text-gray-600">Local</span>
-              </div>
-              <span className="text-gray-400">→</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.NAVY }}></div>
-                <span className="text-gray-600">Spond</span>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => { setShowMappingDialog(false); openImportDialog(); }}
-              className="text-xs h-7"
-            >
-              <Download size={12} className="mr-1" />
-              Import
-            </Button>
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              {loadingGroups ? (
-                <div className="flex items-center justify-center py-8">
-                  <ArrowsClockwise className="animate-spin" size={32} style={{ color: COLORS.ACCENT }} />
-                </div>
-              ) : (
-                <div className="space-y-2 pr-4">
-                  {teams.map((team) => {
-                  // Find the linked group - check linkedTeams array for 1:n support
-                  const linkedGroup = spondGroups.find(g => 
-                    g.linkedTeams?.some(lt => lt.id === team.id) || g.linkedTeam?.id === team.id
-                  )
-                  return (
-                    <div
-                      key={team.id}
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors"
-                    >
-                      {/* Team name row */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS.ACCENT }}></div>
-                        <span className="font-medium text-gray-900 truncate">{team.name}</span>
-                        <Badge variant="outline" className="text-xs border-gray-300 text-gray-600 bg-white flex-shrink-0">
-                          {team.sport}
-                        </Badge>
-                      </div>
-
-                      {/* Link row */}
-                      <div className="flex items-center gap-2 pl-4">
-                        <ArrowRight size={14} className="text-gray-400 flex-shrink-0" />
-                        
-                        {linkedGroup ? (
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <Badge className="bg-[#248bcc]/10 text-[#248bcc] border border-[#248bcc]/30 truncate max-w-[200px]">
-                              <CheckCircle size={12} className="mr-1 flex-shrink-0" />
-                              <span className="truncate">{linkedGroup.name}</span>
-                              {linkedGroup.parentGroup && (
-                                <span className="text-xs ml-1 opacity-70 truncate">({linkedGroup.parentGroup})</span>
-                              )}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => unlinkTeam(team.id)}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50 h-7 w-7 p-0 flex-shrink-0"
-                            >
-                              <LinkBreak size={14} />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Select
-                            value=""
-                            onValueChange={(value) => {
-                              if (value && value !== 'none') {
-                                linkTeam(team.id, value)
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1 max-w-full bg-white h-8 text-sm">
-                              <SelectValue placeholder="Select Spond group..." />
-                            </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">
-                                  <span className="text-gray-500">Don't link</span>
-                                </SelectItem>
-                                {/* Group the items by parent group - allow selecting already-linked groups (1:n) */}
-                                {(() => {
-                                  const parentGroups = spondGroups.filter(g => g.isParentGroup)
-                                  return parentGroups.map((parentGroup) => {
-                                    const subgroups = spondGroups.filter(g => g.parentGroup === parentGroup.name)
-                                    const linkedCount = parentGroup.linkedTeams?.length || 0
-                                    return (
-                                      <div key={parentGroup.id}>
-                                        {/* Parent Group - styled as a selectable option */}
-                                        <SelectItem value={parentGroup.id}>
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-semibold">{parentGroup.name}</span>
-                                            {parentGroup.memberCount > 0 && (
-                                              <span className="text-xs text-gray-400">({parentGroup.memberCount})</span>
-                                            )}
-                                            {parentGroup.hasSubgroups && (
-                                              <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Group</span>
-                                            )}
-                                            {linkedCount > 0 && (
-                                              <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">{linkedCount} linked</span>
-                                            )}
-                                          </div>
-                                        </SelectItem>
-                                        {/* Subgroups - indented */}
-                                        {subgroups.map((subgroup) => {
-                                          const subLinkedCount = subgroup.linkedTeams?.length || 0
-                                          return (
-                                            <SelectItem key={subgroup.id} value={subgroup.id}>
-                                              <div className="flex items-center gap-2 pl-4">
-                                                <span className="text-gray-400">└</span>
-                                                <span>{subgroup.name}</span>
-                                                {subgroup.memberCount > 0 && (
-                                                  <span className="text-xs text-gray-400">({subgroup.memberCount})</span>
-                                                )}
-                                                {subLinkedCount > 0 && (
-                                                  <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded">{subLinkedCount}</span>
-                                                )}
-                                              </div>
-                                            </SelectItem>
-                                          )
-                                        })}
-                                      </div>
-                                    )
-                                  })
-                                })()}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-
-                {teams.length === 0 && (
-                  <div className="text-center py-6">
-                    <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Users size={24} className="text-gray-400" />
-                    </div>
-                    <p className="text-gray-700 font-medium text-sm">No local teams found</p>
-                    <p className="text-xs text-gray-500">Create teams first, or import from Spond</p>
-                  </div>
-                )}
-              </div>
-            )}
-            </ScrollArea>
-          </div>
-
-          <DialogFooter className="flex-shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowMappingDialog(false)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              Close
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1266,15 +1067,11 @@ export default function SpondIntegration() {
             ) : syncSettings.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                  <LinkIcon size={32} className="text-gray-400" />
+                  <Download size={32} className="text-gray-400" />
                 </div>
                 <p className="text-gray-700 font-medium">No teams linked to Spond</p>
-                <p className="text-sm text-gray-500 mb-4">Link teams or import from Spond to configure sync settings</p>
+                <p className="text-sm text-gray-500 mb-4">Import teams from Spond to configure sync settings</p>
                 <div className="flex justify-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setShowSyncSettingsDialog(false); openMappingDialog(); }}>
-                    <LinkIcon size={14} className="mr-2" />
-                    Link Teams
-                  </Button>
                   <Button variant="outline" size="sm" onClick={() => { setShowSyncSettingsDialog(false); openImportDialog(); }}>
                     <Download size={14} className="mr-2" />
                     Import from Spond
