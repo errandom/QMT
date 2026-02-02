@@ -1,14 +1,14 @@
 import { Event, Team, Field, Site } from './types'
 
 // Dynamic import for xlsx to avoid build-time resolution issues
-type XLSX = typeof import('xlsx')
-let xlsxModule: XLSX | null = null
+type XLSXModule = typeof import('xlsx')
 
-async function getXLSX(): Promise<XLSX> {
-  if (!xlsxModule) {
-    xlsxModule = await import('xlsx')
-  }
-  return xlsxModule
+async function getXLSX(): Promise<XLSXModule> {
+  // Use webpackIgnore comment to prevent bundler from trying to resolve at build time
+  // @ts-ignore - dynamic import with variable to prevent static analysis
+  const moduleName = 'xlsx'
+  const xlsx = await import(/* @vite-ignore */ moduleName)
+  return xlsx
 }
 
 export interface ExportFilters {
