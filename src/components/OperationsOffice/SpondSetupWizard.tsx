@@ -451,34 +451,6 @@ export default function SpondSetupWizard({
 
       await Promise.all(mappingPromises)
 
-      // 3. Trigger initial event sync if there are team mappings
-      if (teamMappings.size > 0) {
-        toast.info('Syncing events from Spond...')
-        try {
-          const syncResponse = await fetch('/api/spond/sync/events', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${getToken()}`
-            },
-            body: JSON.stringify({
-              daysAhead: 60,
-              daysBehind: 7
-            })
-          })
-          
-          if (syncResponse.ok) {
-            const syncResult = await syncResponse.json()
-            toast.success(`Synced ${syncResult.imported || 0} events from Spond!`)
-          } else {
-            console.warn('Event sync failed, but configuration was saved')
-          }
-        } catch (syncError) {
-          console.warn('Event sync error:', syncError)
-          // Don't fail the whole operation if sync fails
-        }
-      }
-
       toast.success('Spond integration configured successfully!')
       onComplete()
       onOpenChange(false)
