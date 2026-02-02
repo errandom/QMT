@@ -70,6 +70,7 @@ interface ImportableGroup {
   id: string
   name: string
   parentGroup: string | null
+  parentGroupId?: string
   isSubgroup: boolean
   memberCount: number
   activity?: string
