@@ -383,13 +383,18 @@ export async function exportEventToSpond(
   try {
     const pool = await getPool();
     
-    // Get the local event
+    // Get the local event with sync settings
     const eventResult = await pool.request()
       .input('id', sql.Int, eventId)
       .query(`
-        SELECT e.*, t.spond_group_id as team_spond_group_id
+        SELECT 
+          e.*, 
+          t.spond_group_id as team_spond_group_id,
+          ss.spond_parent_group_id,
+          ss.is_subgroup
         FROM events e
         LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
         WHERE e.id = @id
       `);
 
@@ -404,13 +409,26 @@ export async function exportEventToSpond(
       return { success: false, error: 'No Spond group ID specified' };
     }
 
+    // Determine the correct parent group and subgroup for Spond API
+    // If the team is linked to a subgroup, we need to use the parent group as recipient
+    // and specify the subgroup separately
+    let recipientGroupId = targetGroupId;
+    let subgroupIds: string[] | undefined;
+
+    if (event.is_subgroup && event.spond_parent_group_id) {
+      recipientGroupId = event.spond_parent_group_id;
+      subgroupIds = [targetGroupId];
+      console.log(`[Spond] Event ${eventId}: Using parent group ${recipientGroupId} with subgroup ${targetGroupId}`);
+    }
+
     // Create event in Spond
-    const spondEvent = await client.createEvent(targetGroupId, {
+    const spondEvent = await client.createEvent(recipientGroupId, {
       heading: event.description?.split('\n')[0] || `${event.event_type} Event`,
       description: event.description,
       startTimestamp: new Date(event.start_time),
       endTimestamp: new Date(event.end_time),
       type: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
+      subgroupIds,
     });
 
     // Update local event with Spond ID
@@ -893,7 +911,7 @@ export async function pushEventToSpond(
   try {
     const pool = await getPool();
     
-    // Get the local event with related data
+    // Get the local event with related data and sync settings
     const eventResult = await pool.request()
       .input('id', sql.Int, eventId)
       .query(`
@@ -901,6 +919,8 @@ export async function pushEventToSpond(
           e.*,
           t.name as team_name,
           t.spond_group_id as team_spond_group_id,
+          ss.spond_parent_group_id,
+          ss.is_subgroup,
           f.name as field_name,
           s.name as site_name,
           s.address as site_address,
@@ -908,6 +928,7 @@ export async function pushEventToSpond(
           s.longitude
         FROM events e
         LEFT JOIN teams t ON e.team_id = t.id
+        LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
@@ -931,6 +952,16 @@ export async function pushEventToSpond(
       return { success: false, error: 'No Spond group specified. Link the team to a Spond group first, or specify spondGroupId.' };
     }
 
+    // Determine the correct parent group and subgroup for Spond API
+    let recipientGroupId = targetGroupId;
+    let subgroupIds: string[] | undefined;
+
+    if (event.is_subgroup && event.spond_parent_group_id) {
+      recipientGroupId = event.spond_parent_group_id;
+      subgroupIds = [targetGroupId];
+      console.log(`[Spond] Event ${eventId}: Using parent group ${recipientGroupId} with subgroup ${targetGroupId}`);
+    }
+
     // Build event heading from type and team
     const heading = buildEventHeading(event);
     
@@ -938,12 +969,13 @@ export async function pushEventToSpond(
     const description = buildEventDescription(event);
 
     // Create the event in Spond
-    const spondEvent = await client.createEvent(targetGroupId, {
+    const spondEvent = await client.createEvent(recipientGroupId, {
       heading,
       description,
       startTimestamp: new Date(event.start_time),
       endTimestamp: new Date(event.end_time),
       type: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
+      subgroupIds,
       location: event.site_address ? {
         address: `${event.site_name || ''} - ${event.field_name || ''}\n${event.site_address}`.trim(),
         latitude: event.latitude,
