@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useData } from '@/contexts/DataContext'
-import { Field, Site, TurfType, FieldSize, User } from '@/lib/types'
+import { Field, Site, TurfType, FieldSize, User, LocationType } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, PencilSimple, GridFour, Trash } from '@phosphor-icons/react'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Plus, PencilSimple, GridFour, Trash, Buildings } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 
@@ -26,6 +27,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
   const [formData, setFormData] = useState<Partial<Field>>({
     name: '',
     siteId: undefined,
+    locationType: 'field',
     turfType: 'Natural Turf',
     hasLights: false,
     fieldSize: 'Full',
@@ -34,12 +36,25 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
   })
 
   const activeSportsSites = sites.filter(s => s.isActive && s.isSportsFacility)
+  const activeNonSportsSites = sites.filter(s => s.isActive && !s.isSportsFacility)
+  const hasAvailableSites = activeSportsSites.length > 0 || activeNonSportsSites.length > 0
+
+  // Get available sites based on location type
+  const getAvailableSites = (locationType: LocationType) => {
+    if (locationType === 'field') {
+      return activeSportsSites
+    }
+    return activeNonSportsSites
+  }
 
   const handleCreate = () => {
     setEditingField(null)
+    // Default to field if sports sites available, otherwise meeting room
+    const defaultType: LocationType = activeSportsSites.length > 0 ? 'field' : 'meeting_room'
     setFormData({
       name: '',
       siteId: undefined,
+      locationType: defaultType,
       turfType: 'Natural Turf',
       hasLights: false,
       fieldSize: 'Full',
@@ -51,7 +66,10 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
 
   const handleEdit = (field: Field) => {
     setEditingField(field)
-    setFormData(field)
+    setFormData({
+      ...field,
+      locationType: field.locationType || 'field'
+    })
     setShowDialog(true)
   }
 
@@ -76,16 +94,19 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
     
     try {
       if (!formData.name || !formData.siteId) {
-        toast.error('Field name and site are required')
+        toast.error('Name and site are required')
         return
       }
+
+      const isField = formData.locationType === 'field'
 
       const apiData = {
         site_id: parseInt(formData.siteId),
         name: formData.name,
-        field_type: formData.turfType || null,
-        surface_type: formData.fieldSize || null,
-        has_lights: formData.hasLights || false,
+        location_type: formData.locationType || 'field',
+        field_type: isField ? (formData.turfType || null) : null,
+        surface_type: isField ? (formData.fieldSize || null) : null,
+        has_lights: isField ? (formData.hasLights || false) : false,
         capacity: formData.capacity || null,
         active: formData.isActive !== false
       }
@@ -100,7 +121,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
         setFields((current = []) =>
           current.map(f => f.id === editingField.id ? { ...formData, id: editingField.id } as Field : f)
         )
-        toast.success('Field updated successfully')
+        toast.success(`${isField ? 'Field' : 'Meeting room'} updated successfully`)
       } else {
         const response = await api.createField(apiData)
         const newField: Field = {
@@ -109,13 +130,13 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
         } as Field
         
         setFields((current = []) => [...current, newField])
-        toast.success('Field created successfully')
+        toast.success(`${isField ? 'Field' : 'Meeting room'} created successfully`)
       }
       
       setShowDialog(false)
     } catch (error: any) {
-      console.error('Error saving field:', error)
-      toast.error(error.message || 'Failed to save field')
+      console.error('Error saving:', error)
+      toast.error(error.message || 'Failed to save')
     }
   }
 
@@ -133,33 +154,40 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Fields Management</h2>
-        <Button onClick={handleCreate} disabled={activeSportsSites.length === 0}>
+        <h2 className="text-xl font-semibold">Fields & Meeting Rooms</h2>
+        <Button onClick={handleCreate} disabled={!hasAvailableSites}>
           <Plus className="mr-2" size={16} />
-          Add Field
+          Add Location
         </Button>
       </div>
 
-      {activeSportsSites.length === 0 && (
+      {!hasAvailableSites && (
         <div className="text-sm text-muted-foreground p-4 border rounded-lg">
-          Create an active sports facility first before adding fields.
+          Create an active site first before adding fields or meeting rooms.
         </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {fields.map((field) => (
+        {fields.map((field) => {
+          const isField = field.locationType !== 'meeting_room'
+          return (
           <Card key={field.id} className={!field.isActive ? 'opacity-60' : ''}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
-                    <GridFour size={16} />
+                    {isField ? <GridFour size={16} /> : <Buildings size={16} />}
                     {field.name}
                   </CardTitle>
                   <div className="text-xs text-muted-foreground">{getSiteName(field.siteId)}</div>
-                  <Badge variant={field.isActive ? 'default' : 'destructive'} className="text-xs">
-                    {field.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <div className="flex gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {isField ? 'Field' : 'Meeting Room'}
+                    </Badge>
+                    <Badge variant={field.isActive ? 'default' : 'destructive'} className="text-xs">
+                      {field.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
                 </div>
                 {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
                   <div className="flex gap-1">
@@ -187,9 +215,9 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               <div className="flex flex-wrap gap-1">
-                <Badge variant="outline" className="text-xs">{field.turfType}</Badge>
-                <Badge variant="outline" className="text-xs">{field.fieldSize} Field</Badge>
-                {field.hasLights && <Badge variant="outline" className="text-xs">Lights</Badge>}
+                {isField && field.turfType && <Badge variant="outline" className="text-xs">{field.turfType}</Badge>}
+                {isField && field.fieldSize && <Badge variant="outline" className="text-xs">{field.fieldSize} Field</Badge>}
+                {isField && field.hasLights && <Badge variant="outline" className="text-xs">Lights</Badge>}
                 {field.capacity && <Badge variant="outline" className="text-xs">Cap: {field.capacity}</Badge>}
               </div>
               {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
@@ -211,7 +239,8 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
               )}
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -225,23 +254,61 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
         >
           <DialogHeader>
             <DialogTitle style={{ color: COLORS.NAVY }}>
-              {editingField ? 'Edit Field' : 'Create Field'}
+              {editingField 
+                ? `Edit ${formData.locationType === 'meeting_room' ? 'Meeting Room' : 'Field'}` 
+                : `Create ${formData.locationType === 'meeting_room' ? 'Meeting Room' : 'Field'}`}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 pb-20 sm:pb-4">
+            {/* Location Type Selection - only show when creating and both site types exist */}
+            {!editingField && activeSportsSites.length > 0 && activeNonSportsSites.length > 0 && (
+              <div className="space-y-2">
+                <Label style={{ color: COLORS.CHARCOAL }}>Location Type *</Label>
+                <RadioGroup
+                  value={formData.locationType || 'field'}
+                  onValueChange={(v) => setFormData({ 
+                    ...formData, 
+                    locationType: v as LocationType,
+                    siteId: undefined // Reset site when changing type
+                  })}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="field" id="type-field" />
+                    <Label htmlFor="type-field" className="flex items-center gap-2 cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                      <GridFour size={18} />
+                      Field
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="meeting_room" id="type-meeting" />
+                    <Label htmlFor="type-meeting" className="flex items-center gap-2 cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                      <Buildings size={18} />
+                      Meeting Room
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>Field Name *</Label>
+              <Label htmlFor="name" style={{ color: COLORS.CHARCOAL }}>
+                {formData.locationType === 'meeting_room' ? 'Room Name' : 'Field Name'} *
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder={formData.locationType === 'meeting_room' ? 'e.g. Conference Room A' : 'e.g. Main Field'}
                 required
                 style={{ color: COLORS.CHARCOAL }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="site" style={{ color: COLORS.CHARCOAL }}>Site *</Label>
+              <Label htmlFor="site" style={{ color: COLORS.CHARCOAL }}>
+                {formData.locationType === 'meeting_room' ? 'Building/Site' : 'Sports Facility'} *
+              </Label>
               <Select 
                 value={formData.siteId || ''} 
                 onValueChange={(v) => setFormData({ ...formData, siteId: v })}
@@ -253,7 +320,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-300">
-                  {activeSportsSites.map(site => (
+                  {getAvailableSites(formData.locationType || 'field').map(site => (
                     <SelectItem 
                       key={site.id} 
                       value={site.id}
@@ -266,6 +333,8 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
               </Select>
             </div>
 
+            {/* Field-specific options - only show for fields */}
+            {formData.locationType !== 'meeting_room' && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="turfType" style={{ color: COLORS.CHARCOAL }}>Turf Type *</Label>
@@ -324,6 +393,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 </Select>
               </div>
             </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="capacity" style={{ color: COLORS.CHARCOAL }}>Capacity (optional)</Label>
@@ -337,6 +407,8 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
             </div>
 
             <div className="flex items-center justify-between">
+              {/* Has Lights - only for fields */}
+              {formData.locationType !== 'meeting_room' ? (
               <div className="flex items-center space-x-2">
                 <Switch
                   id="hasLights"
@@ -348,6 +420,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                 />
                 <Label htmlFor="hasLights" style={{ color: COLORS.CHARCOAL }}>Has Lights</Label>
               </div>
+              ) : <div />}
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
