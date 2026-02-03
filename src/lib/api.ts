@@ -117,10 +117,15 @@ function transformSite(site: any): any {
 
 function transformField(field: any): any {
   if (!field) return field;
+  // Handle id properly - preserve numeric 0 as "0", not empty string
+  const fieldId = field.id !== undefined && field.id !== null ? String(field.id) : '';
+  const siteId = field.siteId !== undefined && field.siteId !== null 
+    ? String(field.siteId) 
+    : (field.site_id !== undefined && field.site_id !== null ? String(field.site_id) : '');
   return {
     ...field,
-    id: String(field.id || ''),
-    siteId: String(field.siteId || field.site_id || ''),
+    id: fieldId,
+    siteId: siteId,
     locationType: field.locationType || field.location_type || 'field',
     turfType: field.turfType || field.field_type || 'Natural Turf',
     hasLights: field.hasLights !== undefined ? Boolean(field.hasLights) : (field.has_lights !== undefined ? Boolean(field.has_lights) : false),
