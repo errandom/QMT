@@ -53,6 +53,8 @@ IMPORTANT RULES:
 8. If no year is specified, assume 2026
 9. Parse team names as they appear (e.g., "U19", "Seniors", "U15")
 10. For games, extract opponent if mentioned
+11. LOCATION VALIDATION: Sites contain fields. When the user mentions a location, match it to the available sites and their corresponding fields. If a site name is mentioned, use a field belonging to that site. If a field name is mentioned directly, use that field.
+12. Only use field/site names from the provided available lists. If the location doesn't match any available site or field, leave fieldName empty and include a note about unrecognized location.
 
 Return a JSON object with this structure:
 {
@@ -64,8 +66,8 @@ Return a JSON object with this structure:
       "startTime": "HH:mm",
       "endTime": "HH:mm",
       "teamNames": ["array of team names"],
-      "siteName": "venue/site name if mentioned",
-      "fieldName": "specific field if mentioned",
+      "siteName": "venue/site name if mentioned (must match available sites)",
+      "fieldName": "specific field if mentioned (must match available fields and belong to the site)",
       "opponent": "opponent name for games",
       "notes": "any additional notes",
       "isRecurring": boolean,
@@ -100,12 +102,22 @@ export async function parseNaturalLanguageEvent(
   const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
   const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
 
-  // Build context string for the AI
+  // Build context string for the AI with site-field relationships
   let contextStr = '';
   if (context?.teams?.length) {
     contextStr += `\nAvailable teams: ${context.teams.map(t => t.name).join(', ')}`;
   }
-  if (context?.sites?.length) {
+  if (context?.sites?.length && context?.fields?.length) {
+    // Build site -> fields mapping for the AI to understand the relationship
+    const siteFieldsMap = context.sites.map(site => {
+      const siteFields = context.fields!.filter(f => f.siteId === site.id);
+      const fieldsStr = siteFields.length > 0 
+        ? siteFields.map(f => f.name).join(', ')
+        : 'no specific fields';
+      return `${site.name} (fields: ${fieldsStr})`;
+    }).join('; ');
+    contextStr += `\nAvailable sites and their fields: ${siteFieldsMap}`;
+  } else if (context?.sites?.length) {
     contextStr += `\nAvailable sites: ${context.sites.map(s => s.name).join(', ')}`;
   }
   if (context?.currentDate) {
@@ -334,6 +346,7 @@ function parseSimpleDate(dateStr: string): string | undefined {
 
 /**
  * Convert parsed events to the format expected by the events API
+ * Validates that field belongs to the correct site if both are specified
  */
 export function convertToApiEvents(
   parsed: ParsedEvent[],
@@ -375,12 +388,48 @@ export function convertToApiEvents(
       }
     }
 
-    // Map field/site names
+    // Map field/site names - validate site-field relationship
     let fieldId: number | undefined;
+    let matchedSiteId: number | undefined;
+    
+    // First, try to match site name to get the site ID
+    if (event.siteName) {
+      const normalizedSite = event.siteName.toLowerCase();
+      for (const [siteName, siteId] of mapping.sites) {
+        if (siteName.toLowerCase().includes(normalizedSite) || 
+            normalizedSite.includes(siteName.toLowerCase())) {
+          matchedSiteId = siteId;
+          break;
+        }
+      }
+    }
+    
+    // Then match field name
     if (event.fieldName) {
       const normalizedField = event.fieldName.toLowerCase();
       for (const [fieldName, field] of mapping.fields) {
-        if (fieldName.toLowerCase().includes(normalizedField)) {
+        if (fieldName.toLowerCase().includes(normalizedField) || 
+            normalizedField.includes(fieldName.toLowerCase())) {
+          // If we have a matched site, validate the field belongs to it
+          if (matchedSiteId !== undefined) {
+            if (field.siteId === matchedSiteId) {
+              fieldId = field.id;
+              break;
+            }
+            // Field doesn't belong to the site, continue searching
+          } else {
+            // No site specified, just use the matching field
+            fieldId = field.id;
+            break;
+          }
+        }
+      }
+    }
+    
+    // If site was specified but no field, try to find a default field for that site
+    if (matchedSiteId !== undefined && fieldId === undefined && !event.fieldName) {
+      for (const [_, field] of mapping.fields) {
+        if (field.siteId === matchedSiteId) {
           fieldId = field.id;
           break;
         }
