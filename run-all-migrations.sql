@@ -264,6 +264,153 @@ END
 
 PRINT 'Fields table migration completed!';
 
+-- ======================================
+-- EVENTS TABLE CORE COLUMN MIGRATIONS
+-- ======================================
+PRINT 'Migrating events table...';
+
+-- Add notes column
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'notes')
+BEGIN
+    ALTER TABLE events ADD notes NVARCHAR(1000) NULL;
+    PRINT '  Added notes';
+END
+ELSE
+BEGIN
+    PRINT '  notes already exists';
+END
+
+-- Add team_ids column
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'team_ids')
+BEGIN
+    ALTER TABLE events ADD team_ids NVARCHAR(255) NULL;
+    PRINT '  Added team_ids';
+    -- Migrate existing team_id values to team_ids
+    EXEC('UPDATE events SET team_ids = CAST(team_id AS NVARCHAR(255)) WHERE team_id IS NOT NULL');
+    PRINT '  Migrated existing team_id values to team_ids';
+END
+ELSE
+BEGIN
+    PRINT '  team_ids already exists';
+END
+
+-- Add field_ids column (for multiple fields support)
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'field_ids')
+BEGIN
+    ALTER TABLE events ADD field_ids NVARCHAR(255) NULL;
+    PRINT '  Added field_ids';
+    -- Migrate existing field_id values to field_ids
+    EXEC('UPDATE events SET field_ids = CAST(field_id AS NVARCHAR(255)) WHERE field_id IS NOT NULL');
+    PRINT '  Migrated existing field_id values to field_ids';
+END
+ELSE
+BEGIN
+    PRINT '  field_ids already exists';
+END
+
+-- Add recurring_days column
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'recurring_days')
+BEGIN
+    ALTER TABLE events ADD recurring_days NVARCHAR(50) NULL;
+    PRINT '  Added recurring_days';
+END
+ELSE
+BEGIN
+    PRINT '  recurring_days already exists';
+END
+
+-- Add recurring_end_date column
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'recurring_end_date')
+BEGIN
+    ALTER TABLE events ADD recurring_end_date DATE NULL;
+    PRINT '  Added recurring_end_date';
+END
+ELSE
+BEGIN
+    PRINT '  recurring_end_date already exists';
+END
+
+-- Add other_participants column
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'other_participants')
+BEGIN
+    ALTER TABLE events ADD other_participants NVARCHAR(255) NULL;
+    PRINT '  Added other_participants';
+END
+ELSE
+BEGIN
+    PRINT '  other_participants already exists';
+END
+
+-- Add estimated_attendance column
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'estimated_attendance')
+BEGIN
+    ALTER TABLE events ADD estimated_attendance INT NULL;
+    PRINT '  Added estimated_attendance';
+END
+ELSE
+BEGIN
+    PRINT '  estimated_attendance already exists';
+END
+
+PRINT 'Events table core migration completed!';
+
+-- ======================================
+-- EVENTS TABLE GAME LOCATION MIGRATION
+-- ======================================
+PRINT 'Migrating events table for game location...';
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'game_location')
+BEGIN
+    ALTER TABLE events ADD game_location NVARCHAR(10) NULL;
+    PRINT '  Added game_location';
+END
+ELSE
+BEGIN
+    PRINT '  game_location already exists';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'away_street')
+BEGIN
+    ALTER TABLE events ADD away_street NVARCHAR(255) NULL;
+    PRINT '  Added away_street';
+END
+ELSE
+BEGIN
+    PRINT '  away_street already exists';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'away_zip')
+BEGIN
+    ALTER TABLE events ADD away_zip NVARCHAR(20) NULL;
+    PRINT '  Added away_zip';
+END
+ELSE
+BEGIN
+    PRINT '  away_zip already exists';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'away_city')
+BEGIN
+    ALTER TABLE events ADD away_city NVARCHAR(100) NULL;
+    PRINT '  Added away_city';
+END
+ELSE
+BEGIN
+    PRINT '  away_city already exists';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'transport_requested')
+BEGIN
+    ALTER TABLE events ADD transport_requested BIT DEFAULT 0;
+    PRINT '  Added transport_requested';
+END
+ELSE
+BEGIN
+    PRINT '  transport_requested already exists';
+END
+
+PRINT 'Events game location migration completed!';
+
 PRINT '';
 PRINT '==============================================';
 PRINT 'All database migrations completed successfully!';
