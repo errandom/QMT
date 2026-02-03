@@ -1,7 +1,6 @@
 import { Event, Team, Field, Site } from './types'
-import * as XLSX from 'xlsx'
 
-// Export the XLSX module directly - Vite will bundle it properly
+// Pure JavaScript CSV export - no external dependencies needed
 
 export interface ExportFilters {
   teamIds: string[]
@@ -139,7 +138,20 @@ export function transformEventsForExport(
 }
 
 /**
- * Generate and download Excel file from events
+ * Escape a value for CSV (handle commas, quotes, newlines)
+ */
+function escapeCSV(value: string | number | undefined | null): string {
+  if (value === null || value === undefined) return ''
+  const str = String(value)
+  // If contains comma, quote, or newline, wrap in quotes and escape internal quotes
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
+/**
+ * Generate and download CSV file from events
  */
 export async function exportToExcel(
   events: Event[],
@@ -157,38 +169,52 @@ export async function exportToExcel(
   // Transform to export rows
   const rows = transformEventsForExport(filteredEvents, data)
 
-  // Create workbook and worksheet
-  const wb = XLSX.utils.book_new()
-  const ws = XLSX.utils.json_to_sheet(rows)
-
-  // Set column widths for better readability
-  const columnWidths = [
-    { wch: 30 }, // Event Title
-    { wch: 12 }, // Event Type
-    { wch: 12 }, // Status
-    { wch: 14 }, // Date
-    { wch: 10 }, // Start Time
-    { wch: 10 }, // End Time
-    { wch: 25 }, // Team(s)
-    { wch: 20 }, // Other Participants
-    { wch: 18 }, // Estimated Attendance
-    { wch: 20 }, // Field
-    { wch: 20 }, // Site
-    { wch: 35 }, // Site Address
-    { wch: 10 }, // Recurring
-    { wch: 40 }, // Notes
+  // CSV headers
+  const headers = [
+    'Event Title',
+    'Event Type',
+    'Status',
+    'Date',
+    'Start Time',
+    'End Time',
+    'Team(s)',
+    'Other Participants',
+    'Estimated Attendance',
+    'Field',
+    'Site',
+    'Site Address',
+    'Recurring',
+    'Notes'
   ]
-  ws['!cols'] = columnWidths
 
-  // Add worksheet to workbook
-  XLSX.utils.book_append_sheet(wb, ws, 'Schedule')
+  // Build CSV content
+  const csvLines: string[] = []
+  
+  // Add header row
+  csvLines.push(headers.map(h => escapeCSV(h)).join(','))
+  
+  // Add data rows
+  for (const row of rows) {
+    const values = headers.map(header => escapeCSV(row[header as keyof typeof row]))
+    csvLines.push(values.join(','))
+  }
+
+  const csvContent = csvLines.join('\n')
 
   // Generate filename with date range
   const defaultFilename = generateFilename(filters)
   const finalFilename = filename || defaultFilename
 
-  // Download the file
-  XLSX.writeFile(wb, `${finalFilename}.xlsx`)
+  // Create and download the file
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${finalFilename}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 /**
