@@ -6,8 +6,8 @@ BEGIN
     ALTER TABLE fields ADD location_type NVARCHAR(50) DEFAULT 'field';
     PRINT 'Added location_type column to fields table';
     
-    -- Update existing records to have 'field' as the default
-    UPDATE fields SET location_type = 'field' WHERE location_type IS NULL;
+    -- Update existing records to have 'field' as the default (using dynamic SQL to avoid parse error)
+    EXEC('UPDATE fields SET location_type = ''field'' WHERE location_type IS NULL');
     PRINT 'Set default location_type for existing fields';
 END
 ELSE
