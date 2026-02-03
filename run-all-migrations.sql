@@ -254,8 +254,8 @@ IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('fields') A
 BEGIN
     ALTER TABLE fields ADD location_type NVARCHAR(50) DEFAULT 'field';
     PRINT '  Added location_type';
-    -- Update existing records to have 'field' as the default
-    UPDATE fields SET location_type = 'field' WHERE location_type IS NULL;
+    -- Update existing records to have 'field' as the default (using dynamic SQL to avoid parse error)
+    EXEC('UPDATE fields SET location_type = ''field'' WHERE location_type IS NULL');
 END
 ELSE
 BEGIN
