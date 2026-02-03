@@ -136,10 +136,18 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         other_participants: approvalRequest.opponent || null
       }
       
+      console.log('[RequestsManager] Creating event with data:', eventData)
       const newEvent = await api.createEvent(eventData)
+      console.log('[RequestsManager] Created event:', newEvent)
       
-      // Update local state
-      setEvents((current = []) => [...current, newEvent])
+      // Update local state - handle both single event and array of events
+      if (newEvent) {
+        if (Array.isArray(newEvent)) {
+          setEvents((current = []) => [...current, ...newEvent])
+        } else {
+          setEvents((current = []) => [...current, newEvent])
+        }
+      }
       
       // Update request status
       setFacilityRequests((current = []) =>
