@@ -50,13 +50,15 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const locationOptions = useMemo(() => {
     return fields
       .filter((f: any) => {
+        // Ensure field has a valid id (required for Select component)
+        if (!f.id && f.id !== 0) return false
         const site = (sites || []).find((s: any) => s.id === f.siteId)
         // Only include active fields from active sports facilities (not meeting rooms)
         const isField = !f.locationType || f.locationType === 'field'
         return f.isActive && site?.isActive && site?.isSportsFacility && isField
       })
       .map((f: any) => ({
-        id: String(f.id), // Ensure id is always a string
+        id: String(f.id), // Ensure id is always a string (never empty - Radix UI requires non-empty values)
         name: f.name || 'Unnamed Field',
         siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name || 'Unknown Site'
       }))
