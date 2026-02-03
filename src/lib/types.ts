@@ -82,7 +82,7 @@ export interface Event {
   date: string
   startTime: string
   endTime: string
-  fieldId?: string
+  fieldIds: string[]  // Multiple fields/meeting rooms can be assigned
   teamIds: string[]
   otherParticipants?: string
   estimatedAttendance?: number
