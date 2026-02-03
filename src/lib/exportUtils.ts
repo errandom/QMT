@@ -20,6 +20,7 @@ export interface ExportRow {
   'Event Title': string
   'Event Type': string
   'Status': string
+  'Weekday': string
   'Date': string
   'Start Time': string
   'End Time': string
@@ -99,6 +100,15 @@ function formatDate(date: string): string {
 }
 
 /**
+ * Get weekday name from date string (e.g., "2026-02-15" -> "Sunday")
+ */
+function getWeekday(date: string): string {
+  if (!date) return ''
+  const d = new Date(date + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { weekday: 'long' })
+}
+
+/**
  * Transform filtered events into export-ready rows
  */
 export function transformEventsForExport(
@@ -114,23 +124,52 @@ export function transformEventsForExport(
           .join(', ')
       : ''
 
-    // Get field and site info
-    const field = event.fieldId ? data.fields.find(f => f.id === event.fieldId) : null
+    // Get field and site info - use fieldIds (array) instead of fieldId
+    // Get the first field if multiple are assigned
+    const fieldId = event.fieldIds && event.fieldIds.length > 0 ? event.fieldIds[0] : null
+    const field = fieldId ? data.fields.find(f => f.id === fieldId) : null
     const site = field ? data.sites.find(s => s.id === field.siteId) : null
+    
+    // If multiple fields, show all field names
+    const fieldNames = event.fieldIds && event.fieldIds.length > 0
+      ? event.fieldIds
+          .map(fid => data.fields.find(f => f.id === fid)?.name)
+          .filter(Boolean)
+          .join(', ')
+      : ''
+    
+    // Get all unique sites from all assigned fields
+    const siteNames: string[] = []
+    const siteAddresses: string[] = []
+    if (event.fieldIds && event.fieldIds.length > 0) {
+      const seenSiteIds = new Set<string>()
+      for (const fid of event.fieldIds) {
+        const f = data.fields.find(field => field.id === fid)
+        if (f && !seenSiteIds.has(f.siteId)) {
+          seenSiteIds.add(f.siteId)
+          const s = data.sites.find(site => site.id === f.siteId)
+          if (s) {
+            siteNames.push(s.name)
+            siteAddresses.push(`${s.address || ''}, ${s.city || ''} ${s.zipCode || ''}`.trim())
+          }
+        }
+      }
+    }
 
     return {
       'Event Title': event.title || '',
       'Event Type': event.eventType || '',
       'Status': event.status || '',
+      'Weekday': getWeekday(event.date),
       'Date': formatDate(event.date),
       'Start Time': formatTime(event.startTime),
       'End Time': formatTime(event.endTime),
       'Team(s)': teamNames,
       'Other Participants': event.otherParticipants || '',
       'Estimated Attendance': event.estimatedAttendance || '',
-      'Field': field?.name || '',
-      'Site': site?.name || '',
-      'Site Address': site ? `${site.address}, ${site.city} ${site.zipCode}` : '',
+      'Field': fieldNames,
+      'Site': siteNames.join(', '),
+      'Site Address': siteAddresses.join(' | '),
       'Recurring': event.isRecurring ? 'Yes' : 'No',
       'Notes': event.notes || ''
     }
@@ -174,6 +213,7 @@ export async function exportToExcel(
     'Event Title',
     'Event Type',
     'Status',
+    'Weekday',
     'Date',
     'Start Time',
     'End Time',
