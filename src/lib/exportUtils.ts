@@ -1,17 +1,7 @@
 import { Event, Team, Field, Site } from './types'
+import * as XLSX from 'xlsx'
 
-// XLSX is imported dynamically at runtime to handle browser compatibility
-type XLSXModule = typeof import('xlsx')
-let xlsxModule: XLSXModule | null = null
-
-async function getXLSX(): Promise<XLSXModule> {
-  if (xlsxModule) {
-    return xlsxModule
-  }
-  // Static dynamic import - Vite can resolve this properly
-  xlsxModule = await import('xlsx')
-  return xlsxModule
-}
+// Export the XLSX module directly - Vite will bundle it properly
 
 export interface ExportFilters {
   teamIds: string[]
@@ -166,9 +156,6 @@ export async function exportToExcel(
 
   // Transform to export rows
   const rows = transformEventsForExport(filteredEvents, data)
-
-  // Load xlsx dynamically
-  const XLSX = await getXLSX()
 
   // Create workbook and worksheet
   const wb = XLSX.utils.book_new()
