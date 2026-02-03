@@ -356,15 +356,29 @@ export default function NaturalLanguageEventCreator({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {fields.map((field) => {
-                      const site = sites.find(s => String(s.id) === String(field.siteId))
-                      const displayName = site ? `${site.name} - ${field.name}` : field.name
+                    {/* Group fields by site for better organization */}
+                    {sites.map((site) => {
+                      const siteFields = fields.filter(f => String(f.siteId) === String(site.id))
+                      if (siteFields.length === 0) return null
                       return (
-                        <SelectItem key={field.id} value={String(field.id)}>
-                          {displayName}
-                        </SelectItem>
+                        <div key={site.id}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+                            {site.name}
+                          </div>
+                          {siteFields.map((field) => (
+                            <SelectItem key={field.id} value={String(field.id)}>
+                              {field.name}
+                            </SelectItem>
+                          ))}
+                        </div>
                       )
                     })}
+                    {/* Show fields without sites at the end */}
+                    {fields.filter(f => !f.siteId || !sites.some(s => String(s.id) === String(f.siteId))).map((field) => (
+                      <SelectItem key={field.id} value={String(field.id)}>
+                        {field.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -617,15 +631,29 @@ export default function NaturalLanguageEventCreator({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">No venue</SelectItem>
-                          {fields.map((field) => {
-                            const site = sites.find(s => String(s.id) === String(field.siteId))
-                            const displayName = site ? `${site.name} - ${field.name}` : field.name
+                          {/* Group fields by site for better organization */}
+                          {sites.map((site) => {
+                            const siteFields = fields.filter(f => String(f.siteId) === String(site.id))
+                            if (siteFields.length === 0) return null
                             return (
-                              <SelectItem key={field.id} value={String(field.id)}>
-                                {displayName}
-                              </SelectItem>
+                              <div key={site.id}>
+                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+                                  {site.name}
+                                </div>
+                                {siteFields.map((field) => (
+                                  <SelectItem key={field.id} value={String(field.id)}>
+                                    {field.name}
+                                  </SelectItem>
+                                ))}
+                              </div>
                             )
                           })}
+                          {/* Show fields without sites at the end */}
+                          {fields.filter(f => !f.siteId || !sites.some(s => String(s.id) === String(f.siteId))).map((field) => (
+                            <SelectItem key={field.id} value={String(field.id)}>
+                              {field.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
