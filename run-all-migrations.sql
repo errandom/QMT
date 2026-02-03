@@ -249,6 +249,19 @@ END
 UPDATE fields SET has_lights = 0 WHERE has_lights IS NULL;
 UPDATE fields SET active = 1 WHERE active IS NULL;
 
+-- Add location_type column for distinguishing fields vs meeting rooms
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('fields') AND name = 'location_type')
+BEGIN
+    ALTER TABLE fields ADD location_type NVARCHAR(50) DEFAULT 'field';
+    PRINT '  Added location_type';
+    -- Update existing records to have 'field' as the default
+    UPDATE fields SET location_type = 'field' WHERE location_type IS NULL;
+END
+ELSE
+BEGIN
+    PRINT '  location_type already exists';
+END
+
 PRINT 'Fields table migration completed!';
 
 PRINT '';
