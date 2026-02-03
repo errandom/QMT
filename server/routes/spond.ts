@@ -325,12 +325,21 @@ router.get('/export-preview', async (req: Request, res: Response) => {
           e.event_type,
           e.start_time,
           e.spond_id,
-          e.team_id,
+          e.team_ids,
+          CASE 
+            WHEN e.team_ids IS NOT NULL AND e.team_ids != '' 
+            THEN TRY_CAST(PARSENAME(REPLACE(e.team_ids, ',', '.'), LEN(e.team_ids) - LEN(REPLACE(e.team_ids, ',', '')) + 1) AS INT)
+            ELSE NULL 
+          END as first_team_id,
           t.id as team_table_id,
           t.name as team_name,
           t.spond_group_id
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
+        OUTER APPLY (
+          SELECT TOP 1 id, name, spond_group_id 
+          FROM teams 
+          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+        ) t
         WHERE e.start_time BETWEEN @minDate AND @maxDate
         ORDER BY e.start_time
       `);
@@ -343,11 +352,11 @@ router.get('/export-preview', async (req: Request, res: Response) => {
         issues.push('Already exported to Spond');
         canExport = false;
       }
-      if (!evt.team_id) {
+      if (!evt.team_ids || evt.team_ids.trim() === '') {
         issues.push('No team assigned to event');
         canExport = false;
       }
-      if (evt.team_id && !evt.spond_group_id) {
+      if (evt.team_ids && evt.team_ids.trim() !== '' && !evt.spond_group_id) {
         issues.push('Team is not linked to a Spond group');
         canExport = false;
       }
@@ -533,12 +542,16 @@ router.post('/sync-with-settings', async (req: Request, res: Response) => {
               e.description,
               e.start_time,
               e.spond_id,
-              e.team_id,
+              e.team_ids,
               t.id as team_table_id,
               t.name as team_name,
               t.spond_group_id
             FROM events e
-            LEFT JOIN teams t ON e.team_id = t.id
+            OUTER APPLY (
+              SELECT TOP 1 id, name, spond_group_id 
+              FROM teams 
+              WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+            ) t
             WHERE e.start_time BETWEEN @minDate AND @maxDate
           `);
         
@@ -556,11 +569,11 @@ router.post('/sync-with-settings', async (req: Request, res: Response) => {
             reasons.push('already has spond_id');
             alreadyExported++;
           }
-          if (!evt.team_id) {
-            reasons.push('no team_id assigned');
+          if (!evt.team_ids || evt.team_ids.trim() === '') {
+            reasons.push('no team_ids assigned');
             noTeam++;
           }
-          if (evt.team_id && !evt.spond_group_id) {
+          if (evt.team_ids && evt.team_ids.trim() !== '' && !evt.spond_group_id) {
             reasons.push('team has no spond_group_id');
             teamNotLinked++;
           }
@@ -578,9 +591,15 @@ router.post('/sync-with-settings', async (req: Request, res: Response) => {
           .query(`
             SELECT e.id, e.description, t.spond_group_id
             FROM events e
-            JOIN teams t ON e.team_id = t.id
+            CROSS APPLY (
+              SELECT TOP 1 id, spond_group_id 
+              FROM teams 
+              WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+                AND spond_group_id IS NOT NULL
+            ) t
             WHERE e.spond_id IS NULL 
-              AND t.spond_group_id IS NOT NULL
+              AND e.team_ids IS NOT NULL 
+              AND e.team_ids != ''
               AND e.start_time BETWEEN @minDate AND @maxDate
           `);
         
@@ -1079,12 +1098,16 @@ router.get('/export-diagnostic', async (req: Request, res: Response) => {
           e.status,
           e.spond_id,
           e.spond_group_id as event_spond_group_id,
-          e.team_id,
+          e.team_ids,
           t.id as team_table_id,
           t.name as team_name,
           t.spond_group_id as team_spond_group_id
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
+        OUTER APPLY (
+          SELECT TOP 1 id, name, spond_group_id 
+          FROM teams 
+          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+        ) t
         WHERE e.start_time BETWEEN @minDate AND @maxDate
         ORDER BY e.start_time
       `);
@@ -1107,11 +1130,11 @@ router.get('/export-diagnostic', async (req: Request, res: Response) => {
         issues.push('Already exported to Spond (has spond_id)');
         canExport = false;
       }
-      if (!evt.team_id) {
-        issues.push('No team assigned (team_id is NULL)');
+      if (!evt.team_ids || evt.team_ids.trim() === '') {
+        issues.push('No team assigned (team_ids is empty)');
         canExport = false;
       }
-      if (evt.team_id && !evt.team_spond_group_id) {
+      if (evt.team_ids && evt.team_ids.trim() !== '' && !evt.team_spond_group_id) {
         issues.push('Team is not linked to a Spond group');
         canExport = false;
       }
@@ -1123,7 +1146,7 @@ router.get('/export-diagnostic', async (req: Request, res: Response) => {
         startTime: evt.start_time,
         status: evt.status,
         spondId: evt.spond_id,
-        teamId: evt.team_id,
+        teamIds: evt.team_ids,
         teamName: evt.team_name,
         teamSpondGroupId: evt.team_spond_group_id,
         canExport,
