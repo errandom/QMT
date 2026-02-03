@@ -144,11 +144,34 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
     return sites.find(s => s.id === siteId)?.name || 'Unknown Site'
   }
 
-  const handleToggleActive = (fieldId: string, currentActive: boolean) => {
-    setFields((current = []) =>
-      current.map(f => f.id === fieldId ? { ...f, isActive: !currentActive } : f)
-    )
-    toast.success(`Field ${currentActive ? 'deactivated' : 'activated'} successfully`)
+  const handleToggleActive = async (field: Field) => {
+    const newActiveState = !field.isActive
+    const isFieldType = field.locationType !== 'meeting_room'
+    
+    try {
+      const numericId = parseInt(field.id)
+      if (!isNaN(numericId)) {
+        const apiData = {
+          site_id: parseInt(field.siteId),
+          name: field.name,
+          location_type: field.locationType || 'field',
+          field_type: isFieldType ? (field.turfType || null) : null,
+          surface_type: isFieldType ? (field.fieldSize || null) : null,
+          has_lights: isFieldType ? (field.hasLights || false) : false,
+          capacity: field.capacity || null,
+          active: newActiveState
+        }
+        await api.updateField(numericId, apiData)
+      }
+      
+      setFields((current = []) =>
+        current.map(f => f.id === field.id ? { ...f, isActive: newActiveState } : f)
+      )
+      toast.success(`${isFieldType ? 'Field' : 'Meeting room'} ${newActiveState ? 'activated' : 'deactivated'} successfully`)
+    } catch (error: any) {
+      console.error('Error toggling active state:', error)
+      toast.error(error.message || 'Failed to update status')
+    }
   }
 
   return (
@@ -229,7 +252,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                     </span>
                     <Switch
                       checked={field.isActive}
-                      onCheckedChange={() => handleToggleActive(field.id, field.isActive)}
+                      onCheckedChange={() => handleToggleActive(field)}
                       style={{
                         backgroundColor: field.isActive ? COLORS.NAVY : undefined
                       }}
