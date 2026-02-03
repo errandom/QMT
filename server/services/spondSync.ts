@@ -12,6 +12,26 @@ import { SpondClient, SpondGroup, SpondEvent, getSpondClient, initializeSpondCli
 import { getPool } from '../db.js';
 import sql from 'mssql';
 
+/**
+ * Normalize Spond UUID to standard format with hyphens
+ * Accepts both formats: with hyphens (a1b2c3d4-e5f6-7890-abcd-ef1234567890) 
+ * and without hyphens (A1B2C3D4E5F67890ABCDEF1234567890)
+ */
+function normalizeSpondUUID(id: string | null | undefined): string | null {
+  if (!id) return null;
+  
+  // Remove any existing hyphens and convert to lowercase
+  const cleanId = id.replace(/-/g, '').toLowerCase();
+  
+  // Check if it's a valid 32-char hex string
+  if (!/^[0-9a-f]{32}$/.test(cleanId)) {
+    return null; // Invalid UUID
+  }
+  
+  // Format as standard UUID with hyphens
+  return `${cleanId.slice(0, 8)}-${cleanId.slice(8, 12)}-${cleanId.slice(12, 16)}-${cleanId.slice(16, 20)}-${cleanId.slice(20)}`;
+}
+
 export interface SyncResult {
   success: boolean;
   message: string;
@@ -426,21 +446,31 @@ export async function exportEventToSpond(
       console.log(`[Spond] Event ${eventId}: Using parent group ${recipientGroupId} with subgroup ${targetGroupId}`);
     }
 
+    // Normalize UUIDs to ensure proper format
+    const normalizedRecipientGroupId = normalizeSpondUUID(recipientGroupId);
+    const normalizedSubgroupIds = subgroupIds?.map(id => normalizeSpondUUID(id)).filter((id): id is string => id !== null);
+
+    if (!normalizedRecipientGroupId) {
+      return { success: false, error: `Invalid Spond group ID format: ${recipientGroupId}` };
+    }
+
+    console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ''}`);
+
     // Create event in Spond
-    const spondEvent = await client.createEvent(recipientGroupId, {
+    const spondEvent = await client.createEvent(normalizedRecipientGroupId, {
       heading: event.description?.split('\n')[0] || `${event.event_type} Event`,
       description: event.description,
       startTimestamp: new Date(event.start_time),
       endTimestamp: new Date(event.end_time),
       type: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
-      subgroupIds,
+      subgroupIds: normalizedSubgroupIds,
     });
 
-    // Update local event with Spond ID
+    // Update local event with Spond ID (store normalized group ID)
     await pool.request()
       .input('id', sql.Int, eventId)
       .input('spond_id', sql.NVarChar, spondEvent.id)
-      .input('spond_group_id', sql.NVarChar, targetGroupId)
+      .input('spond_group_id', sql.NVarChar, normalizedRecipientGroupId)
       .query(`
         UPDATE events SET
           spond_id = @spond_id,
@@ -972,6 +1002,16 @@ export async function pushEventToSpond(
       console.log(`[Spond] Event ${eventId}: Using parent group ${recipientGroupId} with subgroup ${targetGroupId}`);
     }
 
+    // Normalize UUIDs to ensure proper format
+    const normalizedRecipientGroupId = normalizeSpondUUID(recipientGroupId);
+    const normalizedSubgroupIds = subgroupIds?.map(id => normalizeSpondUUID(id)).filter((id): id is string => id !== null);
+
+    if (!normalizedRecipientGroupId) {
+      return { success: false, error: `Invalid Spond group ID format: ${recipientGroupId}` };
+    }
+
+    console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ''}`);
+
     // Build event heading from type and team
     const heading = buildEventHeading(event);
     
@@ -979,13 +1019,13 @@ export async function pushEventToSpond(
     const description = buildEventDescription(event);
 
     // Create the event in Spond
-    const spondEvent = await client.createEvent(recipientGroupId, {
+    const spondEvent = await client.createEvent(normalizedRecipientGroupId, {
       heading,
       description,
       startTimestamp: new Date(event.start_time),
       endTimestamp: new Date(event.end_time),
       type: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
-      subgroupIds,
+      subgroupIds: normalizedSubgroupIds,
       location: event.site_address ? {
         address: `${event.site_name || ''} - ${event.field_name || ''}\n${event.site_address}`.trim(),
         latitude: event.latitude,
@@ -995,11 +1035,11 @@ export async function pushEventToSpond(
       inviteTime: options.sendInvites ? new Date() : undefined,
     });
 
-    // Update local event with Spond ID
+    // Update local event with Spond ID (store normalized group ID)
     await pool.request()
       .input('id', sql.Int, eventId)
       .input('spond_id', sql.NVarChar, spondEvent.id)
-      .input('spond_group_id', sql.NVarChar, targetGroupId)
+      .input('spond_group_id', sql.NVarChar, normalizedRecipientGroupId)
       .input('spond_data', sql.NVarChar, JSON.stringify(spondEvent))
       .query(`
         UPDATE events SET
