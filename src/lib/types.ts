@@ -4,6 +4,7 @@ export type EventStatus = 'Planned' | 'Confirmed' | 'Cancelled' | 'Completed'
 export type GameLocation = 'home' | 'away'
 export type TurfType = 'Natural Turf' | 'Artificial Turf'
 export type FieldSize = 'Full' | 'Shared'
+export type LocationType = 'field' | 'meeting_room'
 export type RosterSize = '< 15' | '16-30' | '> 30'
 export type UserRole = 'admin' | 'mgmt' | 'user'
 export type RequestStatus = 'Pending' | 'Approved' | 'Rejected'
@@ -39,9 +40,10 @@ export interface Field {
   id: string
   name: string
   siteId: string
-  turfType: TurfType
-  hasLights: boolean
-  fieldSize: FieldSize
+  locationType: LocationType
+  turfType?: TurfType
+  hasLights?: boolean
+  fieldSize?: FieldSize
   capacity?: number
   isActive: boolean
 }
