@@ -106,7 +106,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     date: '',
     startTime: '',
     endTime: '',
-    fieldId: '',
+    fieldIds: [],
     teamIds: [],
     otherParticipants: '',
     estimatedAttendance: undefined,
@@ -206,7 +206,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       date: '',
       startTime: '',
       endTime: '',
-      fieldId: '',
+      fieldIds: [],
       teamIds: [],
       otherParticipants: '',
       estimatedAttendance: undefined,
@@ -223,6 +223,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     // Populate form including recurring data and game location if it exists
     setFormData({
       ...event,
+      fieldIds: event.fieldIds || [],
       isRecurring: event.isRecurring || false,
       recurringDays: event.recurringDays || [],
       recurringEndDate: event.recurringEndDate || '',
@@ -344,8 +345,10 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     e.preventDefault()
     
     try {
-      if (formData.status === 'Confirmed' && !formData.fieldId) {
-        toast.error('Cannot confirm an event without a location')
+      // For Confirmed events, require at least one location (unless it's an away game)
+      const isAwayGame = formData.eventType === 'Game' && formData.gameLocation === 'away'
+      if (formData.status === 'Confirmed' && !isAwayGame && (!formData.fieldIds || formData.fieldIds.length === 0)) {
+        toast.error('Confirmed events require at least one location to be specified')
         return
       }
 
@@ -364,7 +367,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         // Editing existing event
         const apiData = {
           team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
-          field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+          field_ids: formData.fieldIds && formData.fieldIds.length > 0 ? formData.fieldIds.join(',') : null,
           event_type: formData.eventType,
           start_time: `${formData.date}T${formData.startTime}:00`,
           end_time: `${formData.date}T${formData.endTime}:00`,
@@ -419,7 +422,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         // Creating new event
         const apiData = {
           team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
-          field_id: formData.fieldId ? parseInt(formData.fieldId) : null,
+          field_ids: formData.fieldIds && formData.fieldIds.length > 0 ? formData.fieldIds.join(',') : null,
           event_type: formData.eventType,
           start_time: `${formData.date}T${formData.startTime}:00`,
           end_time: `${formData.date}T${formData.endTime}:00`,
@@ -498,6 +501,15 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       teamIds: prev.teamIds?.includes(teamId)
         ? prev.teamIds.filter(id => id !== teamId)
         : [...(prev.teamIds || []), teamId]
+    }))
+  }
+
+  const handleFieldToggle = (fieldId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      fieldIds: prev.fieldIds?.includes(fieldId)
+        ? prev.fieldIds.filter(id => id !== fieldId)
+        : [...(prev.fieldIds || []), fieldId]
     }))
   }
 
