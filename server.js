@@ -3950,6 +3950,24 @@ app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (
   }
 });
 
+// Helper function to normalize and validate Spond UUID
+// Accepts both formats: with hyphens (a1b2c3d4-e5f6-7890-abcd-ef1234567890) 
+// and without hyphens (A1B2C3D4E5F67890ABCDEF1234567890)
+function normalizeSpondUUID(id) {
+  if (!id) return null;
+  
+  // Remove any existing hyphens and convert to lowercase
+  const cleanId = id.replace(/-/g, '').toLowerCase();
+  
+  // Check if it's a valid 32-char hex string
+  if (!/^[0-9a-f]{32}$/.test(cleanId)) {
+    return null; // Invalid UUID
+  }
+  
+  // Format as standard UUID with hyphens
+  return `${cleanId.slice(0, 8)}-${cleanId.slice(8, 12)}-${cleanId.slice(12, 16)}-${cleanId.slice(16, 20)}-${cleanId.slice(20)}`;
+}
+
 // Sync with granular settings (respects per-team import/export settings)
 app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async (req, res) => {
   try {
@@ -4007,13 +4025,27 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
       console.log(`[Spond] Found ${eventsToExportQuery.recordset.length} events with team_ids in date range`);
       
       // Now filter to find events where at least one team has spond_group_id
-      // And collect the spond_group_id to export to
+      // And collect the spond_group_id to export to (using spond_sync_settings for subgroup handling)
       const teamsResult = await pool.request().query(`
-        SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL
+        SELECT t.id, t.name, t.spond_group_id, 
+               ss.spond_parent_group_id, ss.is_subgroup
+        FROM teams t
+        LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
+        WHERE t.spond_group_id IS NOT NULL
       `);
       const teamsWithSpond = new Map();
       for (const t of teamsResult.recordset) {
-        teamsWithSpond.set(String(t.id), { name: t.name, spondGroupId: t.spond_group_id });
+        // When team is linked to a subgroup, use parent_group_id for the API call
+        // The subgroup ID is stored in spond_group_id, parent is in spond_parent_group_id
+        const effectiveGroupId = (t.is_subgroup && t.spond_parent_group_id) 
+          ? t.spond_parent_group_id 
+          : t.spond_group_id;
+        teamsWithSpond.set(String(t.id), { 
+          name: t.name, 
+          spondGroupId: effectiveGroupId,
+          subgroupId: t.is_subgroup ? t.spond_group_id : null,
+          isSubgroup: t.is_subgroup
+        });
       }
       console.log(`[Spond] Found ${teamsWithSpond.size} teams with spond_group_id`);
       
@@ -4028,7 +4060,9 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             eligibleEvents.push({
               ...event,
               team_name: teamInfo.name,
-              spond_group_id: teamInfo.spondGroupId
+              spond_group_id: teamInfo.spondGroupId,
+              spond_subgroup_id: teamInfo.subgroupId,
+              is_subgroup: teamInfo.isSubgroup
             });
             break; // Use the first matching team's spond group
           }
@@ -4067,6 +4101,10 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
         try {
           const heading = event.name || event.description?.substring(0, 100) || `${event.event_type || 'Event'} - ${event.team_name}`;
           
+          // Normalize UUIDs to standard format (with hyphens)
+          const normalizedGroupId = normalizeSpondUUID(event.spond_group_id);
+          const normalizedSubgroupId = event.spond_subgroup_id ? normalizeSpondUUID(event.spond_subgroup_id) : null;
+          
           // VERBOSE LOGGING: Show exactly what we're sending to Spond
           console.log(`[Spond] ========== EXPORTING EVENT ${event.id} ==========`);
           console.log(`[Spond] Event Details:`);
@@ -4076,23 +4114,28 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
           console.log(`[Spond]   - Start: ${event.start_time}`);
           console.log(`[Spond]   - team_ids from DB: "${event.team_ids}"`);
           console.log(`[Spond]   - Matched team name: "${event.team_name}"`);
-          console.log(`[Spond]   - spond_group_id being used: "${event.spond_group_id}"`);
-          console.log(`[Spond]   - spond_group_id length: ${event.spond_group_id?.length || 0}`);
-          console.log(`[Spond]   - spond_group_id looks like UUID: ${/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.spond_group_id || '')}`);
+          console.log(`[Spond]   - Original spond_group_id: "${event.spond_group_id}"`);
+          console.log(`[Spond]   - Normalized spond_group_id: "${normalizedGroupId}"`);
+          console.log(`[Spond]   - spond_subgroup_id: "${normalizedSubgroupId || 'none'}"`);
+          console.log(`[Spond]   - is_subgroup: ${event.is_subgroup || false}`);
           
-          // Validate spond_group_id before sending
-          if (!event.spond_group_id) {
-            const errorMsg = `Event ${event.id}: No spond_group_id available. Team "${event.team_name}" may not be linked to a Spond group.`;
-            console.error(`[Spond] ❌ ${errorMsg}`);
-            results.errors.push({ eventId: event.id, error: errorMsg, team: event.team_name });
-            continue;
-          }
-          
-          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.spond_group_id)) {
-            const errorMsg = `Event ${event.id}: Invalid spond_group_id format "${event.spond_group_id}". Expected UUID format (e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890). Check team "${event.team_name}" Spond linkage.`;
+          // Validate normalized spond_group_id before sending
+          if (!normalizedGroupId) {
+            const errorMsg = `Event ${event.id}: Invalid or missing spond_group_id "${event.spond_group_id}". Team "${event.team_name}" may not be linked to a valid Spond group.`;
             console.error(`[Spond] ❌ ${errorMsg}`);
             results.errors.push({ eventId: event.id, error: errorMsg, team: event.team_name, groupId: event.spond_group_id });
             continue;
+          }
+          
+          // Build recipients object - include subgroup if team is linked to a subgroup
+          const recipients = {
+            group: { id: normalizedGroupId }
+          };
+          
+          // If the team is linked to a subgroup, add subgroup to recipients
+          if (event.is_subgroup && normalizedSubgroupId) {
+            recipients.subGroups = [{ id: normalizedSubgroupId }];
+            console.log(`[Spond] Adding subgroup to recipients: ${normalizedSubgroupId}`);
           }
           
           const spondPayload = {
@@ -4101,20 +4144,18 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             startTimestamp: new Date(event.start_time).toISOString(),
             endTimestamp: new Date(event.end_time).toISOString(),
             spilesType: event.event_type === 'Game' ? 'MATCH' : 'EVENT',
-            recipients: {
-              group: { id: event.spond_group_id }
-            },
+            recipients: recipients,
             autoAccept: false
           };
           
-          console.log(`[Spond] Sending to Spond API with group.id: "${event.spond_group_id}"`);
+          console.log(`[Spond] Sending to Spond API with group.id: "${normalizedGroupId}"${event.is_subgroup ? ` and subgroup: "${normalizedSubgroupId}"` : ''}`);
           
           const createdEvent = await spondPostRequest(token, 'sponds', spondPayload);
           
           await pool.request()
             .input('id', sql.Int, event.id)
             .input('spond_id', sql.NVarChar, createdEvent.id)
-            .input('spond_group_id', sql.NVarChar, event.spond_group_id)
+            .input('spond_group_id', sql.NVarChar, normalizedGroupId)
             .query(`
               UPDATE events SET 
                 spond_id = @spond_id,
@@ -4130,16 +4171,16 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
           console.error(`[Spond] ❌ EXPORT FAILED for event ${event.id}`);
           console.error(`[Spond]   - Error message: ${exportErr.message}`);
           console.error(`[Spond]   - Team: "${event.team_name}"`);
-          console.error(`[Spond]   - spond_group_id used: "${event.spond_group_id}"`);
+          console.error(`[Spond]   - spond_group_id used: "${normalizedGroupId}" (original: "${event.spond_group_id}")`);
           
           // Parse Spond error for more helpful message
           let userFriendlyError = exportErr.message;
           if (exportErr.message.includes('Unable to load group')) {
-            userFriendlyError = `Spond cannot find group "${event.spond_group_id}". This group may have been deleted in Spond, or your account doesn't have access to it. Please re-link team "${event.team_name}" to a valid Spond group.`;
+            userFriendlyError = `Spond cannot find group "${normalizedGroupId}". This group may have been deleted in Spond, or your account doesn't have access to it. Please re-link team "${event.team_name}" to a valid Spond group.`;
           } else if (exportErr.message.includes('401') || exportErr.message.includes('Unauthorized')) {
             userFriendlyError = `Spond authentication failed. Please reconfigure your Spond credentials.`;
           } else if (exportErr.message.includes('403') || exportErr.message.includes('Forbidden')) {
-            userFriendlyError = `Access denied to Spond group "${event.spond_group_id}". Your Spond account may not have permission to create events in this group.`;
+            userFriendlyError = `Access denied to Spond group "${normalizedGroupId}". Your Spond account may not have permission to create events in this group.`;
           }
           
           console.error(`[Spond]   - User message: ${userFriendlyError}`);
@@ -4149,7 +4190,8 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             eventId: event.id, 
             error: userFriendlyError,
             team: event.team_name,
-            groupId: event.spond_group_id,
+            groupId: normalizedGroupId,
+            originalGroupId: event.spond_group_id,
             rawError: exportErr.message
           });
         }
