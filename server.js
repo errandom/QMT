@@ -4066,6 +4066,35 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
       for (const event of eligibleEvents) {
         try {
           const heading = event.name || event.description?.substring(0, 100) || `${event.event_type || 'Event'} - ${event.team_name}`;
+          
+          // VERBOSE LOGGING: Show exactly what we're sending to Spond
+          console.log(`[Spond] ========== EXPORTING EVENT ${event.id} ==========`);
+          console.log(`[Spond] Event Details:`);
+          console.log(`[Spond]   - ID: ${event.id}`);
+          console.log(`[Spond]   - Heading: "${heading}"`);
+          console.log(`[Spond]   - Type: ${event.event_type}`);
+          console.log(`[Spond]   - Start: ${event.start_time}`);
+          console.log(`[Spond]   - team_ids from DB: "${event.team_ids}"`);
+          console.log(`[Spond]   - Matched team name: "${event.team_name}"`);
+          console.log(`[Spond]   - spond_group_id being used: "${event.spond_group_id}"`);
+          console.log(`[Spond]   - spond_group_id length: ${event.spond_group_id?.length || 0}`);
+          console.log(`[Spond]   - spond_group_id looks like UUID: ${/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.spond_group_id || '')}`);
+          
+          // Validate spond_group_id before sending
+          if (!event.spond_group_id) {
+            const errorMsg = `Event ${event.id}: No spond_group_id available. Team "${event.team_name}" may not be linked to a Spond group.`;
+            console.error(`[Spond] ❌ ${errorMsg}`);
+            results.errors.push({ eventId: event.id, error: errorMsg, team: event.team_name });
+            continue;
+          }
+          
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.spond_group_id)) {
+            const errorMsg = `Event ${event.id}: Invalid spond_group_id format "${event.spond_group_id}". Expected UUID format (e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890). Check team "${event.team_name}" Spond linkage.`;
+            console.error(`[Spond] ❌ ${errorMsg}`);
+            results.errors.push({ eventId: event.id, error: errorMsg, team: event.team_name, groupId: event.spond_group_id });
+            continue;
+          }
+          
           const spondPayload = {
             heading: heading,
             description: event.description || '',
@@ -4078,7 +4107,7 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             autoAccept: false
           };
           
-          console.log(`[Spond] Exporting event ${event.id} "${heading}" to Spond group ${event.spond_group_id}`);
+          console.log(`[Spond] Sending to Spond API with group.id: "${event.spond_group_id}"`);
           
           const createdEvent = await spondPostRequest(token, 'sponds', spondPayload);
           
@@ -4094,11 +4123,35 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
               WHERE id = @id
             `);
           
-          console.log(`[Spond] Successfully exported event ${event.id} as Spond event ${createdEvent.id}`);
+          console.log(`[Spond] ✅ Successfully exported event ${event.id} as Spond event ${createdEvent.id}`);
+          console.log(`[Spond] ==========================================`);
           results.exported++;
         } catch (exportErr) {
-          console.error(`[Spond] Failed to export event ${event.id}:`, exportErr.message);
-          results.errors.push({ eventId: event.id, error: exportErr.message });
+          console.error(`[Spond] ❌ EXPORT FAILED for event ${event.id}`);
+          console.error(`[Spond]   - Error message: ${exportErr.message}`);
+          console.error(`[Spond]   - Team: "${event.team_name}"`);
+          console.error(`[Spond]   - spond_group_id used: "${event.spond_group_id}"`);
+          
+          // Parse Spond error for more helpful message
+          let userFriendlyError = exportErr.message;
+          if (exportErr.message.includes('Unable to load group')) {
+            userFriendlyError = `Spond cannot find group "${event.spond_group_id}". This group may have been deleted in Spond, or your account doesn't have access to it. Please re-link team "${event.team_name}" to a valid Spond group.`;
+          } else if (exportErr.message.includes('401') || exportErr.message.includes('Unauthorized')) {
+            userFriendlyError = `Spond authentication failed. Please reconfigure your Spond credentials.`;
+          } else if (exportErr.message.includes('403') || exportErr.message.includes('Forbidden')) {
+            userFriendlyError = `Access denied to Spond group "${event.spond_group_id}". Your Spond account may not have permission to create events in this group.`;
+          }
+          
+          console.error(`[Spond]   - User message: ${userFriendlyError}`);
+          console.error(`[Spond] ==========================================`);
+          
+          results.errors.push({ 
+            eventId: event.id, 
+            error: userFriendlyError,
+            team: event.team_name,
+            groupId: event.spond_group_id,
+            rawError: exportErr.message
+          });
         }
       }
     }
