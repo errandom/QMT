@@ -1936,7 +1936,7 @@ app.get('/api/fields/:id', async (req, res) => {
 
 app.post('/api/fields', async (req, res) => {
   try {
-    const { site_id, name, field_type, surface_type, has_lights, capacity, active } = req.body;
+    const { site_id, name, location_type, field_type, surface_type, has_lights, capacity, active } = req.body;
 
     console.log('[Fields POST] Received data:', JSON.stringify(req.body, null, 2));
 
@@ -1944,15 +1944,16 @@ app.post('/api/fields', async (req, res) => {
     const result = await pool.request()
       .input('site_id', sql.Int, site_id)
       .input('name', sql.NVarChar, name)
+      .input('location_type', sql.NVarChar, location_type || 'field')
       .input('field_type', sql.NVarChar, field_type || null)
       .input('surface_type', sql.NVarChar, surface_type || null)
       .input('has_lights', sql.Bit, has_lights || false)
       .input('capacity', sql.Int, capacity || null)
       .input('active', sql.Bit, active !== false ? 1 : 0)
       .query(`
-        INSERT INTO fields (site_id, name, field_type, surface_type, has_lights, capacity, active)
+        INSERT INTO fields (site_id, name, location_type, field_type, surface_type, has_lights, capacity, active)
         OUTPUT INSERTED.*
-        VALUES (@site_id, @name, @field_type, @surface_type, @has_lights, @capacity, @active)
+        VALUES (@site_id, @name, @location_type, @field_type, @surface_type, @has_lights, @capacity, @active)
       `);
     res.status(201).json(result.recordset[0]);
   } catch (err) {
@@ -1963,7 +1964,7 @@ app.post('/api/fields', async (req, res) => {
 
 app.put('/api/fields/:id', async (req, res) => {
   try {
-    const { site_id, name, field_type, surface_type, has_lights, capacity, active } = req.body;
+    const { site_id, name, location_type, field_type, surface_type, has_lights, capacity, active } = req.body;
 
     console.log('[Fields PUT] Received data:', JSON.stringify(req.body, null, 2));
 
@@ -1972,6 +1973,7 @@ app.put('/api/fields/:id', async (req, res) => {
       .input('id', sql.Int, req.params.id)
       .input('site_id', sql.Int, site_id)
       .input('name', sql.NVarChar, name)
+      .input('location_type', sql.NVarChar, location_type || 'field')
       .input('field_type', sql.NVarChar, field_type || null)
       .input('surface_type', sql.NVarChar, surface_type || null)
       .input('has_lights', sql.Bit, has_lights || false)
@@ -1980,7 +1982,8 @@ app.put('/api/fields/:id', async (req, res) => {
       .query(`
         UPDATE fields 
         SET site_id = @site_id, 
-            name = @name, 
+            name = @name,
+            location_type = @location_type,
             field_type = @field_type, 
             surface_type = @surface_type,
             has_lights = @has_lights,
