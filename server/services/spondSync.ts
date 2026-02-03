@@ -384,6 +384,7 @@ export async function exportEventToSpond(
     const pool = await getPool();
     
     // Get the local event with sync settings
+    // Use team_ids (comma-separated) and find the first matching team with a spond_group_id
     const eventResult = await pool.request()
       .input('id', sql.Int, eventId)
       .query(`
@@ -393,7 +394,11 @@ export async function exportEventToSpond(
           ss.spond_parent_group_id,
           ss.is_subgroup
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
+        OUTER APPLY (
+          SELECT TOP 1 id, spond_group_id 
+          FROM teams 
+          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+        ) t
         LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
         WHERE e.id = @id
       `);
@@ -912,6 +917,7 @@ export async function pushEventToSpond(
     const pool = await getPool();
     
     // Get the local event with related data and sync settings
+    // Use team_ids (comma-separated) and find the first matching team with a spond_group_id
     const eventResult = await pool.request()
       .input('id', sql.Int, eventId)
       .query(`
@@ -927,7 +933,11 @@ export async function pushEventToSpond(
           s.latitude,
           s.longitude
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
+        OUTER APPLY (
+          SELECT TOP 1 id, name, spond_group_id 
+          FROM teams 
+          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+        ) t
         LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
@@ -1031,7 +1041,11 @@ export async function updateEventInSpond(
           s.latitude,
           s.longitude
         FROM events e
-        LEFT JOIN teams t ON e.team_id = t.id
+        OUTER APPLY (
+          SELECT TOP 1 id, name 
+          FROM teams 
+          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+        ) t
         LEFT JOIN fields f ON e.field_id = f.id
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
