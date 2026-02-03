@@ -147,6 +147,25 @@ function transformEvent(event: any): any {
   const startDateTime = new Date(event.start_time || event.startTime);
   const endDateTime = new Date(event.end_time || event.endTime);
   
+  // Handle invalid dates gracefully
+  if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+    console.error('[API] Invalid date in event:', event);
+    // Return event with default values to prevent crashes
+    return {
+      id: String(event.id || ''),
+      title: event.title || event.description || 'Untitled Event',
+      eventType: event.eventType || event.event_type || 'Other',
+      status: event.status || 'Planned',
+      date: '',
+      startTime: '',
+      endTime: '',
+      teamIds: [],
+      fieldIds: [],
+      isRecurring: false,
+      notes: event.notes || '',
+    };
+  }
+  
   // Extract date in YYYY-MM-DD format using UTC
   const date = startDateTime.toISOString().split('T')[0];
   
