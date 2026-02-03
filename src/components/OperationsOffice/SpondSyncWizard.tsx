@@ -49,23 +49,29 @@ interface SyncResult {
 }
 
 // Helper to format error items that can be strings or objects
-function formatError(err: string | { team?: string; eventId?: number; error: string; groupId?: string; name?: string }): string {
+function formatError(err: string | { team?: string; eventId?: number; error: string; groupId?: string; name?: string; rawError?: string }): string {
   if (typeof err === 'string') {
     return err
   }
-  if (err.team) {
-    return `${err.team}: ${err.error}`
-  }
+  
+  // Build a comprehensive error message
+  const parts: string[] = []
+  
   if (err.eventId) {
-    return `Event ${err.eventId}: ${err.error}`
+    parts.push(`Event ${err.eventId}`)
+  }
+  if (err.team) {
+    parts.push(`Team: ${err.team}`)
   }
   if (err.groupId) {
-    return `Group ${err.groupId}: ${err.error}`
+    parts.push(`Group ID: ${err.groupId}`)
   }
   if (err.name) {
-    return `${err.name}: ${err.error}`
+    parts.push(err.name)
   }
-  return err.error || 'Unknown error'
+  
+  const prefix = parts.length > 0 ? `[${parts.join(' | ')}] ` : ''
+  return `${prefix}${err.error || 'Unknown error'}`
 }
 
 interface SpondSyncWizardProps {
