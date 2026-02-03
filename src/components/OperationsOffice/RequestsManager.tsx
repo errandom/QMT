@@ -46,17 +46,19 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [sendWhatsAppNotification, setSendWhatsAppNotification] = useState(true)
   const [rejectionMessage, setRejectionMessage] = useState('')
 
-  // Get location options for approval dialog
+  // Get location options for approval dialog (only sports fields, not meeting rooms)
   const locationOptions = useMemo(() => {
     return fields
       .filter((f: any) => {
         const site = (sites || []).find((s: any) => s.id === f.siteId)
-        return f.isActive && site?.isActive
+        // Only include active fields from active sports facilities (not meeting rooms)
+        const isField = !f.locationType || f.locationType === 'field'
+        return f.isActive && site?.isActive && site?.isSportsFacility && isField
       })
       .map((f: any) => ({
-        id: f.id,
-        name: f.name,
-        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
+        id: String(f.id), // Ensure id is always a string
+        name: f.name || 'Unnamed Field',
+        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name || 'Unknown Site'
       }))
   }, [fields, sites])
 
