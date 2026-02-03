@@ -352,6 +352,11 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
       teamMap.set(team.name, team.id);
     }
 
+    const siteMap = new Map<string, number>();
+    for (const site of sitesResult.recordset) {
+      siteMap.set(site.name, site.id);
+    }
+
     const fieldMap = new Map<string, { id: number; siteId: number }>();
     for (const field of fieldsResult.recordset) {
       fieldMap.set(field.name, { id: field.id, siteId: field.site_id });
@@ -359,7 +364,7 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
 
     const apiEvents = convertToApiEvents(result.events, {
       teams: teamMap,
-      sites: new Map(),
+      sites: siteMap,
       fields: fieldMap,
     });
 
