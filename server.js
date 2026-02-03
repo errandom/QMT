@@ -754,6 +754,13 @@ app.post('/api/events', async (req, res) => {
 
     const pool = await getPool();
 
+    // Check if game location columns exist (migration might not have been run)
+    const gameLocationColumnCheck = await pool.request().query(`
+      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'game_location'
+    `);
+    const hasGameLocationColumns = gameLocationColumnCheck.recordset.length > 0;
+    console.log('[Events POST] hasGameLocationColumns:', hasGameLocationColumns);
+
     // Check if this is a recurring event
     const hasRecurringDays = recurringDaysStr && 
                               typeof recurringDaysStr === 'string' && 
@@ -813,10 +820,14 @@ app.post('/api/events', async (req, res) => {
         `);
         const hasFieldIdsColumn = columnCheck.recordset.length > 0;
         
+        // Calculate first field ID for backwards compatibility with JOINs
+        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+        
         let result;
-        if (hasFieldIdsColumn) {
+        if (hasFieldIdsColumn && hasGameLocationColumns) {
           result = await pool.request()
             .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId)
             .input('field_ids', sql.NVarChar, fieldIdsStr || null)
             .input('event_type', sql.NVarChar, event_type)
             .input('start_time', sql.DateTime, eventStart)
@@ -834,13 +845,32 @@ app.post('/api/events', async (req, res) => {
             .input('away_city', sql.NVarChar, away_city || null)
             .input('transport_requested', sql.Bit, transport_requested || false)
             .query(`
-              INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
+              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
               OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
             `);
-        } else {
-          // Fallback: use field_id column (take first field from fieldIdsStr)
-          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+        } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
+          result = await pool.request()
+            .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId)
+            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
+            .input('event_type', sql.NVarChar, event_type)
+            .input('start_time', sql.DateTime, eventStart)
+            .input('end_time', sql.DateTime, eventEnd)
+            .input('description', sql.NVarChar, description || null)
+            .input('notes', sql.NVarChar, notes || null)
+            .input('status', sql.NVarChar, status || 'Planned')
+            .input('recurring_days', sql.NVarChar, null)
+            .input('recurring_end_date', sql.Date, null)
+            .input('other_participants', sql.NVarChar, other_participants || null)
+            .input('estimated_attendance', sql.Int, estimated_attendance || null)
+            .query(`
+              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+            `);
+        } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
+          // Fallback: use field_id column only
           result = await pool.request()
             .input('team_ids', sql.NVarChar, team_ids || null)
             .input('field_id', sql.Int, firstFieldId || null)
@@ -863,6 +893,27 @@ app.post('/api/events', async (req, res) => {
               INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
               OUTPUT INSERTED.*
               VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+            `);
+        } else {
+          // Fallback: use field_id column without game location columns
+          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+          result = await pool.request()
+            .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId || null)
+            .input('event_type', sql.NVarChar, event_type)
+            .input('start_time', sql.DateTime, eventStart)
+            .input('end_time', sql.DateTime, eventEnd)
+            .input('description', sql.NVarChar, description || null)
+            .input('notes', sql.NVarChar, notes || null)
+            .input('status', sql.NVarChar, status || 'Planned')
+            .input('recurring_days', sql.NVarChar, null)
+            .input('recurring_end_date', sql.Date, null)
+            .input('other_participants', sql.NVarChar, other_participants || null)
+            .input('estimated_attendance', sql.Int, estimated_attendance || null)
+            .query(`
+              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
             `);
         }
         
@@ -901,10 +952,14 @@ app.post('/api/events', async (req, res) => {
       const hasFieldIdsColumn = columnCheck.recordset.length > 0;
       
       let result;
-      if (hasFieldIdsColumn) {
-        // Single event (non-recurring) with field_ids
+      // Calculate first field ID for backwards compatibility with JOINs
+      const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+      
+      if (hasFieldIdsColumn && hasGameLocationColumns) {
+        // Single event (non-recurring) with field_ids and game location columns
         result = await pool.request()
           .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_id', sql.Int, firstFieldId)
           .input('field_ids', sql.NVarChar, fieldIdsStr || null)
           .input('event_type', sql.NVarChar, event_type)
           .input('start_time', sql.DateTime, start_time)
@@ -922,13 +977,33 @@ app.post('/api/events', async (req, res) => {
           .input('away_city', sql.NVarChar, away_city || null)
           .input('transport_requested', sql.Bit, transport_requested || false)
           .query(`
-            INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
+            INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+            VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
           `);
-      } else {
-        // Fallback: use field_id column (take first field from fieldIdsStr)
-        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+      } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
+        // Single event with field_ids but without game location columns
+        result = await pool.request()
+          .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_id', sql.Int, firstFieldId)
+          .input('field_ids', sql.NVarChar, fieldIdsStr || null)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, start_time)
+          .input('end_time', sql.DateTime, end_time)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status || 'Planned')
+          .input('recurring_days', sql.NVarChar, recurringDaysStr)
+          .input('recurring_end_date', sql.Date, recurring_end_date || null)
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .query(`
+            INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            OUTPUT INSERTED.*
+            VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+          `);
+      } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
+        // Fallback: use field_id column with game location columns
         result = await pool.request()
           .input('team_ids', sql.NVarChar, team_ids || null)
           .input('field_id', sql.Int, firstFieldId || null)
@@ -951,6 +1026,27 @@ app.post('/api/events', async (req, res) => {
             INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
             OUTPUT INSERTED.*
             VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+          `);
+      } else {
+        // Fallback: use field_id column without game location columns
+        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+        result = await pool.request()
+          .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_id', sql.Int, firstFieldId || null)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, start_time)
+          .input('end_time', sql.DateTime, end_time)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status || 'Planned')
+          .input('recurring_days', sql.NVarChar, recurringDaysStr)
+          .input('recurring_end_date', sql.Date, recurring_end_date || null)
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .query(`
+            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            OUTPUT INSERTED.*
+            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
           `);
       }
       
@@ -1001,6 +1097,12 @@ app.put('/api/events/:id', async (req, res) => {
     `);
     const hasFieldIdsColumn = columnCheck.recordset.length > 0;
 
+    // Check if game location columns exist
+    const gameLocationColumnCheck = await pool.request().query(`
+      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'game_location'
+    `);
+    const hasGameLocationColumns = gameLocationColumnCheck.recordset.length > 0;
+
     // Check if we should generate recurring events (convert single to recurring)
     const hasRecurringDays = recurringDaysStr && 
                               typeof recurringDaysStr === 'string' && 
@@ -1046,15 +1148,19 @@ app.put('/api/events/:id', async (req, res) => {
       // Create individual events for each date
       const createdEvents = [];
       
+      // Calculate first field ID for backwards compatibility with JOINs
+      const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+      
       for (const date of recurringDates) {
         const eventStart = new Date(date);
         eventStart.setHours(startDateTime.getHours(), startDateTime.getMinutes(), startDateTime.getSeconds());
         const eventEnd = new Date(eventStart.getTime() + duration);
         
         let result;
-        if (hasFieldIdsColumn) {
+        if (hasFieldIdsColumn && hasGameLocationColumns) {
           result = await pool.request()
             .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId)
             .input('field_ids', sql.NVarChar, fieldIdsStr || null)
             .input('event_type', sql.NVarChar, event_type)
             .input('start_time', sql.DateTime, eventStart)
@@ -1072,12 +1178,31 @@ app.put('/api/events/:id', async (req, res) => {
             .input('away_city', sql.NVarChar, away_city || null)
             .input('transport_requested', sql.Bit, transport_requested || false)
             .query(`
-              INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
+              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
               OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
             `);
-        } else {
-          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+        } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
+          result = await pool.request()
+            .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId)
+            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
+            .input('event_type', sql.NVarChar, event_type)
+            .input('start_time', sql.DateTime, eventStart)
+            .input('end_time', sql.DateTime, eventEnd)
+            .input('description', sql.NVarChar, description || null)
+            .input('notes', sql.NVarChar, notes || null)
+            .input('status', sql.NVarChar, status || 'Planned')
+            .input('recurring_days', sql.NVarChar, null)
+            .input('recurring_end_date', sql.Date, null)
+            .input('other_participants', sql.NVarChar, other_participants || null)
+            .input('estimated_attendance', sql.Int, estimated_attendance || null)
+            .query(`
+              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+            `);
+        } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
           result = await pool.request()
             .input('team_ids', sql.NVarChar, team_ids || null)
             .input('field_id', sql.Int, firstFieldId || null)
@@ -1100,6 +1225,26 @@ app.put('/api/events/:id', async (req, res) => {
               INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
               OUTPUT INSERTED.*
               VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+            `);
+        } else {
+          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+          result = await pool.request()
+            .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId || null)
+            .input('event_type', sql.NVarChar, event_type)
+            .input('start_time', sql.DateTime, eventStart)
+            .input('end_time', sql.DateTime, eventEnd)
+            .input('description', sql.NVarChar, description || null)
+            .input('notes', sql.NVarChar, notes || null)
+            .input('status', sql.NVarChar, status || 'Planned')
+            .input('recurring_days', sql.NVarChar, null)
+            .input('recurring_end_date', sql.Date, null)
+            .input('other_participants', sql.NVarChar, other_participants || null)
+            .input('estimated_attendance', sql.Int, estimated_attendance || null)
+            .query(`
+              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
             `);
         }
         
@@ -1130,7 +1275,7 @@ app.put('/api/events/:id', async (req, res) => {
     } else {
       // Regular update (no recurring generation)
       let result;
-      if (hasFieldIdsColumn) {
+      if (hasFieldIdsColumn && hasGameLocationColumns) {
         result = await pool.request()
           .input('id', sql.Int, req.params.id)
           .input('team_ids', sql.NVarChar, team_ids || null)
@@ -1162,7 +1307,32 @@ app.put('/api/events/:id', async (req, res) => {
             OUTPUT INSERTED.*
             WHERE id = @id
           `);
-      } else {
+      } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
+        result = await pool.request()
+          .input('id', sql.Int, req.params.id)
+          .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_ids', sql.NVarChar, fieldIdsStr || null)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, start_time)
+          .input('end_time', sql.DateTime, end_time)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status)
+          .input('recurring_days', sql.NVarChar, recurringDaysStr)
+          .input('recurring_end_date', sql.Date, recurring_end_date || null)
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .query(`
+            UPDATE events 
+            SET team_ids = @team_ids, field_ids = @field_ids, event_type = @event_type,
+                start_time = @start_time, end_time = @end_time, description = @description,
+                notes = @notes, status = @status, recurring_days = @recurring_days,
+                recurring_end_date = @recurring_end_date, other_participants = @other_participants,
+                estimated_attendance = @estimated_attendance, updated_at = GETDATE()
+            OUTPUT INSERTED.*
+            WHERE id = @id
+          `);
+      } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
         const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
         result = await pool.request()
           .input('id', sql.Int, req.params.id)
@@ -1192,6 +1362,32 @@ app.put('/api/events/:id', async (req, res) => {
                 estimated_attendance = @estimated_attendance, game_location = @game_location,
                 away_street = @away_street, away_zip = @away_zip, away_city = @away_city,
                 transport_requested = @transport_requested, updated_at = GETDATE()
+            OUTPUT INSERTED.*
+            WHERE id = @id
+          `);
+      } else {
+        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+        result = await pool.request()
+          .input('id', sql.Int, req.params.id)
+          .input('team_ids', sql.NVarChar, team_ids || null)
+          .input('field_id', sql.Int, firstFieldId || null)
+          .input('event_type', sql.NVarChar, event_type)
+          .input('start_time', sql.DateTime, start_time)
+          .input('end_time', sql.DateTime, end_time)
+          .input('description', sql.NVarChar, description || null)
+          .input('notes', sql.NVarChar, notes || null)
+          .input('status', sql.NVarChar, status)
+          .input('recurring_days', sql.NVarChar, recurringDaysStr)
+          .input('recurring_end_date', sql.Date, recurring_end_date || null)
+          .input('other_participants', sql.NVarChar, other_participants || null)
+          .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .query(`
+            UPDATE events 
+            SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
+                start_time = @start_time, end_time = @end_time, description = @description,
+                notes = @notes, status = @status, recurring_days = @recurring_days,
+                recurring_end_date = @recurring_end_date, other_participants = @other_participants,
+                estimated_attendance = @estimated_attendance, updated_at = GETDATE()
             OUTPUT INSERTED.*
             WHERE id = @id
           `);
