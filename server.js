@@ -732,12 +732,22 @@ function generateRecurringDates(startDate, endDate, recurringDays) {
 
 app.post('/api/events', async (req, res) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
+    const { team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
+
+    // Handle field_ids: accept either field_ids (new) or field_id (legacy)
+    // Convert to comma-separated string for storage
+    let fieldIdsStr = null;
+    if (field_ids) {
+      fieldIdsStr = field_ids; // Already a comma-separated string from frontend
+    } else if (field_id) {
+      fieldIdsStr = String(field_id); // Convert single field_id to string
+    }
 
     // Handle recurring_days as comma-separated string
     const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
 
     console.log('[Events POST] ===== INCOMING REQUEST =====');
+    console.log('[Events POST] field_ids:', field_ids, 'field_id:', field_id, 'fieldIdsStr:', fieldIdsStr);
     console.log('[Events POST] recurring_days:', recurring_days, 'type:', typeof recurring_days);
     console.log('[Events POST] recurring_end_date:', recurring_end_date, 'type:', typeof recurring_end_date);
     console.log('[Events POST] recurringDaysStr:', recurringDaysStr);
@@ -797,27 +807,64 @@ app.post('/api/events', async (req, res) => {
         
         console.log('[Events POST] Creating event for', eventStart.toISOString());
         
-        const result = await pool.request()
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, field_id || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, eventStart)
-          .input('end_time', sql.DateTime, eventEnd)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, null)  // Set to null for individual events
-          .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .input('game_location', sql.NVarChar, game_location || null)
-          .input('away_street', sql.NVarChar, away_street || null)
-          .input('away_zip', sql.NVarChar, away_zip || null)
-          .input('away_city', sql.NVarChar, away_city || null)
-          .input('transport_requested', sql.Bit, transport_requested || false)
-          .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-            OUTPUT INSERTED.*
+        // Check if field_ids column exists
+        const columnCheck = await pool.request().query(`
+          SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'field_ids'
+        `);
+        const hasFieldIdsColumn = columnCheck.recordset.length > 0;
+        
+        let result;
+        if (hasFieldIdsColumn) {
+          result = await pool.request()
+            .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
+            .input('event_type', sql.NVarChar, event_type)
+            .input('start_time', sql.DateTime, eventStart)
+            .input('end_time', sql.DateTime, eventEnd)
+            .input('description', sql.NVarChar, description || null)
+            .input('notes', sql.NVarChar, notes || null)
+            .input('status', sql.NVarChar, status || 'Planned')
+            .input('recurring_days', sql.NVarChar, null)
+            .input('recurring_end_date', sql.Date, null)
+            .input('other_participants', sql.NVarChar, other_participants || null)
+            .input('estimated_attendance', sql.Int, estimated_attendance || null)
+            .input('game_location', sql.NVarChar, game_location || null)
+            .input('away_street', sql.NVarChar, away_street || null)
+            .input('away_zip', sql.NVarChar, away_zip || null)
+            .input('away_city', sql.NVarChar, away_city || null)
+            .input('transport_requested', sql.Bit, transport_requested || false)
+            .query(`
+              INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+            `);
+        } else {
+          // Fallback: use field_id column (take first field from fieldIdsStr)
+          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
+          result = await pool.request()
+            .input('team_ids', sql.NVarChar, team_ids || null)
+            .input('field_id', sql.Int, firstFieldId || null)
+            .input('event_type', sql.NVarChar, event_type)
+            .input('start_time', sql.DateTime, eventStart)
+            .input('end_time', sql.DateTime, eventEnd)
+            .input('description', sql.NVarChar, description || null)
+            .input('notes', sql.NVarChar, notes || null)
+            .input('status', sql.NVarChar, status || 'Planned')
+            .input('recurring_days', sql.NVarChar, null)
+            .input('recurring_end_date', sql.Date, null)
+            .input('other_participants', sql.NVarChar, other_participants || null)
+            .input('estimated_attendance', sql.Int, estimated_attendance || null)
+            .input('game_location', sql.NVarChar, game_location || null)
+            .input('away_street', sql.NVarChar, away_street || null)
+            .input('away_zip', sql.NVarChar, away_zip || null)
+            .input('away_city', sql.NVarChar, away_city || null)
+            .input('transport_requested', sql.Bit, transport_requested || false)
+            .query(`
+              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
+              OUTPUT INSERTED.*
+              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
+            `);
+        }
             VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
           `);
         
