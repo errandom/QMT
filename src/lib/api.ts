@@ -198,6 +198,18 @@ function transformEvent(event: any): any {
     recurringEndDate = recurringEndDate.split('T')[0];
   }
   
+  // Convert field_ids string (comma-separated) to array, or fallback to single field_id
+  let fieldIds: string[] = [];
+  if (event.field_ids) {
+    // field_ids is stored as comma-separated string like "1,2,3"
+    fieldIds = event.field_ids.split(',').map((id: string) => id.trim()).filter(Boolean);
+  } else if (event.field_id) {
+    // Fallback to single field_id for backward compatibility
+    fieldIds = [String(event.field_id)];
+  } else if (event.fieldIds) {
+    fieldIds = event.fieldIds;
+  }
+  
   const transformed = {
     id: String(event.id || ''),
     title: event.title || event.description || `${event.event_type || event.eventType} Event`,
@@ -207,7 +219,7 @@ function transformEvent(event: any): any {
     startTime,
     endTime,
     teamIds,
-    fieldId: String(event.fieldId || event.field_id || ''),
+    fieldIds,
     isRecurring,
     recurringDays,
     recurringEndDate,
