@@ -1941,20 +1941,45 @@ app.post('/api/fields', async (req, res) => {
     console.log('[Fields POST] Received data:', JSON.stringify(req.body, null, 2));
 
     const pool = await getPool();
-    const result = await pool.request()
-      .input('site_id', sql.Int, site_id)
-      .input('name', sql.NVarChar, name)
-      .input('location_type', sql.NVarChar, location_type || 'field')
-      .input('field_type', sql.NVarChar, field_type || null)
-      .input('surface_type', sql.NVarChar, surface_type || null)
-      .input('has_lights', sql.Bit, has_lights || false)
-      .input('capacity', sql.Int, capacity || null)
-      .input('active', sql.Bit, active !== false ? 1 : 0)
-      .query(`
-        INSERT INTO fields (site_id, name, location_type, field_type, surface_type, has_lights, capacity, active)
-        OUTPUT INSERTED.*
-        VALUES (@site_id, @name, @location_type, @field_type, @surface_type, @has_lights, @capacity, @active)
-      `);
+    
+    // Check if location_type column exists (backward compatibility)
+    const columnCheck = await pool.request().query(`
+      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('fields') AND name = 'location_type'
+    `);
+    const hasLocationTypeColumn = columnCheck.recordset.length > 0;
+    
+    let result;
+    if (hasLocationTypeColumn) {
+      result = await pool.request()
+        .input('site_id', sql.Int, site_id)
+        .input('name', sql.NVarChar, name)
+        .input('location_type', sql.NVarChar, location_type || 'field')
+        .input('field_type', sql.NVarChar, field_type || null)
+        .input('surface_type', sql.NVarChar, surface_type || null)
+        .input('has_lights', sql.Bit, has_lights || false)
+        .input('capacity', sql.Int, capacity || null)
+        .input('active', sql.Bit, active !== false ? 1 : 0)
+        .query(`
+          INSERT INTO fields (site_id, name, location_type, field_type, surface_type, has_lights, capacity, active)
+          OUTPUT INSERTED.*
+          VALUES (@site_id, @name, @location_type, @field_type, @surface_type, @has_lights, @capacity, @active)
+        `);
+    } else {
+      // Fallback for databases without location_type column
+      result = await pool.request()
+        .input('site_id', sql.Int, site_id)
+        .input('name', sql.NVarChar, name)
+        .input('field_type', sql.NVarChar, field_type || null)
+        .input('surface_type', sql.NVarChar, surface_type || null)
+        .input('has_lights', sql.Bit, has_lights || false)
+        .input('capacity', sql.Int, capacity || null)
+        .input('active', sql.Bit, active !== false ? 1 : 0)
+        .query(`
+          INSERT INTO fields (site_id, name, field_type, surface_type, has_lights, capacity, active)
+          OUTPUT INSERTED.*
+          VALUES (@site_id, @name, @field_type, @surface_type, @has_lights, @capacity, @active)
+        `);
+    }
     res.status(201).json(result.recordset[0]);
   } catch (err) {
     console.error('Error creating field:', err);
@@ -1969,30 +1994,64 @@ app.put('/api/fields/:id', async (req, res) => {
     console.log('[Fields PUT] Received data:', JSON.stringify(req.body, null, 2));
 
     const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .input('site_id', sql.Int, site_id)
-      .input('name', sql.NVarChar, name)
-      .input('location_type', sql.NVarChar, location_type || 'field')
-      .input('field_type', sql.NVarChar, field_type || null)
-      .input('surface_type', sql.NVarChar, surface_type || null)
-      .input('has_lights', sql.Bit, has_lights || false)
-      .input('capacity', sql.Int, capacity || null)
-      .input('active', sql.Bit, active !== false ? 1 : 0)
-      .query(`
-        UPDATE fields 
-        SET site_id = @site_id, 
-            name = @name,
-            location_type = @location_type,
-            field_type = @field_type, 
-            surface_type = @surface_type,
-            has_lights = @has_lights,
-            capacity = @capacity,
-            active = @active,
-            updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `);
+    
+    // Check if location_type column exists (backward compatibility)
+    const columnCheck = await pool.request().query(`
+      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('fields') AND name = 'location_type'
+    `);
+    const hasLocationTypeColumn = columnCheck.recordset.length > 0;
+    
+    let result;
+    if (hasLocationTypeColumn) {
+      result = await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .input('site_id', sql.Int, site_id)
+        .input('name', sql.NVarChar, name)
+        .input('location_type', sql.NVarChar, location_type || 'field')
+        .input('field_type', sql.NVarChar, field_type || null)
+        .input('surface_type', sql.NVarChar, surface_type || null)
+        .input('has_lights', sql.Bit, has_lights || false)
+        .input('capacity', sql.Int, capacity || null)
+        .input('active', sql.Bit, active !== false ? 1 : 0)
+        .query(`
+          UPDATE fields 
+          SET site_id = @site_id, 
+              name = @name,
+              location_type = @location_type,
+              field_type = @field_type, 
+              surface_type = @surface_type,
+              has_lights = @has_lights,
+              capacity = @capacity,
+              active = @active,
+              updated_at = GETDATE()
+          OUTPUT INSERTED.*
+          WHERE id = @id
+        `);
+    } else {
+      // Fallback for databases without location_type column
+      result = await pool.request()
+        .input('id', sql.Int, req.params.id)
+        .input('site_id', sql.Int, site_id)
+        .input('name', sql.NVarChar, name)
+        .input('field_type', sql.NVarChar, field_type || null)
+        .input('surface_type', sql.NVarChar, surface_type || null)
+        .input('has_lights', sql.Bit, has_lights || false)
+        .input('capacity', sql.Int, capacity || null)
+        .input('active', sql.Bit, active !== false ? 1 : 0)
+        .query(`
+          UPDATE fields 
+          SET site_id = @site_id, 
+              name = @name,
+              field_type = @field_type, 
+              surface_type = @surface_type,
+              has_lights = @has_lights,
+              capacity = @capacity,
+              active = @active,
+              updated_at = GETDATE()
+          OUTPUT INSERTED.*
+          WHERE id = @id
+        `);
+    }
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Field not found' });
