@@ -19,7 +19,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': resolve(projectRoot, 'src')
+      '@': resolve(projectRoot, 'src'),
+      'xlsx': resolve(projectRoot, 'node_modules/xlsx/xlsx.mjs')
     }
   },
   server: {
