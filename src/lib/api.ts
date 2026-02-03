@@ -212,7 +212,13 @@ function transformEvent(event: any): any {
     recurringEndDate,
     notes: event.notes || '',
     estimatedAttendance: event.estimatedAttendance || event.estimated_attendance,
-    otherParticipants: event.otherParticipants || event.other_participants
+    otherParticipants: event.otherParticipants || event.other_participants,
+    // Game location fields
+    gameLocation: event.gameLocation || event.game_location || undefined,
+    awayStreet: event.awayStreet || event.away_street || '',
+    awayZip: event.awayZip || event.away_zip || '',
+    awayCity: event.awayCity || event.away_city || '',
+    transportRequested: Boolean(event.transportRequested ?? event.transport_requested ?? false),
   };
   
   console.log('[API] Transformed event result:', transformed);
