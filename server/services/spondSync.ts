@@ -610,7 +610,11 @@ async function findPotentialDuplicate(
           s.longitude,
           f.name as field_name
         FROM events e
-        LEFT JOIN fields f ON e.field_id = f.id
+        OUTER APPLY (
+          SELECT TOP 1 f.id, f.name, f.site_id
+          FROM fields f
+          WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        ) f
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.spond_id IS NULL
           AND e.start_time BETWEEN @min_time AND @max_time
@@ -969,7 +973,11 @@ export async function pushEventToSpond(
           WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
         ) t
         LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
-        LEFT JOIN fields f ON e.field_id = f.id
+        OUTER APPLY (
+          SELECT TOP 1 f.id, f.name, f.site_id
+          FROM fields f
+          WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        ) f
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
       `);
@@ -1086,7 +1094,11 @@ export async function updateEventInSpond(
           FROM teams 
           WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
         ) t
-        LEFT JOIN fields f ON e.field_id = f.id
+        OUTER APPLY (
+          SELECT TOP 1 f.id, f.name, f.site_id
+          FROM fields f
+          WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        ) f
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
       `);
