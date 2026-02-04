@@ -76,27 +76,28 @@ function generateRecurringDates(startDate: Date, endDate: Date, recurringDays: n
 // Helper function to check for field booking conflicts (only for Game events)
 async function checkFieldConflict(
   pool: any,
-  fieldId: number | null,
+  fieldIds: string | null,  // Changed to accept comma-separated field IDs
   eventType: string,
   startTime: Date,
   endTime: Date,
   excludeEventId?: number
 ): Promise<{ hasConflict: boolean; conflictingEvent?: any }> {
   // Only check conflicts for Game events
-  if (eventType !== 'Game' || !fieldId) {
+  if (eventType !== 'Game' || !fieldIds) {
     return { hasConflict: false };
   }
   
   try {
+    // Check if any of the requested fields have a conflicting Game event
     const query = `
       SELECT TOP 1 
         e.id, 
         e.description as title,
         e.start_time,
-        e.end_time
+        e.end_time,
+        e.field_ids
       FROM events e
-      WHERE e.field_id = @field_id
-        AND e.event_type = 'Game'
+      WHERE e.event_type = 'Game'
         AND e.status != 'Cancelled'
         ${excludeEventId ? 'AND e.id != @exclude_event_id' : ''}
         AND (
@@ -109,10 +110,16 @@ async function checkFieldConflict(
           -- New event completely encompasses existing event
           (@start_time <= e.start_time AND @end_time >= e.end_time)
         )
+        AND EXISTS (
+          -- Check if any field in the new event overlaps with any field in existing event
+          SELECT 1 
+          FROM STRING_SPLIT(@field_ids, ',') newFields
+          WHERE CHARINDEX(',' + LTRIM(RTRIM(newFields.value)) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        )
     `;
     
     const request = pool.request()
-      .input('field_id', sql.Int, fieldId)
+      .input('field_ids', sql.NVarChar, fieldIds)
       .input('start_time', sql.DateTime, startTime)
       .input('end_time', sql.DateTime, endTime);
     
@@ -590,7 +597,7 @@ router.post('/', async (req: Request, res: Response) => {
         // Check for field conflict (only for Game events)
         const conflict = await checkFieldConflict(
           pool,
-          field_id,
+          fieldIdsStr,
           event_type,
           eventStart,
           eventEnd
@@ -663,7 +670,7 @@ router.post('/', async (req: Request, res: Response) => {
       // Check for field conflict (only for Game events)
       const conflict = await checkFieldConflict(
         pool,
-        field_id,
+        fieldIdsStr,
         event_type,
         new Date(start_time),
         new Date(end_time)
@@ -832,7 +839,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         // Check for field conflict (only for Game events)
         const conflict = await checkFieldConflict(
           pool,
-          field_id,
+          fieldIdsStr,
           event_type,
           eventStart,
           eventEnd
@@ -905,7 +912,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       // Check for field conflict (only for Game events)
       const conflict = await checkFieldConflict(
         pool,
-        field_id,
+        fieldIdsStr,
         event_type,
         new Date(start_time),
         new Date(end_time),
