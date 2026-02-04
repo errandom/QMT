@@ -166,6 +166,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         .map((f: any) => ({
           id: f.id,
           name: f.name,
+          siteId: f.siteId,
           siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
         }))
     }
@@ -180,6 +181,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         .map((f: any) => ({
           id: f.id,
           name: f.name,
+          siteId: f.siteId,
           siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
         }))
     }
@@ -193,9 +195,29 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       .map((f: any) => ({
         id: f.id,
         name: f.name,
+        siteId: f.siteId,
         siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name
       }))
   }, [formData.eventType, fields, sites])
+
+  // Group location options by site for display
+  const locationsBysite = useMemo(() => {
+    const grouped: { [siteId: string]: { siteName: string, fields: typeof locationOptions } } = {}
+    for (const loc of locationOptions) {
+      if (!grouped[loc.siteId]) {
+        grouped[loc.siteId] = { siteName: loc.siteName || 'Unknown', fields: [] }
+      }
+      grouped[loc.siteId].fields.push(loc)
+    }
+    return grouped
+  }, [locationOptions])
+
+  // Get the site ID of the first selected field (to show only fields from same site)
+  const selectedSiteId = useMemo(() => {
+    if (!formData.fieldIds || formData.fieldIds.length === 0) return null
+    const firstField = locationOptions.find((loc: any) => loc.id === formData.fieldIds[0])
+    return firstField?.siteId || null
+  }, [formData.fieldIds, locationOptions])
 
   const handleCreate = () => {
     setEditingEvent(null)
@@ -249,8 +271,10 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   }
 
   const handleNotifyCancellation = (event: Event) => {
-    const field = fields.find(f => f.id === event.fieldId)
-    const site = field ? sites.find(s => s.id === field.siteId) : null
+    const eventFieldIds = event.fieldIds || []
+    const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
+    const primaryField = eventFields[0]
+    const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
     const eventTeams = event.teamIds ? teams.filter(t => event.teamIds?.includes(t.id)) : []
     const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
       weekday: 'long', 
@@ -259,7 +283,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       year: 'numeric' 
     })
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    const locationName = field && site ? `${site.name} - ${field.name}` : field?.name || site?.name || 'TBD'
+    const fieldNames = eventFields.map(f => f?.name).join(', ')
+    const locationName = site && fieldNames ? `${site.name} - ${fieldNames}` : fieldNames || site?.name || 'TBD'
 
     // Collect TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
@@ -699,8 +724,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                 {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
                   <div className="flex gap-1 shrink-0">
                     {event.status === 'Cancelled' && (() => {
-                      const field = fields.find(f => f.id === event.fieldId)
-                      const site = field ? sites.find(s => s.id === field.siteId) : null
+                      const eventFieldIds = event.fieldIds || []
+                      const primaryField = eventFieldIds.length > 0 ? fields.find(f => f.id === eventFieldIds[0]) : null
+                      const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
                       return site?.contactEmail ? (
                         <Button
                           variant="ghost"
@@ -868,8 +894,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   onValueChange={(v) => setFormData({ 
                     ...formData, 
                     gameLocation: v as GameLocation,
-                    // Clear field if switching to away, clear away address if switching to home
-                    fieldId: v === 'away' ? '' : formData.fieldId,
+                    // Clear fields if switching to away, clear away address if switching to home
+                    fieldIds: v === 'away' ? [] : formData.fieldIds,
                     awayStreet: v === 'home' ? '' : formData.awayStreet,
                     awayZip: v === 'home' ? '' : formData.awayZip,
                     awayCity: v === 'home' ? '' : formData.awayCity,
@@ -893,25 +919,52 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   </div>
                 </RadioGroup>
 
-                {/* Home Game: Show field selector */}
+                {/* Home Game: Show field selector with multi-select */}
                 {formData.gameLocation === 'home' && (
                   <div className="space-y-2 pt-2">
-                    <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>Field *</Label>
-                    <Select 
-                      value={formData.fieldId || ''} 
-                      onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
-                    >
-                      <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
-                        <SelectValue placeholder="Select field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locationOptions.map((location: any) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {`${location.siteName} - ${location.name}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label style={{ color: COLORS.CHARCOAL }}>
+                      Field(s) * {selectedSiteId && <span className="text-xs text-muted-foreground ml-2">(Select multiple from same site)</span>}
+                    </Label>
+                    <div className="p-3 border rounded-md max-h-48 overflow-y-auto space-y-3">
+                      {Object.entries(locationsBysite).map(([siteId, siteData]) => {
+                        // If a field is already selected, only show fields from that site
+                        if (selectedSiteId && siteId !== selectedSiteId) {
+                          return null
+                        }
+                        return (
+                          <div key={siteId} className="space-y-2">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                              {siteData.siteName}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
+                              {siteData.fields.map((location: any) => (
+                                <div key={location.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`field-${location.id}`}
+                                    checked={formData.fieldIds?.includes(location.id)}
+                                    onCheckedChange={() => handleFieldToggle(location.id)}
+                                  />
+                                  <label htmlFor={`field-${location.id}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                                    {location.name}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {selectedSiteId && formData.fieldIds && formData.fieldIds.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, fieldIds: [] })}
+                        className="text-xs"
+                      >
+                        Clear selection (choose different site)
+                      </Button>
+                    )}
                   </div>
                 )}
 
@@ -985,30 +1038,56 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               </div>
             )}
 
-            {/* Location for non-Game events */}
+            {/* Location for non-Game events - multi-select with site grouping */}
             {formData.eventType !== 'Game' && (
               <div className="space-y-2">
-                <Label htmlFor="field" style={{ color: COLORS.CHARCOAL }}>
-                  Location
-                  {formData.eventType === 'Meeting' || formData.eventType === 'Other' ? ' (Site)' : ' (Field)'}
+                <Label style={{ color: COLORS.CHARCOAL }}>
+                  Location{formData.eventType === 'Practice' && '(s)'}
+                  {formData.eventType === 'Meeting' || formData.eventType === 'Other' ? ' (Room)' : ' (Field)'}
+                  {selectedSiteId && <span className="text-xs text-muted-foreground ml-2">(Select from same site)</span>}
                 </Label>
-                <Select 
-                  value={formData.fieldId || ''} 
-                  onValueChange={(v) => setFormData({ ...formData, fieldId: v })}
-                >
-                  <SelectTrigger id="field" style={{ color: COLORS.CHARCOAL }}>
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationOptions.map((location: any) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {formData.eventType === 'Meeting' || formData.eventType === 'Other' 
-                          ? location.siteName 
-                          : `${location.siteName} - ${location.name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="p-3 border rounded-md max-h-48 overflow-y-auto space-y-3">
+                  {Object.entries(locationsBysite).map(([siteId, siteData]) => {
+                    // If a field is already selected, only show fields from that site
+                    if (selectedSiteId && siteId !== selectedSiteId) {
+                      return null
+                    }
+                    return (
+                      <div key={siteId} className="space-y-2">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {siteData.siteName}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
+                          {siteData.fields.map((location: any) => (
+                            <div key={location.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`location-${location.id}`}
+                                checked={formData.fieldIds?.includes(location.id)}
+                                onCheckedChange={() => handleFieldToggle(location.id)}
+                              />
+                              <label htmlFor={`location-${location.id}`} className="text-sm cursor-pointer" style={{ color: COLORS.CHARCOAL }}>
+                                {formData.eventType === 'Meeting' || formData.eventType === 'Other' 
+                                  ? location.name 
+                                  : location.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {selectedSiteId && formData.fieldIds && formData.fieldIds.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, fieldIds: [] })}
+                    className="text-xs"
+                  >
+                    Clear selection (choose different site)
+                  </Button>
+                )}
               </div>
             )}
 
@@ -1192,8 +1271,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           
           {/* Cancellation email option */}
           {eventToDelete && (() => {
-            const field = fields.find(f => f.id === eventToDelete.fieldId)
-            const site = field ? sites.find(s => s.id === field.siteId) : null
+            const eventFieldIds = eventToDelete.fieldIds || []
+            const primaryField = eventFieldIds.length > 0 ? fields.find(f => f.id === eventFieldIds[0]) : null
+            const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
             const hasContactEmail = site?.contactEmail
             
             return hasContactEmail ? (
