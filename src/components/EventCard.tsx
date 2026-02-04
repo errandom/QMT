@@ -65,7 +65,9 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const [loadingWeather, setLoadingWeather] = useState(false)
   
   // Support multiple fields - get first field for weather/location display
-  const eventFieldIds = event.fieldIds || (event.fieldId ? [event.fieldId] : [])
+  // Use type assertion for backward compatibility with old data that may have fieldId
+  const legacyFieldId = (event as any).fieldId
+  const eventFieldIds = event.fieldIds || (legacyFieldId ? [legacyFieldId] : [])
   const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
   const primaryField = eventFields[0]
   const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : undefined
@@ -264,7 +266,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
-        {site && field && (
+        {site && primaryField && (
           <>
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
