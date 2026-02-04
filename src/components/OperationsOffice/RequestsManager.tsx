@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Check, X, ClipboardText, Prohibit, WhatsappLogo, MapPin } from '@phosphor-icons/react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Check, X, ClipboardText, Prohibit, WhatsappLogo, MapPin, CaretDown, CaretRight } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
@@ -124,7 +125,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
       // Create event via API with selected field
       const eventData = {
         team_ids: approvalRequest.teamIds && approvalRequest.teamIds.length > 0 ? approvalRequest.teamIds.join(',') : null,
-        field_id: selectedFieldId ? parseInt(selectedFieldId) : null,
+        field_ids: selectedFieldId ? selectedFieldId : null,
         event_type: approvalRequest.eventType,
         start_time: `${approvalRequest.date}T${approvalRequest.startTime}:00`,
         end_time: `${approvalRequest.date}T${endTime}:00`,
@@ -256,7 +257,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         // Update the event status to Cancelled via API
         const updateData = {
           team_ids: event.teamIds && event.teamIds.length > 0 ? event.teamIds.join(',') : null,
-          field_id: event.fieldId ? parseInt(event.fieldId) : null,
+          field_ids: event.fieldIds && event.fieldIds.length > 0 ? event.fieldIds.join(',') : null,
           event_type: event.eventType,
           start_time: `${event.date}T${event.startTime}:00`,
           end_time: `${event.date}T${event.endTime}:00`,
@@ -312,6 +313,19 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const pendingEquipmentCount = equipmentRequests.filter(r => r.status === 'Pending').length
   const pendingCancellationCount = cancellationRequests.filter(r => r.status === 'Pending').length
 
+  // Collapsible state for resolved (approved/rejected) requests - collapsed by default
+  const [showResolvedCancellations, setShowResolvedCancellations] = useState(false)
+  const [showResolvedFacility, setShowResolvedFacility] = useState(false)
+  const [showResolvedEquipment, setShowResolvedEquipment] = useState(false)
+
+  // Split requests into pending and resolved
+  const pendingCancellations = cancellationRequests.filter(r => r.status === 'Pending')
+  const resolvedCancellations = cancellationRequests.filter(r => r.status !== 'Pending')
+  const pendingFacility = facilityRequests.filter(r => r.status === 'Pending')
+  const resolvedFacility = facilityRequests.filter(r => r.status !== 'Pending')
+  const pendingEquipment = equipmentRequests.filter(r => r.status === 'Pending')
+  const resolvedEquipment = equipmentRequests.filter(r => r.status !== 'Pending')
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -336,74 +350,130 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             No cancellation requests yet.
           </div>
         ) : (
-          <div className="grid gap-4">
-            {cancellationRequests.map((request) => (
-              <Card key={request.id} className={request.status !== 'Pending' ? 'opacity-70' : ''}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Prohibit size={18} weight="duotone" />
-                        Cancellation Request - {request.eventTitle}
-                      </CardTitle>
-                      <Badge variant={
-                        request.status === 'Pending' ? 'default' :
-                        request.status === 'Approved' ? 'secondary' : 'destructive'
-                      }>
-                        {request.status}
-                      </Badge>
-                    </div>
-                    {request.status === 'Pending' && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleApproveCancellation(request.id)}
-                        >
-                          <Check className="mr-1" size={16} weight="bold" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleOpenRejectionDialog(request, 'cancellation')}
-                        >
-                          <X className="mr-1" size={16} weight="bold" />
-                          Reject
-                        </Button>
+          <div className="space-y-4">
+            {/* Pending Cancellation Requests */}
+            {pendingCancellations.length === 0 ? (
+              <div className="text-sm text-muted-foreground p-4 border rounded-lg">
+                No pending cancellation requests.
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {pendingCancellations.map((request) => (
+                  <Card key={request.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Prohibit size={18} weight="duotone" />
+                            Cancellation Request - {request.eventTitle}
+                          </CardTitle>
+                          <Badge variant="default">
+                            {request.status}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleApproveCancellation(request.id)}
+                          >
+                            <Check className="mr-1" size={16} weight="bold" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleOpenRejectionDialog(request, 'cancellation')}
+                          >
+                            <X className="mr-1" size={16} weight="bold" />
+                            Reject
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Event Date:</span> {request.eventDate}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Event Time:</span> {request.eventTime}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Justification:</span> {request.justification}
-                  </div>
-                  {request.reviewedAt && (
-                    <>
-                      <Separator />
-                      <div className="text-xs text-muted-foreground">
-                        Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Event Date:</span> {request.eventDate}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Event Time:</span> {request.eventTime}
+                        </div>
                       </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                      <div>
+                        <span className="text-muted-foreground">Justification:</span> {request.justification}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Resolved Cancellation Requests - Collapsible */}
+            {resolvedCancellations.length > 0 && (
+              <Collapsible open={showResolvedCancellations} onOpenChange={setShowResolvedCancellations}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+                    {showResolvedCancellations ? <CaretDown size={16} /> : <CaretRight size={16} />}
+                    <span>Resolved Requests ({resolvedCancellations.length})</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="grid gap-4">
+                    {resolvedCancellations.map((request) => (
+                      <Card key={request.id} className="opacity-70">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <Prohibit size={18} weight="duotone" />
+                                Cancellation Request - {request.eventTitle}
+                              </CardTitle>
+                              <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
+                                {request.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Event Date:</span> {request.eventDate}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Event Time:</span> {request.eventTime}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Justification:</span> {request.justification}
+                          </div>
+                          {request.reviewedAt && (
+                            <>
+                              <Separator />
+                              <div className="text-xs text-muted-foreground">
+                                Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
+                              </div>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         )}
       </div>
@@ -415,86 +485,154 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             No facility requests yet.
           </div>
         ) : (
-          <div className="grid gap-4">
-            {facilityRequests.map((request) => (
-              <Card key={request.id} className={request.status !== 'Pending' ? 'opacity-70' : ''}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <ClipboardText size={18} weight="duotone" />
-                        {request.eventType} Request
-                      </CardTitle>
-                      <Badge variant={
-                        request.status === 'Pending' ? 'default' :
-                        request.status === 'Approved' ? 'secondary' : 'destructive'
-                      }>
-                        {request.status}
-                      </Badge>
-                    </div>
-                    {request.status === 'Pending' && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleOpenApprovalDialog(request)}
-                        >
-                          <Check className="mr-1" size={16} weight="bold" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleOpenRejectionDialog(request, 'facility')}
-                        >
-                          <X className="mr-1" size={16} weight="bold" />
-                          Reject
-                        </Button>
+          <div className="space-y-4">
+            {/* Pending Facility Requests */}
+            {pendingFacility.length === 0 ? (
+              <div className="text-sm text-muted-foreground p-4 border rounded-lg">
+                No pending facility requests.
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {pendingFacility.map((request) => (
+                  <Card key={request.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <ClipboardText size={18} weight="duotone" />
+                            {request.eventType} Request
+                          </CardTitle>
+                          <Badge variant="default">
+                            {request.status}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleOpenApprovalDialog(request)}
+                          >
+                            <Check className="mr-1" size={16} weight="bold" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleOpenRejectionDialog(request, 'facility')}
+                          >
+                            <X className="mr-1" size={16} weight="bold" />
+                            Reject
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Date:</span> {request.date}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
-                    </div>
-                  </div>
-                  {request.teamIds && request.teamIds.length > 0 && (
-                    <div>
-                      <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
-                    </div>
-                  )}
-                  {request.purpose && (
-                    <div>
-                      <span className="text-muted-foreground">Purpose:</span> {request.purpose}
-                    </div>
-                  )}
-                  {request.description && (
-                    <div>
-                      <span className="text-muted-foreground">Details:</span> {request.description}
-                    </div>
-                  )}
-                  {request.reviewedAt && (
-                    <>
-                      <Separator />
-                      <div className="text-xs text-muted-foreground">
-                        Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Date:</span> {request.date}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
+                        </div>
                       </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                      {request.teamIds && request.teamIds.length > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
+                        </div>
+                      )}
+                      {request.purpose && (
+                        <div>
+                          <span className="text-muted-foreground">Purpose:</span> {request.purpose}
+                        </div>
+                      )}
+                      {request.description && (
+                        <div>
+                          <span className="text-muted-foreground">Details:</span> {request.description}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Resolved Facility Requests - Collapsible */}
+            {resolvedFacility.length > 0 && (
+              <Collapsible open={showResolvedFacility} onOpenChange={setShowResolvedFacility}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+                    {showResolvedFacility ? <CaretDown size={16} /> : <CaretRight size={16} />}
+                    <span>Resolved Requests ({resolvedFacility.length})</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="grid gap-4">
+                    {resolvedFacility.map((request) => (
+                      <Card key={request.id} className="opacity-70">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <ClipboardText size={18} weight="duotone" />
+                                {request.eventType} Request
+                              </CardTitle>
+                              <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
+                                {request.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Date:</span> {request.date}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
+                            </div>
+                          </div>
+                          {request.teamIds && request.teamIds.length > 0 && (
+                            <div>
+                              <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
+                            </div>
+                          )}
+                          {request.purpose && (
+                            <div>
+                              <span className="text-muted-foreground">Purpose:</span> {request.purpose}
+                            </div>
+                          )}
+                          {request.description && (
+                            <div>
+                              <span className="text-muted-foreground">Details:</span> {request.description}
+                            </div>
+                          )}
+                          {request.reviewedAt && (
+                            <>
+                              <Separator />
+                              <div className="text-xs text-muted-foreground">
+                                Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
+                              </div>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         )}
       </div>
@@ -506,74 +644,130 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             No equipment requests yet.
           </div>
         ) : (
-          <div className="grid gap-4">
-            {equipmentRequests.map((request) => (
-              <Card key={request.id} className={request.status !== 'Pending' ? 'opacity-70' : ''}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <ClipboardText size={18} weight="duotone" />
-                        Equipment Request
-                      </CardTitle>
-                      <Badge variant={
-                        request.status === 'Pending' ? 'default' :
-                        request.status === 'Approved' ? 'secondary' : 'destructive'
-                      }>
-                        {request.status}
-                      </Badge>
-                    </div>
-                    {request.status === 'Pending' && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleApproveEquipment(request.id)}
-                        >
-                          <Check className="mr-1" size={16} weight="bold" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleOpenRejectionDialog(request, 'equipment')}
-                        >
-                          <X className="mr-1" size={16} weight="bold" />
-                          Reject
-                        </Button>
+          <div className="space-y-4">
+            {/* Pending Equipment Requests */}
+            {pendingEquipment.length === 0 ? (
+              <div className="text-sm text-muted-foreground p-4 border rounded-lg">
+                No pending equipment requests.
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {pendingEquipment.map((request) => (
+                  <Card key={request.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <ClipboardText size={18} weight="duotone" />
+                            Equipment Request
+                          </CardTitle>
+                          <Badge variant="default">
+                            {request.status}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleApproveEquipment(request.id)}
+                          >
+                            <Check className="mr-1" size={16} weight="bold" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleOpenRejectionDialog(request, 'equipment')}
+                          >
+                            <X className="mr-1" size={16} weight="bold" />
+                            Reject
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Date Needed:</span> {request.date}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Equipment:</span> {request.equipmentDescription}
-                  </div>
-                  {request.reviewedAt && (
-                    <>
-                      <Separator />
-                      <div className="text-xs text-muted-foreground">
-                        Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Date Needed:</span> {request.date}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
+                        </div>
                       </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                      <div>
+                        <span className="text-muted-foreground">Equipment:</span> {request.equipmentDescription}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Resolved Equipment Requests - Collapsible */}
+            {resolvedEquipment.length > 0 && (
+              <Collapsible open={showResolvedEquipment} onOpenChange={setShowResolvedEquipment}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+                    {showResolvedEquipment ? <CaretDown size={16} /> : <CaretRight size={16} />}
+                    <span>Resolved Requests ({resolvedEquipment.length})</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="grid gap-4">
+                    {resolvedEquipment.map((request) => (
+                      <Card key={request.id} className="opacity-70">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <ClipboardText size={18} weight="duotone" />
+                                Equipment Request
+                              </CardTitle>
+                              <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
+                                {request.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Date Needed:</span> {request.date}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Equipment:</span> {request.equipmentDescription}
+                          </div>
+                          {request.reviewedAt && (
+                            <>
+                              <Separator />
+                              <div className="text-xs text-muted-foreground">
+                                Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
+                              </div>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         )}
       </div>
