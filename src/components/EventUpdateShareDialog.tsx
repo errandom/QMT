@@ -43,10 +43,13 @@ export default function EventUpdateShareDialog({
     ? teams.filter(t => event.teamIds?.includes(t.id))
     : []
 
-  // Get field and site info
-  const field = fields.find(f => f.id === event.fieldId)
-  const site = field ? sites.find(s => s.id === field.siteId) : null
-  const locationName = field && site ? `${site.name} - ${field.name}` : field?.name || site?.name || 'TBD'
+  // Get field and site info - support multiple fields
+  const eventFieldIds = event.fieldIds || []
+  const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
+  const primaryField = eventFields[0]
+  const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
+  const fieldNames = eventFields.map(f => f?.name).join(', ')
+  const locationName = site && fieldNames ? `${site.name} - ${fieldNames}` : fieldNames || site?.name || 'TBD'
 
   // Calculate changes
   const changes: EventChange[] = []
@@ -72,10 +75,13 @@ export default function EventUpdateShareDialog({
       })
     }
     
-    // Location change
-    const origField = fields.find(f => f.id === originalEvent.fieldId)
-    const origSite = origField ? sites.find(s => s.id === origField.siteId) : null
-    const origLocation = origField && origSite ? `${origSite.name} - ${origField.name}` : origField?.name || origSite?.name || 'TBD'
+    // Location change - support multiple fields
+    const origFieldIds = originalEvent.fieldIds || []
+    const origFields = origFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
+    const origPrimaryField = origFields[0]
+    const origSite = origPrimaryField ? sites.find(s => s.id === origPrimaryField.siteId) : null
+    const origFieldNames = origFields.map(f => f?.name).join(', ')
+    const origLocation = origSite && origFieldNames ? `${origSite.name} - ${origFieldNames}` : origFieldNames || origSite?.name || 'TBD'
     
     if (origLocation !== locationName) {
       changes.push({
