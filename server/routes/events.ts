@@ -9,15 +9,11 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const pool = await getPool();
+    // Get events with field_ids support - we'll join field info separately
     const result = await pool.request().query(`
       SELECT 
-        e.*,
-        f.name as field_name,
-        s.name as site_name,
-        s.address as site_address
+        e.*
       FROM events e
-      LEFT JOIN fields f ON e.field_id = f.id
-      LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
     `);
     console.log('[Events GET] Retrieved', result.recordset.length, 'events')
@@ -36,13 +32,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       .input('id', sql.Int, req.params.id)
       .query(`
         SELECT 
-          e.*,
-          f.name as field_name,
-          s.name as site_name,
-          s.address as site_address
+          e.*
         FROM events e
-        LEFT JOIN fields f ON e.field_id = f.id
-        LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
       `);
     
@@ -258,9 +249,12 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
               const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
               const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
               
+              // Convert fieldId or fieldIds to field_ids string
+              const eventFieldIds = event.fieldIds ? event.fieldIds.join(',') : (event.fieldId ? String(event.fieldId) : null);
+              
               const insertResult = await pool.request()
                 .input('team_ids', sql.NVarChar, (event.teamIds || []).join(','))
-                .input('field_id', sql.Int, event.fieldId || null)
+                .input('field_ids', sql.NVarChar, eventFieldIds)
                 .input('event_type', sql.NVarChar, event.eventType || 'Other')
                 .input('start_time', sql.DateTime, startDateTime)
                 .input('end_time', sql.DateTime, endDateTime)
@@ -269,9 +263,9 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
                 .input('status', sql.NVarChar, 'Scheduled')
                 .input('other_participants', sql.NVarChar, event.otherParticipants || null)
                 .query(`
-                  INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+                  INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, other_participants)
                   OUTPUT INSERTED.*
-                  VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+                  VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
                 `);
               
               createdEvents.push(insertResult.recordset[0]);
@@ -284,9 +278,12 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
           const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
           const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
           
+          // Convert fieldId or fieldIds to field_ids string
+          const eventFieldIds = event.fieldIds ? event.fieldIds.join(',') : (event.fieldId ? String(event.fieldId) : null);
+          
           const insertResult = await pool.request()
             .input('team_ids', sql.NVarChar, (event.teamIds || []).join(','))
-            .input('field_id', sql.Int, event.fieldId || null)
+            .input('field_ids', sql.NVarChar, eventFieldIds)
             .input('event_type', sql.NVarChar, event.eventType || 'Other')
             .input('start_time', sql.DateTime, startDateTime)
             .input('end_time', sql.DateTime, endDateTime)
@@ -295,9 +292,9 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
             .input('status', sql.NVarChar, 'Scheduled')
             .input('other_participants', sql.NVarChar, event.otherParticipants || null)
             .query(`
-              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+              INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, other_participants)
               OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+              VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
             `);
           
           createdEvents.push(insertResult.recordset[0]);
@@ -430,9 +427,12 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
             const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
             const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
             
+            // Convert fieldId or fieldIds to field_ids string
+            const eventFieldIds = (event as any).fieldIds ? (event as any).fieldIds.join(',') : (event.fieldId ? String(event.fieldId) : null);
+            
             const insertResult = await pool.request()
               .input('team_ids', sql.NVarChar, event.teamIds.join(','))
-              .input('field_id', sql.Int, event.fieldId || null)
+              .input('field_ids', sql.NVarChar, eventFieldIds)
               .input('event_type', sql.NVarChar, event.eventType)
               .input('start_time', sql.DateTime, startDateTime)
               .input('end_time', sql.DateTime, endDateTime)
@@ -441,9 +441,9 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
               .input('status', sql.NVarChar, 'Scheduled')
               .input('other_participants', sql.NVarChar, event.otherParticipants || null)
               .query(`
-                INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+                INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, other_participants)
                 OUTPUT INSERTED.*
-                VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+                VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
               `);
             
             createdEvents.push(insertResult.recordset[0]);
@@ -456,9 +456,12 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
         const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
         const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
         
+        // Convert fieldId or fieldIds to field_ids string
+        const eventFieldIds = (event as any).fieldIds ? (event as any).fieldIds.join(',') : (event.fieldId ? String(event.fieldId) : null);
+        
         const insertResult = await pool.request()
           .input('team_ids', sql.NVarChar, event.teamIds.join(','))
-          .input('field_id', sql.Int, event.fieldId || null)
+          .input('field_ids', sql.NVarChar, eventFieldIds)
           .input('event_type', sql.NVarChar, event.eventType)
           .input('start_time', sql.DateTime, startDateTime)
           .input('end_time', sql.DateTime, endDateTime)
@@ -467,9 +470,9 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
           .input('status', sql.NVarChar, 'Scheduled')
           .input('other_participants', sql.NVarChar, event.otherParticipants || null)
           .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
+            INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, other_participants)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
+            VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
           `);
         
         createdEvents.push(insertResult.recordset[0]);
@@ -494,15 +497,19 @@ router.post('/create-from-natural-language', async (req: Request, res: Response)
 // POST create new event
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance } = req.body;
+    const { team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
     
     // Handle team_ids as comma-separated string (already comes as string from frontend)
     const teamIdsStr = team_ids || null;
+    
+    // Handle field_ids - prefer field_ids over field_id for multiple field support
+    const fieldIdsStr = field_ids || (field_id ? String(field_id) : null);
     
     // Handle recurring_days - it comes as string from frontend already
     const recurringDaysStr = recurring_days || null;
     
     console.log('[Events POST] ===== INCOMING REQUEST =====');
+    console.log('[Events POST] field_ids:', field_ids, 'field_id:', field_id, '-> fieldIdsStr:', fieldIdsStr);
     console.log('[Events POST] recurring_days:', recurring_days, 'type:', typeof recurring_days);
     console.log('[Events POST] recurring_end_date:', recurring_end_date, 'type:', typeof recurring_end_date);
     console.log('[Events POST] Full request body:', req.body);
@@ -599,7 +606,7 @@ router.post('/', async (req: Request, res: Response) => {
         
         const result = await pool.request()
           .input('team_ids', sql.NVarChar, teamIdsStr)
-          .input('field_id', sql.Int, field_id)
+          .input('field_ids', sql.NVarChar, fieldIdsStr)
           .input('event_type', sql.NVarChar, event_type)
           .input('start_time', sql.DateTime, eventStart)
           .input('end_time', sql.DateTime, eventEnd)
@@ -610,10 +617,15 @@ router.post('/', async (req: Request, res: Response) => {
           .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
           .input('other_participants', sql.NVarChar, other_participants || null)
           .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .input('game_location', sql.NVarChar, game_location || null)
+          .input('away_street', sql.NVarChar, away_street || null)
+          .input('away_zip', sql.NVarChar, away_zip || null)
+          .input('away_city', sql.NVarChar, away_city || null)
+          .input('transport_requested', sql.Bit, transport_requested || false)
           .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+            VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
           `);
         
         createdEvents.push(result.recordset[0]);
@@ -629,18 +641,12 @@ router.post('/', async (req: Request, res: Response) => {
         });
       }
       
-      // Fetch all created events with joins
+      // Fetch all created events
       const eventIds = createdEvents.map(e => e.id);
       const eventsWithDetails = await pool.request()
         .query(`
-          SELECT 
-            e.*,
-            f.name as field_name,
-            s.name as site_name,
-            s.address as site_address
+          SELECT e.*
           FROM events e
-          LEFT JOIN fields f ON e.field_id = f.id
-          LEFT JOIN sites s ON f.site_id = s.id
           WHERE e.id IN (${eventIds.join(',')})
         `);
       
@@ -675,7 +681,7 @@ router.post('/', async (req: Request, res: Response) => {
       // Single event (non-recurring)
       const result = await pool.request()
         .input('team_ids', sql.NVarChar, teamIdsStr)
-        .input('field_id', sql.Int, field_id)
+        .input('field_ids', sql.NVarChar, fieldIdsStr)
         .input('event_type', sql.NVarChar, event_type)
         .input('start_time', sql.DateTime, start_time)
         .input('end_time', sql.DateTime, end_time)
@@ -686,26 +692,25 @@ router.post('/', async (req: Request, res: Response) => {
         .input('recurring_end_date', sql.Date, recurring_end_date || null)
         .input('other_participants', sql.NVarChar, other_participants || null)
         .input('estimated_attendance', sql.Int, estimated_attendance || null)
+        .input('game_location', sql.NVarChar, game_location || null)
+        .input('away_street', sql.NVarChar, away_street || null)
+        .input('away_zip', sql.NVarChar, away_zip || null)
+        .input('away_city', sql.NVarChar, away_city || null)
+        .input('transport_requested', sql.Bit, transport_requested || false)
         .query(`
-          INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+          INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
           OUTPUT INSERTED.*
-          VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+          VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
         `);
       
-      console.log('[Events POST] Created event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
+      console.log('[Events POST] Created event with team_ids:', teamIdsStr, 'field_ids:', fieldIdsStr);
       
-      // Fetch the created event with joins to return complete data
+      // Fetch the created event
       const createdEvent = await pool.request()
         .input('id', sql.Int, result.recordset[0].id)
         .query(`
-          SELECT 
-            e.*,
-            f.name as field_name,
-            s.name as site_name,
-            s.address as site_address
+          SELECT e.*
           FROM events e
-          LEFT JOIN fields f ON e.field_id = f.id
-          LEFT JOIN sites s ON f.site_id = s.id
           WHERE e.id = @id
         `);
       
@@ -721,17 +726,20 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT update event
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance } = req.body;
+    const { team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
     
     console.log('[Events PUT] Request body:', req.body);
     
     // Handle team_ids as comma-separated string (already comes as string from frontend)
     const teamIdsStr = team_ids || null;
     
+    // Handle field_ids - prefer field_ids over field_id for multiple field support
+    const fieldIdsStr = field_ids || (field_id ? String(field_id) : null);
+    
     // Handle recurring_days - it comes as string from frontend already
     const recurringDaysStr = recurring_days || null;
     
-    console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr, 'generate_recurring:', generate_recurring);
+    console.log('[Events PUT] Processed - team_ids:', teamIdsStr, 'field_ids:', fieldIdsStr, 'notes:', notes, 'recurring_days:', recurringDaysStr, 'generate_recurring:', generate_recurring);
     console.log('[Events PUT] Condition check:', {
       generate_recurring,
       generate_recurring_type: typeof generate_recurring,
@@ -840,7 +848,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         
         const result = await pool.request()
           .input('team_ids', sql.NVarChar, teamIdsStr)
-          .input('field_id', sql.Int, field_id)
+          .input('field_ids', sql.NVarChar, fieldIdsStr)
           .input('event_type', sql.NVarChar, event_type)
           .input('start_time', sql.DateTime, eventStart)
           .input('end_time', sql.DateTime, eventEnd)
@@ -851,10 +859,15 @@ router.put('/:id', async (req: Request, res: Response) => {
           .input('recurring_end_date', sql.Date, null)  // Set to null for individual events
           .input('other_participants', sql.NVarChar, other_participants || null)
           .input('estimated_attendance', sql.Int, estimated_attendance || null)
+          .input('game_location', sql.NVarChar, game_location || null)
+          .input('away_street', sql.NVarChar, away_street || null)
+          .input('away_zip', sql.NVarChar, away_zip || null)
+          .input('away_city', sql.NVarChar, away_city || null)
+          .input('transport_requested', sql.Bit, transport_requested || false)
           .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
+            INSERT INTO events (team_ids, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
             OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
+            VALUES (@team_ids, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
           `);
         
         createdEvents.push(result.recordset[0]);
@@ -870,18 +883,12 @@ router.put('/:id', async (req: Request, res: Response) => {
         });
       }
       
-      // Fetch all created events with joins
+      // Fetch all created events
       const eventIds = createdEvents.map(e => e.id);
       const eventsWithDetails = await pool.request()
         .query(`
-          SELECT 
-            e.*,
-            f.name as field_name,
-            s.name as site_name,
-            s.address as site_address
+          SELECT e.*
           FROM events e
-          LEFT JOIN fields f ON e.field_id = f.id
-          LEFT JOIN sites s ON f.site_id = s.id
           WHERE e.id IN (${eventIds.join(',')})
         `);
       
@@ -918,7 +925,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       const result = await pool.request()
         .input('id', sql.Int, req.params.id)
         .input('team_ids', sql.NVarChar, teamIdsStr)
-        .input('field_id', sql.Int, field_id)
+        .input('field_ids', sql.NVarChar, fieldIdsStr)
         .input('event_type', sql.NVarChar, event_type)
         .input('start_time', sql.DateTime, start_time)
         .input('end_time', sql.DateTime, end_time)
@@ -929,10 +936,15 @@ router.put('/:id', async (req: Request, res: Response) => {
         .input('recurring_end_date', sql.Date, recurring_end_date || null)
         .input('other_participants', sql.NVarChar, other_participants || null)
         .input('estimated_attendance', sql.Int, estimated_attendance || null)
+        .input('game_location', sql.NVarChar, game_location || null)
+        .input('away_street', sql.NVarChar, away_street || null)
+        .input('away_zip', sql.NVarChar, away_zip || null)
+        .input('away_city', sql.NVarChar, away_city || null)
+        .input('transport_requested', sql.Bit, transport_requested || false)
         .query(`
         UPDATE events 
         SET team_ids = @team_ids,
-            field_id = @field_id,
+            field_ids = @field_ids,
             event_type = @event_type,
             start_time = @start_time,
             end_time = @end_time,
@@ -942,29 +954,28 @@ router.put('/:id', async (req: Request, res: Response) => {
             recurring_days = @recurring_days,
             recurring_end_date = @recurring_end_date,
             other_participants = @other_participants,
-            estimated_attendance = @estimated_attendance
+            estimated_attendance = @estimated_attendance,
+            game_location = @game_location,
+            away_street = @away_street,
+            away_zip = @away_zip,
+            away_city = @away_city,
+            transport_requested = @transport_requested
         OUTPUT INSERTED.*
         WHERE id = @id
       `);
     
-      console.log('[Events PUT] Updated event with team_ids:', teamIdsStr, 'recurring_days:', recurringDaysStr);
+      console.log('[Events PUT] Updated event with team_ids:', teamIdsStr, 'field_ids:', fieldIdsStr);
       
       if (result.recordset.length === 0) {
         return res.status(404).json({ error: 'Event not found' });
       }
       
-      // Fetch the updated event with joins to return complete data
+      // Fetch the updated event
       const updatedEvent = await pool.request()
         .input('id', sql.Int, req.params.id)
         .query(`
-          SELECT 
-            e.*,
-            f.name as field_name,
-            s.name as site_name,
-            s.address as site_address
+          SELECT e.*
           FROM events e
-          LEFT JOIN fields f ON e.field_id = f.id
-          LEFT JOIN sites s ON f.site_id = s.id
           WHERE e.id = @id
         `);
       
