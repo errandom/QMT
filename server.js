@@ -3276,6 +3276,7 @@ app.post('/api/spond/sync', verifyToken, requireAdminOrMgmt, async (req, res) =>
               .input('name', sql.NVarChar, spondEvent.heading || 'Spond Event')
               .input('description', sql.NVarChar, spondEvent.description || '')
               .input('team_id', sql.Int, team.id)
+              .input('team_ids', sql.NVarChar, String(team.id))
               .input('start_time', sql.DateTime, new Date(spondEvent.startTimestamp))
               .input('end_time', sql.DateTime, new Date(spondEvent.endTimestamp))
               .input('event_type', sql.NVarChar, spondEvent.type === 'MATCH' ? 'Game' : 'Practice')
@@ -3293,10 +3294,11 @@ app.post('/api/spond/sync', verifyToken, requireAdminOrMgmt, async (req, res) =>
                     end_time = @end_time,
                     event_type = @event_type,
                     status = @status,
+                    team_ids = COALESCE(@team_ids, target.team_ids),
                     updated_at = GETDATE()
                 WHEN NOT MATCHED THEN
-                  INSERT (spond_id, name, description, team_id, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
-                  VALUES (@spond_id, @name, @description, @team_id, @start_time, @end_time, @event_type, @status, @spond_group_id, GETDATE(), GETDATE());
+                  INSERT (spond_id, name, description, team_id, team_ids, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
+                  VALUES (@spond_id, @name, @description, @team_id, @team_ids, @start_time, @end_time, @event_type, @status, @spond_group_id, GETDATE(), GETDATE());
               `);
           }
         } catch (err) {
@@ -4212,7 +4214,23 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
     
     // Get all active sync settings
     const settingsResult = await pool.request().query(`
-      SELECT ss.*, t.id as team_id, t.name as team_name
+      SELECT 
+        ss.id as settings_id,
+        ss.spond_group_id,
+        ss.spond_group_name,
+        ss.spond_parent_group_id,
+        ss.is_subgroup,
+        ss.sync_events_import,
+        ss.sync_events_export,
+        ss.sync_attendance_import,
+        ss.sync_event_title,
+        ss.sync_event_description,
+        ss.sync_event_time,
+        ss.sync_event_location,
+        ss.sync_event_type,
+        ss.is_active,
+        t.id as team_id,
+        t.name as team_name
       FROM spond_sync_settings ss
       JOIN teams t ON ss.team_id = t.id
       WHERE ss.is_active = 1
@@ -4455,6 +4473,7 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
               .input('name', sql.NVarChar, settings.sync_event_title ? (spondEvent.heading || 'Spond Event') : null)
               .input('description', sql.NVarChar, settings.sync_event_description ? (spondEvent.description || '') : null)
               .input('team_id', sql.Int, settings.team_id)
+              .input('team_ids', sql.NVarChar, String(settings.team_id))
               .input('start_time', sql.DateTime, startTime)
               .input('end_time', sql.DateTime, endTime)
               .input('event_type', sql.NVarChar, settings.sync_event_type ? (spondEvent.type === 'MATCH' ? 'Game' : 'Practice') : null)
@@ -4472,10 +4491,11 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
                     end_time = COALESCE(@end_time, target.end_time),
                     event_type = COALESCE(@event_type, target.event_type),
                     status = @status,
+                    team_ids = COALESCE(@team_ids, target.team_ids),
                     updated_at = GETDATE()
                 WHEN NOT MATCHED THEN
-                  INSERT (spond_id, name, description, team_id, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
-                  VALUES (@spond_id, COALESCE(@name, 'Spond Event'), @description, @team_id, @start_time, @end_time, COALESCE(@event_type, 'Practice'), @status, @spond_group_id, GETDATE(), GETDATE());
+                  INSERT (spond_id, name, description, team_id, team_ids, start_time, end_time, event_type, status, spond_group_id, created_at, updated_at)
+                  VALUES (@spond_id, COALESCE(@name, 'Spond Event'), @description, @team_id, @team_ids, @start_time, @end_time, COALESCE(@event_type, 'Practice'), @status, @spond_group_id, GETDATE(), GETDATE());
               `);
             results.imported++;
           }
