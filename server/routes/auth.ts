@@ -6,6 +6,46 @@ import { generateToken, authenticateToken, AuthRequest } from '../middleware/aut
 
 const router = Router();
 
+// Helper function to get client IP address
+function getClientIp(req: Request): string {
+  // Check for forwarded IP (when behind proxy/load balancer)
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const forwardedIp = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+    return forwardedIp.trim();
+  }
+  // Check for real IP header (nginx)
+  const realIp = req.headers['x-real-ip'];
+  if (realIp) {
+    return Array.isArray(realIp) ? realIp[0] : realIp;
+  }
+  // Fall back to connection remote address
+  return req.socket?.remoteAddress || req.ip || 'unknown';
+}
+
+// Helper function to record login
+async function recordLogin(pool: sql.ConnectionPool, userId: number, username: string, req: Request): Promise<void> {
+  try {
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    await pool.request()
+      .input('user_id', sql.Int, userId)
+      .input('username', sql.NVarChar, username)
+      .input('ip_address', sql.NVarChar, ipAddress)
+      .input('user_agent', sql.NVarChar, userAgent.substring(0, 500)) // Truncate to fit column
+      .query(`
+        INSERT INTO user_logins (user_id, username, ip_address, user_agent, login_time)
+        VALUES (@user_id, @username, @ip_address, @user_agent, GETDATE())
+      `);
+    
+    console.log(`[AUTH] Login recorded for user ${username} from IP ${ipAddress}`);
+  } catch (error) {
+    // Log but don't fail the login if recording fails
+    console.error('[AUTH] Failed to record login:', error);
+  }
+}
+
 // POST /api/auth/login - Login endpoint
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -39,6 +79,9 @@ router.post('/login', async (req: Request, res: Response) => {
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    // Record the successful login with IP and timestamp
+    await recordLogin(pool, user.id, user.username, req);
 
     // Generate token
     const token = generateToken({
@@ -83,6 +126,74 @@ router.get('/users', authenticateToken, async (req: AuthRequest, res: Response) 
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// GET /api/auth/logins - Get login history (admin only)
+router.get('/logins', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    // Only admins can view login history
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin privileges required' });
+    }
+
+    const pool = await getPool();
+    const limit = parseInt(req.query.limit as string) || 100;
+    const userId = req.query.userId ? parseInt(req.query.userId as string) : null;
+
+    let query = `
+      SELECT TOP (@limit) 
+        ul.id, ul.user_id, ul.username, ul.ip_address, ul.user_agent, ul.login_time,
+        u.full_name, u.email
+      FROM user_logins ul
+      LEFT JOIN users u ON ul.user_id = u.id
+    `;
+    
+    if (userId) {
+      query += ` WHERE ul.user_id = @userId`;
+    }
+    
+    query += ` ORDER BY ul.login_time DESC`;
+
+    const request = pool.request().input('limit', sql.Int, limit);
+    if (userId) {
+      request.input('userId', sql.Int, userId);
+    }
+
+    const result = await request.query(query);
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('Error fetching login history:', error);
+    res.status(500).json({ error: 'Failed to fetch login history' });
+  }
+});
+
+// GET /api/auth/logins/:userId - Get login history for specific user (admin only)
+router.get('/logins/:userId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    // Only admins can view login history
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin privileges required' });
+    }
+
+    const pool = await getPool();
+    const userId = parseInt(req.params.userId);
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    const result = await pool.request()
+      .input('userId', sql.Int, userId)
+      .input('limit', sql.Int, limit)
+      .query(`
+        SELECT TOP (@limit) id, user_id, username, ip_address, user_agent, login_time
+        FROM user_logins
+        WHERE user_id = @userId
+        ORDER BY login_time DESC
+      `);
+
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('Error fetching user login history:', error);
+    res.status(500).json({ error: 'Failed to fetch login history' });
   }
 });
 
