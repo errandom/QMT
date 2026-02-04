@@ -28,9 +28,13 @@ function formatEventMessage(
     .map(id => teams.find(t => t.id === id)?.name || 'Unknown')
     .join(', ')
 
-  const field = fields.find(f => f.id === event.fieldId)
-  const site = field ? sites.find(s => s.id === field.siteId) : null
-  const location = site ? `${site.name} - ${field?.name}` : 'TBD'
+  // Support multiple fields
+  const eventFieldIds = event.fieldIds || []
+  const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
+  const primaryField = eventFields[0]
+  const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
+  const fieldNames = eventFields.map(f => f?.name).join(', ')
+  const location = site && fieldNames ? `${site.name} - ${fieldNames}` : fieldNames || 'TBD'
 
   const date = new Date(event.date).toLocaleDateString('en-US', {
     weekday: 'short',
