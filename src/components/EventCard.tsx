@@ -64,8 +64,11 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const [weather, setWeather] = useState<WeatherForecast | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
   
-  const field = fields.find(f => f.id === event.fieldId)
-  const site = field ? sites.find(s => s.id === field.siteId) : undefined
+  // Support multiple fields - get first field for weather/location display
+  const eventFieldIds = event.fieldIds || (event.fieldId ? [event.fieldId] : [])
+  const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
+  const primaryField = eventFields[0]
+  const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : undefined
   const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
   
   const eventDate = new Date(event.date + ' ' + event.startTime)
@@ -77,6 +80,14 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
   const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 72
 
+  // Build field names string for display
+  const fieldNamesDisplay = eventFields.length > 0 
+    ? eventFields.map(f => f?.name).join(', ')
+    : 'TBD'
+  const locationDisplay = site 
+    ? `${site.name} - ${fieldNamesDisplay}` 
+    : fieldNamesDisplay
+
   // Build cancellation notification email
   const handleNotifyCancellation = () => {
     const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
@@ -86,7 +97,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       year: 'numeric' 
     })
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    const locationName = field && site ? `${site.name} - ${field.name}` : field?.name || site?.name || 'TBD'
+    const locationName = locationDisplay
 
     // Collect TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
@@ -267,7 +278,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                   <div className="font-semibold">
                     {event.eventType === 'Meeting' || event.eventType === 'Other' 
                       ? site.name 
-                      : `${site.name} - ${field.name}`}
+                      : locationDisplay}
                   </div>
                   <div className="text-sm" style={{ color: '#6b7280' }}>
                     {site.address}, {site.zipCode} {site.city}
@@ -320,10 +331,10 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                     <Buildings size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                     Meeting Room
                   </span>
-                ) : (
+                ) : primaryField ? (
                   <>
                     <span className="flex items-center gap-1">
-                      {field.turfType === 'Artificial Turf' ? (
+                      {primaryField.turfType === 'Artificial Turf' ? (
                         <div className="relative inline-flex items-center justify-center" style={{ width: '16px', height: '16px' }}>
                           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
@@ -336,32 +347,35 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                           <path d="M8 2 L8 6 M6 3.5 L7 5.5 M10 3.5 L9 5.5 M5 6 L6.5 7.5 M11 6 L9.5 7.5 M8 8 L8 13 M4 10 L5.5 11.5 M12 10 L10.5 11.5" strokeLinecap="round" />
                         </svg>
                       )}
-                      {field.turfType}
+                      {primaryField.turfType}
                     </span>
-                    {field.hasLights && (
+                    {primaryField.hasLights && (
                       <span className="flex items-center gap-1">
                         <Lightbulb size={SIZES.ICON_SIZE_SMALL} weight="duotone" />
                         Lights
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      {field.fieldSize === 'Full' ? (
+                      {primaryField.fieldSize === 'Full' ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="2" y="3" width="12" height="10" />
                         </svg>
-                      ) : field.fieldSize === 'Shared' ? (
+                      ) : primaryField.fieldSize === 'Shared' ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="2" y="3" width="12" height="10" />
                           <rect x="2" y="3" width="6" height="10" fill="currentColor" opacity="0.3" />
                         </svg>
                       ) : (
-                        <span>{field.fieldSize}</span>
+                        <span>{primaryField.fieldSize}</span>
                       )}
-                      {field.fieldSize} Field
+                      {primaryField.fieldSize} Field
                     </span>
-                    {field.capacity && <span>Capacity: {field.capacity}</span>}
+                    {primaryField.capacity && <span>Capacity: {primaryField.capacity}</span>}
+                    {eventFields.length > 1 && (
+                      <span className="text-muted-foreground">+{eventFields.length - 1} more field(s)</span>
+                    )}
                   </>
-                )}
+                ) : null}
               </div>
             </div>
           </>
