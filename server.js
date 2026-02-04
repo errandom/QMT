@@ -4322,12 +4322,14 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
       console.log('[Spond] Export diagnostic:', results.exportDiagnostic);
       
       for (const event of eligibleEvents) {
+        let normalizedGroupId = null;
+        let normalizedSubgroupId = null;
         try {
           const heading = event.name || event.description?.substring(0, 100) || `${event.event_type || 'Event'} - ${event.team_name}`;
           
           // Normalize UUIDs to standard format (with hyphens)
-          const normalizedGroupId = normalizeSpondUUID(event.spond_group_id);
-          const normalizedSubgroupId = event.spond_subgroup_id ? normalizeSpondUUID(event.spond_subgroup_id) : null;
+          normalizedGroupId = normalizeSpondUUID(event.spond_group_id);
+          normalizedSubgroupId = event.spond_subgroup_id ? normalizeSpondUUID(event.spond_subgroup_id) : null;
           
           // VERBOSE LOGGING: Show exactly what we're sending to Spond
           console.log(`[Spond] ========== EXPORTING EVENT ${event.id} ==========`);
@@ -4492,7 +4494,7 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             .input('max_date', sql.DateTime, maxDate)
             .query(`
               SELECT id, spond_id FROM events 
-              WHERE team_id = @team_id 
+              WHERE CHARINDEX(',' + CAST(@team_id AS VARCHAR) + ',', ',' + ISNULL(team_ids, '') + ',') > 0
               AND spond_id IS NOT NULL
               AND start_time >= @min_date AND start_time <= @max_date
             `);
@@ -4549,10 +4551,10 @@ app.post('/api/spond/sync-with-settings', verifyToken, requireAdminOrMgmt, async
             .query(`
               SELECT id, name, description, event_type, start_time, end_time, status
               FROM events 
-              WHERE team_id = @team_id 
+              WHERE CHARINDEX(',' + CAST(@team_id AS VARCHAR) + ',', ',' + ISNULL(team_ids, '') + ',') > 0
               AND spond_id IS NULL
               AND start_time >= @min_date AND start_time <= @max_date
-              AND status != 'Cancelled'
+              AND (status IS NULL OR status != 'Cancelled')
             `);
           
           console.log(`[Spond] Found ${eventsToExport.recordset.length} events to export for team ${settings.team_name}`);
