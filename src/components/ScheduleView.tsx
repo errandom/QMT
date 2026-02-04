@@ -35,12 +35,26 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   // Show all events - both recurring and one-time events
   const displayEvents = allEvents
 
+  // Helper to get field IDs for an event (supports both fieldIds array and legacy fieldId)
+  const getEventFieldIds = (event: any): string[] => {
+    if (event.fieldIds && event.fieldIds.length > 0) {
+      return event.fieldIds
+    }
+    if (event.fieldId) {
+      return [event.fieldId]
+    }
+    return []
+  }
+
   // Filter sites to only show those with events, sorted by event count (most events first)
   const activeSites = sites
     .map(site => {
       const siteFields = fields.filter(f => f.siteId === site.id)
       const siteFieldIds = siteFields.map(f => f.id)
-      const eventCount = displayEvents.filter(e => siteFieldIds.includes(e.fieldId)).length
+      const eventCount = displayEvents.filter(e => {
+        const eventFieldIds = getEventFieldIds(e)
+        return eventFieldIds.some(fid => siteFieldIds.includes(fid))
+      }).length
       return { site, eventCount }
     })
     .filter(({ eventCount }) => eventCount > 0)
@@ -72,14 +86,18 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
   const getEventsForSiteFieldDay = (siteId: string, fieldId: string, dayIndex: number) => {
     return displayEvents.filter(event => {
+      const eventFieldIds = getEventFieldIds(event)
+      // Check if this field is one of the event's fields
+      if (!eventFieldIds.includes(fieldId)) return false
+      
       // For recurring events, check if the day matches
       if (event.isRecurring && event.recurringDays) {
-        return event.fieldId === fieldId && event.recurringDays.includes(dayIndex)
+        return event.recurringDays.includes(dayIndex)
       }
       // For one-time events, check if the event's date falls on this day of the week
       const eventDate = new Date(event.date)
       const eventDayOfWeek = eventDate.getDay() === 0 ? 7 : eventDate.getDay() // Sunday = 7
-      return event.fieldId === fieldId && eventDayOfWeek === dayIndex
+      return eventDayOfWeek === dayIndex
     })
   }
 
@@ -175,7 +193,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
                   {siteFields.map(field => {
                     // Check if this field is used by Meeting/Other events
-                    const fieldEvents = displayEvents.filter(e => e.fieldId === field.id)
+                    const fieldEvents = displayEvents.filter(e => getEventFieldIds(e).includes(field.id))
                     const isMeetingLocation = fieldEvents.length > 0 && fieldEvents.every(e => e.eventType === 'Meeting' || e.eventType === 'Other')
                     
                     return (
