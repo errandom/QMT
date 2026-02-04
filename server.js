@@ -661,7 +661,11 @@ app.get('/api/events', async (_req, res) => {
         s.name as site_name,
         s.address as site_address
       FROM events e
-      LEFT JOIN fields f ON e.field_id = f.id
+      OUTER APPLY (
+        SELECT TOP 1 f.id, f.name, f.site_id
+        FROM fields f
+        WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+      ) f
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
     `);
@@ -690,7 +694,11 @@ app.get('/api/events/:id', async (req, res) => {
           s.name as site_name,
           s.address as site_address
         FROM events e
-        LEFT JOIN fields f ON e.field_id = f.id
+        OUTER APPLY (
+          SELECT TOP 1 f.id, f.name, f.site_id
+          FROM fields f
+          WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        ) f
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
       `);
@@ -933,7 +941,11 @@ app.post('/api/events', async (req, res) => {
               s.name as site_name,
               s.address as site_address
             FROM events e
-            LEFT JOIN fields f ON e.field_id = f.id
+            OUTER APPLY (
+              SELECT TOP 1 f.id, f.name, f.site_id
+              FROM fields f
+              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+            ) f
             LEFT JOIN sites s ON f.site_id = s.id
             WHERE e.id IN (${eventIds.join(',')})
           `);
@@ -1060,7 +1072,11 @@ app.post('/api/events', async (req, res) => {
             s.name as site_name,
             s.address as site_address
           FROM events e
-          LEFT JOIN fields f ON e.field_id = f.id
+          OUTER APPLY (
+              SELECT TOP 1 f.id, f.name, f.site_id
+              FROM fields f
+              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+            ) f
           LEFT JOIN sites s ON f.site_id = s.id
           WHERE e.id = @id
         `);
@@ -1262,7 +1278,11 @@ app.put('/api/events/:id', async (req, res) => {
               s.name as site_name,
               s.address as site_address
             FROM events e
-            LEFT JOIN fields f ON e.field_id = f.id
+            OUTER APPLY (
+              SELECT TOP 1 f.id, f.name, f.site_id
+              FROM fields f
+              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+            ) f
             LEFT JOIN sites s ON f.site_id = s.id
             WHERE e.id IN (${eventIds.join(',')})
           `);
@@ -1409,7 +1429,11 @@ app.put('/api/events/:id', async (req, res) => {
             s.name as site_name,
             s.address as site_address
           FROM events e
-          LEFT JOIN fields f ON e.field_id = f.id
+          OUTER APPLY (
+              SELECT TOP 1 f.id, f.name, f.site_id
+              FROM fields f
+              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+            ) f
           LEFT JOIN sites s ON f.site_id = s.id
           WHERE e.id = @id
         `);
@@ -1446,7 +1470,11 @@ app.post('/api/events/:id/transport-request', async (req, res) => {
       .query(`
         SELECT e.*, f.name as field_name, s.name as site_name
         FROM events e
-        LEFT JOIN fields f ON e.field_id = f.id
+        OUTER APPLY (
+              SELECT TOP 1 f.id, f.name, f.site_id
+              FROM fields f
+              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+            ) f
         LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.id = @id
       `);
