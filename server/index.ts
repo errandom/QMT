@@ -154,7 +154,11 @@ app.get('/api/events', async (req: Request, res: Response, next: NextFunction) =
         s.name as site_name,
         s.address as site_address
       FROM events e
-      LEFT JOIN fields f ON e.field_id = f.id
+      OUTER APPLY (
+        SELECT TOP 1 f.id, f.name, f.site_id
+        FROM fields f
+        WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+      ) f
       LEFT JOIN sites s ON f.site_id = s.id
       ORDER BY e.start_time DESC
     `);
@@ -227,7 +231,11 @@ app.get('/api/events/:id', async (req: Request, res: Response, next: NextFunctio
         s.name as site_name,
         s.address as site_address
       FROM events e
-      LEFT JOIN fields f ON e.field_id = f.id
+      OUTER APPLY (
+        SELECT TOP 1 f.id, f.name, f.site_id
+        FROM fields f
+        WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+      ) f
       LEFT JOIN sites s ON f.site_id = s.id
       WHERE e.id = @id
     `);
