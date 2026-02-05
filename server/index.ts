@@ -72,6 +72,7 @@ app.get('/api/health', async (req: Request, res: Response) => {
 });
 
 // Warm-up endpoint - call this to pre-warm the database connection
+// This endpoint does a deeper warmup by touching multiple tables
 app.get('/api/warmup', async (req: Request, res: Response) => {
   const startTime = Date.now();
   console.log('[Warmup] Starting database warm-up...');
@@ -81,11 +82,32 @@ app.get('/api/warmup', async (req: Request, res: Response) => {
     const connectTime = Date.now() - startTime;
     console.log(`[Warmup] Database connected in ${connectTime}ms`);
     
-    // Run a simple query to fully warm up
-    await pool.request().query('SELECT 1');
+    // Run queries against multiple tables to warm up the database cache
+    // This ensures indexes and data pages are loaded into memory
+    const warmupQueries = [
+      'SELECT TOP 1 id FROM teams',
+      'SELECT TOP 1 id FROM events', 
+      'SELECT TOP 1 id FROM sites',
+      'SELECT TOP 1 id FROM fields',
+      'SELECT TOP 1 id FROM equipment',
+      'SELECT COUNT(*) as cnt FROM users'
+    ];
+    
+    const queryResults: Record<string, boolean> = {};
+    for (const query of warmupQueries) {
+      try {
+        await pool.request().query(query);
+        const tableName = query.match(/FROM (\w+)/)?.[1] || 'unknown';
+        queryResults[tableName] = true;
+      } catch (e) {
+        // Table might not exist, ignore
+        const tableName = query.match(/FROM (\w+)/)?.[1] || 'unknown';
+        queryResults[tableName] = false;
+      }
+    }
     
     const totalTime = Date.now() - startTime;
-    console.log(`[Warmup] Complete in ${totalTime}ms`);
+    console.log(`[Warmup] Complete in ${totalTime}ms - Tables: ${JSON.stringify(queryResults)}`);
     
     res.json({ 
       status: 'warm',
@@ -93,6 +115,7 @@ app.get('/api/warmup', async (req: Request, res: Response) => {
         connectionMs: connectTime,
         totalMs: totalTime
       },
+      tables: queryResults,
       message: totalTime > 5000 
         ? 'Database was cold (serverless paused). Now warm and ready.'
         : 'Database was already warm.'
@@ -307,6 +330,36 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
+// Self-ping mechanism to keep Azure App Service awake
+// Azure Free/Shared tier sleeps after ~20 minutes of inactivity
+function startSelfPing(): void {
+  const SELF_PING_INTERVAL = 10 * 60 * 1000; // Every 10 minutes
+  
+  // Determine the app URL for self-ping
+  const appUrl = process.env.WEBSITE_HOSTNAME 
+    ? `https://${process.env.WEBSITE_HOSTNAME}`
+    : `http://localhost:${PORT}`;
+  
+  setInterval(async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      
+      const response = await fetch(`${appUrl}/api/warmup`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      
+      const data = await response.json();
+      console.log(`[Self-Ping] Warmup completed: ${data.timing?.totalMs}ms`);
+    } catch (error) {
+      console.error('[Self-Ping] Failed:', (error as Error).message);
+    }
+  }, SELF_PING_INTERVAL);
+  
+  console.log(`✓ Self-ping enabled (every 10 minutes to ${appUrl}/api/warmup)`);
+}
+
 // Initialize database connection and start server
 async function startServer() {
   try {
@@ -315,6 +368,11 @@ async function startServer() {
       console.log(`✓ Server running on port ${PORT}`);
       console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`✓ API available at http://localhost:${PORT}/api`);
+      
+      // Start self-ping in production to keep Azure App Service awake
+      if (process.env.NODE_ENV === 'production' || process.env.WEBSITE_HOSTNAME) {
+        startSelfPing();
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);
