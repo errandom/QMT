@@ -175,8 +175,10 @@ export async function importEventsFromSpond(
         console.log(`[Spond Sync] Event ${spondEvent.heading}: Spond time=${spondEvent.startTimestamp}, Parsed=${startTime.toISOString()}`);
 
         // Get the spond group ID and map to local team
+        // Normalize for consistent lookup against our map
         const spondGroupId = spondEvent.recipients?.group?.id || null;
-        const mappedTeamId = spondGroupId ? teamMapping.get(spondGroupId) : null;
+        const normalizedGroupId = normalizeSpondUUID(spondGroupId);
+        const mappedTeamId = normalizedGroupId ? teamMapping.get(normalizedGroupId) : null;
         
         if (spondGroupId && mappedTeamId) {
           console.log(`[Spond Sync] Mapped Spond group ${spondGroupId} to team ${mappedTeamId}`);
