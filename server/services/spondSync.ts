@@ -191,7 +191,7 @@ export async function importEventsFromSpond(
           end_time: endTime,
           description: spondEvent.heading + (spondEvent.description ? `\n\n${spondEvent.description}` : ''),
           status: mapEventStatus(spondEvent),
-          spond_group_id: spondGroupId,
+          spond_group_id: normalizedGroupId, // Store normalized ID for consistency
           team_id: mappedTeamId,
           spond_data: JSON.stringify(spondEvent),
         };
