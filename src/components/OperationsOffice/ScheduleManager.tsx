@@ -1030,6 +1030,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                       <Switch
                         checked={formData.transportRequested || false}
                         onCheckedChange={(checked) => setFormData({ ...formData, transportRequested: checked })}
+                        onClick={(e) => e.stopPropagation()}
                         style={{ backgroundColor: formData.transportRequested ? '#f59e0b' : undefined }}
                       />
                     </div>
