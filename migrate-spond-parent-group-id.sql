@@ -22,4 +22,27 @@ BEGIN
 END
 GO
 
+-- =====================================================
+-- 3. Update existing teams that are linked to Spond subgroups
+-- =====================================================
+-- If you have teams linked to Spond subgroups, you need to set their parent_group_id
+-- 
+-- Example: If your team is linked to subgroup 41B5BD87392941BEB6C940CB0BA15217
+-- and the parent group is A6C03B65982444C18328024047630CB9, run:
+--
+-- UPDATE spond_sync_settings 
+-- SET spond_parent_group_id = 'A6C03B65982444C18328024047630CB9',
+--     is_subgroup = 1
+-- WHERE spond_group_id = '41B5BD87392941BEB6C940CB0BA15217';
+--
+-- Or update all sync settings for a specific team by team name:
+--
+-- UPDATE ss
+-- SET ss.spond_parent_group_id = 'YOUR_PARENT_GROUP_ID',
+--     ss.is_subgroup = 1
+-- FROM spond_sync_settings ss
+-- INNER JOIN teams t ON ss.team_id = t.id
+-- WHERE t.name = 'YOUR_TEAM_NAME';
+
 PRINT 'Migration complete: spond_parent_group_id column added to spond_sync_settings';
+PRINT 'NOTE: Run the UPDATE statements above for existing teams linked to Spond subgroups';
