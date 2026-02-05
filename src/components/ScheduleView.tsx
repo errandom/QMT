@@ -32,8 +32,43 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return true
   })
 
-  // Show all events - both recurring and one-time events
-  const displayEvents = allEvents
+  // Deduplicate recurring events - show each recurring event only once
+  // Group by signature (title, time, teams, fields, day) and take the first one
+  const displayEvents = (() => {
+    const getEventSignature = (event: Event, dayOfWeek: number): string => {
+      return [
+        event.title,
+        event.startTime,
+        event.endTime,
+        event.eventType,
+        (event.teamIds || []).sort().join(','),
+        (event.fieldIds || []).sort().join(','),
+        dayOfWeek
+      ].join('|')
+    }
+
+    const seen = new Set<string>()
+    const deduped: Event[] = []
+
+    for (const event of allEvents) {
+      if (event.isRecurring && event.recurringDays && event.recurringDays.length > 0) {
+        // For recurring events, create one entry per recurring day
+        for (const dayOfWeek of event.recurringDays) {
+          const sig = getEventSignature(event, dayOfWeek)
+          if (!seen.has(sig)) {
+            seen.add(sig)
+            deduped.push(event)
+            break; // Only add the event once, the display logic handles showing on correct days
+          }
+        }
+      } else {
+        // Non-recurring events are always included
+        deduped.push(event)
+      }
+    }
+
+    return deduped
+  })()
 
   // Helper to get field IDs for an event (supports both fieldIds array and legacy fieldId)
   const getEventFieldIds = (event: any): string[] => {
