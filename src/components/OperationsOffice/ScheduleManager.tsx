@@ -769,11 +769,27 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               />
             </div>
           </div>
-          {(filterTeam !== 'all' || filterEventType !== 'all' || filterStartDate || filterEndDate) && (
-            <div className="mt-3 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="groupRecurring"
+                  checked={showGroupedView}
+                  onCheckedChange={setShowGroupedView}
+                  className="h-5 w-9"
+                />
+                <Label htmlFor="groupRecurring" className="text-xs cursor-pointer">
+                  Group recurring events
+                </Label>
+              </div>
               <span className="text-xs text-muted-foreground">
-                Showing {filteredAndSortedEvents.length} of {events.length} events
+                {showGroupedView 
+                  ? `${groupedEvents.length} event${groupedEvents.length !== 1 ? 's' : ''} (${filteredAndSortedEvents.length} total instances)`
+                  : `${filteredAndSortedEvents.length} of ${events.length} events`
+                }
               </span>
+            </div>
+            {(filterTeam !== 'all' || filterEventType !== 'all' || filterStartDate || filterEndDate) && (
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -782,13 +798,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               >
                 Clear Filters
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {filteredAndSortedEvents.map((event) => (
+        {groupedEvents.map((event) => (
           <Card key={event.id} className="glass-card">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
@@ -797,7 +813,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   <div className="flex gap-2 flex-wrap">
                     <Badge variant="secondary">{event.eventType}</Badge>
                     <Badge>{event.status}</Badge>
-                    {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
+                    {event.isRecurring && (
+                      <Badge variant="outline" style={{ backgroundColor: 'rgba(36, 139, 204, 0.1)' }}>
+                        {event.instanceCount ? `${event.instanceCount}x Recurring` : 'Recurring'}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
@@ -852,7 +872,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             <CardContent className="text-sm space-y-1">
               <div className="flex items-center gap-2">
                 <CalendarBlank size={14} />
-                {event.date} • {event.startTime} - {event.endTime}
+                {event.dateRange ? (
+                  <span>
+                    {event.dateRange.start} → {event.dateRange.end} • {event.startTime} - {event.endTime}
+                  </span>
+                ) : (
+                  <span>{event.date} • {event.startTime} - {event.endTime}</span>
+                )}
               </div>
               {event.teamIds && event.teamIds.length > 0 && (
                 <div className="text-xs text-muted-foreground">
