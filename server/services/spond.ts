@@ -776,16 +776,24 @@ router.post('/link/team', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'teamId and spondGroupId are required' });
     }
 
+    // Normalize Spond IDs to consistent format (uppercase, no hyphens)
+    const normalizedGroupId = normalizeSpondUUID(spondGroupId);
+    const normalizedParentGroupId = normalizeSpondUUID(parentGroupId);
+
+    if (!normalizedGroupId) {
+      return res.status(400).json({ error: 'Invalid spondGroupId format' });
+    }
+
     const pool = await getPool();
     
-    // Update the team's spond_group_id
+    // Update the team's spond_group_id with normalized ID
     await pool.request()
       .input('id', sql.Int, teamId)
-      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .input('spond_group_id', sql.NVarChar, normalizedGroupId)
       .query('UPDATE teams SET spond_group_id = @spond_group_id WHERE id = @id');
 
     // Determine if this is a subgroup (has a parent group)
-    const isSubgroup = !!parentGroupId;
+    const isSubgroup = !!normalizedParentGroupId;
 
     // Create or update sync settings with parent group info
     // This is required for proper export to Spond when using subgroups
@@ -797,9 +805,9 @@ router.post('/link/team', async (req: Request, res: Response) => {
       // Update existing settings
       await pool.request()
         .input('team_id', sql.Int, teamId)
-        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_id', sql.NVarChar, normalizedGroupId)
         .input('spond_group_name', sql.NVarChar, groupName || null)
-        .input('spond_parent_group_id', sql.NVarChar, parentGroupId || null)
+        .input('spond_parent_group_id', sql.NVarChar, normalizedParentGroupId || null)
         .input('spond_parent_group_name', sql.NVarChar, parentGroupName || null)
         .input('is_subgroup', sql.Bit, isSubgroup)
         .input('updated_at', sql.DateTime, new Date())
@@ -817,9 +825,9 @@ router.post('/link/team', async (req: Request, res: Response) => {
       // Insert new settings
       await pool.request()
         .input('team_id', sql.Int, teamId)
-        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_id', sql.NVarChar, normalizedGroupId)
         .input('spond_group_name', sql.NVarChar, groupName || null)
-        .input('spond_parent_group_id', sql.NVarChar, parentGroupId || null)
+        .input('spond_parent_group_id', sql.NVarChar, normalizedParentGroupId || null)
         .input('spond_parent_group_name', sql.NVarChar, parentGroupName || null)
         .input('is_subgroup', sql.Bit, isSubgroup)
         .query(`
