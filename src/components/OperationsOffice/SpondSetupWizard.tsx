@@ -412,7 +412,7 @@ export default function SpondSetupWizard({
 
       // 2. Save all team mappings AND sync settings
       const mappingPromises = Array.from(teamMappings.values()).map(async (mapping) => {
-        // First, link the team
+        // First, link the team (includes parent group info for subgroups)
         await fetch('/api/spond/link/team', {
           method: 'POST',
           headers: {
@@ -421,7 +421,10 @@ export default function SpondSetupWizard({
           },
           body: JSON.stringify({
             teamId: mapping.teamId,
-            spondGroupId: mapping.spondGroupId
+            spondGroupId: mapping.spondGroupId,
+            parentGroupId: mapping.spondParentGroupId || null,
+            groupName: mapping.spondGroupName || null,
+            parentGroupName: mapping.spondParentGroupName || null
           })
         })
         
