@@ -4,20 +4,30 @@
 -- Your team is linked to subgroup: 41B5BD87392941BEB6C940CB0BA15217
 -- The parent group ID is: A6C03B65982444C18328024047630CB9
 -- Correct Spond URL format: https://spond.com/client/groups/A6C03B65982444C18328024047630CB9-S-41B5BD87392941BEB6C940CB0BA15217
+--
+-- NOTE: Spond IDs should be stored in uppercase WITHOUT hyphens
 
--- Update the sync settings for teams linked to this subgroup
+-- First, normalize any existing IDs that have hyphens to the proper format
+-- Update teams table
+UPDATE teams 
+SET spond_group_id = UPPER(REPLACE(spond_group_id, '-', ''))
+WHERE spond_group_id LIKE '%-%';
+
+-- Update spond_sync_settings table
+UPDATE spond_sync_settings 
+SET spond_group_id = UPPER(REPLACE(spond_group_id, '-', ''))
+WHERE spond_group_id LIKE '%-%';
+
+UPDATE spond_sync_settings 
+SET spond_parent_group_id = UPPER(REPLACE(spond_parent_group_id, '-', ''))
+WHERE spond_parent_group_id LIKE '%-%';
+
+-- Now set the parent group ID for teams linked to this subgroup
 UPDATE spond_sync_settings 
 SET spond_parent_group_id = 'A6C03B65982444C18328024047630CB9',
     is_subgroup = 1,
     updated_at = GETDATE()
-WHERE spond_group_id = '41B5BD87392941BEB6C940CB0BA15217';
-
--- Also update if stored in uppercase (Spond IDs can come in different formats)
-UPDATE spond_sync_settings 
-SET spond_parent_group_id = 'A6C03B65982444C18328024047630CB9',
-    is_subgroup = 1,
-    updated_at = GETDATE()
-WHERE LOWER(spond_group_id) = LOWER('41B5BD87392941BEB6C940CB0BA15217');
+WHERE UPPER(REPLACE(spond_group_id, '-', '')) = '41B5BD87392941BEB6C940CB0BA15217';
 
 -- Verify the update
 SELECT 
@@ -31,4 +41,4 @@ FROM teams t
 LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
 WHERE t.spond_group_id IS NOT NULL;
 
-PRINT 'Parent group ID set for team(s) linked to subgroup 41B5BD87392941BEB6C940CB0BA15217';
+PRINT 'Spond IDs normalized and parent group ID set for subgroups';
