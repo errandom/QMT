@@ -335,7 +335,13 @@ export default function SpondIntegration() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getToken()}`
         },
-        body: JSON.stringify({ teamId, spondGroupId })
+        body: JSON.stringify({ 
+          teamId, 
+          spondGroupId,
+          parentGroupId: group?.parentGroupId || null,
+          groupName: group?.name || null,
+          parentGroupName: group?.parentGroup || null
+        })
       })
 
       if (response.ok) {
