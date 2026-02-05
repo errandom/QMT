@@ -95,7 +95,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [filterEventType, setFilterEventType] = useState<string>('all')
   const [filterStartDate, setFilterStartDate] = useState<string>('')
   const [filterEndDate, setFilterEndDate] = useState<string>('')
-  const [showGroupedView, setShowGroupedView] = useState<boolean>(true) // Group recurring events by default
 
   // Export dialog state
   const [showExportDialog, setShowExportDialog] = useState(false)
@@ -583,84 +582,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     return filtered
   }, [events, filterTeam, filterEventType, filterStartDate, filterEndDate])
 
-  // Group recurring events by their signature (title, time, teams, type, location)
-  type GroupedEvent = Event & { 
-    instanceCount?: number
-    dateRange?: { start: string; end: string }
-    instances?: Event[]
-  }
-  
-  const groupedEvents = useMemo((): GroupedEvent[] => {
-    if (!showGroupedView) {
-      return filteredAndSortedEvents
-    }
-
-    // Create a signature for each event to group recurring ones
-    const getEventSignature = (event: Event): string => {
-      return [
-        event.title,
-        event.startTime,
-        event.endTime,
-        event.eventType,
-        (event.teamIds || []).sort().join(','),
-        (event.fieldIds || []).sort().join(','),
-        event.gameLocation || '',
-        event.awayStreet || '',
-        event.awayCity || ''
-      ].join('|')
-    }
-
-    const groups = new Map<string, Event[]>()
-    
-    for (const event of filteredAndSortedEvents) {
-      // Only group recurring events
-      if (!event.isRecurring) {
-        // Non-recurring events get their own "group"
-        groups.set(`single-${event.id}`, [event])
-      } else {
-        const sig = getEventSignature(event)
-        if (!groups.has(sig)) {
-          groups.set(sig, [])
-        }
-        groups.get(sig)!.push(event)
-      }
-    }
-
-    // Convert groups to display items
-    const result: GroupedEvent[] = []
-    
-    for (const [key, groupEvents] of groups) {
-      if (key.startsWith('single-') || groupEvents.length === 1) {
-        // Single event or only one instance
-        result.push(groupEvents[0])
-      } else {
-        // Multiple recurring instances - create a grouped entry
-        const sorted = [...groupEvents].sort((a, b) => a.date.localeCompare(b.date))
-        const representative = { ...sorted[0] }
-        result.push({
-          ...representative,
-          instanceCount: sorted.length,
-          dateRange: {
-            start: sorted[0].date,
-            end: sorted[sorted.length - 1].date
-          },
-          instances: sorted
-        })
-      }
-    }
-
-    // Sort by the earliest date in each group
-    result.sort((a, b) => {
-      const dateA = a.dateRange?.start || a.date
-      const dateB = b.dateRange?.start || b.date
-      const dateCompare = dateA.localeCompare(dateB)
-      if (dateCompare !== 0) return dateCompare
-      return a.startTime.localeCompare(b.startTime)
-    })
-
-    return result
-  }, [filteredAndSortedEvents, showGroupedView])
-
   const clearFilters = () => {
     setFilterTeam('all')
     setFilterEventType('all')
@@ -770,27 +691,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               />
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="groupRecurring"
-                  checked={showGroupedView}
-                  onCheckedChange={setShowGroupedView}
-                  className="h-5 w-9"
-                />
-                <Label htmlFor="groupRecurring" className="text-xs cursor-pointer">
-                  Group recurring events
-                </Label>
-              </div>
+          {(filterTeam !== 'all' || filterEventType !== 'all' || filterStartDate || filterEndDate) && (
+            <div className="mt-3 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                {showGroupedView 
-                  ? `${groupedEvents.length} event${groupedEvents.length !== 1 ? 's' : ''} (${filteredAndSortedEvents.length} total instances)`
-                  : `${filteredAndSortedEvents.length} of ${events.length} events`
-                }
+                Showing {filteredAndSortedEvents.length} of {events.length} events
               </span>
-            </div>
-            {(filterTeam !== 'all' || filterEventType !== 'all' || filterStartDate || filterEndDate) && (
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -799,13 +704,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               >
                 Clear Filters
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {groupedEvents.map((event) => (
+        {filteredAndSortedEvents.map((event) => (
           <Card key={event.id} className="glass-card">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
@@ -814,11 +719,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   <div className="flex gap-2 flex-wrap">
                     <Badge variant="secondary">{event.eventType}</Badge>
                     <Badge>{event.status}</Badge>
-                    {event.isRecurring && (
-                      <Badge variant="outline" style={{ backgroundColor: 'rgba(36, 139, 204, 0.1)' }}>
-                        {event.instanceCount ? `${event.instanceCount}x Recurring` : 'Recurring'}
-                      </Badge>
-                    )}
+                    {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
                   </div>
                 </div>
                 {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
@@ -873,13 +774,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             <CardContent className="text-sm space-y-1">
               <div className="flex items-center gap-2">
                 <CalendarBlank size={14} />
-                {event.dateRange ? (
-                  <span>
-                    {event.dateRange.start} → {event.dateRange.end} • {event.startTime} - {event.endTime}
-                  </span>
-                ) : (
-                  <span>{event.date} • {event.startTime} - {event.endTime}</span>
-                )}
+                {event.date} • {event.startTime} - {event.endTime}
               </div>
               {event.teamIds && event.teamIds.length > 0 && (
                 <div className="text-xs text-muted-foreground">
