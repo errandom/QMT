@@ -105,15 +105,21 @@ function startKeepAlive(): void {
     clearInterval(keepAliveInterval);
   }
 
-  // Ping the database every 4 minutes to keep it awake
-  // Azure SQL serverless pauses after no activity (configurable, default 1 hour)
-  const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutes
+  // Ping the database every 2 minutes to keep it awake
+  // Azure SQL serverless has minimum auto-pause of 1 hour, but we ping frequently
+  // to ensure connection pool stays healthy
+  const KEEP_ALIVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
   
   keepAliveInterval = setInterval(async () => {
     try {
       if (pool && pool.connected) {
-        await pool.request().query('SELECT 1');
+        // Use a slightly heavier query to ensure DB stays fully warm
+        await pool.request().query('SELECT GETDATE() as serverTime, @@SPID as sessionId');
         console.log('[DB] Keep-alive ping successful');
+      } else {
+        // Pool not connected, try to reconnect
+        console.log('[DB] Keep-alive: Pool not connected, attempting reconnection...');
+        await getPool();
       }
     } catch (error) {
       console.error('[DB] Keep-alive ping failed:', (error as Error).message);
@@ -122,8 +128,8 @@ function startKeepAlive(): void {
     }
   }, KEEP_ALIVE_INTERVAL);
 
-  // Don't let this interval prevent the process from exiting
-  keepAliveInterval.unref();
+  // Keep the interval reference - we WANT this to help keep the process alive
+  // Removing .unref() so the interval helps prevent Azure from sleeping the app
 }
 
 export async function closePool(): Promise<void> {
