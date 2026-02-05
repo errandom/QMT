@@ -13,23 +13,25 @@ import { getPool } from '../db.js';
 import sql from 'mssql';
 
 /**
- * Normalize Spond UUID to standard format with hyphens
+ * Normalize Spond UUID to the format Spond API expects (no hyphens, uppercase)
  * Accepts both formats: with hyphens (a1b2c3d4-e5f6-7890-abcd-ef1234567890) 
  * and without hyphens (A1B2C3D4E5F67890ABCDEF1234567890)
+ * 
+ * Spond API expects IDs in uppercase without hyphens (e.g., A6C03B65982444C18328024047630CB9)
  */
 function normalizeSpondUUID(id: string | null | undefined): string | null {
   if (!id) return null;
   
-  // Remove any existing hyphens and convert to lowercase
-  const cleanId = id.replace(/-/g, '').toLowerCase();
+  // Remove any existing hyphens and convert to uppercase (Spond API format)
+  const cleanId = id.replace(/-/g, '').toUpperCase();
   
   // Check if it's a valid 32-char hex string
-  if (!/^[0-9a-f]{32}$/.test(cleanId)) {
+  if (!/^[0-9A-F]{32}$/.test(cleanId)) {
     return null; // Invalid UUID
   }
   
-  // Format as standard UUID with hyphens
-  return `${cleanId.slice(0, 8)}-${cleanId.slice(8, 12)}-${cleanId.slice(12, 16)}-${cleanId.slice(16, 20)}-${cleanId.slice(20)}`;
+  // Return in Spond API format: uppercase, no hyphens
+  return cleanId;
 }
 
 export interface SyncResult {
@@ -127,11 +129,16 @@ export async function importEventsFromSpond(
     const pool = await getPool();
     
     // Build a lookup map of spond_group_id -> team_id for team mapping
+    // Normalize IDs for consistent lookups (Spond may return different formats)
     const teamMappingResult = await pool.request()
       .query('SELECT id, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
     const teamMapping = new Map<string, number>();
     for (const team of teamMappingResult.recordset) {
-      teamMapping.set(team.spond_group_id, team.id);
+      // Store with normalized ID (uppercase, no hyphens) for consistent lookup
+      const normalizedId = normalizeSpondUUID(team.spond_group_id);
+      if (normalizedId) {
+        teamMapping.set(normalizedId, team.id);
+      }
     }
     console.log(`[Spond Sync] Loaded ${teamMapping.size} team mappings`);
     
