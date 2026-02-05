@@ -216,7 +216,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   // Get the site ID of the first selected field (to show only fields from same site)
   const selectedSiteId = useMemo(() => {
     if (!formData.fieldIds || formData.fieldIds.length === 0) return null
-    const firstField = locationOptions.find((loc: any) => loc.id === formData.fieldIds[0])
+    const fieldIds = formData.fieldIds
+    const firstField = locationOptions.find((loc: any) => loc.id === fieldIds[0])
     return firstField?.siteId || null
   }, [formData.fieldIds, locationOptions])
 
