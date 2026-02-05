@@ -3169,19 +3169,89 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
 // Link a local team to a Spond group/subgroup
 app.post('/api/spond/link/team', verifyToken, requireAdminOrMgmt, async (req, res) => {
   try {
-    const { teamId, spondGroupId } = req.body;
+    const { teamId, spondGroupId, parentGroupId, groupName, parentGroupName } = req.body;
 
     if (!teamId || !spondGroupId) {
       return res.status(400).json({ error: 'teamId and spondGroupId are required' });
     }
 
+    // Normalize Spond IDs to consistent format (uppercase, no hyphens)
+    const normalizedGroupId = normalizeSpondUUID(spondGroupId);
+    const normalizedParentGroupId = normalizeSpondUUID(parentGroupId);
+
+    if (!normalizedGroupId) {
+      return res.status(400).json({ error: 'Invalid spondGroupId format' });
+    }
+
     const pool = await getPool();
+    
+    // Update the team's spond_group_id with normalized ID
     await pool.request()
       .input('id', sql.Int, teamId)
-      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .input('spond_group_id', sql.NVarChar, normalizedGroupId)
       .query('UPDATE teams SET spond_group_id = @spond_group_id WHERE id = @id');
 
-    res.json({ success: true, message: 'Team linked to Spond group' });
+    // Determine if this is a subgroup (has a parent group)
+    const isSubgroup = !!normalizedParentGroupId;
+
+    // Create or update sync settings with parent group info
+    const existingSettings = await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('SELECT id FROM spond_sync_settings WHERE team_id = @team_id');
+
+    if (existingSettings.recordset.length > 0) {
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, normalizedGroupId)
+        .input('spond_group_name', sql.NVarChar, groupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, normalizedParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, parentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup)
+        .input('updated_at', sql.DateTime, new Date())
+        .query(`
+          UPDATE spond_sync_settings SET
+            spond_group_id = @spond_group_id,
+            spond_group_name = @spond_group_name,
+            spond_parent_group_id = @spond_parent_group_id,
+            spond_parent_group_name = @spond_parent_group_name,
+            is_subgroup = @is_subgroup,
+            updated_at = @updated_at
+          WHERE team_id = @team_id
+        `);
+    } else {
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, normalizedGroupId)
+        .input('spond_group_name', sql.NVarChar, groupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, normalizedParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, parentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup)
+        .query(`
+          INSERT INTO spond_sync_settings (
+            team_id, spond_group_id, spond_group_name, 
+            spond_parent_group_id, spond_parent_group_name, 
+            is_subgroup, sync_events_import, sync_attendance_import, is_active
+          )
+          VALUES (
+            @team_id, @spond_group_id, @spond_group_name,
+            @spond_parent_group_id, @spond_parent_group_name,
+            @is_subgroup, 1, 1, 1
+          )
+        `);
+    }
+
+    const linkType = isSubgroup 
+      ? `Team linked to Spond subgroup (parent: ${parentGroupName || normalizedParentGroupId})` 
+      : 'Team linked to Spond group';
+    
+    console.log(`[Spond] ${linkType} - Team ${teamId} -> Group ${normalizedGroupId}${isSubgroup ? ` (parent: ${normalizedParentGroupId})` : ''}`);
+
+    res.json({ 
+      success: true, 
+      message: linkType,
+      isSubgroup,
+      parentGroupId: normalizedParentGroupId || null
+    });
   } catch (err) {
     console.error('[Spond] Link team error:', err);
     res.status(500).json({ error: 'Failed to link team' });
@@ -4179,19 +4249,20 @@ app.get('/api/spond/export-diagnostic', verifyToken, requireAdminOrMgmt, async (
 // Helper function to normalize and validate Spond UUID
 // Accepts both formats: with hyphens (a1b2c3d4-e5f6-7890-abcd-ef1234567890) 
 // and without hyphens (A1B2C3D4E5F67890ABCDEF1234567890)
+// Returns Spond API format: uppercase, no hyphens
 function normalizeSpondUUID(id) {
   if (!id) return null;
   
-  // Remove any existing hyphens and convert to lowercase
-  const cleanId = id.replace(/-/g, '').toLowerCase();
+  // Remove any existing hyphens and convert to uppercase (Spond API format)
+  const cleanId = id.replace(/-/g, '').toUpperCase();
   
   // Check if it's a valid 32-char hex string
-  if (!/^[0-9a-f]{32}$/.test(cleanId)) {
+  if (!/^[0-9A-F]{32}$/.test(cleanId)) {
     return null; // Invalid UUID
   }
   
-  // Format as standard UUID with hyphens
-  return `${cleanId.slice(0, 8)}-${cleanId.slice(8, 12)}-${cleanId.slice(12, 16)}-${cleanId.slice(16, 20)}-${cleanId.slice(20)}`;
+  // Return in Spond API format: uppercase, no hyphens
+  return cleanId;
 }
 
 // Sync with granular settings (respects per-team import/export settings)
