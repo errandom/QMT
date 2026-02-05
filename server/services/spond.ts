@@ -1257,6 +1257,143 @@ router.get('/export-diagnostic', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/spond/sync-settings
+ * Create or update sync settings for a team
+ */
+router.post('/sync-settings', async (req: Request, res: Response) => {
+  try {
+    const { 
+      teamId, 
+      spondGroupId, 
+      spondGroupName, 
+      spondParentGroupId, 
+      spondParentGroupName,
+      isSubgroup,
+      syncEventsImport,
+      syncEventsExport,
+      syncAttendanceImport,
+      syncEventTitle,
+      syncEventDescription,
+      syncEventTime,
+      syncEventLocation,
+      syncEventType,
+      isActive
+    } = req.body;
+
+    if (!teamId || !spondGroupId) {
+      return res.status(400).json({ error: 'teamId and spondGroupId are required' });
+    }
+
+    const pool = await getPool();
+
+    // Check if settings exist for this team
+    const existing = await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('SELECT id FROM spond_sync_settings WHERE team_id = @team_id');
+
+    if (existing.recordset.length > 0) {
+      // Update existing settings
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup || false)
+        .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+        .input('sync_events_export', sql.Bit, syncEventsExport || false)
+        .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+        .input('sync_event_title', sql.Bit, syncEventTitle !== false)
+        .input('sync_event_description', sql.Bit, syncEventDescription !== false)
+        .input('sync_event_time', sql.Bit, syncEventTime !== false)
+        .input('sync_event_location', sql.Bit, syncEventLocation !== false)
+        .input('sync_event_type', sql.Bit, syncEventType !== false)
+        .input('is_active', sql.Bit, isActive !== false)
+        .input('updated_at', sql.DateTime, new Date())
+        .query(`
+          UPDATE spond_sync_settings SET
+            spond_group_id = @spond_group_id,
+            spond_group_name = @spond_group_name,
+            spond_parent_group_id = @spond_parent_group_id,
+            spond_parent_group_name = @spond_parent_group_name,
+            is_subgroup = @is_subgroup,
+            sync_events_import = @sync_events_import,
+            sync_events_export = @sync_events_export,
+            sync_attendance_import = @sync_attendance_import,
+            sync_event_title = @sync_event_title,
+            sync_event_description = @sync_event_description,
+            sync_event_time = @sync_event_time,
+            sync_event_location = @sync_event_location,
+            sync_event_type = @sync_event_type,
+            is_active = @is_active,
+            updated_at = @updated_at
+          WHERE team_id = @team_id
+        `);
+    } else {
+      // Insert new settings
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup || false)
+        .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+        .input('sync_events_export', sql.Bit, syncEventsExport || false)
+        .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+        .input('sync_event_title', sql.Bit, syncEventTitle !== false)
+        .input('sync_event_description', sql.Bit, syncEventDescription !== false)
+        .input('sync_event_time', sql.Bit, syncEventTime !== false)
+        .input('sync_event_location', sql.Bit, syncEventLocation !== false)
+        .input('sync_event_type', sql.Bit, syncEventType !== false)
+        .input('is_active', sql.Bit, isActive !== false)
+        .query(`
+          INSERT INTO spond_sync_settings (
+            team_id, spond_group_id, spond_group_name, 
+            spond_parent_group_id, spond_parent_group_name, 
+            is_subgroup, sync_events_import, sync_events_export, 
+            sync_attendance_import, sync_event_title, sync_event_description, 
+            sync_event_time, sync_event_location, sync_event_type, is_active
+          )
+          VALUES (
+            @team_id, @spond_group_id, @spond_group_name,
+            @spond_parent_group_id, @spond_parent_group_name,
+            @is_subgroup, @sync_events_import, @sync_events_export,
+            @sync_attendance_import, @sync_event_title, @sync_event_description,
+            @sync_event_time, @sync_event_location, @sync_event_type, @is_active
+          )
+        `);
+    }
+
+    console.log(`[Spond] Sync settings saved for team ${teamId}`);
+    res.json({ success: true, message: 'Sync settings saved' });
+  } catch (error) {
+    console.error('[Spond] Sync settings error:', error);
+    res.status(500).json({ error: 'Failed to save sync settings' });
+  }
+});
+
+/**
+ * DELETE /api/spond/sync-settings/:teamId
+ * Delete sync settings for a team
+ */
+router.delete('/sync-settings/:teamId', async (req: Request, res: Response) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+
+    const pool = await getPool();
+    await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('DELETE FROM spond_sync_settings WHERE team_id = @team_id');
+
+    res.json({ success: true, message: 'Sync settings deleted' });
+  } catch (error) {
+    console.error('[Spond] Delete sync settings error:', error);
+    res.status(500).json({ error: 'Failed to delete sync settings' });
+  }
+});
+
+/**
  * Helper: Ensure Spond client is initialized
  */
 async function ensureClient(): Promise<SpondClient | null> {
