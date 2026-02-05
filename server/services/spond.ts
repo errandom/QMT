@@ -32,6 +32,25 @@ import {
 const router = Router();
 
 /**
+ * Normalize Spond UUID to the format Spond API expects (no hyphens, uppercase)
+ * This ensures consistent storage and lookup of Spond IDs
+ */
+function normalizeSpondUUID(id: string | null | undefined): string | null {
+  if (!id) return null;
+  
+  // Remove any existing hyphens and convert to uppercase (Spond API format)
+  const cleanId = id.replace(/-/g, '').toUpperCase();
+  
+  // Check if it's a valid 32-char hex string
+  if (!/^[0-9A-F]{32}$/.test(cleanId)) {
+    return null; // Invalid UUID
+  }
+  
+  // Return in Spond API format: uppercase, no hyphens
+  return cleanId;
+}
+
+/**
  * GET /api/spond/status
  * Get current Spond integration status
  */
