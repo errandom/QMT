@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { WhatsappLogo, Envelope, X, ArrowRight } from '@phosphor-icons/react'
+import { WhatsappLogo, Envelope, X, ArrowRight, CloudArrowUp, CheckCircle, Warning, ArrowsClockwise } from '@phosphor-icons/react'
 import { Event, Team, Field, Site } from '@/lib/types'
 import { shareEvent } from '@/lib/whatsappService'
 import { toast } from 'sonner'
+import { getToken } from '@/lib/api'
 
 interface EventChange {
   field: string
@@ -37,6 +38,8 @@ export default function EventUpdateShareDialog({
   updateType
 }: EventUpdateShareDialogProps) {
   const [sharing, setSharing] = useState(false)
+  const [pushingToSpond, setPushingToSpond] = useState(false)
+  const [spondPushResult, setSpondPushResult] = useState<'success' | 'error' | 'already' | null>(null)
 
   // Get related teams
   const eventTeams = event.teamIds 
@@ -157,6 +160,73 @@ export default function EventUpdateShareDialog({
     }
   }
 
+  // Check if event can be pushed to Spond
+  // A team must be assigned and the team should be linked to a Spond group (we check backend-side)
+  const hasTeams = eventTeams.length > 0
+  const isAlreadyInSpond = Boolean(event.spondId)
+  const canPushToSpond = hasTeams && updateType !== 'cancel' // Can't push cancelled events as new
+  const canUpdateInSpond = isAlreadyInSpond && updateType !== 'create' // Can update already-linked events
+
+  const handlePushToSpond = async () => {
+    setPushingToSpond(true)
+    setSpondPushResult(null)
+    
+    try {
+      const eventId = parseInt(event.id)
+      if (isNaN(eventId)) {
+        toast.error('Invalid event ID')
+        return
+      }
+
+      if (isAlreadyInSpond) {
+        // Update existing Spond event
+        const response = await fetch(`/api/spond/push/event/${eventId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`,
+          },
+        })
+        const result = await response.json()
+        
+        if (result.success) {
+          setSpondPushResult('success')
+          toast.success('Event updated in Spond')
+        } else {
+          setSpondPushResult('error')
+          toast.error(result.error || 'Failed to update in Spond')
+        }
+      } else {
+        // Push new event to Spond (with dedup check)
+        const response = await fetch(`/api/spond/push/event/${eventId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`,
+          },
+        })
+        const result = await response.json()
+        
+        if (result.success) {
+          setSpondPushResult('success')
+          toast.success('Event pushed to Spond')
+        } else if (result.error?.includes('already linked')) {
+          setSpondPushResult('already')
+          toast.info('Event is already in Spond')
+        } else {
+          setSpondPushResult('error')
+          toast.error(result.error || 'Failed to push to Spond')
+        }
+      }
+    } catch (error) {
+      console.error('Error pushing to Spond:', error)
+      setSpondPushResult('error')
+      toast.error('Failed to connect to Spond')
+    } finally {
+      setPushingToSpond(false)
+    }
+  }
+
   const handleWhatsAppShare = async () => {
     setSharing(true)
     try {
@@ -180,7 +250,7 @@ export default function EventUpdateShareDialog({
     const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
     
     // Build subject
-    const subjectPrefix = updateType === 'cancel' ? 'CANCELLED' : 'UPDATE'
+    const subjectPrefix = updateType === 'cancel' ? 'CANCELLED' : updateType === 'create' ? 'NEW' : 'UPDATE'
     const eventTitle = event.title || `${event.eventType} - ${teamNames}`
     const subject = encodeURIComponent(`${subjectPrefix}: ${eventTitle}`)
     
@@ -250,12 +320,16 @@ export default function EventUpdateShareDialog({
           <DialogTitle className="flex items-center gap-2">
             {updateType === 'cancel' ? (
               <Badge variant="destructive">Event Cancelled</Badge>
+            ) : updateType === 'create' ? (
+              <Badge className="bg-green-600">Event Created</Badge>
             ) : (
               <Badge variant="default">Event Updated</Badge>
             )}
           </DialogTitle>
           <DialogDescription>
-            Would you like to notify team managers and coaches about this {updateType === 'cancel' ? 'cancellation' : 'update'}?
+            {updateType === 'create'
+              ? 'Would you like to notify stakeholders or push this event to Spond?'
+              : `Would you like to notify team managers and coaches about this ${updateType === 'cancel' ? 'cancellation' : 'update'}?`}
           </DialogDescription>
         </DialogHeader>
         
@@ -321,6 +395,42 @@ export default function EventUpdateShareDialog({
               WhatsApp
             </Button>
           </div>
+          {/* Spond push/update button */}
+          {(canPushToSpond || canUpdateInSpond) && (
+            <Button
+              variant="outline"
+              className={`w-full ${spondPushResult === 'success' ? 'border-green-300 text-green-700 bg-green-50' : spondPushResult === 'error' ? 'border-red-300 text-red-700' : 'border-blue-300 text-blue-700 hover:bg-blue-50'}`}
+              onClick={handlePushToSpond}
+              disabled={pushingToSpond || spondPushResult === 'success'}
+            >
+              {pushingToSpond ? (
+                <>
+                  <ArrowsClockwise className="mr-2 animate-spin" size={18} />
+                  {isAlreadyInSpond ? 'Updating in Spond...' : 'Pushing to Spond...'}
+                </>
+              ) : spondPushResult === 'success' ? (
+                <>
+                  <CheckCircle className="mr-2" size={18} weight="fill" />
+                  {isAlreadyInSpond ? 'Updated in Spond' : 'Pushed to Spond'}
+                </>
+              ) : spondPushResult === 'already' ? (
+                <>
+                  <CheckCircle className="mr-2" size={18} weight="fill" />
+                  Already in Spond
+                </>
+              ) : spondPushResult === 'error' ? (
+                <>
+                  <Warning className="mr-2" size={18} />
+                  Retry Spond Push
+                </>
+              ) : (
+                <>
+                  <CloudArrowUp className="mr-2" size={18} weight="duotone" />
+                  {isAlreadyInSpond ? 'Update in Spond' : 'Push to Spond'}
+                </>
+              )}
+            </Button>
+          )}
           <Button
             variant="ghost"
             className="w-full"
