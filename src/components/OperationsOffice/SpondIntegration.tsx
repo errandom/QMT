@@ -356,6 +356,7 @@ export default function SpondIntegration() {
             teamId,
             spondGroupId,
             spondGroupName: group?.name || null,
+            spondParentGroupId: group?.parentGroupId || null,
             spondParentGroupName: group?.parentGroup || null,
             isSubgroup: !group?.isParentGroup,
             syncEventsImport: true,
