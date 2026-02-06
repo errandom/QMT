@@ -32,10 +32,10 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return true
   })
 
-  // Deduplicate recurring events - show each recurring event only once
-  // Group by signature (title, time, teams, fields, day) and take the first one
+  // Deduplicate recurring events - show each recurring event only once in the weekly view
+  // Multiple DB rows exist for each occurrence, but we only need one representative instance
   const displayEvents = (() => {
-    const getEventSignature = (event: Event, dayOfWeek: number): string => {
+    const getRecurringSignature = (event: Event): string => {
       return [
         event.title,
         event.startTime,
@@ -43,7 +43,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
         event.eventType,
         (event.teamIds || []).sort().join(','),
         (event.fieldIds || []).sort().join(','),
-        dayOfWeek
+        (event.recurringDays || []).sort().join(',')
       ].join('|')
     }
 
@@ -52,14 +52,11 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
     for (const event of allEvents) {
       if (event.isRecurring && event.recurringDays && event.recurringDays.length > 0) {
-        // For recurring events, create one entry per recurring day
-        for (const dayOfWeek of event.recurringDays) {
-          const sig = getEventSignature(event, dayOfWeek)
-          if (!seen.has(sig)) {
-            seen.add(sig)
-            deduped.push(event)
-            break; // Only add the event once, the display logic handles showing on correct days
-          }
+        // For recurring events, keep only one representative instance
+        const sig = getRecurringSignature(event)
+        if (!seen.has(sig)) {
+          seen.add(sig)
+          deduped.push(event)
         }
       } else {
         // Non-recurring events are always included
