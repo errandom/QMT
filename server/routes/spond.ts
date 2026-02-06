@@ -51,6 +51,22 @@ function normalizeSpondUUID(id: string | null | undefined): string | null {
 }
 
 /**
+ * Map Spond event type to local event type (for import preview)
+ */
+function mapEventType(spondType?: string, heading?: string): string {
+  const headingLower = heading?.toLowerCase() || '';
+  if (headingLower.includes('practice') || headingLower.includes('training')) return 'Practice';
+  if (headingLower.includes('game') || headingLower.includes('match')) return 'Game';
+  if (headingLower.includes('meeting')) return 'Meeting';
+  switch (spondType?.toUpperCase()) {
+    case 'MATCH': return 'Game';
+    case 'TRAINING': case 'PRACTICE': return 'Practice';
+    case 'MEETING': return 'Meeting';
+    default: return 'Other';
+  }
+}
+
+/**
  * GET /api/spond/status
  * Get current Spond integration status
  */
@@ -316,6 +332,234 @@ router.get('/events', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[Spond] Error fetching events:', error);
     res.status(500).json({ error: 'Failed to fetch Spond events' });
+  }
+});
+
+/**
+ * GET /api/spond/import-preview
+ * Preview what will be imported from Spond before actually importing
+ */
+router.get('/import-preview', async (req: Request, res: Response) => {
+  try {
+    const client = await ensureClient();
+    if (!client) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { daysAhead = 60, daysBehind = 7 } = req.query;
+
+    const pool = await getPool();
+
+    // Build team mapping for resolving group names
+    const teamMappingResult = await pool.request()
+      .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+    const teamMapping = new Map<string, { id: number; name: string }>();
+    for (const team of teamMappingResult.recordset) {
+      const normalizedId = normalizeSpondUUID(team.spond_group_id);
+      if (normalizedId) {
+        teamMapping.set(normalizedId, { id: team.id, name: team.name });
+      }
+    }
+
+    // Calculate date range
+    const now = new Date();
+    const minStart = new Date(now);
+    minStart.setDate(minStart.getDate() - Number(daysBehind));
+    const maxStart = new Date(now);
+    maxStart.setDate(maxStart.getDate() + Number(daysAhead));
+
+    // Fetch events from Spond
+    const spondEvents = await client.getEvents({
+      minStart,
+      maxStart,
+      maxEvents: 500,
+    });
+
+    // Check existing events in our DB
+    const existingResult = await pool.request()
+      .query('SELECT spond_id FROM events WHERE spond_id IS NOT NULL');
+    const existingSpondIds = new Set(existingResult.recordset.map((r: any) => r.spond_id));
+
+    // Categorize each event
+    const events = spondEvents.map(evt => {
+      const spondGroupId = evt.recipients?.group?.id || null;
+      const normalizedGroupId = normalizeSpondUUID(spondGroupId);
+      const mappedTeam = normalizedGroupId ? teamMapping.get(normalizedGroupId) : null;
+      const alreadyImported = existingSpondIds.has(evt.id);
+
+      // Gather attendance counts from responses
+      const accepted = evt.responses?.accepted?.length || 0;
+      const declined = evt.responses?.declined?.length || 0;
+      const unanswered = evt.responses?.unanswered?.length || 0;
+      const waiting = evt.responses?.waiting?.length || 0;
+
+      return {
+        spondId: evt.id,
+        heading: evt.heading,
+        description: evt.description?.substring(0, 100) || '',
+        eventType: mapEventType(evt.type || evt.spilesType, evt.heading),
+        startTime: evt.startTimestamp,
+        endTime: evt.endTimestamp,
+        location: evt.location?.address || null,
+        spondGroupName: evt.recipients?.group?.name || null,
+        spondSubgroups: evt.recipients?.subGroups?.map(sg => sg.name).filter(Boolean) || [],
+        mappedTeam: mappedTeam ? { id: mappedTeam.id, name: mappedTeam.name } : null,
+        alreadyImported,
+        action: alreadyImported ? 'update' : 'import',
+        cancelled: evt.cancelled || false,
+        attendance: {
+          accepted,
+          declined,
+          unanswered,
+          waiting,
+          total: accepted + declined + unanswered + waiting,
+          estimatedAttendance: accepted + waiting,
+        },
+      };
+    });
+
+    // Compute summary stats
+    const summary = {
+      totalInSpond: events.length,
+      willImport: events.filter(e => !e.alreadyImported).length,
+      willUpdate: events.filter(e => e.alreadyImported).length,
+      withTeamMapping: events.filter(e => e.mappedTeam).length,
+      withoutTeamMapping: events.filter(e => !e.mappedTeam).length,
+      cancelled: events.filter(e => e.cancelled).length,
+      withAttendance: events.filter(e => e.attendance.total > 0).length,
+    };
+
+    res.json({ summary, events });
+  } catch (error) {
+    console.error('[Spond] Error generating import preview:', error);
+    res.status(500).json({ error: 'Failed to generate import preview' });
+  }
+});
+
+/**
+ * POST /api/spond/export-validate
+ * Validate events before export - check if already exported events still exist in Spond
+ */
+router.post('/export-validate', async (req: Request, res: Response) => {
+  try {
+    const client = await ensureClient();
+    if (!client) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { daysAhead = 60, daysBehind = 7 } = req.body;
+    const pool = await getPool();
+    const now = new Date();
+    const minDate = new Date(now);
+    minDate.setDate(minDate.getDate() - Number(daysBehind));
+    const maxDate = new Date(now);
+    maxDate.setDate(maxDate.getDate() + Number(daysAhead));
+
+    // Get all local events in date range
+    const eventsResult = await pool.request()
+      .input('minDate', sql.DateTime, minDate)
+      .input('maxDate', sql.DateTime, maxDate)
+      .query(`
+        SELECT 
+          e.id,
+          e.description,
+          e.event_type,
+          e.start_time,
+          e.end_time,
+          e.spond_id,
+          e.team_ids,
+          e.status,
+          t.id as team_table_id,
+          t.name as team_name,
+          t.spond_group_id
+        FROM events e
+        OUTER APPLY (
+          SELECT TOP 1 id, name, spond_group_id 
+          FROM teams 
+          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
+        ) t
+        WHERE e.start_time BETWEEN @minDate AND @maxDate
+        ORDER BY e.start_time
+      `);
+
+    const readyToExport: any[] = [];
+    const alreadyExported: any[] = [];
+    const cannotExport: any[] = [];
+    const conflictsDetected: any[] = [];
+
+    // Check already-exported events against Spond
+    for (const evt of eventsResult.recordset) {
+      const eventInfo = {
+        id: evt.id,
+        title: evt.description?.split('\n')[0]?.substring(0, 80) || 'Untitled',
+        eventType: evt.event_type,
+        startTime: evt.start_time,
+        endTime: evt.end_time,
+        teamName: evt.team_name || null,
+        status: evt.status,
+        spondId: evt.spond_id || null,
+        spondGroupId: evt.spond_group_id || null,
+      };
+
+      if (evt.spond_id) {
+        // Already exported - validate it still exists in Spond
+        try {
+          const spondEvent = await client.getEvent(evt.spond_id);
+          if (!spondEvent) {
+            // Event was deleted in Spond
+            conflictsDetected.push({
+              ...eventInfo,
+              conflict: 'deleted_in_spond',
+              message: 'This event was previously exported but no longer exists in Spond. Re-exporting will create a new event.',
+            });
+          } else {
+            // Event exists - check if local version was modified since export
+            alreadyExported.push({
+              ...eventInfo,
+              spondHeading: spondEvent.heading,
+              spondStartTime: spondEvent.startTimestamp,
+              existsInSpond: true,
+            });
+          }
+        } catch (checkError) {
+          // If we can't check, treat as conflict
+          conflictsDetected.push({
+            ...eventInfo,
+            conflict: 'check_failed',
+            message: `Could not verify event in Spond: ${(checkError as Error).message}`,
+          });
+        }
+      } else if (!evt.team_ids || evt.team_ids.trim() === '') {
+        cannotExport.push({
+          ...eventInfo,
+          reason: 'No team assigned',
+        });
+      } else if (!evt.spond_group_id) {
+        cannotExport.push({
+          ...eventInfo,
+          reason: 'Team not linked to Spond group',
+        });
+      } else {
+        readyToExport.push(eventInfo);
+      }
+    }
+
+    res.json({
+      summary: {
+        totalInRange: eventsResult.recordset.length,
+        readyToExport: readyToExport.length,
+        alreadyExported: alreadyExported.length,
+        conflicts: conflictsDetected.length,
+        cannotExport: cannotExport.length,
+      },
+      readyToExport,
+      alreadyExported,
+      conflicts: conflictsDetected,
+      cannotExport,
+    });
+  } catch (error) {
+    console.error('[Spond] Error validating export:', error);
+    res.status(500).json({ error: 'Failed to validate export' });
   }
 });
 
