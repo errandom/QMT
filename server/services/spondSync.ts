@@ -242,8 +242,8 @@ export async function importEventsFromSpond(
           }
           result.updated++;
         } else {
-          // No spond_id match - check for potential duplicate by date/time and location
-          const potentialDuplicate = await findPotentialDuplicate(pool, spondEvent);
+          // No spond_id match - check for potential duplicate by date/time, team, and location
+          const potentialDuplicate = await findPotentialDuplicate(pool, spondEvent, mappedTeamId);
 
           if (potentialDuplicate) {
             // Link existing local event to this Spond event
@@ -472,6 +472,35 @@ export async function exportEventToSpond(
 
     console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ' (no subgroup filter - ALL subgroups will see this)'}`);
 
+    // Check if a matching event already exists in Spond (dedup by time + location)
+    const existingInSpond = await findPotentialDuplicateInSpond(
+      client,
+      {
+        start_time: new Date(event.start_time),
+        end_time: new Date(event.end_time),
+      },
+      normalizedRecipientGroupId
+    );
+
+    if (existingInSpond) {
+      console.log(`[Spond] Event ${eventId}: Found matching Spond event ${existingInSpond.spondId} (${existingInSpond.heading}) - linking instead of creating duplicate`);
+      
+      // Link local event to the existing Spond event instead of creating a duplicate
+      await pool.request()
+        .input('id', sql.Int, eventId)
+        .input('spond_id', sql.NVarChar, existingInSpond.spondId)
+        .input('spond_group_id', sql.NVarChar, normalizedRecipientGroupId)
+        .query(`
+          UPDATE events SET
+            spond_id = @spond_id,
+            spond_group_id = @spond_group_id,
+            updated_at = GETDATE()
+          WHERE id = @id
+        `);
+
+      return { success: true, spondEventId: existingInSpond.spondId };
+    }
+
     // Create event in Spond
     const spondEvent = await client.createEvent(normalizedRecipientGroupId, {
       heading: event.description?.split('\n')[0] || `${event.event_type} Event`,
@@ -595,11 +624,17 @@ function isApproximateLocationMatch(
 }
 
 /**
- * Find a potential duplicate local event based on date/time and location
+ * Find a potential duplicate local event based on date/time, team, and approximate location.
+ * Matching criteria:
+ * 1. Time within ±15 minutes
+ * 2. Team match (if Spond event has a mapped team, local event must share it)
+ * 3. Approximate location match (coordinates within ~500m or address word overlap)
+ * If all three match, the events are considered duplicates and title is NOT overwritten.
  */
 async function findPotentialDuplicate(
   pool: sql.ConnectionPool,
-  spondEvent: SpondEvent
+  spondEvent: SpondEvent,
+  mappedTeamId?: number | null
 ): Promise<{ id: number } | null> {
   try {
     const startTime = new Date(spondEvent.startTimestamp);
@@ -620,6 +655,7 @@ async function findPotentialDuplicate(
           e.end_time,
           e.description,
           e.event_type,
+          e.team_ids,
           s.address as site_address,
           s.name as site_name,
           s.latitude,
@@ -640,12 +676,22 @@ async function findPotentialDuplicate(
       return null;
     }
 
-    // Check each potential match for location similarity
+    // Check each potential match for team + location similarity
     for (const localEvent of potentialMatches.recordset) {
+      // Team matching: if we have a mapped team from Spond, the local event should include that team
+      if (mappedTeamId) {
+        const localTeamIds = (localEvent.team_ids || '').split(',').map((id: string) => id.trim()).filter(Boolean);
+        const teamMatches = localTeamIds.includes(String(mappedTeamId));
+        if (!teamMatches) {
+          // Team doesn't match - skip this candidate
+          continue;
+        }
+      }
+      
       const locationMatch = isApproximateLocationMatch(spondEvent.location, localEvent);
       
       if (locationMatch) {
-        console.log(`[Spond Sync] Found potential duplicate: local event ${localEvent.id} matches Spond event ${spondEvent.id} (${spondEvent.heading})`);
+        console.log(`[Spond Sync] Found potential duplicate: local event ${localEvent.id} matches Spond event ${spondEvent.id} (${spondEvent.heading}) on time+team+location`);
         return { id: localEvent.id };
       }
     }
@@ -653,6 +699,70 @@ async function findPotentialDuplicate(
     return null;
   } catch (error) {
     console.error('[Spond Sync] Error finding potential duplicate:', error);
+    return null;
+  }
+}
+
+/**
+ * Find a potential duplicate in Spond before exporting a local event.
+ * Checks existing Spond events for matching date/time, team (group), and approximate location.
+ * Prevents creating duplicates when exporting.
+ */
+async function findPotentialDuplicateInSpond(
+  client: SpondClient,
+  localEvent: {
+    start_time: Date;
+    end_time: Date;
+    site_address?: string;
+    site_name?: string;
+    latitude?: number;
+    longitude?: number;
+    field_name?: string;
+  },
+  spondGroupId: string
+): Promise<{ spondId: string; heading: string } | null> {
+  try {
+    const startTime = new Date(localEvent.start_time);
+    
+    // Search Spond events in a window around this event's time
+    const timeWindowMinutes = 15;
+    const minStart = new Date(startTime.getTime() - timeWindowMinutes * 60 * 1000);
+    const maxStart = new Date(startTime.getTime() + timeWindowMinutes * 60 * 1000);
+
+    const spondEvents = await client.getEvents({
+      groupId: spondGroupId,
+      minStart,
+      maxStart,
+      maxEvents: 50,
+    });
+
+    if (spondEvents.length === 0) {
+      return null;
+    }
+
+    // Check each Spond event for approximate location match
+    for (const spondEvent of spondEvents) {
+      const spondStart = new Date(spondEvent.startTimestamp);
+      const timeDiff = Math.abs(spondStart.getTime() - startTime.getTime());
+      
+      // Must be within ±15 minutes
+      if (timeDiff > timeWindowMinutes * 60 * 1000) continue;
+
+      // Check location match
+      const locationMatch = isApproximateLocationMatch(
+        spondEvent.location,
+        localEvent
+      );
+      
+      if (locationMatch) {
+        console.log(`[Spond Sync] Found potential duplicate in Spond: ${spondEvent.id} (${spondEvent.heading}) matches local event on time+location`);
+        return { spondId: spondEvent.id, heading: spondEvent.heading };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Spond Sync] Error checking for Spond duplicates:', error);
     return null;
   }
 }
@@ -1042,6 +1152,40 @@ export async function pushEventToSpond(
     }
 
     console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ' (no subgroup filter)'}`);
+
+    // Check if a matching event already exists in Spond (dedup by time + location)
+    const existingInSpond = await findPotentialDuplicateInSpond(
+      client,
+      {
+        start_time: new Date(event.start_time),
+        end_time: new Date(event.end_time),
+        site_address: event.site_address,
+        site_name: event.site_name,
+        latitude: event.latitude,
+        longitude: event.longitude,
+        field_name: event.field_name,
+      },
+      normalizedRecipientGroupId
+    );
+
+    if (existingInSpond) {
+      console.log(`[Spond] Event ${eventId}: Found matching Spond event ${existingInSpond.spondId} (${existingInSpond.heading}) - linking instead of creating duplicate`);
+      
+      // Link local event to the existing Spond event
+      await pool.request()
+        .input('id', sql.Int, eventId)
+        .input('spond_id', sql.NVarChar, existingInSpond.spondId)
+        .input('spond_group_id', sql.NVarChar, normalizedRecipientGroupId)
+        .query(`
+          UPDATE events SET
+            spond_id = @spond_id,
+            spond_group_id = @spond_group_id,
+            updated_at = GETDATE()
+          WHERE id = @id
+        `);
+
+      return { success: true, spondEventId: existingInSpond.spondId };
+    }
 
     // Build event heading from type and team
     const heading = buildEventHeading(event);
