@@ -256,6 +256,9 @@ function transformEvent(event: any): any {
     awayZip: event.awayZip || event.away_zip || '',
     awayCity: event.awayCity || event.away_city || '',
     transportRequested: Boolean(event.transportRequested ?? event.transport_requested ?? false),
+    // Spond integration fields
+    spondId: event.spondId || event.spond_id || undefined,
+    spondGroupId: event.spondGroupId || event.spond_group_id || undefined,
   };
   
   console.log('[API] Transformed event result:', transformed);
