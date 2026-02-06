@@ -32,6 +32,25 @@ import {
 const router = Router();
 
 /**
+ * Normalize Spond UUID to the format Spond API expects (no hyphens, uppercase)
+ * This ensures consistent storage and lookup of Spond IDs
+ */
+function normalizeSpondUUID(id: string | null | undefined): string | null {
+  if (!id) return null;
+  
+  // Remove any existing hyphens and convert to uppercase (Spond API format)
+  const cleanId = id.replace(/-/g, '').toUpperCase();
+  
+  // Check if it's a valid 32-char hex string
+  if (!/^[0-9A-F]{32}$/.test(cleanId)) {
+    return null; // Invalid UUID
+  }
+  
+  // Return in Spond API format: uppercase, no hyphens
+  return cleanId;
+}
+
+/**
  * GET /api/spond/status
  * Get current Spond integration status
  */
@@ -743,23 +762,100 @@ router.post('/export/event/:id', async (req: Request, res: Response) => {
 
 /**
  * POST /api/spond/link/team
- * Link a local team to a Spond group
+ * Link a local team to a Spond group (supports both parent groups and subgroups)
+ * 
+ * For subgroups, also accepts parentGroupId which is required for proper 
+ * event export to Spond. The Spond API requires events to be created on 
+ * the parent group with subgroup recipients specified.
  */
 router.post('/link/team', async (req: Request, res: Response) => {
   try {
-    const { teamId, spondGroupId } = req.body;
+    const { teamId, spondGroupId, parentGroupId, groupName, parentGroupName } = req.body;
 
     if (!teamId || !spondGroupId) {
       return res.status(400).json({ error: 'teamId and spondGroupId are required' });
     }
 
+    // Normalize Spond IDs to consistent format (uppercase, no hyphens)
+    const normalizedGroupId = normalizeSpondUUID(spondGroupId);
+    const normalizedParentGroupId = normalizeSpondUUID(parentGroupId);
+
+    if (!normalizedGroupId) {
+      return res.status(400).json({ error: 'Invalid spondGroupId format' });
+    }
+
     const pool = await getPool();
+    
+    // Update the team's spond_group_id with normalized ID
     await pool.request()
       .input('id', sql.Int, teamId)
-      .input('spond_group_id', sql.NVarChar, spondGroupId)
+      .input('spond_group_id', sql.NVarChar, normalizedGroupId)
       .query('UPDATE teams SET spond_group_id = @spond_group_id WHERE id = @id');
 
-    res.json({ success: true, message: 'Team linked to Spond group' });
+    // Determine if this is a subgroup (has a parent group)
+    const isSubgroup = !!normalizedParentGroupId;
+
+    // Create or update sync settings with parent group info
+    // This is required for proper export to Spond when using subgroups
+    const existingSettings = await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('SELECT id FROM spond_sync_settings WHERE team_id = @team_id');
+
+    if (existingSettings.recordset.length > 0) {
+      // Update existing settings
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, normalizedGroupId)
+        .input('spond_group_name', sql.NVarChar, groupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, normalizedParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, parentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup)
+        .input('updated_at', sql.DateTime, new Date())
+        .query(`
+          UPDATE spond_sync_settings SET
+            spond_group_id = @spond_group_id,
+            spond_group_name = @spond_group_name,
+            spond_parent_group_id = @spond_parent_group_id,
+            spond_parent_group_name = @spond_parent_group_name,
+            is_subgroup = @is_subgroup,
+            updated_at = @updated_at
+          WHERE team_id = @team_id
+        `);
+    } else {
+      // Insert new settings
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, normalizedGroupId)
+        .input('spond_group_name', sql.NVarChar, groupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, normalizedParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, parentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup)
+        .query(`
+          INSERT INTO spond_sync_settings (
+            team_id, spond_group_id, spond_group_name, 
+            spond_parent_group_id, spond_parent_group_name, 
+            is_subgroup, sync_events_import, sync_attendance_import, is_active
+          )
+          VALUES (
+            @team_id, @spond_group_id, @spond_group_name,
+            @spond_parent_group_id, @spond_parent_group_name,
+            @is_subgroup, 1, 1, 1
+          )
+        `);
+    }
+
+    const linkType = isSubgroup 
+      ? `Team linked to Spond subgroup (parent: ${parentGroupName || parentGroupId})` 
+      : 'Team linked to Spond group';
+    
+    console.log(`[Spond] ${linkType} - Team ${teamId} -> Group ${spondGroupId}${isSubgroup ? ` (parent: ${parentGroupId})` : ''}`);
+
+    res.json({ 
+      success: true, 
+      message: linkType,
+      isSubgroup,
+      parentGroupId: parentGroupId || null
+    });
   } catch (error) {
     console.error('[Spond] Link team error:', error);
     res.status(500).json({ error: 'Failed to link team' });
@@ -1184,6 +1280,279 @@ router.get('/export-diagnostic', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[Spond] Export diagnostic error:', error);
     res.status(500).json({ error: 'Failed to run export diagnostic' });
+  }
+});
+
+/**
+ * POST /api/spond/sync-settings
+ * Create or update sync settings for a team
+ */
+router.post('/sync-settings', async (req: Request, res: Response) => {
+  try {
+    const { 
+      teamId, 
+      spondGroupId, 
+      spondGroupName, 
+      spondParentGroupId, 
+      spondParentGroupName,
+      isSubgroup,
+      syncEventsImport,
+      syncEventsExport,
+      syncAttendanceImport,
+      syncEventTitle,
+      syncEventDescription,
+      syncEventTime,
+      syncEventLocation,
+      syncEventType,
+      isActive
+    } = req.body;
+
+    if (!teamId || !spondGroupId) {
+      return res.status(400).json({ error: 'teamId and spondGroupId are required' });
+    }
+
+    const pool = await getPool();
+
+    // Check if settings exist for this team
+    const existing = await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('SELECT id FROM spond_sync_settings WHERE team_id = @team_id');
+
+    if (existing.recordset.length > 0) {
+      // Update existing settings
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup || false)
+        .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+        .input('sync_events_export', sql.Bit, syncEventsExport || false)
+        .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+        .input('sync_event_title', sql.Bit, syncEventTitle !== false)
+        .input('sync_event_description', sql.Bit, syncEventDescription !== false)
+        .input('sync_event_time', sql.Bit, syncEventTime !== false)
+        .input('sync_event_location', sql.Bit, syncEventLocation !== false)
+        .input('sync_event_type', sql.Bit, syncEventType !== false)
+        .input('is_active', sql.Bit, isActive !== false)
+        .input('updated_at', sql.DateTime, new Date())
+        .query(`
+          UPDATE spond_sync_settings SET
+            spond_group_id = @spond_group_id,
+            spond_group_name = @spond_group_name,
+            spond_parent_group_id = @spond_parent_group_id,
+            spond_parent_group_name = @spond_parent_group_name,
+            is_subgroup = @is_subgroup,
+            sync_events_import = @sync_events_import,
+            sync_events_export = @sync_events_export,
+            sync_attendance_import = @sync_attendance_import,
+            sync_event_title = @sync_event_title,
+            sync_event_description = @sync_event_description,
+            sync_event_time = @sync_event_time,
+            sync_event_location = @sync_event_location,
+            sync_event_type = @sync_event_type,
+            is_active = @is_active,
+            updated_at = @updated_at
+          WHERE team_id = @team_id
+        `);
+    } else {
+      // Insert new settings
+      await pool.request()
+        .input('team_id', sql.Int, teamId)
+        .input('spond_group_id', sql.NVarChar, spondGroupId)
+        .input('spond_group_name', sql.NVarChar, spondGroupName || null)
+        .input('spond_parent_group_id', sql.NVarChar, spondParentGroupId || null)
+        .input('spond_parent_group_name', sql.NVarChar, spondParentGroupName || null)
+        .input('is_subgroup', sql.Bit, isSubgroup || false)
+        .input('sync_events_import', sql.Bit, syncEventsImport !== false)
+        .input('sync_events_export', sql.Bit, syncEventsExport || false)
+        .input('sync_attendance_import', sql.Bit, syncAttendanceImport !== false)
+        .input('sync_event_title', sql.Bit, syncEventTitle !== false)
+        .input('sync_event_description', sql.Bit, syncEventDescription !== false)
+        .input('sync_event_time', sql.Bit, syncEventTime !== false)
+        .input('sync_event_location', sql.Bit, syncEventLocation !== false)
+        .input('sync_event_type', sql.Bit, syncEventType !== false)
+        .input('is_active', sql.Bit, isActive !== false)
+        .query(`
+          INSERT INTO spond_sync_settings (
+            team_id, spond_group_id, spond_group_name, 
+            spond_parent_group_id, spond_parent_group_name, 
+            is_subgroup, sync_events_import, sync_events_export, 
+            sync_attendance_import, sync_event_title, sync_event_description, 
+            sync_event_time, sync_event_location, sync_event_type, is_active
+          )
+          VALUES (
+            @team_id, @spond_group_id, @spond_group_name,
+            @spond_parent_group_id, @spond_parent_group_name,
+            @is_subgroup, @sync_events_import, @sync_events_export,
+            @sync_attendance_import, @sync_event_title, @sync_event_description,
+            @sync_event_time, @sync_event_location, @sync_event_type, @is_active
+          )
+        `);
+    }
+
+    console.log(`[Spond] Sync settings saved for team ${teamId}`);
+    res.json({ success: true, message: 'Sync settings saved' });
+  } catch (error) {
+    console.error('[Spond] Sync settings error:', error);
+    res.status(500).json({ error: 'Failed to save sync settings' });
+  }
+});
+
+/**
+ * GET /api/spond/subgroup-diagnostic
+ * Check which teams have proper subgroup mapping for event export
+ */
+router.get('/subgroup-diagnostic', async (req: Request, res: Response) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT 
+        t.id as team_id,
+        t.name as team_name,
+        t.spond_group_id as team_spond_group_id,
+        ss.spond_group_id as sync_spond_group_id,
+        ss.spond_group_name,
+        ss.is_subgroup,
+        ss.spond_parent_group_id,
+        ss.spond_parent_group_name,
+        ss.sync_events_export,
+        CASE 
+          WHEN ss.is_subgroup = 1 AND ss.spond_parent_group_id IS NULL THEN 'BROKEN - subgroup without parent ID'
+          WHEN ss.is_subgroup = 1 AND ss.spond_parent_group_id IS NOT NULL THEN 'OK - subgroup with parent'
+          WHEN ss.is_subgroup = 0 OR ss.is_subgroup IS NULL THEN 'OK - parent group (all subgroups see events)'
+          ELSE 'Unknown'
+        END as subgroup_status
+      FROM teams t
+      LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
+      WHERE t.spond_group_id IS NOT NULL
+    `);
+
+    res.json({
+      teams: result.recordset,
+      summary: {
+        total: result.recordset.length,
+        subgroups: result.recordset.filter((r: any) => r.is_subgroup).length,
+        broken: result.recordset.filter((r: any) => r.is_subgroup && !r.spond_parent_group_id).length,
+        ok: result.recordset.filter((r: any) => !r.is_subgroup || r.spond_parent_group_id).length,
+      }
+    });
+  } catch (error) {
+    console.error('[Spond] Subgroup diagnostic error:', error);
+    res.status(500).json({ error: 'Failed to run diagnostic' });
+  }
+});
+
+/**
+ * POST /api/spond/fix-subgroup-mappings
+ * Automatically fix subgroup mappings by looking up parent group IDs from Spond
+ */
+router.post('/fix-subgroup-mappings', async (req: Request, res: Response) => {
+  try {
+    const client = await ensureClient();
+    if (!client) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    // Get all groups from Spond to build parent-child map
+    const groups = await client.getGroups();
+    const subgroupToParent = new Map<string, { parentId: string; parentName: string }>();
+
+    for (const group of groups) {
+      const normalizedParentId = normalizeSpondUUID(group.id);
+      if (group.subGroups) {
+        for (const sub of group.subGroups) {
+          const normalizedSubId = normalizeSpondUUID(sub.id);
+          if (normalizedSubId && normalizedParentId) {
+            subgroupToParent.set(normalizedSubId, { 
+              parentId: normalizedParentId, 
+              parentName: group.name 
+            });
+          }
+        }
+      }
+    }
+
+    // Find teams that need fixing
+    const pool = await getPool();
+    const teamsToFix = await pool.request().query(`
+      SELECT ss.team_id, ss.spond_group_id, ss.spond_group_name, t.name as team_name
+      FROM spond_sync_settings ss
+      JOIN teams t ON t.id = ss.team_id
+      WHERE ss.spond_parent_group_id IS NULL
+    `);
+
+    let fixed = 0;
+    const results: any[] = [];
+
+    for (const team of teamsToFix.recordset) {
+      const normalizedGroupId = normalizeSpondUUID(team.spond_group_id);
+      if (normalizedGroupId && subgroupToParent.has(normalizedGroupId)) {
+        const parent = subgroupToParent.get(normalizedGroupId)!;
+        
+        await pool.request()
+          .input('team_id', sql.Int, team.team_id)
+          .input('spond_parent_group_id', sql.NVarChar, parent.parentId)
+          .input('spond_parent_group_name', sql.NVarChar, parent.parentName)
+          .query(`
+            UPDATE spond_sync_settings SET
+              spond_parent_group_id = @spond_parent_group_id,
+              spond_parent_group_name = @spond_parent_group_name,
+              is_subgroup = 1,
+              updated_at = GETDATE()
+            WHERE team_id = @team_id
+          `);
+
+        fixed++;
+        results.push({
+          teamId: team.team_id,
+          teamName: team.team_name,
+          spondGroupId: normalizedGroupId,
+          parentGroupId: parent.parentId,
+          parentGroupName: parent.parentName,
+          status: 'fixed'
+        });
+      } else {
+        results.push({
+          teamId: team.team_id,
+          teamName: team.team_name,
+          spondGroupId: normalizedGroupId,
+          status: normalizedGroupId ? 'is-parent-group' : 'invalid-id'
+        });
+      }
+    }
+
+    console.log(`[Spond] Fixed ${fixed} subgroup mappings`);
+    res.json({ 
+      success: true, 
+      fixed, 
+      total: teamsToFix.recordset.length,
+      results 
+    });
+  } catch (error) {
+    console.error('[Spond] Fix subgroup mappings error:', error);
+    res.status(500).json({ error: 'Failed to fix subgroup mappings' });
+  }
+});
+
+/**
+ * DELETE /api/spond/sync-settings/:teamId
+ * Delete sync settings for a team
+ */
+router.delete('/sync-settings/:teamId', async (req: Request, res: Response) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+
+    const pool = await getPool();
+    await pool.request()
+      .input('team_id', sql.Int, teamId)
+      .query('DELETE FROM spond_sync_settings WHERE team_id = @team_id');
+
+    res.json({ success: true, message: 'Sync settings deleted' });
+  } catch (error) {
+    console.error('[Spond] Delete sync settings error:', error);
+    res.status(500).json({ error: 'Failed to delete sync settings' });
   }
 });
 
