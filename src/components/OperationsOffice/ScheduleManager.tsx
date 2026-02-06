@@ -23,10 +23,11 @@ import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope, FileXls, House, MapPin, Bus } from '@phosphor-icons/react'
+import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope, FileXls, House, MapPin, Bus, CloudArrowUp } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
 import { shareEvent } from '@/lib/whatsappService'
+import { getToken } from '@/lib/api'
 import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 import ScheduleExportDialog from '@/components/ScheduleExportDialog'
@@ -89,6 +90,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null)
   const [sendCancellationEmail, setSendCancellationEmail] = useState(false)
+  const [alsoDeleteFromSpond, setAlsoDeleteFromSpond] = useState(false)
 
   // Filter state
   const [filterTeam, setFilterTeam] = useState<string>('all')
@@ -338,6 +340,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const handleDeleteClick = (event: Event) => {
     setEventToDelete(event)
     setSendCancellationEmail(false)
+    setAlsoDeleteFromSpond(false)
     setShowDeleteDialog(true)
   }
 
@@ -355,6 +358,26 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         handleNotifyCancellation(eventToDelete)
       }
       
+      // Also delete from Spond if requested and the event is linked
+      if (alsoDeleteFromSpond && eventToDelete.spondId) {
+        try {
+          // The Spond API doesn't have a delete method, but we can cancel it
+          // by updating the event status in Spond
+          await fetch(`/api/spond/push/event/${numericId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${getToken()}`,
+            },
+            body: JSON.stringify({ status: 'cancelled' }),
+          })
+          toast.success('Event also cancelled in Spond')
+        } catch (spondError) {
+          console.error('Error deleting from Spond:', spondError)
+          toast.error('Event deleted locally but failed to update Spond')
+        }
+      }
+      
       setEvents((current = []) => current.filter(ev => ev.id !== eventToDelete.id))
       toast.success('Event deleted successfully')
     } catch (error: any) {
@@ -364,6 +387,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       setShowDeleteDialog(false)
       setEventToDelete(null)
       setSendCancellationEmail(false)
+      setAlsoDeleteFromSpond(false)
     }
   }
 
@@ -495,6 +519,12 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           // Single event created
           setEvents((current = []) => [...current, result])
           toast.success('Event created successfully')
+          
+          // Show share dialog for newly created event (includes Spond push option)
+          setShareDialogOriginalEvent(null)
+          setShareDialogEvent(result)
+          setShareDialogUpdateType('create')
+          setShowShareDialog(true)
           
           // Send transport request for away games
           if (formData.transportRequested && formData.gameLocation === 'away') {
@@ -1300,6 +1330,29 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               </div>
             ) : null
           })()}
+          
+          {/* Spond delete option */}
+          {eventToDelete?.spondId && (
+            <div className="flex items-start gap-3 py-2 px-1">
+              <Checkbox
+                id="also-delete-spond"
+                checked={alsoDeleteFromSpond}
+                onCheckedChange={(checked) => setAlsoDeleteFromSpond(checked as boolean)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="also-delete-spond"
+                  className="text-sm font-medium leading-none cursor-pointer flex items-center gap-2"
+                >
+                  <CloudArrowUp size={16} className="text-blue-600" />
+                  Also cancel in Spond
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  This event is linked to Spond. Cancel it there too so members are notified.
+                </p>
+              </div>
+            </div>
+          )}
           
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
