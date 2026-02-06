@@ -443,6 +443,9 @@ export async function exportEventToSpond(
       return { success: false, error: 'No Spond group ID specified' };
     }
 
+    // Log subgroup detection details
+    console.log(`[Spond] Event ${eventId} subgroup detection: is_subgroup=${event.is_subgroup}, spond_parent_group_id=${event.spond_parent_group_id}, targetGroupId=${targetGroupId}`);
+
     // Determine the correct parent group and subgroup for Spond API
     // If the team is linked to a subgroup, we need to use the parent group as recipient
     // and specify the subgroup separately
@@ -453,6 +456,10 @@ export async function exportEventToSpond(
       recipientGroupId = event.spond_parent_group_id;
       subgroupIds = [targetGroupId];
       console.log(`[Spond] Event ${eventId}: Using parent group ${recipientGroupId} with subgroup ${targetGroupId}`);
+    } else if (!event.is_subgroup) {
+      console.log(`[Spond] Event ${eventId}: Team is not a subgroup, sending to group directly`);
+    } else if (!event.spond_parent_group_id) {
+      console.log(`[Spond] Event ${eventId}: WARNING - Team is marked as subgroup but spond_parent_group_id is missing! Event will go to parent group level.`);
     }
 
     // Normalize UUIDs to ensure proper format
@@ -463,7 +470,7 @@ export async function exportEventToSpond(
       return { success: false, error: `Invalid Spond group ID format: ${recipientGroupId}` };
     }
 
-    console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ''}`);
+    console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ' (no subgroup filter - ALL subgroups will see this)'}`);
 
     // Create event in Spond
     const spondEvent = await client.createEvent(normalizedRecipientGroupId, {
@@ -1009,6 +1016,9 @@ export async function pushEventToSpond(
       return { success: false, error: 'No Spond group specified. Link the team to a Spond group first, or specify spondGroupId.' };
     }
 
+    // Log subgroup detection details
+    console.log(`[Spond] pushEvent ${eventId} subgroup detection: is_subgroup=${event.is_subgroup}, spond_parent_group_id=${event.spond_parent_group_id}, targetGroupId=${targetGroupId}`);
+
     // Determine the correct parent group and subgroup for Spond API
     let recipientGroupId = targetGroupId;
     let subgroupIds: string[] | undefined;
@@ -1017,6 +1027,10 @@ export async function pushEventToSpond(
       recipientGroupId = event.spond_parent_group_id;
       subgroupIds = [targetGroupId];
       console.log(`[Spond] Event ${eventId}: Using parent group ${recipientGroupId} with subgroup ${targetGroupId}`);
+    } else if (!event.is_subgroup) {
+      console.log(`[Spond] Event ${eventId}: Team is not a subgroup, sending to group directly`);
+    } else if (!event.spond_parent_group_id) {
+      console.log(`[Spond] Event ${eventId}: WARNING - Team is marked as subgroup but spond_parent_group_id is missing!`);
     }
 
     // Normalize UUIDs to ensure proper format
@@ -1027,7 +1041,7 @@ export async function pushEventToSpond(
       return { success: false, error: `Invalid Spond group ID format: ${recipientGroupId}` };
     }
 
-    console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ''}`);
+    console.log(`[Spond] Event ${eventId}: Sending to group ${normalizedRecipientGroupId}${normalizedSubgroupIds?.length ? ` with subgroups: ${normalizedSubgroupIds.join(', ')}` : ' (no subgroup filter)'}`);
 
     // Build event heading from type and team
     const heading = buildEventHeading(event);
