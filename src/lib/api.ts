@@ -1,4 +1,3 @@
-
 // API Configuration Module
 // Used by frontend to get the correct API base URL
 
