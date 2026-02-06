@@ -34,6 +34,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [shareDialogEvent, setShareDialogEvent] = useState<Event | null>(null)
   const [shareDialogOriginalEvent, setShareDialogOriginalEvent] = useState<Event | null>(null)
+  const [shareDialogUpdateType, setShareDialogUpdateType] = useState<'update' | 'cancel' | 'create'>('cancel')
 
   // Approval dialog state (for facility requests - to specify location)
   const [showApprovalDialog, setShowApprovalDialog] = useState(false)
@@ -165,6 +166,15 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         ? 'Facility request approved and event created with location' 
         : 'Facility request approved - event created without location')
       
+      // Show share dialog for newly created event (includes Spond push option)
+      const createdEvent = Array.isArray(newEvent) ? newEvent[0] : newEvent
+      if (createdEvent) {
+        setShareDialogOriginalEvent(null)
+        setShareDialogEvent(createdEvent)
+        setShareDialogUpdateType('create')
+        setShowShareDialog(true)
+      }
+      
       setShowApprovalDialog(false)
       setApprovalRequest(null)
       setSelectedFieldId('')
@@ -285,6 +295,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         // Show share dialog for cancellation notification
         setShareDialogOriginalEvent(originalEvent)
         setShareDialogEvent(cancelledEvent)
+        setShareDialogUpdateType('cancel')
         setShowShareDialog(true)
       }
       
@@ -772,7 +783,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         )}
       </div>
 
-      {/* Event Update Share Dialog for Cancellations */}
+      {/* Event Update Share Dialog for Cancellations and Approvals */}
       {shareDialogEvent && (
         <EventUpdateShareDialog
           isOpen={showShareDialog}
@@ -786,7 +797,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
           teams={teams}
           fields={fields}
           sites={sites}
-          updateType="cancel"
+          updateType={shareDialogUpdateType}
         />
       )}
 
