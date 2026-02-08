@@ -51,22 +51,6 @@ function normalizeSpondUUID(id: string | null | undefined): string | null {
 }
 
 /**
- * Map Spond event type to local event type (for import preview)
- */
-function mapEventType(spondType?: string, heading?: string): string {
-  const headingLower = heading?.toLowerCase() || '';
-  if (headingLower.includes('practice') || headingLower.includes('training')) return 'Practice';
-  if (headingLower.includes('game') || headingLower.includes('match')) return 'Game';
-  if (headingLower.includes('meeting')) return 'Meeting';
-  switch (spondType?.toUpperCase()) {
-    case 'MATCH': return 'Game';
-    case 'TRAINING': case 'PRACTICE': return 'Practice';
-    case 'MEETING': return 'Meeting';
-    default: return 'Other';
-  }
-}
-
-/**
  * GET /api/spond/status
  * Get current Spond integration status
  */
@@ -336,234 +320,6 @@ router.get('/events', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/spond/import-preview
- * Preview what will be imported from Spond before actually importing
- */
-router.get('/import-preview', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { daysAhead = 60, daysBehind = 7 } = req.query;
-
-    const pool = await getPool();
-
-    // Build team mapping for resolving group names
-    const teamMappingResult = await pool.request()
-      .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
-    const teamMapping = new Map<string, { id: number; name: string }>();
-    for (const team of teamMappingResult.recordset) {
-      const normalizedId = normalizeSpondUUID(team.spond_group_id);
-      if (normalizedId) {
-        teamMapping.set(normalizedId, { id: team.id, name: team.name });
-      }
-    }
-
-    // Calculate date range
-    const now = new Date();
-    const minStart = new Date(now);
-    minStart.setDate(minStart.getDate() - Number(daysBehind));
-    const maxStart = new Date(now);
-    maxStart.setDate(maxStart.getDate() + Number(daysAhead));
-
-    // Fetch events from Spond
-    const spondEvents = await client.getEvents({
-      minStart,
-      maxStart,
-      maxEvents: 500,
-    });
-
-    // Check existing events in our DB
-    const existingResult = await pool.request()
-      .query('SELECT spond_id FROM events WHERE spond_id IS NOT NULL');
-    const existingSpondIds = new Set(existingResult.recordset.map((r: any) => r.spond_id));
-
-    // Categorize each event
-    const events = spondEvents.map(evt => {
-      const spondGroupId = evt.recipients?.group?.id || null;
-      const normalizedGroupId = normalizeSpondUUID(spondGroupId);
-      const mappedTeam = normalizedGroupId ? teamMapping.get(normalizedGroupId) : null;
-      const alreadyImported = existingSpondIds.has(evt.id);
-
-      // Gather attendance counts from responses
-      const accepted = evt.responses?.accepted?.length || 0;
-      const declined = evt.responses?.declined?.length || 0;
-      const unanswered = evt.responses?.unanswered?.length || 0;
-      const waiting = evt.responses?.waiting?.length || 0;
-
-      return {
-        spondId: evt.id,
-        heading: evt.heading,
-        description: evt.description?.substring(0, 100) || '',
-        eventType: mapEventType(evt.type || evt.spilesType, evt.heading),
-        startTime: evt.startTimestamp,
-        endTime: evt.endTimestamp,
-        location: evt.location?.address || null,
-        spondGroupName: evt.recipients?.group?.name || null,
-        spondSubgroups: evt.recipients?.subGroups?.map(sg => sg.name).filter(Boolean) || [],
-        mappedTeam: mappedTeam ? { id: mappedTeam.id, name: mappedTeam.name } : null,
-        alreadyImported,
-        action: alreadyImported ? 'update' : 'import',
-        cancelled: evt.cancelled || false,
-        attendance: {
-          accepted,
-          declined,
-          unanswered,
-          waiting,
-          total: accepted + declined + unanswered + waiting,
-          estimatedAttendance: accepted + waiting,
-        },
-      };
-    });
-
-    // Compute summary stats
-    const summary = {
-      totalInSpond: events.length,
-      willImport: events.filter(e => !e.alreadyImported).length,
-      willUpdate: events.filter(e => e.alreadyImported).length,
-      withTeamMapping: events.filter(e => e.mappedTeam).length,
-      withoutTeamMapping: events.filter(e => !e.mappedTeam).length,
-      cancelled: events.filter(e => e.cancelled).length,
-      withAttendance: events.filter(e => e.attendance.total > 0).length,
-    };
-
-    res.json({ summary, events });
-  } catch (error) {
-    console.error('[Spond] Error generating import preview:', error);
-    res.status(500).json({ error: 'Failed to generate import preview' });
-  }
-});
-
-/**
- * POST /api/spond/export-validate
- * Validate events before export - check if already exported events still exist in Spond
- */
-router.post('/export-validate', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    const { daysAhead = 60, daysBehind = 7 } = req.body;
-    const pool = await getPool();
-    const now = new Date();
-    const minDate = new Date(now);
-    minDate.setDate(minDate.getDate() - Number(daysBehind));
-    const maxDate = new Date(now);
-    maxDate.setDate(maxDate.getDate() + Number(daysAhead));
-
-    // Get all local events in date range
-    const eventsResult = await pool.request()
-      .input('minDate', sql.DateTime, minDate)
-      .input('maxDate', sql.DateTime, maxDate)
-      .query(`
-        SELECT 
-          e.id,
-          e.description,
-          e.event_type,
-          e.start_time,
-          e.end_time,
-          e.spond_id,
-          e.team_ids,
-          e.status,
-          t.id as team_table_id,
-          t.name as team_name,
-          t.spond_group_id
-        FROM events e
-        OUTER APPLY (
-          SELECT TOP 1 id, name, spond_group_id 
-          FROM teams 
-          WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
-        ) t
-        WHERE e.start_time BETWEEN @minDate AND @maxDate
-        ORDER BY e.start_time
-      `);
-
-    const readyToExport: any[] = [];
-    const alreadyExported: any[] = [];
-    const cannotExport: any[] = [];
-    const conflictsDetected: any[] = [];
-
-    // Check already-exported events against Spond
-    for (const evt of eventsResult.recordset) {
-      const eventInfo = {
-        id: evt.id,
-        title: evt.description?.split('\n')[0]?.substring(0, 80) || 'Untitled',
-        eventType: evt.event_type,
-        startTime: evt.start_time,
-        endTime: evt.end_time,
-        teamName: evt.team_name || null,
-        status: evt.status,
-        spondId: evt.spond_id || null,
-        spondGroupId: evt.spond_group_id || null,
-      };
-
-      if (evt.spond_id) {
-        // Already exported - validate it still exists in Spond
-        try {
-          const spondEvent = await client.getEvent(evt.spond_id);
-          if (!spondEvent) {
-            // Event was deleted in Spond
-            conflictsDetected.push({
-              ...eventInfo,
-              conflict: 'deleted_in_spond',
-              message: 'This event was previously exported but no longer exists in Spond. Re-exporting will create a new event.',
-            });
-          } else {
-            // Event exists - check if local version was modified since export
-            alreadyExported.push({
-              ...eventInfo,
-              spondHeading: spondEvent.heading,
-              spondStartTime: spondEvent.startTimestamp,
-              existsInSpond: true,
-            });
-          }
-        } catch (checkError) {
-          // If we can't check, treat as conflict
-          conflictsDetected.push({
-            ...eventInfo,
-            conflict: 'check_failed',
-            message: `Could not verify event in Spond: ${(checkError as Error).message}`,
-          });
-        }
-      } else if (!evt.team_ids || evt.team_ids.trim() === '') {
-        cannotExport.push({
-          ...eventInfo,
-          reason: 'No team assigned',
-        });
-      } else if (!evt.spond_group_id) {
-        cannotExport.push({
-          ...eventInfo,
-          reason: 'Team not linked to Spond group',
-        });
-      } else {
-        readyToExport.push(eventInfo);
-      }
-    }
-
-    res.json({
-      summary: {
-        totalInRange: eventsResult.recordset.length,
-        readyToExport: readyToExport.length,
-        alreadyExported: alreadyExported.length,
-        conflicts: conflictsDetected.length,
-        cannotExport: cannotExport.length,
-      },
-      readyToExport,
-      alreadyExported,
-      conflicts: conflictsDetected,
-      cannotExport,
-    });
-  } catch (error) {
-    console.error('[Spond] Error validating export:', error);
-    res.status(500).json({ error: 'Failed to validate export' });
-  }
-});
-
-/**
  * GET /api/spond/export-preview
  * Preview which events can be exported to Spond and why others cannot
  */
@@ -649,6 +405,135 @@ router.get('/export-preview', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[Spond] Error generating export preview:', error);
     res.status(500).json({ error: 'Failed to generate export preview' });
+  }
+});
+
+/**
+ * GET /api/spond/import-preview
+ * Preview which events would be imported from Spond
+ * Shows events from Spond with their mapping status (new vs existing, team mapping, etc.)
+ */
+router.get('/import-preview', async (req: Request, res: Response) => {
+  try {
+    const client = await ensureClient();
+    if (!client) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { daysAhead = 60, daysBehind = 7 } = req.query;
+
+    // Calculate date range
+    const now = new Date();
+    const minStart = new Date(now);
+    minStart.setDate(minStart.getDate() - Number(daysBehind));
+    const maxStart = new Date(now);
+    maxStart.setDate(maxStart.getDate() + Number(daysAhead));
+
+    // Build team mapping lookup
+    const pool = await getPool();
+    const teamMappingResult = await pool.request()
+      .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+    const teamMapping = new Map<string, { id: number; name: string }>();
+    for (const team of teamMappingResult.recordset) {
+      const normalizedId = normalizeSpondUUID(team.spond_group_id);
+      if (normalizedId) {
+        teamMapping.set(normalizedId, { id: team.id, name: team.name });
+      }
+    }
+
+    // Fetch events from Spond
+    const spondEvents = await client.getEvents({
+      minStart,
+      maxStart,
+      maxEvents: 500,
+    });
+
+    // Check which events already exist locally
+    const existingEventsResult = await pool.request()
+      .query('SELECT spond_id FROM events WHERE spond_id IS NOT NULL');
+    const existingSpondIds = new Set(existingEventsResult.recordset.map((r: any) => r.spond_id));
+
+    // Map events for preview
+    const events = spondEvents.map(evt => {
+      const spondGroupId = evt.recipients?.group?.id || null;
+      const normalizedGroupId = spondGroupId ? normalizeSpondUUID(spondGroupId) : null;
+      const mappedTeam = normalizedGroupId ? teamMapping.get(normalizedGroupId) : null;
+      const alreadyExists = existingSpondIds.has(evt.id);
+
+      // Determine event type from Spond data
+      const headingLower = evt.heading?.toLowerCase() || '';
+      let eventType = 'Other';
+      if (headingLower.includes('practice') || headingLower.includes('training')) {
+        eventType = 'Practice';
+      } else if (headingLower.includes('game') || headingLower.includes('match')) {
+        eventType = 'Game';
+      } else if (headingLower.includes('meeting')) {
+        eventType = 'Meeting';
+      } else {
+        switch (evt.type?.toUpperCase() || evt.spilesType?.toUpperCase()) {
+          case 'MATCH': eventType = 'Game'; break;
+          case 'TRAINING': case 'PRACTICE': eventType = 'Practice'; break;
+          case 'MEETING': eventType = 'Meeting'; break;
+        }
+      }
+
+      // Build status/issues
+      const issues: string[] = [];
+      if (alreadyExists) {
+        issues.push('Will update existing event');
+      }
+      if (!mappedTeam && spondGroupId) {
+        issues.push('Spond group not linked to a local team');
+      }
+      if (!spondGroupId) {
+        issues.push('No group assigned in Spond');
+      }
+
+      // Count attendance
+      const accepted = evt.responses?.accepted?.length || 0;
+      const declined = evt.responses?.declined?.length || 0;
+      const unanswered = evt.responses?.unanswered?.length || 0;
+
+      return {
+        spondId: evt.id,
+        heading: evt.heading,
+        description: evt.description || null,
+        eventType,
+        startTime: evt.startTimestamp,
+        endTime: evt.endTimestamp,
+        location: evt.location?.feature || evt.location?.address || null,
+        spondGroupName: evt.recipients?.group?.name || null,
+        teamName: mappedTeam?.name || null,
+        teamId: mappedTeam?.id || null,
+        alreadyExists,
+        cancelled: evt.cancelled || false,
+        attendance: { accepted, declined, unanswered },
+        issues,
+      };
+    });
+
+    // Sort by start time
+    events.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    const summary = {
+      totalEvents: events.length,
+      newEvents: events.filter(e => !e.alreadyExists).length,
+      existingEvents: events.filter(e => e.alreadyExists).length,
+      withTeam: events.filter(e => e.teamName).length,
+      withoutTeam: events.filter(e => !e.teamName).length,
+      cancelled: events.filter(e => e.cancelled).length,
+      byType: {
+        games: events.filter(e => e.eventType === 'Game').length,
+        practices: events.filter(e => e.eventType === 'Practice').length,
+        meetings: events.filter(e => e.eventType === 'Meeting').length,
+        other: events.filter(e => e.eventType === 'Other').length,
+      },
+    };
+
+    res.json({ summary, events });
+  } catch (error) {
+    console.error('[Spond] Error generating import preview:', error);
+    res.status(500).json({ error: 'Failed to generate import preview' });
   }
 });
 
@@ -1641,142 +1526,6 @@ router.post('/sync-settings', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[Spond] Sync settings error:', error);
     res.status(500).json({ error: 'Failed to save sync settings' });
-  }
-});
-
-/**
- * GET /api/spond/subgroup-diagnostic
- * Check which teams have proper subgroup mapping for event export
- */
-router.get('/subgroup-diagnostic', async (req: Request, res: Response) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT 
-        t.id as team_id,
-        t.name as team_name,
-        t.spond_group_id as team_spond_group_id,
-        ss.spond_group_id as sync_spond_group_id,
-        ss.spond_group_name,
-        ss.is_subgroup,
-        ss.spond_parent_group_id,
-        ss.spond_parent_group_name,
-        ss.sync_events_export,
-        CASE 
-          WHEN ss.is_subgroup = 1 AND ss.spond_parent_group_id IS NULL THEN 'BROKEN - subgroup without parent ID'
-          WHEN ss.is_subgroup = 1 AND ss.spond_parent_group_id IS NOT NULL THEN 'OK - subgroup with parent'
-          WHEN ss.is_subgroup = 0 OR ss.is_subgroup IS NULL THEN 'OK - parent group (all subgroups see events)'
-          ELSE 'Unknown'
-        END as subgroup_status
-      FROM teams t
-      LEFT JOIN spond_sync_settings ss ON t.id = ss.team_id
-      WHERE t.spond_group_id IS NOT NULL
-    `);
-
-    res.json({
-      teams: result.recordset,
-      summary: {
-        total: result.recordset.length,
-        subgroups: result.recordset.filter((r: any) => r.is_subgroup).length,
-        broken: result.recordset.filter((r: any) => r.is_subgroup && !r.spond_parent_group_id).length,
-        ok: result.recordset.filter((r: any) => !r.is_subgroup || r.spond_parent_group_id).length,
-      }
-    });
-  } catch (error) {
-    console.error('[Spond] Subgroup diagnostic error:', error);
-    res.status(500).json({ error: 'Failed to run diagnostic' });
-  }
-});
-
-/**
- * POST /api/spond/fix-subgroup-mappings
- * Automatically fix subgroup mappings by looking up parent group IDs from Spond
- */
-router.post('/fix-subgroup-mappings', async (req: Request, res: Response) => {
-  try {
-    const client = await ensureClient();
-    if (!client) {
-      return res.status(400).json({ error: 'Spond not configured' });
-    }
-
-    // Get all groups from Spond to build parent-child map
-    const groups = await client.getGroups();
-    const subgroupToParent = new Map<string, { parentId: string; parentName: string }>();
-
-    for (const group of groups) {
-      const normalizedParentId = normalizeSpondUUID(group.id);
-      if (group.subGroups) {
-        for (const sub of group.subGroups) {
-          const normalizedSubId = normalizeSpondUUID(sub.id);
-          if (normalizedSubId && normalizedParentId) {
-            subgroupToParent.set(normalizedSubId, { 
-              parentId: normalizedParentId, 
-              parentName: group.name 
-            });
-          }
-        }
-      }
-    }
-
-    // Find teams that need fixing
-    const pool = await getPool();
-    const teamsToFix = await pool.request().query(`
-      SELECT ss.team_id, ss.spond_group_id, ss.spond_group_name, t.name as team_name
-      FROM spond_sync_settings ss
-      JOIN teams t ON t.id = ss.team_id
-      WHERE ss.spond_parent_group_id IS NULL
-    `);
-
-    let fixed = 0;
-    const results: any[] = [];
-
-    for (const team of teamsToFix.recordset) {
-      const normalizedGroupId = normalizeSpondUUID(team.spond_group_id);
-      if (normalizedGroupId && subgroupToParent.has(normalizedGroupId)) {
-        const parent = subgroupToParent.get(normalizedGroupId)!;
-        
-        await pool.request()
-          .input('team_id', sql.Int, team.team_id)
-          .input('spond_parent_group_id', sql.NVarChar, parent.parentId)
-          .input('spond_parent_group_name', sql.NVarChar, parent.parentName)
-          .query(`
-            UPDATE spond_sync_settings SET
-              spond_parent_group_id = @spond_parent_group_id,
-              spond_parent_group_name = @spond_parent_group_name,
-              is_subgroup = 1,
-              updated_at = GETDATE()
-            WHERE team_id = @team_id
-          `);
-
-        fixed++;
-        results.push({
-          teamId: team.team_id,
-          teamName: team.team_name,
-          spondGroupId: normalizedGroupId,
-          parentGroupId: parent.parentId,
-          parentGroupName: parent.parentName,
-          status: 'fixed'
-        });
-      } else {
-        results.push({
-          teamId: team.team_id,
-          teamName: team.team_name,
-          spondGroupId: normalizedGroupId,
-          status: normalizedGroupId ? 'is-parent-group' : 'invalid-id'
-        });
-      }
-    }
-
-    console.log(`[Spond] Fixed ${fixed} subgroup mappings`);
-    res.json({ 
-      success: true, 
-      fixed, 
-      total: teamsToFix.recordset.length,
-      results 
-    });
-  } catch (error) {
-    console.error('[Spond] Fix subgroup mappings error:', error);
-    res.status(500).json({ error: 'Failed to fix subgroup mappings' });
   }
 });
 
