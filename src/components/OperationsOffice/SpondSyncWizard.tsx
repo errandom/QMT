@@ -23,6 +23,8 @@ import {
   Info,
   MapPin,
   UsersThree,
+  LinkSimple,
+  CopySimple,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { getToken } from '@/lib/api'
@@ -113,6 +115,7 @@ export default function SpondSyncWizard({
       totalEvents: number
       newEvents: number
       existingEvents: number
+      potentialDuplicates: number
       withTeam: number
       withoutTeam: number
       cancelled: number
@@ -130,6 +133,16 @@ export default function SpondSyncWizard({
       teamName: string | null
       teamId: number | null
       alreadyExists: boolean
+      existingLocalId: number | null
+      fuzzyMatch: {
+        localEventId: number
+        localDescription: string
+        localStartTime: string
+        localTeamName: string | null
+        localLocation: string | null
+        matchScore: number
+        matchReasons: string[]
+      } | null
       cancelled: boolean
       attendance: { accepted: number; declined: number; unanswered: number }
       issues: string[]
@@ -142,15 +155,27 @@ export default function SpondSyncWizard({
       alreadyExported: number
       noTeam: number
       teamNotLinked: number
+      potentialDuplicates: number
     }
     events: Array<{
       id: number
       description: string
       eventType: string
       startTime: string
+      endTime: string
       teamName: string | null
+      location: string | null
       spondId: string | null
       canExport: boolean
+      spondMatch: {
+        spondId: string
+        spondHeading: string
+        spondStartTime: string
+        spondLocation: string | null
+        spondGroupName: string | null
+        matchScore: number
+        matchReasons: string[]
+      } | null
       issues: string[]
     }>
   } | null>(null)
@@ -657,6 +682,26 @@ export default function SpondSyncWizard({
       )
     }
 
+    // Helper to render a confidence badge based on match score
+    const renderMatchBadge = (score: number) => {
+      if (score >= 80) return <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50 flex-shrink-0">High Match ({score}%)</Badge>
+      if (score >= 60) return <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50 flex-shrink-0">Likely Match ({score}%)</Badge>
+      return <Badge variant="outline" className="text-xs border-yellow-300 text-yellow-700 bg-yellow-50 flex-shrink-0">Possible ({score}%)</Badge>
+    }
+
+    const renderMatchReasons = (reasons: string[]) => (
+      <div className="flex flex-wrap gap-1 mt-1">
+        {reasons.map((r, i) => (
+          <span key={i} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+            {r.toLowerCase().includes('time') && <CalendarBlank size={10} />}
+            {r.toLowerCase().includes('team') && <UsersThree size={10} />}
+            {r.toLowerCase().includes('location') && <MapPin size={10} />}
+            {r}
+          </span>
+        ))}
+      </div>
+    )
+
     return (
       <div className="space-y-4">
         {/* Import Preview */}
@@ -668,7 +713,7 @@ export default function SpondSyncWizard({
             </div>
 
             {/* Summary cards */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               <div className="p-2 bg-blue-50 rounded-lg text-center">
                 <div className="text-lg font-semibold text-blue-700">{importPreview.summary.totalEvents}</div>
                 <div className="text-xs text-blue-600">Total</div>
@@ -680,6 +725,10 @@ export default function SpondSyncWizard({
               <div className="p-2 bg-amber-50 rounded-lg text-center">
                 <div className="text-lg font-semibold text-amber-700">{importPreview.summary.existingEvents}</div>
                 <div className="text-xs text-amber-600">Updates</div>
+              </div>
+              <div className="p-2 bg-orange-50 rounded-lg text-center">
+                <div className="text-lg font-semibold text-orange-700">{importPreview.summary.potentialDuplicates}</div>
+                <div className="text-xs text-orange-600">Duplicates?</div>
               </div>
               <div className="p-2 bg-purple-50 rounded-lg text-center">
                 <div className="text-lg font-semibold text-purple-700">{importPreview.summary.withTeam}</div>
@@ -703,7 +752,22 @@ export default function SpondSyncWizard({
               )}
             </div>
 
-            {/* Warnings */}
+            {/* Duplicate warning */}
+            {importPreview.summary.potentialDuplicates > 0 && (
+              <div className="p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-start gap-2 text-xs text-orange-800">
+                  <CopySimple size={14} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium">{importPreview.summary.potentialDuplicates} potential duplicate(s) detected</span>
+                    <span className="text-orange-600 block mt-0.5">
+                      Fuzzy matching found local events with similar team, time, or location. These may already exist in your system under different names. Review the matches below.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* No-team warning */}
             {importPreview.summary.withoutTeam > 0 && (
               <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-2 text-xs text-amber-700">
@@ -716,48 +780,87 @@ export default function SpondSyncWizard({
             {/* Event list */}
             {importPreview.events.length > 0 ? (
               <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="max-h-48 overflow-y-auto">
+                <div className="max-h-60 overflow-y-auto">
                   {importPreview.events.map((evt, idx) => (
                     <div
                       key={evt.spondId}
-                      className={`flex items-start gap-3 px-3 py-2 text-sm ${
-                        idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                      className={`px-3 py-2 text-sm border-b border-gray-100 last:border-b-0 ${
+                        evt.fuzzyMatch ? 'bg-orange-50/50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                       } ${evt.cancelled ? 'opacity-50' : ''}`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 truncate">{evt.heading}</span>
-                          {evt.alreadyExists ? (
-                            <Badge variant="outline" className="text-xs border-amber-300 text-amber-700 bg-amber-50 flex-shrink-0">Update</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50 flex-shrink-0">New</Badge>
-                          )}
-                          {evt.cancelled && (
-                            <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50 flex-shrink-0">Cancelled</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <CalendarBlank size={12} />
-                            {new Date(evt.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                            {' '}
-                            {new Date(evt.startTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <Badge variant="secondary" className="text-xs py-0">{evt.eventType}</Badge>
-                          {evt.teamName && (
+                      {/* Event row */}
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900 truncate">{evt.heading}</span>
+                            {evt.alreadyExists ? (
+                              <Badge variant="outline" className="text-xs border-amber-300 text-amber-700 bg-amber-50 flex-shrink-0">Update</Badge>
+                            ) : evt.fuzzyMatch ? (
+                              renderMatchBadge(evt.fuzzyMatch.matchScore)
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50 flex-shrink-0">New</Badge>
+                            )}
+                            {evt.cancelled && (
+                              <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50 flex-shrink-0">Cancelled</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
                             <span className="flex items-center gap-1">
-                              <UsersThree size={12} />
-                              {evt.teamName}
+                              <CalendarBlank size={12} />
+                              {new Date(evt.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                              {' '}
+                              {new Date(evt.startTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                          )}
-                          {evt.location && (
-                            <span className="flex items-center gap-1 truncate">
-                              <MapPin size={12} />
-                              {evt.location}
-                            </span>
-                          )}
+                            <Badge variant="secondary" className="text-xs py-0">{evt.eventType}</Badge>
+                            {evt.teamName && (
+                              <span className="flex items-center gap-1">
+                                <UsersThree size={12} />
+                                {evt.teamName}
+                              </span>
+                            )}
+                            {evt.location && (
+                              <span className="flex items-center gap-1 truncate">
+                                <MapPin size={12} />
+                                {evt.location}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Fuzzy match mapping row */}
+                      {evt.fuzzyMatch && (
+                        <div className="mt-2 ml-2 pl-3 border-l-2 border-orange-300">
+                          <div className="flex items-center gap-1.5 text-xs text-orange-700 mb-1">
+                            <LinkSimple size={12} weight="bold" />
+                            <span className="font-medium">Possible match with existing local event:</span>
+                          </div>
+                          <div className="bg-white/80 rounded p-2 text-xs">
+                            <div className="font-medium text-gray-800">{evt.fuzzyMatch.localDescription}</div>
+                            <div className="flex items-center gap-3 mt-0.5 text-gray-500 flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <CalendarBlank size={10} />
+                                {new Date(evt.fuzzyMatch.localStartTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                {' '}
+                                {new Date(evt.fuzzyMatch.localStartTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {evt.fuzzyMatch.localTeamName && (
+                                <span className="flex items-center gap-1">
+                                  <UsersThree size={10} />
+                                  {evt.fuzzyMatch.localTeamName}
+                                </span>
+                              )}
+                              {evt.fuzzyMatch.localLocation && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin size={10} />
+                                  {evt.fuzzyMatch.localLocation}
+                                </span>
+                              )}
+                            </div>
+                            {renderMatchReasons(evt.fuzzyMatch.matchReasons)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -780,7 +883,7 @@ export default function SpondSyncWizard({
               <span>Export Preview</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <div className="p-2 bg-blue-50 rounded-lg text-center">
                 <div className="text-lg font-semibold text-blue-700">{exportPreview.summary.totalEvents}</div>
                 <div className="text-xs text-blue-600">In Range</div>
@@ -791,9 +894,28 @@ export default function SpondSyncWizard({
               </div>
               <div className="p-2 bg-gray-50 rounded-lg text-center">
                 <div className="text-lg font-semibold text-gray-700">{exportPreview.summary.alreadyExported}</div>
-                <div className="text-xs text-gray-600">Already Exported</div>
+                <div className="text-xs text-gray-600">Exported</div>
+              </div>
+              <div className="p-2 bg-orange-50 rounded-lg text-center">
+                <div className="text-lg font-semibold text-orange-700">{exportPreview.summary.potentialDuplicates}</div>
+                <div className="text-xs text-orange-600">Duplicates?</div>
               </div>
             </div>
+
+            {/* Duplicate warning for export */}
+            {exportPreview.summary.potentialDuplicates > 0 && (
+              <div className="p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-start gap-2 text-xs text-orange-800">
+                  <CopySimple size={14} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium">{exportPreview.summary.potentialDuplicates} potential duplicate(s) on Spond</span>
+                    <span className="text-orange-600 block mt-0.5">
+                      Fuzzy matching found Spond events with similar team, time, or location. Exporting may create duplicates. Review the matches below.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {(exportPreview.summary.noTeam > 0 || exportPreview.summary.teamNotLinked > 0) && (
               <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -810,25 +932,99 @@ export default function SpondSyncWizard({
             {/* Export event list */}
             {exportPreview.events.filter(e => e.canExport).length > 0 && (
               <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="max-h-36 overflow-y-auto">
+                <div className="max-h-60 overflow-y-auto">
                   {exportPreview.events.filter(e => e.canExport).map((evt, idx) => (
                     <div
                       key={evt.id}
-                      className={`flex items-center gap-3 px-3 py-2 text-sm ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                      className={`px-3 py-2 text-sm border-b border-gray-100 last:border-b-0 ${
+                        evt.spondMatch ? 'bg-orange-50/50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                      }`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-gray-900 truncate block">{evt.description}</span>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                          <span>{new Date(evt.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                          <Badge variant="secondary" className="text-xs py-0">{evt.eventType}</Badge>
-                          {evt.teamName && <span>{evt.teamName}</span>}
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900 truncate">{evt.description}</span>
+                            {evt.spondMatch ? (
+                              renderMatchBadge(evt.spondMatch.matchScore)
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50 flex-shrink-0">New to Spond</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <CalendarBlank size={12} />
+                              {new Date(evt.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                              {' '}
+                              {new Date(evt.startTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <Badge variant="secondary" className="text-xs py-0">{evt.eventType}</Badge>
+                            {evt.teamName && (
+                              <span className="flex items-center gap-1">
+                                <UsersThree size={12} />
+                                {evt.teamName}
+                              </span>
+                            )}
+                            {evt.location && (
+                              <span className="flex items-center gap-1 truncate">
+                                <MapPin size={12} />
+                                {evt.location}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Spond match mapping row */}
+                      {evt.spondMatch && (
+                        <div className="mt-2 ml-2 pl-3 border-l-2 border-orange-300">
+                          <div className="flex items-center gap-1.5 text-xs text-orange-700 mb-1">
+                            <LinkSimple size={12} weight="bold" />
+                            <span className="font-medium">Possible match on Spond:</span>
+                          </div>
+                          <div className="bg-white/80 rounded p-2 text-xs">
+                            <div className="font-medium text-gray-800">{evt.spondMatch.spondHeading}</div>
+                            <div className="flex items-center gap-3 mt-0.5 text-gray-500 flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <CalendarBlank size={10} />
+                                {new Date(evt.spondMatch.spondStartTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                {' '}
+                                {new Date(evt.spondMatch.spondStartTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {evt.spondMatch.spondGroupName && (
+                                <span className="flex items-center gap-1">
+                                  <UsersThree size={10} />
+                                  {evt.spondMatch.spondGroupName}
+                                </span>
+                              )}
+                              {evt.spondMatch.spondLocation && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin size={10} />
+                                  {evt.spondMatch.spondLocation}
+                                </span>
+                              )}
+                            </div>
+                            {renderMatchReasons(evt.spondMatch.matchReasons)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Duplicate summary legend */}
+        {((importPreview?.summary.potentialDuplicates ?? 0) > 0 || (exportPreview?.summary.potentialDuplicates ?? 0) > 0) && (
+          <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-start gap-2 text-xs text-gray-600">
+              <Info size={14} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-medium text-gray-700">How duplicate detection works:</span>
+                <span className="block mt-0.5">Events are compared using team name, time (within 30 minutes), and location similarity. A score of 80%+ indicates a very likely duplicate. Proceeding will still sync all events — review flagged items to decide if the sync is appropriate.</span>
+              </div>
+            </div>
           </div>
         )}
 
