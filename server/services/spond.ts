@@ -321,7 +321,8 @@ router.get('/events', async (req: Request, res: Response) => {
 
 /**
  * GET /api/spond/export-preview
- * Preview which events can be exported to Spond and why others cannot
+ * Preview which events can be exported to Spond and why others cannot.
+ * Includes fuzzy duplicate detection against existing Spond events to prevent double-posting.
  */
 router.get('/export-preview', async (req: Request, res: Response) => {
   try {
@@ -333,7 +334,8 @@ router.get('/export-preview', async (req: Request, res: Response) => {
     minDate.setDate(minDate.getDate() - Number(daysBehind));
     const maxDate = new Date(now);
     maxDate.setDate(maxDate.getDate() + Number(daysAhead));
-    
+
+    // Fetch local events with team/location info
     const eventsResult = await pool.request()
       .input('minDate', sql.DateTime, minDate)
       .input('maxDate', sql.DateTime, maxDate)
@@ -343,27 +345,79 @@ router.get('/export-preview', async (req: Request, res: Response) => {
           e.description,
           e.event_type,
           e.start_time,
+          e.end_time,
           e.spond_id,
           e.team_ids,
-          CASE 
-            WHEN e.team_ids IS NOT NULL AND e.team_ids != '' 
-            THEN TRY_CAST(PARSENAME(REPLACE(e.team_ids, ',', '.'), LEN(e.team_ids) - LEN(REPLACE(e.team_ids, ',', '')) + 1) AS INT)
-            ELSE NULL 
-          END as first_team_id,
           t.id as team_table_id,
           t.name as team_name,
-          t.spond_group_id
+          t.spond_group_id,
+          s.name as site_name,
+          s.address as site_address,
+          f.name as field_name
         FROM events e
         OUTER APPLY (
           SELECT TOP 1 id, name, spond_group_id 
           FROM teams 
           WHERE CHARINDEX(',' + CAST(id AS VARCHAR) + ',', ',' + e.team_ids + ',') > 0
         ) t
+        OUTER APPLY (
+          SELECT TOP 1 f.id, f.name, f.site_id
+          FROM fields f
+          WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        ) f
+        LEFT JOIN sites s ON f.site_id = s.id
         WHERE e.start_time BETWEEN @minDate AND @maxDate
         ORDER BY e.start_time
       `);
-    
-    const events = eventsResult.recordset.map(evt => {
+
+    // Fetch Spond events for fuzzy duplicate detection if client is available
+    let spondEvents: any[] = [];
+    try {
+      const client = await ensureClient();
+      if (client) {
+        spondEvents = await client.getEvents({
+          minStart: minDate,
+          maxStart: maxDate,
+          maxEvents: 500,
+        });
+      }
+    } catch (spondError) {
+      console.warn('[Spond] Could not fetch Spond events for export duplicate check:', spondError);
+    }
+
+    // Helper: fuzzy time match (within ±30 minutes)
+    function isTimeClose(localTime: Date, spondTime: string): boolean {
+      const localMs = new Date(localTime).getTime();
+      const spondMs = new Date(spondTime).getTime();
+      return Math.abs(localMs - spondMs) <= 30 * 60 * 1000;
+    }
+
+    // Helper: fuzzy location match for export
+    function locationSimilar(localEvt: any, spondEvt: any): boolean {
+      const spondLoc = spondEvt.location;
+      if (!spondLoc) return true;
+      const spondAddr = (spondLoc.address || spondLoc.feature || '').toLowerCase().trim();
+      if (!spondAddr) return true;
+      const localParts = [localEvt.site_address || '', localEvt.site_name || '', localEvt.field_name || '']
+        .join(' ').toLowerCase().trim();
+      if (!localParts) return false;
+      const stopWords = new Set(['the', 'at', 'of', 'in', 'and', 'or', 'a', 'an']);
+      const spondWords = spondAddr.split(/[\s,.-]+/).filter((w: string) => w.length > 2 && !stopWords.has(w));
+      const localWords = localParts.split(/[\s,.-]+/).filter((w: string) => w.length > 2 && !stopWords.has(w));
+      const matching = spondWords.filter((w: string) => localWords.some((lw: string) => lw.includes(w) || w.includes(lw)));
+      return matching.length >= 2 || localParts.includes(spondAddr) || spondAddr.includes(localParts);
+    }
+
+    // Build team spond_group_id lookup for team matching
+    const teamGroupMap = new Map<string, string>(); // team spond_group_id -> normalized
+    for (const evt of eventsResult.recordset) {
+      if (evt.spond_group_id) {
+        const norm = normalizeSpondUUID(evt.spond_group_id);
+        if (norm) teamGroupMap.set(evt.spond_group_id, norm);
+      }
+    }
+
+    const events = eventsResult.recordset.map((evt: any) => {
       const issues: string[] = [];
       let canExport = true;
       
@@ -379,32 +433,418 @@ router.get('/export-preview', async (req: Request, res: Response) => {
         issues.push('Team is not linked to a Spond group');
         canExport = false;
       }
+
+      // Fuzzy duplicate detection against existing Spond events
+      let spondMatch: {
+        spondId: string;
+        spondHeading: string;
+        spondStartTime: string;
+        spondLocation: string | null;
+        spondGroupName: string | null;
+        matchScore: number;
+        matchReasons: string[];
+      } | null = null;
+
+      if (canExport && spondEvents.length > 0) {
+        let bestScore = 0;
+        let bestSpond: any = null;
+        let bestReasons: string[] = [];
+
+        const evtTeamGroupNorm = evt.spond_group_id ? normalizeSpondUUID(evt.spond_group_id) : null;
+
+        for (const se of spondEvents) {
+          let score = 0;
+          const reasons: string[] = [];
+
+          // Time match: +40
+          if (isTimeClose(evt.start_time, se.startTimestamp)) {
+            score += 40;
+            reasons.push('Similar time');
+          }
+
+          // Team/group match: +30
+          const seGroupId = se.recipients?.group?.id ? normalizeSpondUUID(se.recipients.group.id) : null;
+          if (evtTeamGroupNorm && seGroupId && evtTeamGroupNorm === seGroupId) {
+            score += 30;
+            reasons.push('Same team/group');
+          }
+
+          // Location match: +20
+          if (locationSimilar(evt, se)) {
+            score += 20;
+            reasons.push('Similar location');
+          }
+
+          // Event type match: +10
+          const seHeading = se.heading?.toLowerCase() || '';
+          let seType = 'Other';
+          if (seHeading.includes('practice') || seHeading.includes('training')) seType = 'Practice';
+          else if (seHeading.includes('game') || seHeading.includes('match')) seType = 'Game';
+          else if (seHeading.includes('meeting')) seType = 'Meeting';
+          if (evt.event_type === seType) {
+            score += 10;
+            reasons.push('Same event type');
+          }
+
+          if (score >= 50 && score > bestScore) {
+            bestScore = score;
+            bestSpond = se;
+            bestReasons = reasons;
+          }
+        }
+
+        if (bestSpond) {
+          spondMatch = {
+            spondId: bestSpond.id,
+            spondHeading: bestSpond.heading,
+            spondStartTime: bestSpond.startTimestamp,
+            spondLocation: bestSpond.location?.feature || bestSpond.location?.address || null,
+            spondGroupName: bestSpond.recipients?.group?.name || null,
+            matchScore: bestScore,
+            matchReasons: bestReasons,
+          };
+          issues.push(`Possible duplicate of Spond event "${bestSpond.heading}" (${bestScore}% confidence)`);
+        }
+      }
       
       return {
         id: evt.id,
-        description: evt.description?.split('\n')[0]?.substring(0, 50) || 'Untitled',
+        description: evt.description?.split('\n')[0]?.substring(0, 80) || 'Untitled',
         eventType: evt.event_type,
         startTime: evt.start_time,
+        endTime: evt.end_time,
         teamName: evt.team_name || null,
+        location: evt.site_name || evt.field_name || null,
         spondId: evt.spond_id || null,
         spondGroupId: evt.spond_group_id || null,
         canExport,
+        spondMatch,
         issues,
       };
     });
     
     const summary = {
       totalEvents: events.length,
-      canExport: events.filter(e => e.canExport).length,
-      alreadyExported: events.filter(e => e.spondId).length,
-      noTeam: events.filter(e => !e.teamName).length,
-      teamNotLinked: events.filter(e => e.teamName && !e.spondGroupId).length,
+      canExport: events.filter((e: any) => e.canExport).length,
+      alreadyExported: events.filter((e: any) => e.spondId).length,
+      noTeam: events.filter((e: any) => !e.teamName).length,
+      teamNotLinked: events.filter((e: any) => e.teamName && !e.spondGroupId).length,
+      potentialDuplicates: events.filter((e: any) => !!e.spondMatch).length,
     };
     
     res.json({ summary, events });
   } catch (error) {
     console.error('[Spond] Error generating export preview:', error);
     res.status(500).json({ error: 'Failed to generate export preview' });
+  }
+});
+
+/**
+ * GET /api/spond/import-preview
+ * Preview which events would be imported from Spond
+ * Shows events from Spond with their mapping status, duplicate detection, etc.
+ * Uses fuzzy matching on team, time (±30 min), and location to detect potential duplicates.
+ */
+router.get('/import-preview', async (req: Request, res: Response) => {
+  try {
+    const client = await ensureClient();
+    if (!client) {
+      return res.status(400).json({ error: 'Spond not configured' });
+    }
+
+    const { daysAhead = 60, daysBehind = 7 } = req.query;
+
+    // Calculate date range
+    const now = new Date();
+    const minStart = new Date(now);
+    minStart.setDate(minStart.getDate() - Number(daysBehind));
+    const maxStart = new Date(now);
+    maxStart.setDate(maxStart.getDate() + Number(daysAhead));
+
+    const pool = await getPool();
+
+    // Build team mapping lookup (spond_group_id -> local team)
+    const teamMappingResult = await pool.request()
+      .query('SELECT id, name, spond_group_id FROM teams WHERE spond_group_id IS NOT NULL');
+    const teamMapping = new Map<string, { id: number; name: string }>();
+    for (const team of teamMappingResult.recordset) {
+      const normalizedId = normalizeSpondUUID(team.spond_group_id);
+      if (normalizedId) {
+        teamMapping.set(normalizedId, { id: team.id, name: team.name });
+      }
+    }
+
+    // Fetch events from Spond
+    const spondEvents = await client.getEvents({
+      minStart,
+      maxStart,
+      maxEvents: 500,
+    });
+
+    // Fetch ALL local events in a wider window for fuzzy matching
+    const widerMin = new Date(minStart);
+    widerMin.setDate(widerMin.getDate() - 1);
+    const widerMax = new Date(maxStart);
+    widerMax.setDate(widerMax.getDate() + 1);
+
+    const localEventsResult = await pool.request()
+      .input('minDate', sql.DateTime, widerMin)
+      .input('maxDate', sql.DateTime, widerMax)
+      .query(`
+        SELECT 
+          e.id,
+          e.description,
+          e.event_type,
+          e.start_time,
+          e.end_time,
+          e.spond_id,
+          e.team_id,
+          e.team_ids,
+          t.name as team_name,
+          s.address as site_address,
+          s.name as site_name,
+          s.latitude,
+          s.longitude,
+          f.name as field_name
+        FROM events e
+        LEFT JOIN teams t ON e.team_id = t.id
+        OUTER APPLY (
+          SELECT TOP 1 f.id, f.name, f.site_id
+          FROM fields f
+          WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
+        ) f
+        LEFT JOIN sites s ON f.site_id = s.id
+        WHERE e.start_time BETWEEN @minDate AND @maxDate
+      `);
+
+    const localEvents = localEventsResult.recordset;
+
+    // Index local events by spond_id for exact matching
+    const localBySpondId = new Map<string, any>();
+    for (const le of localEvents) {
+      if (le.spond_id) {
+        localBySpondId.set(le.spond_id, le);
+      }
+    }
+
+    // Helper: fuzzy time match (within ±30 minutes)
+    function isTimeMatch(spondTime: string, localTime: Date): boolean {
+      const spondMs = new Date(spondTime).getTime();
+      const localMs = new Date(localTime).getTime();
+      return Math.abs(spondMs - localMs) <= 30 * 60 * 1000;
+    }
+
+    // Helper: fuzzy location match (reuses logic from spondSync)
+    function fuzzyLocationMatch(
+      spondLoc: { address?: string; latitude?: number; longitude?: number; feature?: string } | undefined,
+      localEvt: any
+    ): boolean {
+      if (!spondLoc) return true; // No spond location => no location constraint
+      // Coordinate match (~500m)
+      if (spondLoc.latitude && spondLoc.longitude && localEvt.latitude && localEvt.longitude) {
+        const latDiff = Math.abs(spondLoc.latitude - localEvt.latitude);
+        const lonDiff = Math.abs(spondLoc.longitude - localEvt.longitude);
+        if (latDiff < 0.005 && lonDiff < 0.005) return true;
+      }
+      // Address text match
+      const spondAddr = (spondLoc.address || spondLoc.feature || '').toLowerCase().trim();
+      if (!spondAddr) return true; // No address text => skip
+      const localParts = [localEvt.site_address || '', localEvt.site_name || '', localEvt.field_name || '']
+        .join(' ').toLowerCase().trim();
+      if (!localParts) return false; // Local has nothing to compare
+      const stopWords = new Set(['the', 'at', 'of', 'in', 'and', 'or', 'a', 'an']);
+      const spondWords = spondAddr.split(/[\s,.-]+/).filter((w: string) => w.length > 2 && !stopWords.has(w));
+      const localWords = localParts.split(/[\s,.-]+/).filter((w: string) => w.length > 2 && !stopWords.has(w));
+      const matching = spondWords.filter((w: string) => localWords.some((lw: string) => lw.includes(w) || w.includes(lw)));
+      if (matching.length >= 2) return true;
+      if (localParts.includes(spondAddr) || spondAddr.includes(localParts)) return true;
+      return false;
+    }
+
+    // Helper: team match (spond group maps to same team)
+    function isTeamMatch(spondGroupId: string | null, localEvt: any, mappedTeamId: number | null): boolean {
+      if (!mappedTeamId) return false;
+      // Check team_id directly
+      if (localEvt.team_id === mappedTeamId) return true;
+      // Check team_ids (comma separated)
+      if (localEvt.team_ids) {
+        const ids = localEvt.team_ids.split(',').map((id: string) => parseInt(id.trim()));
+        if (ids.includes(mappedTeamId)) return true;
+      }
+      return false;
+    }
+
+    // Helper: compute match confidence score and reasons
+    function computeMatchScore(
+      spondEvt: any,
+      localEvt: any,
+      mappedTeamId: number | null
+    ): { score: number; reasons: string[] } {
+      let score = 0;
+      const reasons: string[] = [];
+
+      // Time: +40 points for within 30 min
+      if (isTimeMatch(spondEvt.startTimestamp, localEvt.start_time)) {
+        score += 40;
+        reasons.push('Similar time');
+      }
+
+      // Team: +30 points
+      if (mappedTeamId && isTeamMatch(null, localEvt, mappedTeamId)) {
+        score += 30;
+        reasons.push('Same team');
+      }
+
+      // Location: +20 points
+      if (fuzzyLocationMatch(spondEvt.location, localEvt)) {
+        score += 20;
+        reasons.push('Similar location');
+      }
+
+      // Event type: +10 points if same type
+      const headingLower = spondEvt.heading?.toLowerCase() || '';
+      let spondType = 'Other';
+      if (headingLower.includes('practice') || headingLower.includes('training')) spondType = 'Practice';
+      else if (headingLower.includes('game') || headingLower.includes('match')) spondType = 'Game';
+      else if (headingLower.includes('meeting')) spondType = 'Meeting';
+      else {
+        switch ((spondEvt.type || spondEvt.spilesType || '').toUpperCase()) {
+          case 'MATCH': spondType = 'Game'; break;
+          case 'TRAINING': case 'PRACTICE': spondType = 'Practice'; break;
+          case 'MEETING': spondType = 'Meeting'; break;
+        }
+      }
+      if (localEvt.event_type === spondType) {
+        score += 10;
+        reasons.push('Same event type');
+      }
+
+      return { score, reasons };
+    }
+
+    // Map events for preview with duplicate detection
+    const events = spondEvents.map(evt => {
+      const spondGroupId = evt.recipients?.group?.id || null;
+      const normalizedGroupId = spondGroupId ? normalizeSpondUUID(spondGroupId) : null;
+      const mappedTeam = normalizedGroupId ? teamMapping.get(normalizedGroupId) : null;
+
+      // 1. Exact match by spond_id
+      const exactMatch = localBySpondId.get(evt.id) || null;
+      const alreadyExists = !!exactMatch;
+
+      // 2. Fuzzy match: find best local event match for unlinked imports
+      let fuzzyMatch: {
+        localEventId: number;
+        localDescription: string;
+        localStartTime: string;
+        localTeamName: string | null;
+        localLocation: string | null;
+        matchScore: number;
+        matchReasons: string[];
+      } | null = null;
+
+      if (!alreadyExists) {
+        let bestScore = 0;
+        let bestLocal: any = null;
+        let bestReasons: string[] = [];
+
+        for (const le of localEvents) {
+          // Skip events already linked to a Spond event
+          if (le.spond_id) continue;
+          const { score, reasons } = computeMatchScore(evt, le, mappedTeam?.id || null);
+          // Need time match at minimum (score >= 40), plus at least one more signal
+          if (score >= 50 && score > bestScore) {
+            bestScore = score;
+            bestLocal = le;
+            bestReasons = reasons;
+          }
+        }
+
+        if (bestLocal) {
+          fuzzyMatch = {
+            localEventId: bestLocal.id,
+            localDescription: (bestLocal.description || 'Untitled').split('\n')[0].substring(0, 80),
+            localStartTime: bestLocal.start_time?.toISOString?.() || String(bestLocal.start_time),
+            localTeamName: bestLocal.team_name || null,
+            localLocation: bestLocal.site_name || bestLocal.field_name || null,
+            matchScore: bestScore,
+            matchReasons: bestReasons,
+          };
+        }
+      }
+
+      // Determine event type
+      const headingLower = evt.heading?.toLowerCase() || '';
+      let eventType = 'Other';
+      if (headingLower.includes('practice') || headingLower.includes('training')) {
+        eventType = 'Practice';
+      } else if (headingLower.includes('game') || headingLower.includes('match')) {
+        eventType = 'Game';
+      } else if (headingLower.includes('meeting')) {
+        eventType = 'Meeting';
+      } else {
+        switch ((evt.type || evt.spilesType || '').toUpperCase()) {
+          case 'MATCH': eventType = 'Game'; break;
+          case 'TRAINING': case 'PRACTICE': eventType = 'Practice'; break;
+          case 'MEETING': eventType = 'Meeting'; break;
+        }
+      }
+
+      // Build status/issues
+      const issues: string[] = [];
+      if (alreadyExists) issues.push('Will update existing event');
+      if (fuzzyMatch) issues.push(`Possible duplicate of local event #${fuzzyMatch.localEventId} (${fuzzyMatch.matchScore}% confidence)`);
+      if (!mappedTeam && spondGroupId) issues.push('Spond group not linked to a local team');
+      if (!spondGroupId) issues.push('No group assigned in Spond');
+
+      // Attendance counts
+      const accepted = evt.responses?.accepted?.length || 0;
+      const declined = evt.responses?.declined?.length || 0;
+      const unanswered = evt.responses?.unanswered?.length || 0;
+
+      return {
+        spondId: evt.id,
+        heading: evt.heading,
+        description: evt.description || null,
+        eventType,
+        startTime: evt.startTimestamp,
+        endTime: evt.endTimestamp,
+        location: evt.location?.feature || evt.location?.address || null,
+        spondGroupName: evt.recipients?.group?.name || null,
+        teamName: mappedTeam?.name || null,
+        teamId: mappedTeam?.id || null,
+        alreadyExists,
+        existingLocalId: exactMatch?.id || null,
+        fuzzyMatch,
+        cancelled: evt.cancelled || false,
+        attendance: { accepted, declined, unanswered },
+        issues,
+      };
+    });
+
+    // Sort by start time
+    events.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    const summary = {
+      totalEvents: events.length,
+      newEvents: events.filter(e => !e.alreadyExists && !e.fuzzyMatch).length,
+      existingEvents: events.filter(e => e.alreadyExists).length,
+      potentialDuplicates: events.filter(e => !!e.fuzzyMatch).length,
+      withTeam: events.filter(e => e.teamName).length,
+      withoutTeam: events.filter(e => !e.teamName).length,
+      cancelled: events.filter(e => e.cancelled).length,
+      byType: {
+        games: events.filter(e => e.eventType === 'Game').length,
+        practices: events.filter(e => e.eventType === 'Practice').length,
+        meetings: events.filter(e => e.eventType === 'Meeting').length,
+        other: events.filter(e => e.eventType === 'Other').length,
+      },
+    };
+
+    res.json({ summary, events });
+  } catch (error) {
+    console.error('[Spond] Error generating import preview:', error);
+    res.status(500).json({ error: 'Failed to generate import preview' });
   }
 });
 
