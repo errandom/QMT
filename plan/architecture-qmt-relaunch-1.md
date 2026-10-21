@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.15'
+version: '1.16'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -78,6 +78,20 @@ Do not merge into
 `main`, dispatch the legacy deployment workflow, publish an image, provision
 resources or alter DNS as part of candidate validation. Historical billing
 amounts and all private configuration remain outside the published candidate.
+
+**B1 foundation update, 2026-10-21:** `infra\app-service-acceptance.bicep`
+wraps the isolated B1 foundation at subscription scope with its app fixed disabled.
+`scripts\prepare-app-service.ps1` compiles offline by default and only requests a
+provider-level what-if when explicitly selected. Actual read-only execution
+resolved the exact 17-resource QMT manifest; the reviewer rejects missing, extra,
+cross-venture, existing-resource or unresolved changes and unexpected hosting/
+database size. Independent inventory remained unchanged. Subscription checks
+reported Linux B1 regional support, Web/SQL server quota headroom, Basic SQL
+capability and both names available, not reserved deployment capacity.
+Eight new script-level regression tests passed; the integrated normal suite
+passed 99 tests with its separate real-SQL suite skipped. The workflows now
+compile six templates. TASK-004 remains open: no image publication, provisioning,
+budget activation, actual Azure initialization or launch approval occurred.
 
 **Ownership:** Copilot executes technical work using available authorized tools,
 prepares decision-ready evidence and fixes failures. The owner supplies only
@@ -223,7 +237,7 @@ and infrastructure compilation pass for the same candidate commit.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-003 | Copilot reviews the full diff, fixes relevant failures and, after approval, pushes a reviewable candidate and runs `.github\workflows\main_qmt.yml` on its Docker-capable runner. Use `npm test`, `npm run test:sql`, `npm run lint`, `npm run build` and all five Bicep compilations. Verify fresh/legacy-schema transactions, conflict races, recurrence/update rollback, request idempotency, restart persistence and non-root image startup. Record sanitized run/commit references below. A skipped SQL suite or merely written workflow is not a pass. Record the existing bundle-size warning and assess actual browser performance later. | ✅ | 2026-10-21 |
+| TASK-003 | Copilot reviews the full diff, fixes relevant failures and, after approval, pushes a reviewable candidate and runs `.github\workflows\main_qmt.yml` on its Docker-capable runner. Use `npm test`, `npm run test:sql`, `npm run lint`, `npm run build` and all six Bicep compilations. Verify fresh/legacy-schema transactions, conflict races, recurrence/update rollback, request idempotency, restart persistence and non-root image startup. Record sanitized run/commit references below. A skipped SQL suite or merely written workflow is not a pass. Record the existing bundle-size warning and assess actual browser performance later. | ✅ | 2026-10-21 |
 
 **TASK-003 evidence:** run `39592325727`, commit
 `c4f87cd662698f36344a77e291f1e299705c33d7`: 91 normal-suite tests passed
@@ -358,6 +372,7 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 - **FILE-011**: `scripts\budget-guard.cjs`, `infra\budget-guard.bicep`, `test\budget-guard.test.cjs` and `test\cost-controls.test.cjs`: prepared manual/read-only guard, hourly job/alert, exact-app identity permissions and offline fault/cost coverage. Real execution and complete charge-scope evidence remain pending in TASK-008.
 - **FILE-012**: `infra\app-service.bicep`, `infra\app-service-cost-model.json`, `test\app-service-infra.test.cjs` and `test\app-service-cost.test.cjs`: unselected B1 foundation, subnet-only SQL service-endpoint route, isolated monitoring, comparison and offline contracts. Existing CI compiles/reports this option without publishing/deploying it; the ACA cost gate does not authorize it, and `--app-service --release` always fails.
 - **FILE-013**: `scripts\initialize-app-service.cjs`, `scripts\provision-database-user.cjs` and `test\database-bootstrap.test.cjs`: approval-gated fresh B1 initialization through a temporary exact-IPv4 SQL rule, protected matching credentials, operator-only migration/readiness checks, atomic limited-principal/admin setup and verified cleanup. No application start or deployment is performed; an interrupted process requires independent cleanup of the reported rule ID.
+- **FILE-014**: `infra\app-service-acceptance.bicep`, `scripts\prepare-app-service.ps1` and `test\app-service-preflight.test.cjs`: disabled subscription foundation, default-offline compilation and explicitly selected read-only provider preview with exact manifest/SKU review.
 
 ## 6. Testing
 
@@ -370,6 +385,7 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 - **TEST-007**: `node --test test\legacy-cache-export.test.cjs` verifies exact raw preservation, authentication-key exclusion, strict original-origin guards, missing/malformed values, cancellation, explicit failures and cleanup. A synthetic isolated-browser download validates the browser path, not recovery of operational data. The owner selected fresh production for TASK-001; cache recovery is optional.
 - **TEST-008**: `node --test test\budget-guard.test.cjs test\app-service-infra.test.cjs` verifies exact-site scope, malformed-state rejection, read-only default, threshold/manual behavior, stop verification/failure and explicit ongoing fixed charges. Compile `infra\app-service.bicep` and `infra\budget-guard.bicep` without cloud writes. These checks do not validate live connectivity, SQL grants, image/proxy behavior or billing.
 - **TEST-009**: `node --test test\database-bootstrap.test.cjs` checks preview isolation, scope/credential rejection, parameterized principal creation, single-IP-only changes, SQL/create/cleanup failures and bounded firewall-only connection retries. `npm run test:sql` must additionally prove atomic rollback of principal/admin creation, contained-user login, operational-only DML and refusal of migration-table/schema/role privileges; all existing booking/request cases must pass using those application credentials before any live acceptance.
+- **TEST-010**: `node --test test\app-service-preflight.test.cjs` executes the actual PowerShell preparation with mocked CLI responses, checking offline default, explicit subscription, provider errors, destructive/unresolved/cross-venture changes, exact manifest, SKU/isolation and rejected group names. An authorized actual provider what-if must independently resolve all 17 QMT foundation creates; passing preview never authorizes an apply.
 
 ## 7. Risks & Assumptions
 

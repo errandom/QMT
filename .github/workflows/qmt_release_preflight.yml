@@ -40,3 +40,5 @@ jobs:
         run: az bicep build --file infra/budget-guard.bicep --outfile "$RUNNER_TEMP/qmt-budget-guard.json"
       - name: Compile unselected B1 alternative without deployment or release approval
         run: az bicep build --file infra/app-service.bicep --outfile "$RUNNER_TEMP/qmt-app-service.json"
+      - name: Compile QMT-only subscription foundation without creating its resource group
+        run: az bicep build --file infra/app-service-acceptance.bicep --outfile "$RUNNER_TEMP/qmt-app-service-acceptance.json"

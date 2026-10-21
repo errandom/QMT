@@ -35,6 +35,7 @@ jobs:
           az bicep build --file infra/environment.bicep --outfile "$RUNNER_TEMP/qmt-environment.json"
           az bicep build --file infra/budget-guard.bicep --outfile "$RUNNER_TEMP/qmt-budget-guard.json"
           az bicep build --file infra/app-service.bicep --outfile "$RUNNER_TEMP/qmt-app-service.json"
+          az bicep build --file infra/app-service-acceptance.bicep --outfile "$RUNNER_TEMP/qmt-app-service-acceptance.json"
       - name: Build non-root deployment image without publishing
         run: docker build --tag qmt:validation .
       - name: Smoke-test the image without SQL or external providers

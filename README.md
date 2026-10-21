@@ -75,6 +75,11 @@ Always On, a QMT-owned SQL logical server/database, subnet service-endpoint acce
 and monitoring. It defaults to an offline app for acceptance preparation; even a
 stopped B1 app incurs the plan's fixed charge. This alternative is not covered by
 the current Container Apps cost model or release-preparation command.
+`infra/app-service-acceptance.bicep` adds a QMT-only subscription foundation with
+the app fixed disabled. `scripts/prepare-app-service.ps1` compiles it offline;
+its explicit `-AzureWhatIf` mode uses synthetic parameters and rejects unresolved,
+missing, extra, cross-venture or non-B1 changes without deploying anything.
+See `DEPLOYMENT.md` for the exact private-output and approval requirements.
 The owner rejected idle sleeping and approved suspension at monthly budget
 exhaustion. A scoped budget reader/revision suspender, manual fallback and hourly
 job/heartbeat-alert template are prepared locally. The guard also supports exact-site

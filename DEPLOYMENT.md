@@ -180,8 +180,46 @@ budget, action group, custom-domain binding or certificate. In particular, the
 subnet-only SQL rule does not grant the local machine or GitHub-hosted runner
 bootstrap access. The separately approval-gated `scripts/initialize-app-service.cjs`
 now prepares a temporary **single-operator IPv4** path, with verified cleanup and
-no broad access; see the protected initialization procedure below. It has not run
-against Azure or real SQL. Do not present this as a verified one-command deployment.
+no broad access; see the protected initialization procedure below. Disposable SQL
+checks passed in CI, but initialization against Azure Basic remains untested.
+Do not present this as a verified one-command deployment.
+
+### Subscription-scoped B1 foundation preview
+
+`infra/app-service-acceptance.bicep` wraps the B1 foundation in a new QMT-only
+resource group, permitting an Azure subscription what-if **before that group
+exists**. It allows only `qmt-production` or `qmt-staging` in Switzerland North
+and fixes `appEnabled=false`; there is no app-start parameter. It does not add
+budget resources, enable the guard, publish an image or authorize any apply.
+
+Run `scripts\prepare-app-service.ps1 -SubscriptionId <reviewed-subscription-id>
+-Image <ghcr.io/errandom/qmt@sha256:complete-digest> -OutputPath <new-private.json>`
+to compile without an Azure request. Output files must be new files in an
+existing private directory. Add `-AzureWhatIf` only for an authorized read-only
+provider-level preview using the existing Azure CLI login. The script explicitly
+targets the subscription without changing the CLI default, supplies **synthetic
+preview-only credentials**, saves the full result beside the compiled template,
+and rejects provider errors, incomplete/omitted resources, unresolved changes,
+existing-resource mutations, extra resources and cross-venture changes. It also
+requires the preview to retain one Linux B1 worker, disabled app and 2 GB Basic SQL.
+Do not reuse the synthetic parameters for provisioning or treat successful
+what-if as quota/capacity, cost, actual connectivity or launch acceptance.
+
+The 2026-10-21 provider-level preview expanded all 17 foundation resources as
+creates within the new QMT resource group, with no existing-resource mutations.
+An independent inventory afterward still found no QMT resource group. This
+proves preview execution, not deployment. Actual provisioning must separately
+use protected fresh credentials, the approved published digest and bounded
+spending authorization; this script implements no deployment operation.
+
+Separate read-only checks on 2026-10-21 listed Switzerland North for subscription
+Linux B1, reported Web regional usage of 0/30 instances and SQL server usage of
+0/250, and returned both proposed names as available. SQL capabilities listed
+Basic as available. The Web usage endpoint required API version `2025-05-01`;
+`2024-04-01` returned HTTP 405. These checks report support and headroom at that
+time; they neither reserve capacity/names nor prove deployment or connectivity.
+
+### B1 monitoring and budget suspension
 
 A QMT-owned, pay-as-you-go workspace receives console diagnostics; HTTP request/
 failed-request tracing is disabled. The workspace has 30-day retention and a
