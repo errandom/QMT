@@ -433,7 +433,11 @@ npm run release:check
 
 CI also builds the non-root Docker image and compiles all five Bicep templates without
 deploying, then smoke-tests the image's health, frontend shell and disabled providers
-without SQL credentials. The disposable SQL tests cover fresh and historical base
+without SQL credentials. The initial read-only health request has a bounded
+startup retry window, including connection resets before Node begins listening;
+the response must report `ok: true`, and the running container must be non-root.
+Failed smoke checks print container logs and remove only their named container.
+The disposable SQL tests cover fresh and historical base
 schemas; they do not substitute for testing the actual recovered schema/data.
 The runtime stage uses `npm ci --omit=dev`: the frontend ships as built assets,
 not a second React/toolchain installation. Provider SDKs are development-only
