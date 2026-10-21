@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.21'
+version: '1.22'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -44,13 +44,16 @@ Protected bootstrap and the live pristine-data/cleanup audit passed. QMTadmin
 exists, operational tables are empty, operator SQL access was removed, and the
 application remains explicitly disabled. The real provider state `Disabled` is
 accepted only with `enabled=false`, alongside the previously supported `Stopped`.
-The single approved Basic restore is blocked by Azure backup readiness. Both
-bounded waits ended without submitting a restore; no waiter remains active.
-At 21:48 Zurich, the Online Basic/Local source was Available in Resource Health,
-but its dedicated restore-point inventory was empty. A protected SQL read also
-returned no completed backups; the operator rule was removed and the app stayed
-disabled. Reconcile the exact target and protected receipt on resumption; do not
-loop waiters, fabricate a restore point or repeat an ambiguous restore request.
+The single approved Basic restore is verified. After two bounded waits without
+a request, a fixed-time check found a genuine continuous restore point. Exactly
+one restore was submitted at 22:16:23 Zurich. Its initial GET returned 404;
+read-only reconciliation found the Online Basic/5-DTU, Local-redundancy target
+without repeating PUT. Protected restored-schema/migration, unchanged QMTadmin
+and zero-operational-data checks passed at 22:22:16 Zurich. Operator access was
+removed and the app stayed disabled. Final independent inspection verified both
+databases eligible for conditional cleanup and no retained backups.
+No restore waiter remains active. Preserve the source and the recorded restore
+receipt; never repeat PUT or replay the failed historical deployment.
 Operator commit `9178eace4b11e143264fbfd1c6105aff8ccf110d` passed exact CI
 `39659275216`; the validated runtime image is unchanged.
 Public release and production cost controls remain gated.
@@ -64,7 +67,7 @@ The detailed ten-step status is authoritative over historical checkpoints below.
 | 2. Full operating envelope | Partial | Verify the complete ongoing QMT-only cost envelope and live response controls; bounded acceptance is not production approval. |
 | 3. Application candidate | Published | Retain the validated immutable runtime image; persist and validate operator-only changes separately. |
 | 4. Infrastructure and release plumbing | Disabled foundation verified | Preserve isolated B1/Basic configuration; production release plumbing remains gated. Failed historical deployment receipts are retained. |
-| 5. Database, administrator and restore | Bootstrap verified; restore blocked | QMTadmin and least-privilege SQL user exist; operator access is removed. Both bounded waits ended without a request. Reconcile the protected receipt and target; require a genuine Azure restore point before the single Basic restore and audit. |
+| 5. Database, administrator and restore | Bootstrap and real restore verified | QMTadmin and least-privilege SQL user exist; both databases passed pristine-data inspection and temporary operator access is removed. Complete protected owner sign-in during separately approved application acceptance; keep the temporary restore inside the original cleanup scope. |
 | 6. AI-free launch | Complete | Keep paid AI and alternative providers disabled; optional AI work is deferred. |
 | 7. Deployed application and club acceptance | Not executed | Verify actual browser workflows and production empty-state onboarding under separately approved enablement. |
 | 8. Budget alerts, suspension and recovery | Prepared only | Deploy and test QMT-only attribution, notification and suspension; do not claim that app stop removes fixed charges. |
@@ -168,12 +171,14 @@ and at most the unchanged bootstrap administrator before removing anything.
 Unknown resources, changed accounts, unverified/immutable or pre-acceptance
 backups, failed reads and incomplete inventories preserve the stack. An inspection
 uses and removes a temporary exact-IPv4 SQL rule but never deletes the stack.
-The current normal suite passed 113 checks; its separate SQL invocation was
-intentionally skipped. Ten cleanup checks cover retained-backup ownership timestamps
+The current local suite passed 119 checks with one explicit SQL skip; exact
+operator CI `39659275216` separately passed actual disposable SQL. Ten cleanup
+checks cover retained-backup ownership timestamps
 and preservation-safe handling of the specific no-SQL credential-policy failure.
 Those mocks alone do not establish live acceptance. The later protected bootstrap
-and independent live empty-data audit passed on October 21. Actual restore and
-resource deletion still require their own receipts.
+and independent live empty-data audit passed on October 21. The single actual
+Basic restore and pristine-data inspection of both databases subsequently passed
+at 22:22 Zurich. Resource deletion remains unexercised and conditional.
 
 **Ownership:** Copilot executes technical work using available authorized tools,
 prepares decision-ready evidence and fixes failures. The owner supplies only
@@ -358,6 +363,14 @@ proven, and a protected administrator can sign in.
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-005 | Copilot rehearses the selected restore or approved clean initialization in isolation, retaining the recovery source. Use `scripts\migrate.cjs`, `scripts\check-database.cjs` and `scripts\bootstrap-admin.cjs` under the documented approval variables and separate principals. Review the actual recovered schema, legacy request payloads, timestamp/DST semantics and Basic-tier size/headroom. Test restoration from a new backup as well as successful initialization. Bootstrap only when no active administrator exists, rotate historical secrets and transfer access through a protected channel. Record readiness and recovery outcomes without personal records. | | |
+
+**Bounded foundation evidence, 2026-10-21:** protected Azure Basic initialization,
+least-privilege application-principal reads, the single real post-bootstrap PITR
+and independent pristine-data inspection of both databases passed. The original
+source was not overwritten, temporary operator access was removed, and no sample
+operational data was inserted. Keep TASK-005 open for protected owner sign-in/
+credential delivery during authorized application acceptance; do not treat
+database verification as an enabled-browser acceptance result.
 
 ### Implementation Phase 6
 

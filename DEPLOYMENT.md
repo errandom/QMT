@@ -35,27 +35,28 @@ The site is explicitly disabled; this provider reports `Disabled`, not `Stopped`
 Initialization accepts either exact non-running state only with `enabled=false`,
 and still rejects a running, enabled or unknown-state site.
 
-The post-initialization Basic restore is blocked by actual backup readiness.
-Both bounded readiness waits ended without a restore request. At 21:48 Zurich
-on October 21, the source was Online/Basic with Local backup redundancy and
-Azure Resource Health reported Available, but the dedicated restore-point API
-returned no restore points. A protected SQL read then confirmed no completed
-backups in `sys.dm_database_backups`; its temporary single-IP rule was removed
-and the app remained disabled. No restore target was created and no waiter
-remains active. Do not infer a restore from successful bootstrap, repeatedly
-restart waiters, submit a speculative restore or replay the failed deployment.
-On resumption, reconcile the protected receipt and exact target first; perform
-the single approved restore only after Azure exposes a genuine post-bootstrap
-restore point. If readiness remains absent, investigate with Azure support
-without assuming support charges or broader operating approval.
+The single post-initialization Basic restore is now verified. Two initial bounded
+waits ended without a request. A later fixed-time check found a genuine continuous
+restore point; exactly one restore was submitted on October 21 at 22:16:23 Zurich.
+Its first GET returned 404 before the target became visible. Read-only
+reconciliation, without another PUT, confirmed the exact Online Basic/5-DTU,
+Local-redundancy target. Protected restored-schema/migration, unchanged QMTadmin
+and zero-operational-data checks passed at 22:22:16 Zurich; the temporary
+single-IP SQL rule was removed and the app remained disabled.
+Final independent inspection verified both source and restored databases as
+eligible for the existing conditional cleanup, with no retained backups.
+No restore waiter remains active. Never repeat the recorded restore PUT or
+replay the failed historical deployment. The temporary restored database remains
+inside the original bounded acceptance/cleanup scope, not a permanent second stack.
 Operator commit `9178eace4b11e143264fbfd1c6105aff8ccf110d` passed exact validation
 run `39659275216`; the runtime image remains unchanged.
 The real current-owner Windows cleanup task remains armed with its original
 October 22, 2026, 14:50:55 Zurich deadline, but
 requires a logged-in owner, working machine/network and Azure authentication.
 No resource deletion was executed or proven by that pre-deadline check.
-The provisioned foundation can incur charges. Restore and production
-cost-response/application acceptance remain unverified.
+The provisioned foundation and temporary restored database can incur charges.
+Enabled application acceptance, actual notifications/suspension/recovery and
+production publication remain unverified and separately gated.
 Historical proposal sections below do not override this
 current status or the owner's separately recorded bounded acceptance approval.
 
