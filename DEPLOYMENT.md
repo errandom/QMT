@@ -1,9 +1,33 @@
 # QMT controlled relaunch
 
-Evaluated 2026-10-21. **Not deployed; release remains blocked.**
+Evaluated 2026-10-21. **Disabled acceptance foundation partially provisioned;
+public release remains blocked.**
 This replaces the old App Service guide, including its unsafe example credentials
 and broad SQL-network advice. Rotate every historical credential and signing key
 before reuse; deleting examples does not remove them from Git history.
+
+The published acceptance image is
+`ghcr.io/errandom/qmt@sha256:5d1a7ce14520fadcf88120be60dc143a995d1cc9b4141a4f77f4b63940241b8e`,
+from source `55e8346215e1e696d1ccafa05c6afbe1d1322e2d`.
+Validation `39598721077` and publication `39598766729` succeeded; fresh anonymous
+digest pull and an independent manifest request passed. The first exact-scope
+apply created hosting/network/monitoring foundations, but Azure rejected SQL
+creation with `PasswordNotComplex`. The protected SQL credentials were repaired;
+the administrator's application password and signing key were preserved.
+The guarded continuation did not submit another deployment: its provider
+what-if remained HTTP 202 with an empty body after bounded polling. Its exact
+pending operation is retained privately for resumption, not automatic retries.
+Independent live inventory still contains only the QMT B1 plan, virtual network,
+Log Analytics workspace and budget guard environment; these can incur charges.
+Live inspect-only cleanup verified the narrowly qualified empty partial stack,
+including absence of the SQL server, application and retained backups. The real
+current-owner Windows cleanup task was re-executed successfully after source
+revalidation and returned `not_due` with its original deadline. It is armed, but
+requires a logged-in owner, working machine/network and Azure authentication.
+No resource deletion was executed or proven by that pre-deadline check.
+Initialization, restore, live SQL connectivity and cost-response acceptance
+remain unverified. Historical proposal sections below do not override this
+current status or the owner's separately recorded bounded acceptance approval.
 
 ## Boundaries and authorization
 
@@ -100,8 +124,9 @@ revision, HTTPS ingress and no paid/external integrations. Image repository and
 digest-based. A single revision setting does not remove rollout overlap; the cost
 model includes a two-replica full-month stress scenario.
 
-The chosen replacement for Premium App Service is Container Apps Consumption,
-not a Premium App Service plan. QMT keeps one replica running, even without
+The earlier replacement proposal for Premium App Service was Container Apps
+Consumption. A single-worker Linux B1 stack is now authorized for bounded
+disabled acceptance, not production release. The retained ACA template keeps one replica running, even without
 traffic; there is no routine idle scale-to-zero. The model conservatively charges
 all 744 hours of a 31-day month at the active rate, without idle discounts or an
 assumed suspension. SQL, logs, backups, HTTP requests and other services remain
@@ -150,7 +175,7 @@ egress allowlist or separately priced private networking, prove connectivity fro
 the actual environment, and reject release if it cannot meet the security/budget
 constraints. No permissive firewall rule is created by either template.
 
-### Lower-cost always-on acceptance candidate (not deployed)
+### Lower-cost always-on acceptance candidate
 
 The 2026-10-21 read-only preflight found no surviving QMT resources in the selected
 subscription. The existing shared Consumption environment has no custom VNet;
@@ -276,8 +301,59 @@ price unknown services. The comparison always sets `releaseAllowed=false`,
 including with `--release` or existing ACA approval flags. A B1-specific ancillary
 review, complete approved scenario/residual envelope, named-resource
 authorization/what-if, protected bootstrap route and real stop/resume/notification
-evidence must precede a B1 acceptance apply or release. Neither template
-compilation nor autonomous local preparation selects this option.
+evidence must precede a B1 production release. Neither template compilation
+nor autonomous local preparation authorizes spending.
+
+The owner's later bounded acceptance authorization is distinct from these
+production gates; it does not mark the B1 cost model release-ready.
+
+### Conditional acceptance cleanup
+
+`infra/app-service-acceptance.bicep` accepts an optional opaque `acceptanceId`
+tag on the newly created resource group. This is ownership evidence only: tags
+do not schedule or perform deletion. Arm and test the actual protected cleanup
+mechanism before spending. The current private Windows task passed an actual
+owner-context, pre-deadline no-op, but requires a logged-in owner, machine/network
+availability and working Azure authentication. It is not an unattended guarantee
+or hard currency cap.
+
+`scripts/cleanup-app-service.cjs` exports `runCleanup`; importing it performs no
+operation. A protected caller must provide `env`, an exact `acceptanceId`, an
+explicit boolean `initialized`, `notBefore` and protected ARM authentication.
+The environment includes `QMT_ACCEPTANCE_STARTED_AT` from the private execution
+receipt and `QMT_EXPECTED_IMAGE` as the approved immutable digest, plus the
+initialization module's exact-scope and independent credential settings.
+Credentials and tokens must not be passed as command-line arguments, printed,
+written to plaintext files or committed.
+
+With neither `inspect` nor `execute`, the module returns offline preview.
+`execute: true` before the deadline returns `not_due` without network calls.
+`inspect: true` verifies live ownership, scope, single-worker B1 configuration,
+disabled/stopped app, Basic databases and retained backups, then temporarily
+opens only the reviewed operator IPv4 to audit the databases. It verifies removal
+of that rule and never deletes the stack. Inspection is therefore not entirely
+read-only at the firewall control plane.
+
+Deletion additionally requires `QMT_ACCEPTANCE_CLEANUP_APPROVED=true`. A database
+must be empty and explicitly uninitialized, or contain exactly the expected
+schema with zero operational rows and at most the single unchanged generated
+bootstrap administrator. Additional/changed users, unknown resources, locks,
+unverified inventories, provider failures, pre-acceptance retained backups or
+immutable backups preserve the stack. Eligible retained backups are removed and
+their absence checked before exact-group deletion; final group absence is
+independently polled. Failure is not successful cleanup. Stopping the app alone
+does not stop plan, database or retained-backup charges. Do not delete operational
+data to recover a budget, infer eligibility from a failed read or automatically
+resume production.
+
+A narrowly handled partial apply may be disposable without a SQL connection
+only when initialization is explicitly false, both SQL server and application
+are independently absent, all-location retained-backup inventory for this group
+is empty, only the reviewed non-data foundation resources exist, and the nested
+deployment failed SQL creation specifically with `PasswordNotComplex`. Running,
+unverified or otherwise failed deployments are not eligible through this path.
+The complete database path also rejects bootstrap profile/timestamp changes;
+matching only the username or original password is insufficient.
 
 ## AI replacement: isolated evaluation, not production activation
 

@@ -19,11 +19,16 @@ param sqlPassword string
 param jwtSecret string
 param clubName string
 param transportEmail string = ''
+@description('Optional opaque ownership marker for explicitly approved, conditional acceptance cleanup; it does not schedule deletion.')
+param acceptanceId string = ''
 
 resource group 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: appName
   location: location
-  tags: { solution: 'QMT', platform: 'errandom', costProfile: 'bounded-production' }
+  tags: union(
+    { solution: 'QMT', platform: 'errandom', costProfile: 'bounded-production' },
+    empty(acceptanceId) ? {} : { acceptanceId: acceptanceId }
+  )
 }
 
 module foundation './app-service.bicep' = {

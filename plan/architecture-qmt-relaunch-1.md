@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.17'
+version: '1.19'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -22,7 +22,44 @@ AI and external synchronization disabled. Publish the product page at
 `www.errandom.com/QMT/` and the application at `qmt.errandom.com` only after
 acceptance. American football and flag football are the initial audience.
 
-**Current position:** substantial hardening, tests, deployment templates and
+**Current position, 2026-10-21:** the immutable acceptance image is published and
+anonymous digest access is verified. The owner authorized the isolated disabled
+B1/Basic acceptance foundation, protected initialization, one temporary Basic
+restore and conditional cleanup. A real current-owner Windows cleanup task is
+armed and its protected, pre-deadline no-op was executed successfully. It requires
+the owner to remain logged in and the machine/network/authentication to work; it
+is not a guaranteed deadline or cost cap. The exact 17-create provider preview
+passed with actual protected parameters. The first apply created the QMT hosting,
+network, monitoring and guard environment but SQL creation failed its password
+policy. Only the unusable SQL credentials were repaired in protected storage;
+the application administrator credential and signing key were preserved.
+The foundation is not yet accepted, the application remains offline, and public
+release, real initialization/restoration and production cost controls remain gated.
+The guarded continuation submitted no second deployment: the exact pending
+provider preview remained HTTP 202 with no final result after bounded polling.
+Its protected operation receipt is preserved for resumption; no retry process
+is left applying resources. Independent live inspection verified only the four
+non-data foundation resources, no server/application or retained backups, and
+eligibility for the narrowly qualified SQL-policy-failure cleanup path. The
+actual cleanup task passed another pre-deadline no-op after the validated
+source receipt was refreshed; its original deadline was not reset. Deletion
+itself has not been exercised. The partial foundation can incur charges.
+The detailed ten-step status is authoritative over historical checkpoints below.
+
+| Step | Current status | Remaining outcome |
+|------|----------------|-------------------|
+| 1. Production brief and data decision | Complete | Fresh production and manual application entry are selected; preserve any subsequently found history. |
+| 2. Full operating envelope | Partial | Verify the complete ongoing QMT-only cost envelope and live response controls; bounded acceptance is not production approval. |
+| 3. Application candidate | Published | Retain the validated immutable runtime image; persist and validate operator-only changes separately. |
+| 4. Infrastructure and release plumbing | Partial, blocked | Resolve the protected continuation preview, complete the exact disabled foundation and verify its actual configuration. |
+| 5. Database, administrator and restore | Not executed | Initialize QMTadmin through protected single-IP access, remove that access, perform one Basic restore and verify it. |
+| 6. AI-free launch | Complete | Keep paid AI and alternative providers disabled; optional AI work is deferred. |
+| 7. Deployed application and club acceptance | Not executed | Verify actual browser workflows and production empty-state onboarding under separately approved enablement. |
+| 8. Budget alerts, suspension and recovery | Prepared only | Deploy and test QMT-only attribution, notification and suspension; do not claim that app stop removes fixed charges. |
+| 9. Application/domain/product publication | Drafts only | Obtain Gate C, then perform authorized app/DNS/TLS and errandom product/main-site publication. |
+| 10. Seven-day stabilization | Not started | Observe actual usage, costs and operational behavior after launch. |
+
+**Historical candidate checkpoint (before publication/apply):** substantial hardening, tests, deployment templates and
 marketing drafts exist. Draft PR #6 is published and its corrected candidate
 passed real-SQL, Linux image startup and all validation-only CI checks on
 2026-10-21 under the owner's renewed instruction to continue implementation
@@ -105,6 +142,26 @@ tests anonymous digest pull. Default push/PR checks stay read-only; Azure
 provisioning still requires a usable image, protected credentials and budget
 headroom. Do not broaden the local GitHub token to make publication work.
 
+**Publication and controlled-execution evidence, 2026-10-21:** source
+`55e8346215e1e696d1ccafa05c6afbe1d1322e2d`, validation run `39598721077` and
+publication run `39598766729` passed. The publisher and an independent anonymous
+manifest request verified
+`ghcr.io/errandom/qmt@sha256:5d1a7ce14520fadcf88120be60dc143a995d1cc9b4141a4f77f4b63940241b8e`.
+Do not republish this unchanged application to validate operator-only changes.
+The subscription wrapper now supports an optional acceptance ownership UUID;
+the tag itself schedules nothing. `scripts\cleanup-app-service.cjs` is an explicit
+protected-caller module, offline by default. It verifies exact owned resources,
+disabled isolation, immutable image, Basic databases, empty operational tables
+and at most the unchanged bootstrap administrator before removing anything.
+Unknown resources, changed accounts, unverified/immutable or pre-acceptance
+backups, failed reads and incomplete inventories preserve the stack. An inspection
+uses and removes a temporary exact-IPv4 SQL rule but never deletes the stack.
+The current normal suite passed 113 checks; its separate SQL invocation was
+intentionally skipped. Ten cleanup checks cover retained-backup ownership timestamps
+and preservation-safe handling of the specific no-SQL credential-policy failure.
+Those mocks do not establish a
+successful live database audit, restore or resource deletion.
+
 **Ownership:** Copilot executes technical work using available authorized tools,
 prepares decision-ready evidence and fixes failures. The owner supplies only
 business decisions, account/secret approvals and release acceptance. Missing
@@ -121,7 +178,7 @@ unattended time or future sessions.
 - **SEC-001**: Never commit credentials, recovered records, raw billing exports or identifiable club data. Use protected secret entry and approved private storage. Public-repository evidence contains sanitized outcomes and references only.
 - **SEC-002**: Preserve server-side role checks, public DTO restrictions, transaction-backed bookings and durable requests. Never enable the legacy AI SQL writers or broad SQL firewall access to make deployment easier.
 - **CON-001**: This plan authorizes no commit, push, cloud apply, restore, provider activation, DNS write or site publication. Obtain explicit approval before each category of external write; technical preparation may proceed locally.
-- **CON-002**: The owner supplied a CHF monthly budget on 2026-10-20, privately recorded; the earlier unapproved USD 20 target is superseded, not converted into an approved USD amount. All seven ancillary categories have conditional prices, including the hourly guard/alert/email allowance. Do not provision until the complete estimate and response controls pass every release gate, including sustained traffic and rollout overlap. Do not delete stress cases or bypass the gate to fit the budget.
+- **CON-002**: The owner supplied a CHF monthly budget on 2026-10-20, privately recorded; the earlier unapproved USD 20 target is superseded, not converted into an approved USD amount. All seven ancillary categories have conditional prices, including the hourly guard/alert/email allowance. Production requires the complete estimate and response controls to pass every release gate, including sustained traffic and rollout overlap. Separately approved, bounded disabled acceptance is not production release or an ongoing budget increase. Do not delete stress cases or bypass the gate to fit the budget.
 - **CON-003**: Budgets notify; they do not stop consumption. Pausing the application does not remove database, backup, registry or other residual charges. Do not describe replica limits, API throttles or delayed billing-triggered automation as a hard currency cap.
 - **CON-004**: Use an isolated QMT acceptance stack and promote the accepted stack where practicable. Concurrent staging/production resources require separate pricing and approval. Never modify another venture's runtime, data, identity or shared limits.
 - **CON-005**: The owner requires no idle sleeping: `infra\main.bicep` must keep min/max 1. Model 744 hours at active rates with no assumed idle discount or suspension savings. Owner-approved suspension occurs at actual monthly budget exhaustion and affects QMT only; preserve SQL/backups and other ventures. Price and test authenticated budget-triggered revision deactivation and notification before setting `budgetSuspensionValidated`. If selecting the B1 alternative, retain Always On and one Linux B1 worker, price its complete fixed month, and test exact-site stopping without claiming plan billing stops. No automatic resume is approved.
@@ -301,7 +358,14 @@ separate and cannot create billable fallback usage.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-006 | Copilot retains `QMT_AI_ENABLED=false` and `QMT_SPOND_ENABLED=false` for launch and checks the disabled UI/manual-entry behavior in `server\config.cjs` and `src\components\OperationsOffice\ScheduleManager.tsx`. Groq-hosted GPT-OSS 20B is a candidate for a later synthetic-data benchmark, not a committed provider. Before any activation, verify current free-plan eligibility, quota-exhaustion behavior, privacy/retention, age-related and commercial terms. Any subsequent implementation must replace the legacy confirmation inserts in `server.js` with `server\bookings.cjs`, add strict extraction validation and durable atomic quotas, disable provider retries/paid fallback, restrict staff initiation and retain manual preview/confirmation. Do not relax the production prohibition merely to connect a free API. Record deferral as a valid completion of this launch step. | | |
+| TASK-006 | Copilot retains `QMT_AI_ENABLED=false` and `QMT_SPOND_ENABLED=false` for launch and checks the disabled UI/manual-entry behavior in `server\config.cjs` and `src\components\OperationsOffice\ScheduleManager.tsx`. Groq-hosted GPT-OSS 20B is a candidate for a later synthetic-data benchmark, not a committed provider. Before any activation, verify current free-plan eligibility, quota-exhaustion behavior, privacy/retention, age-related and commercial terms. Any subsequent implementation must replace the legacy confirmation inserts in `server.js` with `server\bookings.cjs`, add strict extraction validation and durable atomic quotas, disable provider retries/paid fallback, restrict staff initiation and retain manual preview/confirmation. Do not relax the production prohibition merely to connect a free API. Record deferral as a valid completion of this launch step. | ✅ | 2026-10-21 |
+
+**TASK-006 evidence:** the published candidate rejects AI activation at startup,
+retires the legacy provider/SQL-write route and preserves manual scheduling.
+Actual Linux image checks verified disabled-provider responses. The enhancement
+is explicitly deferred; no free-provider account, benchmark call or paid fallback
+is required or approved for the core release. This completes launch deferral,
+not an assertion that an external AI replacement has been integrated.
 
 ### Implementation Phase 7
 
@@ -356,7 +420,7 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 
 ## 3. Alternatives
 
-- **ALT-001**: Recreate the former Premium App Service footprint. Rejected. A different, single-worker Linux Basic B1 candidate is prepared locally after the no-sleep clarification; it is not selected and requires complete pricing and acceptance, including residual plan charges.
+- **ALT-001**: Recreate the former Premium App Service footprint. Rejected. A different, single-worker Linux Basic B1 candidate is selected for bounded disabled acceptance after the no-sleep clarification. Production still requires complete pricing and acceptance, including residual plan charges.
 - **ALT-002**: Rewrite the database or introduce multi-tenancy before launch. Deferred because it expands migration risk and is not required for one club.
 - **ALT-003**: Require free AI at launch. Rejected because provider quota, availability and terms would become unnecessary launch blockers. Manual entry is the baseline.
 - **ALT-004**: Host the full application at `/QMT/`. Deferred; the separate product page and application subdomain avoid an additional reverse-proxy/base-path migration.
@@ -382,10 +446,11 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 - **FILE-009**: `plan\evidence\data-recovery-2026-10-20.md` records the current bounded inventory and pending decisions; `plan\evidence\relaunch-acceptance-2026-10-20.md` remains a planned results record. Their presence alone does not establish a passing gate.
 - **FILE-010**: `scripts\export-legacy-cache.js`, `test\legacy-cache-export.test.cjs`, `.gitignore`, `.dockerignore` and `eslint.config.js`: local-only raw-cache preservation, strict origin/authentication boundaries, private-file exclusions and regression coverage.
 - **FILE-011**: `scripts\budget-guard.cjs`, `infra\budget-guard.bicep`, `test\budget-guard.test.cjs` and `test\cost-controls.test.cjs`: prepared manual/read-only guard, hourly job/alert, exact-app identity permissions and offline fault/cost coverage. Real execution and complete charge-scope evidence remain pending in TASK-008.
-- **FILE-012**: `infra\app-service.bicep`, `infra\app-service-cost-model.json`, `test\app-service-infra.test.cjs` and `test\app-service-cost.test.cjs`: unselected B1 foundation, subnet-only SQL service-endpoint route, isolated monitoring, comparison and offline contracts. Existing CI compiles/reports this option without publishing/deploying it; the ACA cost gate does not authorize it, and `--app-service --release` always fails.
+- **FILE-012**: `infra\app-service.bicep`, `infra\app-service-cost-model.json`, `test\app-service-infra.test.cjs` and `test\app-service-cost.test.cjs`: B1 acceptance foundation, subnet-only SQL service-endpoint route, isolated monitoring, comparison and offline contracts. CI compiles/reports this option without deploying it; the ACA cost gate does not authorize it, and `--app-service --release` always fails.
 - **FILE-013**: `scripts\initialize-app-service.cjs`, `scripts\provision-database-user.cjs` and `test\database-bootstrap.test.cjs`: approval-gated fresh B1 initialization through a temporary exact-IPv4 SQL rule, protected matching credentials, operator-only migration/readiness checks, atomic limited-principal/admin setup and verified cleanup. No application start or deployment is performed; an interrupted process requires independent cleanup of the reported rule ID.
 - **FILE-014**: `infra\app-service-acceptance.bicep`, `scripts\prepare-app-service.ps1` and `test\app-service-preflight.test.cjs`: disabled subscription foundation, default-offline compilation and explicitly selected read-only provider preview with exact manifest/SKU review.
 - **FILE-015**: `.github\workflows\main_qmt.yml`, `scripts\smoke-image.sh` and `test\acceptance-image.test.cjs`: read-only default validation, separate manually selected exact-source publisher, shared real-image smoke checks, ephemeral package token and required anonymous digest pull. No Azure deployment operation is added.
+- **FILE-016**: `scripts\cleanup-app-service.cjs` and `test\acceptance-cleanup.test.cjs`: default-offline conditional cleanup module; explicit ownership, initialization and start/deadline receipts; exact resource and retained-backup inventory; unchanged bootstrap-only SQL audit; verified temporary rule removal and deletion confirmation. Actual protected orchestration/scheduling and execution receipts remain private, outside the repository.
 
 ## 6. Testing
 
@@ -400,6 +465,7 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 - **TEST-009**: `node --test test\database-bootstrap.test.cjs` checks preview isolation, scope/credential rejection, parameterized principal creation, single-IP-only changes, SQL/create/cleanup failures and bounded firewall-only connection retries. `npm run test:sql` must additionally prove atomic rollback of principal/admin creation, contained-user login, operational-only DML and refusal of migration-table/schema/role privileges; all existing booking/request cases must pass using those application credentials before any live acceptance.
 - **TEST-010**: `node --test test\app-service-preflight.test.cjs` executes the actual PowerShell preparation with mocked CLI responses, checking offline default, explicit subscription, provider errors, destructive/unresolved/cross-venture changes, exact manifest, SKU/isolation and rejected group names. An authorized actual provider what-if must independently resolve all 17 QMT foundation creates; passing preview never authorizes an apply.
 - **TEST-011**: `node --test test\acceptance-image.test.cjs` checks the manual/branch/exact-commit publisher gate, separation of package-write permission, shared runtime checks and anonymous-pull requirement. Actual CI must smoke-test the image, and an explicitly approved manual run must independently prove registry push and anonymous digest access before provisioning.
+- **TEST-012**: `node --test test\acceptance-cleanup.test.cjs` verifies default preview, deadline no-op, scope/image/approval rejection, unchanged bootstrap-only database acceptance, foreign/changed resource and backup rejection, temporary-rule cleanup, explicit failures and exact-group deletion confirmation. A real protected scheduled no-op and live inspect-only SQL audit are separate gates; mocked tests do not prove either.
 
 ## 7. Risks & Assumptions
 
