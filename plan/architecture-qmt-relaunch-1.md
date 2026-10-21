@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.22'
+version: '1.23'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -19,10 +19,41 @@ does not relax either document's controls or authorize cloud expenditure.
 
 **Production relaunch:** the owner's football club; core scheduling, requests, equipment and exports;
 AI and external synchronization disabled. Publish the product page at
-`www.errandom.com/QMT/` and the application at `qmt.errandom.com` only after
-acceptance. American football and flag football are the initial audience.
+`www.errandom.com/QMT/`. The live application currently uses the verified Azure
+HTTPS hostname; `qmt.errandom.com` remains the DNS-dependent final hostname.
+American football and flag football are the initial audience.
 
-**Current position, 2026-10-21:** the immutable acceptance image is published and
+**Current position, 2026-10-21:** the owner explicitly authorized go-live at
+22:39 Zurich. The existing B1/Basic foundation is enabled and healthy, not
+re-provisioned. The main site links to the published `/QMT/` product page and
+the real Azure HTTPS application. QMTadmin API and Edge-browser sign-in and
+bounded live booking/rollback checks passed; all exact synthetic rows were
+removed. The hourly QMT-only CHF 30 guard is active, and its identity's actual
+stop and controlled owner recovery were verified. Its heartbeat log alert is
+enabled with query validation. Notification test requests fail in Azure, so
+email delivery remains unverified. The temporary restored database was removed.
+The old acceptance cleanup task is disabled and its operator is retired;
+production data must never be deleted by replaying acceptance cleanup.
+The local masked administrator shortcut is available to the owner. Custom DNS,
+notification delivery, extended workflow/mobile acceptance and seven dated
+stabilization observations remain open. No generic release flag was changed to
+represent uncollected evidence. See `evidence/production-launch-2026-10-21.md`.
+
+| Step | Current status | Remaining outcome |
+|------|----------------|-------------------|
+| 1. Production brief and data decision | Complete | Fresh production/manual entry selected; preserve any later-discovered history. |
+| 2. Full operating envelope | Live controls; observation open | Reconcile actual QMT-only spending, delayed billing and residual fixed charges. |
+| 3. Application candidate | Published and in use | Preserve the immutable accepted runtime; operator/docs changes do not require rebuilding it. |
+| 4. Infrastructure and release plumbing | Production promoted | Keep validation-only CI and exact-scope IaC; do not replay historical failed deployments. |
+| 5. Database, administrator and restore | Complete | Real restore and owner sign-in passed; temporary restore removed, production retained. |
+| 6. AI-free launch | Complete | AI and external synchronization remain disabled. |
+| 7. Deployed application and club acceptance | Core acceptance passed | Complete the extended two-session/request/export/DST/mobile matrix; do not claim it ran. |
+| 8. Budget alerts, suspension and recovery | Hourly control active; email test blocked | Verify email delivery; continue cost/usage observation. Stop/recovery and retained guard logs passed. |
+| 9. Application/domain/product publication | Live on Azure HTTPS and errandom | Add verified GoDaddy records, bind the custom hostname and issue its managed certificate. |
+| 10. Seven-day stabilization | Started; not complete | Collect seven dated observations; no unattended agent is implied. |
+
+**Historical disabled-acceptance checkpoint (superseded by production promotion):**
+the immutable acceptance image is published and
 anonymous digest access is verified. The owner authorized the isolated disabled
 B1/Basic acceptance foundation, protected initialization, one temporary Basic
 restore and conditional cleanup. A real current-owner Windows cleanup task is
@@ -61,7 +92,7 @@ The cleanup deadline remains October 22, 2026, 14:50:55 Zurich; deletion itself
 has not been exercised. The provisioned foundation can incur charges.
 The detailed ten-step status is authoritative over historical checkpoints below.
 
-| Step | Current status | Remaining outcome |
+| Step | Historical acceptance status | Outcome remaining at that checkpoint |
 |------|----------------|-------------------|
 | 1. Production brief and data decision | Complete | Fresh production and manual application entry are selected; preserve any subsequently found history. |
 | 2. Full operating envelope | Partial | Verify the complete ongoing QMT-only cost envelope and live response controls; bounded acceptance is not production approval. |
@@ -362,7 +393,7 @@ proven, and a protected administrator can sign in.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-005 | Copilot rehearses the selected restore or approved clean initialization in isolation, retaining the recovery source. Use `scripts\migrate.cjs`, `scripts\check-database.cjs` and `scripts\bootstrap-admin.cjs` under the documented approval variables and separate principals. Review the actual recovered schema, legacy request payloads, timestamp/DST semantics and Basic-tier size/headroom. Test restoration from a new backup as well as successful initialization. Bootstrap only when no active administrator exists, rotate historical secrets and transfer access through a protected channel. Record readiness and recovery outcomes without personal records. | | |
+| TASK-005 | Copilot rehearses the selected restore or approved clean initialization in isolation, retaining the recovery source. Use `scripts\migrate.cjs`, `scripts\check-database.cjs` and `scripts\bootstrap-admin.cjs` under the documented approval variables and separate principals. Review the actual recovered schema, legacy request payloads, timestamp/DST semantics and Basic-tier size/headroom. Test restoration from a new backup as well as successful initialization. Bootstrap only when no active administrator exists, rotate historical secrets and transfer access through a protected channel. Record readiness and recovery outcomes without personal records. | ✅ | 2026-10-21 |
 
 **Bounded foundation evidence, 2026-10-21:** protected Azure Basic initialization,
 least-privilege application-principal reads, the single real post-bootstrap PITR

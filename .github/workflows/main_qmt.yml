@@ -43,6 +43,7 @@ jobs:
           az bicep build --file infra/database.bicep --outfile "$RUNNER_TEMP/qmt-database.json"
           az bicep build --file infra/environment.bicep --outfile "$RUNNER_TEMP/qmt-environment.json"
           az bicep build --file infra/budget-guard.bicep --outfile "$RUNNER_TEMP/qmt-budget-guard.json"
+          az bicep build --file infra/production-budget.bicep --outfile "$RUNNER_TEMP/qmt-production-budget.json"
           az bicep build --file infra/app-service.bicep --outfile "$RUNNER_TEMP/qmt-app-service.json"
           az bicep build --file infra/app-service-acceptance.bicep --outfile "$RUNNER_TEMP/qmt-app-service-acceptance.json"
       - name: Build non-root deployment image without publishing

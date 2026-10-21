@@ -1,7 +1,46 @@
 # QMT controlled relaunch
 
-Evaluated 2026-10-21. **Disabled acceptance foundation provisioned and initialized;
-public release remains blocked.**
+Evaluated 2026-10-21. **The owner-authorized single-club pilot is live.**
+The explicit instruction to go live was recorded at 22:39 Zurich. It supersedes
+the disabled-acceptance-only authorization below; it does not approve AI,
+cross-venture changes, automatic budget recovery or unlimited spending.
+The independent product page is `https://www.errandom.com/QMT/`, linked from
+the main website. Its **Open QMT** link currently targets the verified HTTPS
+application at `https://qmt-production-au5trtsh5mkl2.azurewebsites.net`.
+Do not publish a broken `qmt.errandom.com` link: GoDaddy CNAME/TXT records,
+hostname binding and its managed certificate remain outstanding.
+
+The existing Linux B1 single-worker, Always On app and Basic SQL database were
+promoted, not replaced. QMTadmin API and real Edge-browser sign-in passed.
+Real Basic-tier CRUD, adjacent/conflicting/concurrent booking and transaction
+rollback checks passed; their exact synthetic rows were removed. The guard's
+managed identity actually stopped the site (public HTTP 403); an explicitly
+authorized owner restart restored healthy HTTPS and SQL-backed empty collections.
+The temporary acceptance-restore database was then deleted; the production
+database and its configured retention were preserved.
+
+`infra/production-budget.bicep` creates the QMT-resource-group-only CHF 30
+Monthly budget and operations email action group. The guard is now **Schedule**
+with cron `0 * * * *`, `--execute`, zero retries and the unchanged pinned image.
+Its identity can only read the exact budget and read/stop the exact site.
+The missing-heartbeat/suspension log alert is enabled with real query validation.
+Retained logs prove both `within_budget` and `suspended`. Email test requests
+currently fail with Azure `BadRequest: There are no valid receivers in the request`,
+despite an enabled receiver. **Notification delivery is not verified.**
+App suspension is not an invoice cap: billing data is delayed and B1, SQL,
+backups and monitoring can keep charging after application stop.
+
+The acceptance deletion task is **disabled**, and the local acceptance operator
+rejects execution after recorded production promotion. Never re-arm it or replay
+the old initialization/restore/deployment. The owner receives the unchanged
+administrator credential through the local masked **QMT administrator access**
+desktop shortcut, not chat or a plaintext file.
+See `plan/evidence/production-launch-2026-10-21.md` for exact evidence and
+remaining DNS, notification, extended acceptance and seven-day stabilization work.
+The historical preparation record below does not describe current live state.
+
+## Historical disabled-foundation preparation
+
 This replaces the old App Service guide, including its unsafe example credentials
 and broad SQL-network advice. Rotate every historical credential and signing key
 before reuse; deleting examples does not remove them from Git history.
@@ -94,7 +133,11 @@ End dates are preserved in the editor, cards, shares and CSV (`End Date` column)
 The weekly view clips overnight/multiday intervals to each visible day and uses
 half-open boundaries: an event ending at midnight does not occupy the following day.
 
-## Explicit release blockers
+## Historical release-gate checklist
+
+The owner authorized the live pilot above with the documented residual limits.
+The checklist remains the broader acceptance standard, not a claim that every
+item passed or that the older Container Apps release flags apply to B1.
 
 1. Owner-approved full cost/traffic envelope and response policy, dated within
    31 days. The owner supplied a CHF monthly budget and fewer-than-five-user,

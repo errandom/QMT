@@ -265,6 +265,23 @@ test('protected token input is bounded and CLI errors contain no private values'
   assert.equal(result.stderr.includes('private-value'), false);
 });
 
+test('production notifications cover the whole QMT resource group without subscription scope or spend filters', () => {
+  const template = fs.readFileSync(path.join(__dirname, '..', 'infra', 'production-budget.bicep'), 'utf8');
+  assert.match(template, /targetScope = 'resourceGroup'/);
+  assert.match(template, /param notificationEmail string/);
+  assert.match(template, /param monthlyAmount int = 30/);
+  assert.match(template, /timeGrain: 'Monthly'/);
+  assert.match(template, /timePeriod: \{ startDate: startDate, endDate: endDate \}/);
+  assert.match(template, /enabled: true/);
+  assert.match(template, /emailAddress: notificationEmail/);
+  assert.match(template, /useCommonAlertSchema: true/);
+  for (const threshold of [50, 75, 90, 100]) {
+    assert.match(template, new RegExp(`actual${threshold}: \\{[\\s\\S]*?threshold: ${threshold}[\\s\\S]*?thresholdType: 'Actual'[\\s\\S]*?contactEmails: \\[notificationEmail\\]`));
+  }
+  assert.match(template, /forecast100: \{[\s\S]*?threshold: 100[\s\S]*?thresholdType: 'Forecasted'[\s\S]*?contactEmails: \[notificationEmail\]/);
+  assert.doesNotMatch(template, /\b(filters|scope|subscriptionResourceId|roleAssignments)\s*[:(]/);
+});
+
 function webFixture({ spend = 30, state = 'Running', holdRunning = false, failStop = false } = {}) {
   const site = {
     id: webAppId, name: webAppId.split('/').at(-1), type: 'Microsoft.Web/sites', properties: { state },
