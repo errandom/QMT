@@ -92,7 +92,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     }
     
     message += `\nPlease contact us if you have any questions.\n\n`
-    message += `Quick - Mean - Tough!\nAFC Zurich Renegades`
+    message += `Club operations`
     
     return message
   }
@@ -119,199 +119,75 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   // Confirm approval with location
   const handleConfirmApproval = async () => {
     if (!approvalRequest) return
-
     try {
-      const endTime = calculateEndTime(approvalRequest.startTime, approvalRequest.duration)
-      
-      // Create event via API with selected field
-      const eventData = {
-        team_ids: approvalRequest.teamIds && approvalRequest.teamIds.length > 0 ? approvalRequest.teamIds.join(',') : null,
-        field_ids: selectedFieldId ? selectedFieldId : null,
-        event_type: approvalRequest.eventType,
-        start_time: `${approvalRequest.date}T${approvalRequest.startTime}:00`,
-        end_time: `${approvalRequest.date}T${endTime}:00`,
-        description: approvalRequest.opponent 
-          ? `${approvalRequest.eventType} vs ${approvalRequest.opponent}` 
-          : approvalRequest.purpose 
-            ? `${approvalRequest.eventType} - ${approvalRequest.purpose}`
-            : approvalRequest.eventType,
-        notes: approvalRequest.description || '',
-        status: selectedFieldId ? 'Confirmed' : 'Planned',
-        other_participants: approvalRequest.opponent || null
-      }
-      
-      console.log('[RequestsManager] Creating event with data:', eventData)
-      const newEvent = await api.createEvent(eventData)
-      console.log('[RequestsManager] Created event:', newEvent)
-      
-      // Update local state - handle both single event and array of events
-      if (newEvent) {
-        if (Array.isArray(newEvent)) {
-          setEvents((current = []) => [...current, ...newEvent])
-        } else {
-          setEvents((current = []) => [...current, newEvent])
-        }
-      }
-      
-      // Update request status
-      setFacilityRequests((current = []) =>
-        current.map(r =>
-          r.id === approvalRequest.id
-            ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-            : r
-        )
-      )
-      
-      toast.success(selectedFieldId 
-        ? 'Facility request approved and event created with location' 
-        : 'Facility request approved - event created without location')
-      
-      // Show share dialog for newly created event (includes Spond push option)
-      const createdEvent = Array.isArray(newEvent) ? newEvent[0] : newEvent
-      if (createdEvent) {
+      const result = await api.reviewRequest(approvalRequest.id, 'Approved', selectedFieldId || undefined)
+      setFacilityRequests(current => current.map(item => item.id === result.request.id ? { ...item, status: 'Approved', reviewedAt: result.request.reviewedAt, reviewedBy: result.request.reviewedBy } : item))
+      if (result.event) {
+        const created = result.event
+        setEvents(current => [...current, created])
         setShareDialogOriginalEvent(null)
-        setShareDialogEvent(createdEvent)
+        setShareDialogEvent(result.event)
         setShareDialogUpdateType('create')
         setShowShareDialog(true)
       }
-      
+      toast.success('Request approved and booking saved')
       setShowApprovalDialog(false)
       setApprovalRequest(null)
       setSelectedFieldId('')
-    } catch (error: any) {
-      console.error('Error approving facility request:', error)
-      toast.error(error.message || 'Failed to approve facility request')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Approval was not saved')
     }
   }
 
   // Confirm rejection with optional WhatsApp notification
-  const handleConfirmRejection = () => {
+  const handleConfirmRejection = async () => {
     if (!rejectionRequest) return
-
-    // Update the appropriate request list
-    if (rejectionRequestType === 'facility') {
-      setFacilityRequests((current = []) =>
-        current.map(r =>
-          r.id === rejectionRequest.id
-            ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-            : r
-        )
-      )
-    } else if (rejectionRequestType === 'equipment') {
-      setEquipmentRequests((current = []) =>
-        current.map(r =>
-          r.id === rejectionRequest.id
-            ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-            : r
-        )
-      )
-    } else if (rejectionRequestType === 'cancellation') {
-      setCancellationRequests((current = []) =>
-        current.map(r =>
-          r.id === rejectionRequest.id
-            ? { ...r, status: 'Rejected' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-            : r
-        )
-      )
+    try {
+      const result = await api.reviewRequest(rejectionRequest.id, 'Rejected')
+      const id = rejectionRequest.id
+      const metadata = { status: result.request.status, reviewedAt: result.request.reviewedAt, reviewedBy: result.request.reviewedBy }
+      setFacilityRequests(current => current.map(item => item.id === id ? { ...item, ...metadata } : item))
+      setEquipmentRequests(current => current.map(item => item.id === id ? { ...item, ...metadata } : item))
+      setCancellationRequests(current => current.map(item => item.id === id ? { ...item, ...metadata } : item))
+      if (sendWhatsAppNotification && rejectionRequest.requestorPhone) {
+        const phone = rejectionRequest.requestorPhone.replace(/[^0-9+]/g, '')
+        window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(rejectionMessage)}`, '_blank')
+      }
+      toast.success('Request rejection saved')
+      setShowRejectionDialog(false)
+      setRejectionRequest(null)
+      setRejectionMessage('')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Rejection was not saved')
     }
-
-    // Send WhatsApp notification if enabled
-    if (sendWhatsAppNotification && rejectionRequest.requestorPhone) {
-      const phone = rejectionRequest.requestorPhone.replace(/[^0-9+]/g, '')
-      const encodedMessage = encodeURIComponent(rejectionMessage)
-      window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`, '_blank')
-    }
-
-    toast.success(`${rejectionRequestType.charAt(0).toUpperCase() + rejectionRequestType.slice(1)} request rejected`)
-    
-    setShowRejectionDialog(false)
-    setRejectionRequest(null)
-    setRejectionMessage('')
-  }
-  
-  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
-    const [hours, minutes] = startTime.split(':').map(Number)
-    const totalMinutes = hours * 60 + minutes + durationMinutes
-    const endHours = Math.floor(totalMinutes / 60) % 24
-    const endMinutes = totalMinutes % 60
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`
   }
 
-  const handleApproveEquipment = (requestId: string) => {
-    setEquipmentRequests((current = []) =>
-      current.map(r =>
-        r.id === requestId
-          ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-          : r
-      )
-    )
-    toast.success('Equipment request approved')
+
+  const handleApproveEquipment = async (requestId: string) => {
+    try {
+      const result = await api.reviewRequest(requestId, 'Approved')
+      setEquipmentRequests(current => current.map(item => item.id === requestId ? { ...item, status: result.request.status, reviewedAt: result.request.reviewedAt, reviewedBy: result.request.reviewedBy } : item))
+      toast.success('Equipment request approval saved')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Approval was not saved')
+    }
   }
 
   const handleApproveCancellation = async (requestId: string) => {
-    const request = cancellationRequests.find(r => r.id === requestId)
-    
-    if (!request) {
-      toast.error('Request not found')
-      return
-    }
-
     try {
-      // Find the corresponding event
-      const event = events.find(e => e.id === request.eventId)
-      
-      if (event) {
-        // Store original event for share dialog
-        const originalEvent = { ...event }
-        
-        // Update the event status to Cancelled via API
-        const updateData = {
-          team_ids: event.teamIds && event.teamIds.length > 0 ? event.teamIds.join(',') : null,
-          field_ids: event.fieldIds && event.fieldIds.length > 0 ? event.fieldIds.join(',') : null,
-          event_type: event.eventType,
-          start_time: `${event.date}T${event.startTime}:00`,
-          end_time: `${event.date}T${event.endTime}:00`,
-          description: event.title || '',
-          notes: event.notes || '',
-          status: 'Cancelled',
-          other_participants: event.otherParticipants || null,
-          estimated_attendance: event.estimatedAttendance || null
-        }
-        
-        await api.updateEvent(parseInt(event.id), updateData)
-        
-        // Create cancelled event for share dialog
-        const cancelledEvent: Event = { ...event, status: 'Cancelled' }
-        
-        // Update local state
-        setEvents((current = []) =>
-          current.map(e =>
-            e.id === request.eventId
-              ? { ...e, status: 'Cancelled' as const }
-              : e
-          )
-        )
-        
-        // Show share dialog for cancellation notification
-        setShareDialogOriginalEvent(originalEvent)
-        setShareDialogEvent(cancelledEvent)
+      const result = await api.reviewRequest(requestId, 'Approved')
+      setCancellationRequests(current => current.map(item => item.id === requestId ? { ...item, status: result.request.status, reviewedAt: result.request.reviewedAt, reviewedBy: result.request.reviewedBy } : item))
+      if (result.event) {
+        const cancelled = result.event
+        setShareDialogOriginalEvent(events.find(item => item.id === cancelled.id) || null)
+        setShareDialogEvent(cancelled)
         setShareDialogUpdateType('cancel')
         setShowShareDialog(true)
+        setEvents(current => current.map(item => item.id === cancelled.id ? cancelled : item))
       }
-      
-      // Update request status
-      setCancellationRequests((current = []) =>
-        current.map(r =>
-          r.id === requestId
-            ? { ...r, status: 'Approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: currentUser.username }
-            : r
-        )
-      )
-      
-      toast.success('Cancellation request approved and event cancelled')
-    } catch (error: any) {
-      console.error('Error approving cancellation request:', error)
-      toast.error(error.message || 'Failed to approve cancellation request')
+      toast.success('Cancellation approved and event updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Cancellation was not saved')
     }
   }
 

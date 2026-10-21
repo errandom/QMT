@@ -1,0 +1,81 @@
+{
+  "asOf": "2026-10-20",
+  "currency": "USD",
+  "region": "switzerlandnorth",
+  "priceSource": "https://prices.azure.com/api/retail/prices",
+  "freeGrantsApplied": false,
+  "hoursPerMonth": 744,
+  "minReplicas": 1,
+  "cpu": 0.25,
+  "memoryGiB": 0.5,
+  "replicas": 1,
+  "revisionOverlapReplicas": 2,
+  "prices": {
+    "activeVcpuSecond": 0.000024,
+    "activeGiBSecond": 0.000003,
+    "millionRequests": 0.4,
+    "sqlBasicDay": 0.1771,
+    "logIngestionGB": 3.289,
+    "outboundGB": 0.087,
+    "millionDnsQueries": 0.4,
+    "ltrBackupGBMonth": 0.03278
+  },
+  "expected": { "activeHours": 744, "requests": 10000, "logGBPerReplica": 0.25, "egressGB": 2, "dnsQueries": 10000 },
+  "routine": { "activeHours": 744, "requests": 100000, "logGBPerReplica": 0.5, "egressGB": 20, "dnsQueries": 100000 },
+  "sustained": { "activeHours": 744, "requests": 10000000, "logGBPerReplica": 5, "egressGB": 2000, "dnsQueries": 1000000 },
+  "backupRecovery": {
+    "weeklyRetentionWeeks": 4,
+    "ltrStoredGB": 10,
+    "restoreDatabaseHours": 24,
+    "status": "configured_in_template_not_deployed_or_restore_validated"
+  },
+  "budgetGuard": {
+    "executionsPerMonth": 744,
+    "executionSeconds": 120,
+    "logGB": 0.02,
+    "logAlertMonthlyUsd": 0.55,
+    "emailNotifications": 3000,
+    "emailPriceUsd": 0.00002,
+    "quotesAsOf": "2026-10-21",
+    "status": "conditional_priced_proposal_not_deployed_or_end_to_end_validated"
+  },
+  "ancillaryMonthlyUsd": {
+    "registry": 0,
+    "logsAndMetrics": 0,
+    "networkAndEgress": 0,
+    "backupAndRecovery": 0,
+    "sharedEnvironmentFeatures": 0,
+    "dnsAndCertificates": 0.5,
+    "budgetAutomation": 1.34538
+  },
+  "pricingAssumptions": {
+    "status": "priced_proposal_not_owner_approved_or_deployed",
+    "availability": "Owner rejected idle sleeping on 2026-10-21. Keep one replica running; conservatively bill all 744 hours of a 31-day month at the active rate without assuming idle discounts or a budget suspension. Restarts and deployments can still cause interruptions.",
+    "budgetAutomation": "Prepared hourly Consumption job using the QMT image and existing environment: 744 executions at 120 seconds, 0.25 CPU/0.5 GiB, no platform retries or free grants; USD 0.6696 compute. Add 0.02 GB logs (0.06578), one 15-minute log alert plus one resource series (0.55), and 3000 paid emails to one approved recipient (0.06). Total USD 1.34538/month is conditional, not a runtime/cost cap. No extra manual executions, duplicate jobs, additional recipients/channels, workflow or dedicated host assumed. Verify actual logs, alert rate/series/recipient configuration and complete charge scope. Templates and offline tests exist; Azure execution, KQL/notification delivery, maintenance messaging and actual stop/resume remain unverified. This is not a billing ceiling.",
+    "evidence": "plan\\evidence\\cost-baseline-2026-10-20.md",
+    "registry": "Public GHCR image; public-repository standard Ubuntu Actions runner; no uploaded build artifacts or paid builds. Existing npm cache must remain within the repository's included storage.",
+    "logsAndMetrics": "Fixed base only; scenario log ingestion is added separately at the paid Analytics Logs rate. Thirty-day retention, ordinary Analytics queries and platform metrics only; no paid alert rules, custom metrics, log export or Application Insights.",
+    "networkAndEgress": "Fixed base only; scenario outbound GB is charged separately at the first paid Microsoft Global Network rate. Same-region traffic; no NAT gateway, private endpoint, Front Door or WAF.",
+    "backupAndRecovery": "Fixed base only; add 10 GB-month LRS long-term backup storage and one 24-hour Basic restore database each month. The database template configures four-week weekly LTR and seven-day DTU PITR; deployment, actual backup volume and restoration remain unverified.",
+    "sharedEnvironmentFeatures": "Consumption profile only, with no incremental dedicated-profile management or paid environment features. Actual shared-environment configuration still requires review.",
+    "dnsAndCertificates": "Allow one new public Azure DNS zone plus scenario DNS queries, with a free managed certificate. Existing authoritative DNS and domain renewal are not yet verified; this is an allowance, not a DNS migration decision.",
+    "traffic": "All usage volumes are unmeasured scenario assumptions, not enforced limits. Revision-overlap stress doubles compute and per-replica logs, not aggregate HTTP requests, egress, DNS or the database.",
+    "currencyAndExclusions": "USD retail before taxes, contract pricing and currency conversion; no shared Azure free grants. No permanent second staging stack; separately approve any longer acceptance overlap or additional services."
+  },
+  "approval": {
+    "budgetMonthlyUsd": null,
+    "approvedBy": null,
+    "approvedAt": null,
+    "sqlIntegrationValidated": false,
+    "restoreValidated": false,
+    "pauseResumeValidated": false,
+    "proxyValidated": false,
+    "imageValidated": false,
+    "legacyDataReviewed": false,
+    "costAlertsValidated": false,
+    "budgetSuspensionValidated": false,
+    "budgetScopeValidated": false,
+    "sharedEnvironmentReviewed": false,
+    "trafficAssumptionsAccepted": false
+  }
+}

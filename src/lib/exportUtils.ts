@@ -22,6 +22,7 @@ export interface ExportRow {
   'Status': string
   'Weekday': string
   'Date': string
+  'End Date': string
   'Start Time': string
   'End Time': string
   'Team(s)': string
@@ -59,7 +60,7 @@ export function filterEventsForExport(
 
   // Filter by date range
   if (filters.startDate) {
-    filtered = filtered.filter(event => event.date >= filters.startDate)
+    filtered = filtered.filter(event => `${event.endDate || event.date}T${event.endTime}` > `${filters.startDate}T00:00`)
   }
   if (filters.endDate) {
     filtered = filtered.filter(event => event.date <= filters.endDate)
@@ -162,6 +163,7 @@ export function transformEventsForExport(
       'Status': event.status || '',
       'Weekday': getWeekday(event.date),
       'Date': formatDate(event.date),
+      'End Date': formatDate(event.endDate || event.date),
       'Start Time': formatTime(event.startTime),
       'End Time': formatTime(event.endTime),
       'Team(s)': teamNames,
@@ -215,6 +217,7 @@ export async function exportToExcel(
     'Status',
     'Weekday',
     'Date',
+    'End Date',
     'Start Time',
     'End Time',
     'Team(s)',

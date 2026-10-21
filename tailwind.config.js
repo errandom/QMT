@@ -1,4 +1,4 @@
-import fs from "fs";
+const fs = require("fs");
 
 /** @type {import('tailwindcss').Config} */
 
@@ -18,11 +18,6 @@ const defaultTheme = {
     padding: "2rem",
   },
   extend: {
-    screens: {
-      coarse: { raw: "(pointer: coarse)" },
-      fine: { raw: "(pointer: fine)" },
-      pwa: { raw: "(display-mode: standalone)" },
-    },
     colors: {
       neutral: {
         1: "var(--color-neutral-1)",
@@ -141,7 +136,7 @@ const defaultTheme = {
   darkMode: ["selector", '[data-appearance="dark"]'],
 }
 
-export default {
+module.exports = {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: { ...defaultTheme, ...theme },
 };

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { api } from '@/lib/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ interface FacilityRequestDialogProps {
 }
 
 export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRequestDialogProps) {
+  const requestKey = useRef(crypto.randomUUID())
   const { facilityRequests, setFacilityRequests, teams } = useData()
   
   const [name, setName] = useState('')
@@ -68,7 +70,15 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
       createdAt: new Date().toISOString()
     }
 
-    setFacilityRequests((current) => [...(current || []), newRequest])
+    try {
+      const saved = await api.createRequest('facility', newRequest, requestKey.current)
+      setFacilityRequests(current => [...current, { ...newRequest, id: saved.id }])
+      requestKey.current = crypto.randomUUID()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Request was not saved')
+      setIsLoading(false)
+      return
+    }
     toast.success('Facility request submitted successfully')
     
     setName('')

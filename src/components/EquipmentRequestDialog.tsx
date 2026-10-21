@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { api } from '@/lib/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ interface EquipmentRequestDialogProps {
 }
 
 export default function EquipmentRequestDialog({ open, onOpenChange }: EquipmentRequestDialogProps) {
+  const requestKey = useRef(crypto.randomUUID())
   const { equipmentRequests, setEquipmentRequests, teams } = useData()
   
   const [name, setName] = useState('')
@@ -45,7 +47,15 @@ export default function EquipmentRequestDialog({ open, onOpenChange }: Equipment
       createdAt: new Date().toISOString()
     }
 
-    setEquipmentRequests((current) => [...(current || []), newRequest])
+    try {
+      const saved = await api.createRequest('equipment', newRequest, requestKey.current)
+      setEquipmentRequests(current => [...current, { ...newRequest, id: saved.id }])
+      requestKey.current = crypto.randomUUID()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Request was not saved')
+      setIsLoading(false)
+      return
+    }
     toast.success('Equipment request submitted successfully')
     
     setName('')

@@ -80,6 +80,7 @@ export interface Event {
   eventType: EventType
   status: EventStatus
   date: string
+  endDate?: string
   startTime: string
   endTime: string
   fieldIds: string[]  // Multiple fields/meeting rooms can be assigned

@@ -5,6 +5,7 @@ import LoginDialog from './LoginDialog'
 import { User } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
 import { COLORS, SIZES } from '@/lib/constants'
+import { useCapabilities } from '@/hooks/useCapabilities'
 
 interface HeaderProps {
   currentUser: User | null
@@ -16,6 +17,7 @@ interface HeaderProps {
 
 export default function Header({ currentUser, onLogin, onLogout, onNavigate, currentView }: HeaderProps) {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const { capabilities } = useCapabilities()
 
   const handleLoginClick = () => {
     setShowLoginDialog(true)
@@ -65,7 +67,8 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
           <div className="flex items-center justify-between">
             <div className="flex-1 pr-3">
               <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
-              <p className="text-sm text-white/95 tracking-[0.095em] font-medium">ZURICH RENEGADES FOOTBALL</p>
+              <p className="text-sm text-white/95 tracking-[0.095em] font-medium">{capabilities?.clubName || 'QMT by errandom'}</p>
+              <a href="https://www.errandom.com/QMT/" className="text-xs text-white underline">About QMT on errandom</a>
             </div>
             
             <div className="flex items-center gap-3 sm:flex-row">

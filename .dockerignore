@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.github
+.env
+.env.*
+!.env.template
+*.log
+test
+plan
+docs
+infra
+**/qmt-legacy-cache-*.json

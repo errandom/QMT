@@ -1,0 +1,42 @@
+name: QMT manual release preflight (no deployment)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Public QMT image reference including its complete sha256 digest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    environment: qmt-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test:sql
+      - name: Enforce dated approvals and compile without cloud writes
+        shell: pwsh
+        env:
+          QMT_RELEASE_IMAGE: ${{ inputs.image }}
+        run: ./scripts/prepare-release.ps1 -Image $env:QMT_RELEASE_IMAGE -OutputPath "$env:RUNNER_TEMP/qmt-main.json"
+      - name: Compile separately approved database template
+        run: az bicep build --file infra/database.bicep --outfile "$RUNNER_TEMP/qmt-database.json"
+      - name: Compile optional Consumption environment without deployment
+        run: az bicep build --file infra/environment.bicep --outfile "$RUNNER_TEMP/qmt-environment.json"
+      - name: Compile budget guard without enabling or deploying it
+        run: az bicep build --file infra/budget-guard.bicep --outfile "$RUNNER_TEMP/qmt-budget-guard.json"
+      - name: Compile unselected B1 alternative without deployment or release approval
+        run: az bicep build --file infra/app-service.bicep --outfile "$RUNNER_TEMP/qmt-app-service.json"

@@ -32,3 +32,6 @@ pids
 .devcontainer/
 
 .spark-workbench-id
+
+# Private operational recovery snapshots
+qmt-legacy-cache-*.json

@@ -1,5 +1,8 @@
 // API Configuration Module
 // Used by frontend to get the correct API base URL
+import type { Event, FacilityRequest, EquipmentRequest, CancellationRequest, UserRole } from './types';
+export type StoredRequest = (FacilityRequest & { type: 'facility' })
+  | (EquipmentRequest & { type: 'equipment' }) | (CancellationRequest & { type: 'cancellation' });
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -25,7 +28,13 @@ export function removeToken(): void {
 
 export function getStoredUser(): any | null {
   const user = localStorage.getItem(USER_KEY);
-  return user ? JSON.parse(user) : null;
+  if (!user) return null;
+  try { return JSON.parse(user); }
+  catch {
+    console.warn('Stored session could not be read; sign in again.');
+    removeToken();
+    return null;
+  }
 }
 
 export function setStoredUser(user: any): void {
@@ -145,7 +154,6 @@ function transformEquipment(equipment: any): any {
 function transformEvent(event: any): any {
   if (!event) return event;
   
-  console.log('[API] Transforming event:', event.id, event);
   
   // Parse start_time and end_time from database datetime format
   const startDateTime = new Date(event.start_time || event.startTime);
@@ -172,6 +180,7 @@ function transformEvent(event: any): any {
   
   // Extract date in YYYY-MM-DD format using UTC
   const date = startDateTime.toISOString().split('T')[0];
+  const endDate = endDateTime.toISOString().split('T')[0];
   
   // Extract times in HH:MM format using UTC to avoid timezone shifts
   const startHours = String(startDateTime.getUTCHours()).padStart(2, '0');
@@ -205,13 +214,6 @@ function transformEvent(event: any): any {
   // Determine if event is recurring
   const isRecurring = Boolean(recurringDays && recurringDays.length > 0);
   
-  console.log('[API] Recurring data check:', {
-    recurring_days: event.recurring_days,
-    recurring_end_date: event.recurring_end_date,
-    recurringEndDate: event.recurringEndDate,
-    recurringDays,
-    isRecurring
-  });
   
   // Format recurring_end_date to YYYY-MM-DD if it exists
   let recurringEndDate = event.recurring_end_date || event.recurringEndDate;
@@ -239,6 +241,7 @@ function transformEvent(event: any): any {
     eventType: event.eventType || event.event_type || 'Other',
     status: event.status || 'Planned',
     date,
+    endDate,
     startTime,
     endTime,
     teamIds,
@@ -260,7 +263,6 @@ function transformEvent(event: any): any {
     spondGroupId: event.spondGroupId || event.spond_group_id || undefined,
   };
   
-  console.log('[API] Transformed event result:', transformed);
   return transformed;
 }
 
@@ -272,20 +274,17 @@ export async function apiRequest<T>(
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getToken();
   
-  console.log(`[API] 🚀 Requesting: ${url}`);
-  
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options?.headers,
-  };
+  const headers = new Headers(options?.headers);
+  if (options?.body) headers.set('Content-Type', 'application/json');
 
   // Add authentication token if available
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', ['Bearer', token].join(' '));
   }
   
   const response = await fetch(url, {
     ...options,
+    signal: options?.signal || AbortSignal.timeout(15000),
     headers,
   });
 
@@ -334,12 +333,10 @@ export async function apiRequest<T>(
 
   // Handle 204 No Content responses (e.g., DELETE operations)
   if (response.status === 204) {
-    console.log(`[API] ✓ Response from ${url}: 204 No Content`);
     return {} as T;
   }
 
   const data = await response.json();
-  console.log(`[API] ✓ Response from ${url}:`, data);
   return data;
 }
 
@@ -356,7 +353,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  getCurrentUser: () => apiRequest<any>('/auth/me'),
+  getCurrentUser: () => apiRequest<{
+    id: number; username: string; role: UserRole; is_active: boolean;
+    email?: string; full_name?: string;
+  }>('/auth/me'),
   getUsers: () => apiRequest<any[]>('/auth/users'),
   updateUser: (id: number, data: { username: string; role: string; email?: string; fullName?: string; isActive?: boolean }) =>
     apiRequest<any>(`/auth/users/${id}`, {
@@ -374,19 +374,26 @@ export const api = {
     }),
 
   // Events
-  getEvents: async () => {
-    try {
-      const events = await apiRequest<any[]>('/events');
-      console.log('[API] Raw events from server:', events);
-      if (!Array.isArray(events)) {
-        console.error('[API] ERROR: events is not an array:', typeof events);
-        return [];
-      }
-      return events.map(transformEvent);
-    } catch (error) {
-      console.error('[API] Error fetching events:', error);
-      return [];
+  getEvents: async (range?: { from: string; to: string }) => {
+    const now = Date.now();
+    const window = range || {
+      from: new Date(now - 7 * 86400000).toISOString(),
+      to: new Date(now + 90 * 86400000).toISOString(),
+    };
+    const query = new URLSearchParams({ limit: '500', ...window });
+    const events: Event[] = [];
+    let after = 0;
+    for (let page = 0; page < 20; page++) {
+      query.set('after', String(after));
+      const batch = await apiRequest<any[]>(`/events?${query}`);
+      if (!Array.isArray(batch)) throw new Error('Invalid events response');
+      events.push(...batch.map(transformEvent));
+      if (batch.length < 500) return events;
+      const next = Number(batch[batch.length - 1].id);
+      if (!Number.isSafeInteger(next) || next <= after) throw new Error('Invalid event pagination cursor');
+      after = next;
     }
+    throw new Error('Too many events in this range; select a shorter interval');
   },
   getEvent: (id: number) => apiRequest<any>(`/events/${id}`),
   createEvent: async (data: any) => {
@@ -395,7 +402,6 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      console.log('[API] Raw created event(s) from server:', result);
       
       // Handle both single event and array of events (for recurring)
       if (Array.isArray(result)) {
@@ -413,7 +419,6 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       });
-      console.log('[API] Raw updated event(s) from server:', result);
       
       // Handle both single event and array of events (when converting to recurring)
       if (Array.isArray(result)) {
@@ -431,20 +436,9 @@ export const api = {
 
   // Teams
   getTeams: async () => {
-    try {
-      const teams = await apiRequest<any[]>('/teams');
-      console.log('[API] Raw teams from server:', teams);
-      if (!Array.isArray(teams)) {
-        console.error('[API] ERROR: teams is not an array:', typeof teams);
-        return [];
-      }
-      const transformed = teams.map(transformTeam);
-      console.log('[API] Transformed teams:', transformed);
-      return transformed;
-    } catch (error) {
-      console.error('[API] Error fetching teams:', error);
-      return [];
-    }
+    const teams = await apiRequest<any[]>('/teams');
+    if (!Array.isArray(teams)) throw new Error('Invalid teams response');
+    return teams.map(transformTeam);
   },
   getTeam: (id: number) => apiRequest<any>(`/teams/${id}`),
   createTeam: (data: any) => apiRequest<any>('/teams', {
@@ -461,20 +455,9 @@ export const api = {
 
   // Sites
   getSites: async () => {
-    try {
-      const sites = await apiRequest<any[]>('/sites');
-      console.log('[API] Raw sites from server:', sites);
-      if (!Array.isArray(sites)) {
-        console.error('[API] ERROR: sites is not an array:', typeof sites);
-        return [];
-      }
-      const transformed = sites.map(transformSite);
-      console.log('[API] Transformed sites:', transformed);
-      return transformed;
-    } catch (error) {
-      console.error('[API] Error fetching sites:', error);
-      return [];
-    }
+    const sites = await apiRequest<any[]>('/sites');
+    if (!Array.isArray(sites)) throw new Error('Invalid sites response');
+    return sites.map(transformSite);
   },
   getSite: (id: number) => apiRequest<any>(`/sites/${id}`).then(transformSite),
   createSite: async (data: any) => {
@@ -497,20 +480,9 @@ export const api = {
 
   // Fields
   getFields: async () => {
-    try {
-      const fields = await apiRequest<any[]>('/fields');
-      console.log('[API] Raw fields from server:', fields);
-      if (!Array.isArray(fields)) {
-        console.error('[API] ERROR: fields is not an array:', typeof fields);
-        return [];
-      }
-      const transformed = fields.map(transformField);
-      console.log('[API] Transformed fields:', transformed);
-      return transformed;
-    } catch (error) {
-      console.error('[API] Error fetching fields:', error);
-      return [];
-    }
+    const fields = await apiRequest<any[]>('/fields');
+    if (!Array.isArray(fields)) throw new Error('Invalid fields response');
+    return fields.map(transformField);
   },
   getField: (id: number) => apiRequest<any>(`/fields/${id}`),
   createField: (data: any) => apiRequest<any>('/fields', {
@@ -527,20 +499,9 @@ export const api = {
 
   // Equipment
   getEquipment: async () => {
-    try {
-      const equipment = await apiRequest<any[]>('/equipment');
-      console.log('[API] Raw equipment from server:', equipment);
-      if (!Array.isArray(equipment)) {
-        console.error('[API] ERROR: equipment is not an array:', typeof equipment);
-        return [];
-      }
-      const transformed = equipment.map(transformEquipment);
-      console.log('[API] Transformed equipment:', transformed);
-      return transformed;
-    } catch (error) {
-      console.error('[API] Error fetching equipment:', error);
-      return [];
-    }
+    const equipment = await apiRequest<any[]>('/equipment');
+    if (!Array.isArray(equipment)) throw new Error('Invalid equipment response');
+    return equipment.map(transformEquipment);
   },
   getEquipmentItem: (id: number) => apiRequest<any>(`/equipment/${id}`),
   createEquipment: (data: any) => apiRequest<any>('/equipment', {
@@ -556,28 +517,36 @@ export const api = {
   }),
 
   // Requests
-  getRequests: (params?: { type?: string; status?: string }) => {
-    const query = new URLSearchParams(params as any).toString();
-    return apiRequest<any[]>(`/requests${query ? `?${query}` : ''}`);
+  getRequests: async () => {
+    const requests: StoredRequest[] = [];
+    let after = 0;
+    for (let page = 0; page < 20; page++) {
+      const batch = await apiRequest<StoredRequest[]>(`/requests?after=${after}`);
+      if (!Array.isArray(batch)) throw new Error('Invalid requests response');
+      requests.push(...batch);
+      if (batch.length < 500) return requests;
+      const next = Number(batch[batch.length - 1].id);
+      if (!Number.isSafeInteger(next) || next <= after) throw new Error('Invalid requests cursor');
+      after = next;
+    }
+    throw new Error('Request archive is too large; archive reviewed requests before continuing');
   },
-  getRequest: (id: number) => apiRequest<any>(`/requests/${id}`),
-  createRequest: (data: any) => apiRequest<any>('/requests', {
+  createRequest: (type: StoredRequest['type'], data: FacilityRequest | EquipmentRequest | CancellationRequest, key: string) => apiRequest<{ id: string }>('/requests', {
     method: 'POST',
-    body: JSON.stringify(data),
+    headers: { 'Idempotency-Key': key },
+    body: JSON.stringify({ ...data, type }),
   }),
-  updateRequest: (id: number, data: any) => apiRequest<any>(`/requests/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
-  deleteRequest: (id: number) => apiRequest<any>(`/requests/${id}`, {
-    method: 'DELETE',
-  }),
+  reviewRequest: async (id: string, status: 'Approved' | 'Rejected', fieldId?: string) => {
+    const result = await apiRequest<{ request: StoredRequest; event?: unknown }>(`/requests/${id}/review`, {
+      method: 'POST', body: JSON.stringify({ status, fieldId }),
+    });
+    return { request: result.request, event: result.event ? transformEvent(result.event) as Event : undefined };
+  },
 
   // User Settings
   getSettings: () => apiRequest<Record<string, any>>('/settings'),
   
-  getSetting: <T = any>(key: string, defaultValue?: T) => 
-    apiRequest<T>(`/settings/${key}`).catch(() => defaultValue as T),
+  getSetting: <T = unknown>(key: string) => apiRequest<T>(`/settings/${key}`),
   
   saveSetting: <T = any>(key: string, value: T) => 
     apiRequest<{ success: boolean; key: string }>(`/settings/${key}`, {

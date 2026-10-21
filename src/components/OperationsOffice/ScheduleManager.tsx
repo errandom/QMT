@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { Event, EventType, EventStatus, GameLocation, Team, Field, User } from '@/lib/types'
-import { api } from '@/lib/api'
+import { api, apiRequest } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -31,6 +31,8 @@ import { getToken } from '@/lib/api'
 import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 import ScheduleExportDialog from '@/components/ScheduleExportDialog'
+import { useCapabilities } from '@/hooks/useCapabilities'
+import { formatEventTimeRange } from '@/lib/utils'
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -46,33 +48,23 @@ interface ScheduleManagerProps {
   currentUser: User | null
 }
 
-// Helper function to send transport request email
+// Generates a draft only; the operator's mail client sends it.
 async function sendTransportRequest(eventId: string | number): Promise<void> {
   try {
-    const response = await fetch(`/api/events/${eventId}/transport-request`, {
+    const result = await apiRequest<{ email: { to: string; cc: string[]; subject: string; body: string } }>(`/events/${eventId}/transport-request`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
     })
-    
-    if (response.ok) {
-      const result = await response.json()
-      
-      // Open email client with pre-filled content
-      const { to, cc, subject, body } = result.email
-      const ccParam = cc && cc.length > 0 ? `&cc=${encodeURIComponent(cc.join(','))}` : ''
-      const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}${ccParam}&body=${encodeURIComponent(body)}`
-      
-      window.open(mailtoLink, '_blank')
-    }
+    const { to, cc, subject, body } = result.email
+    const ccParam = cc.length > 0 ? `&cc=${encodeURIComponent(cc.join(','))}` : ''
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}${ccParam}&body=${encodeURIComponent(body)}`
   } catch (error) {
     console.error('[ScheduleManager] Error sending transport request:', error)
+    toast.error('The event was saved, but its transport draft could not be generated. Do not create the event again.')
   }
 }
 
 export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
+  const { capabilities } = useCapabilities()
   const { events, setEvents, teams, fields, sites } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
@@ -310,9 +302,6 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     // Remove duplicates
     const uniqueToRecipients = [...new Set(toRecipients)]
     
-    // CC recipients: only bewilligungen and sports
-    const ccRecipients = ['bewilligungen@igacr.ch', 'sports@renegades.ch']
-
     const subject = encodeURIComponent(
       `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
     )
@@ -322,19 +311,17 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       `Event: ${event.title}\n` +
       `Type: ${event.eventType}\n` +
       `Date: ${formattedDate}\n` +
-      `Time: ${event.startTime} - ${event.endTime}\n` +
+      `Time: ${formatEventTimeRange(event)}\n` +
       `Location: ${locationName}\n` +
       (site ? `Address: ${site.address}, ${site.zipCode} ${site.city}\n` : '') +
       `Team(s): ${teamNames}\n\n` +
       `We apologize for any inconvenience this may cause.\n\n` +
       `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
-      `Quick - Mean - Tough!\n` +
-      `AFC Zurich Renegades`
+      `Club operations`
     )
 
-    const toParam = uniqueToRecipients.length > 0 ? uniqueToRecipients.join(',') : 'sports@renegades.ch'
-    const ccParam = `&cc=${ccRecipients.join(',')}`
-    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}${ccParam}`
+    const toParam = uniqueToRecipients.join(',')
+    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}`
   }
 
   const handleDeleteClick = (event: Event) => {
@@ -359,11 +346,11 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       }
       
       // Also delete from Spond if requested and the event is linked
-      if (alsoDeleteFromSpond && eventToDelete.spondId) {
+      if (capabilities?.spond && alsoDeleteFromSpond && eventToDelete.spondId) {
         try {
           // The Spond API doesn't have a delete method, but we can cancel it
           // by updating the event status in Spond
-          await fetch(`/api/spond/push/event/${numericId}`, {
+          const response = await fetch(`/api/spond/push/event/${numericId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -371,6 +358,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             },
             body: JSON.stringify({ status: 'cancelled' }),
           })
+          if (!response.ok) throw new Error('Spond rejected the cancellation')
           toast.success('Event also cancelled in Spond')
         } catch (spondError) {
           console.error('Error deleting from Spond:', spondError)
@@ -420,7 +408,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           field_ids: formData.fieldIds && formData.fieldIds.length > 0 ? formData.fieldIds.join(',') : null,
           event_type: formData.eventType,
           start_time: `${formData.date}T${formData.startTime}:00`,
-          end_time: `${formData.date}T${formData.endTime}:00`,
+          end_time: `${formData.endDate || formData.date}T${formData.endTime}:00`,
           description: formData.title || '',
           notes: formData.notes || '',
           status: formData.status || 'Planned',
@@ -475,7 +463,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           field_ids: formData.fieldIds && formData.fieldIds.length > 0 ? formData.fieldIds.join(',') : null,
           event_type: formData.eventType,
           start_time: `${formData.date}T${formData.startTime}:00`,
-          end_time: `${formData.date}T${formData.endTime}:00`,
+          end_time: `${formData.endDate || formData.date}T${formData.endTime}:00`,
           description: formData.title || '',
           notes: formData.notes || '',
           status: formData.status || 'Planned',
@@ -509,11 +497,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           setEvents((current = []) => [...current, ...result])
           toast.success(`${result.length} recurring events created successfully`)
           
-          // Send transport request for away games
-          if (formData.transportRequested && formData.gameLocation === 'away') {
-            for (const event of result) {
-              await sendTransportRequest(event.id)
-            }
+          // Do not generate hundreds of SQL requests or mail-client navigations.
+          if (capabilities?.transport && formData.transportRequested && formData.gameLocation === 'away') {
+            toast.info('Events saved. Open transport drafts individually using the bus button on each away game.')
           }
         } else {
           // Single event created
@@ -527,7 +513,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           setShowShareDialog(true)
           
           // Send transport request for away games
-          if (formData.transportRequested && formData.gameLocation === 'away') {
+          if (capabilities?.transport && formData.transportRequested && formData.gameLocation === 'away') {
             await sendTransportRequest(result.id)
           }
         }
@@ -631,14 +617,14 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             <FileXls className="mr-2" size={16} />
             Export
           </Button>
-          <Button 
+          {capabilities?.ai && <Button
             onClick={() => setShowAICreator(!showAICreator)}
             style={{ backgroundColor: '#8B5CF6', color: 'white' }}
             className="hover:opacity-90"
           >
             <MagicWand className="mr-2" size={16} />
             AI Create
-          </Button>
+          </Button>}
           <Button onClick={handleCreate}>
             <Plus className="mr-2" size={16} />
             Add Event
@@ -647,7 +633,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       </div>
 
       {/* AI Event Creator */}
-      {showAICreator && (
+      {capabilities?.ai && showAICreator && (
         <NaturalLanguageEventCreator
           teams={activeTeams.map(t => ({ id: parseInt(t.id), name: t.name }))}
           fields={fields.map(f => ({ id: parseInt(f.id), name: f.name, siteId: f.siteId }))}
@@ -770,6 +756,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                         </Button>
                       ) : null
                     })()}
+                    {capabilities?.transport && event.eventType === 'Game' && event.gameLocation === 'away' && event.status !== 'Cancelled' && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8"
+                        onClick={() => void sendTransportRequest(event.id)}
+                        title="Open transport email draft" aria-label="Open transport email draft">
+                        <Bus size={18} weight="bold" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -804,7 +797,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             <CardContent className="text-sm space-y-1">
               <div className="flex items-center gap-2">
                 <CalendarBlank size={14} />
-                {event.date} • {event.startTime} - {event.endTime}
+                {event.date} • {formatEventTimeRange(event)}
               </div>
               {event.teamIds && event.teamIds.length > 0 && (
                 <div className="text-xs text-muted-foreground">
@@ -882,15 +875,26 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date" style={{ color: COLORS.CHARCOAL }}>Date *</Label>
+                <Label htmlFor="date" style={{ color: COLORS.CHARCOAL }}>Start Date *</Label>
                 <Input
                   id="date"
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    date: e.target.value,
+                    endDate: !formData.endDate || formData.endDate === formData.date ? e.target.value : formData.endDate
+                  })}
                   required
                   style={{ color: COLORS.CHARCOAL }}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate" style={{ color: COLORS.CHARCOAL }}>End Date *</Label>
+                <Input id="endDate" type="date" min={formData.date}
+                  value={formData.endDate || formData.date}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  required style={{ color: COLORS.CHARCOAL }} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="startTime" style={{ color: COLORS.CHARCOAL }}>Start Time *</Label>
@@ -1045,7 +1049,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                         borderColor: formData.transportRequested ? '#f59e0b' : '#e5e7eb',
                         backgroundColor: formData.transportRequested ? 'rgba(245, 158, 11, 0.1)' : 'transparent'
                       }}
-                      onClick={() => setFormData({ ...formData, transportRequested: !formData.transportRequested })}
+                      onClick={() => { if (capabilities?.transport) setFormData({ ...formData, transportRequested: !formData.transportRequested }) }}
                     >
                       <div className="flex items-center gap-3">
                         <Bus size={24} weight={formData.transportRequested ? 'fill' : 'regular'} className="text-amber-600" />
@@ -1054,12 +1058,14 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                             Request Transport
                           </Label>
                           <p className="text-xs text-muted-foreground">
-                            Sends email to transport@renegades.ch with team contacts in CC
+                            {capabilities?.transport ? 'Opens a draft for the configured transport contact with team contacts in CC'
+                              : 'Unavailable until a club transport contact is configured'}
                           </p>
                         </div>
                       </div>
                       <Switch
                         checked={formData.transportRequested || false}
+                        disabled={!capabilities?.transport}
                         onCheckedChange={(checked) => setFormData({ ...formData, transportRequested: checked })}
                         onClick={(e) => e.stopPropagation()}
                         style={{ backgroundColor: formData.transportRequested ? '#f59e0b' : undefined }}
@@ -1332,7 +1338,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           })()}
           
           {/* Spond delete option */}
-          {eventToDelete?.spondId && (
+          {capabilities?.spond && eventToDelete?.spondId && (
             <div className="flex items-start gap-3 py-2 px-1">
               <Checkbox
                 id="also-delete-spond"

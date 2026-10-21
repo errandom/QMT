@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,10 +27,10 @@ import {
   Lightning,
   Envelope
 } from '@phosphor-icons/react'
-import { Event, Team, Field, Site, EventType, WeatherForecast } from '@/lib/types'
+import { Event, Team, Field, Site, EventType } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
-import { getWeatherForecast } from '@/lib/weatherService'
 import { COLORS, SIZES } from '@/lib/constants'
+import { formatEventTimeRange } from '@/lib/utils'
 
 interface EventCardProps {
   event: Event
@@ -61,8 +61,6 @@ const statusColors = {
 
 export default function EventCard({ event, teams, fields, sites }: EventCardProps) {
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false)
-  const [weather, setWeather] = useState<WeatherForecast | null>(null)
-  const [loadingWeather, setLoadingWeather] = useState(false)
   
   // Support multiple fields - get first field for weather/location display
   // Use type assertion for backward compatibility with old data that may have fieldId
@@ -77,10 +75,9 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const now = new Date()
   const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
   const canRequestCancellation = hoursUntilEvent > 24 && (event.status === 'Confirmed' || event.status === 'Planned')
-  const isPastEvent = hoursUntilEvent < 0
+  const isPastEvent = new Date(`${event.endDate || event.date}T${event.endTime}`).getTime() < now.getTime()
   const isCancelled = event.status === 'Cancelled'
 
-  const showWeather = hoursUntilEvent > 0 && hoursUntilEvent < 72
 
   // Build field names string for display
   const fieldNamesDisplay = eventFields.length > 0 
@@ -122,9 +119,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
     // Remove duplicates
     const uniqueToRecipients = [...new Set(toRecipients)]
     
-    // CC recipients: only bewilligungen and sports
-    const ccRecipients = ['bewilligungen@igacr.ch', 'sports@renegades.ch']
-
     const subject = encodeURIComponent(
       `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
     )
@@ -134,35 +128,18 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       `Event: ${event.title}\n` +
       `Type: ${event.eventType}\n` +
       `Date: ${formattedDate}\n` +
-      `Time: ${event.startTime} - ${event.endTime}\n` +
+      `Time: ${formatEventTimeRange(event)}\n` +
       `Location: ${locationName}\n` +
       (site ? `Address: ${site.address}, ${site.zipCode} ${site.city}\n` : '') +
       `Team(s): ${teamNames}\n\n` +
       `We apologize for any inconvenience this may cause.\n\n` +
       `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
-      `Quick - Mean - Tough!\n` +
-      `AFC Zurich Renegades`
+      `Club operations`
     )
 
-    const toParam = uniqueToRecipients.length > 0 ? uniqueToRecipients.join(',') : 'sports@renegades.ch'
-    const ccParam = `&cc=${ccRecipients.join(',')}`
-    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}${ccParam}`
+    const toParam = uniqueToRecipients.join(',')
+    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}`
   }
-
-  useEffect(() => {
-    if (showWeather && site && !weather && !loadingWeather) {
-      setLoadingWeather(true)
-      getWeatherForecast(event.date, event.startTime, site.city, site.zipCode)
-        .then(forecast => {
-          setWeather(forecast)
-          setLoadingWeather(false)
-        })
-        .catch(err => {
-          console.error('Failed to load weather:', err)
-          setLoadingWeather(false)
-        })
-    }
-  }, [showWeather, site, event.date, event.startTime, weather, loadingWeather])
 
   return (
     <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 ${isPastEvent ? 'opacity-40' : ''}`} style={{ borderRadius: SIZES.BORDER_RADIUS }}>
@@ -222,27 +199,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
               </div>
             </div>
             
-            {/* Weather forecast aligned at same level as title */}
-            {showWeather && weather && (
-              <div className="text-right text-sm min-w-[80px] flex-shrink-0">
-                <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
-                <div className="flex items-center justify-end gap-1.5">
-                  <span className="text-2xl leading-none">{weather.icon}</span>
-                  <div className="text-left">
-                    <div className="font-bold text-lg leading-tight" style={{ color: COLORS.NAVY }}>{weather.temperature}°C</div>
-                    <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>{weather.condition}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {showWeather && !weather && loadingWeather && (
-              <div className="text-right text-sm min-w-[80px] flex-shrink-0">
-                <div className="text-xs font-medium mb-1" style={{ color: '#6b7280' }}>Forecast</div>
-                <div className="flex items-center justify-end gap-1.5">
-                  <div className="animate-pulse text-base" style={{ color: '#6b7280' }}>Loading...</div>
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Other participants */}
@@ -263,7 +219,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
 
         <div className="flex items-center gap-2 text-base" style={{ color: COLORS.NAVY }}>
           <Clock style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
-          <span>{event.startTime} - {event.endTime}</span>
+          <span>{formatEventTimeRange(event)}</span>
         </div>
 
         {site && primaryField && (

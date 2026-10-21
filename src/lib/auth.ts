@@ -1,5 +1,5 @@
 import { User } from './types'
-import { api, getStoredUser, removeToken, getToken } from './api'
+import { api, getStoredUser, setStoredUser, removeToken, getToken } from './api'
 
 /**
  * Check if the user has access to operations office features
@@ -46,7 +46,16 @@ export async function verifyToken(): Promise<boolean> {
     if (!token) return false
     
     // Try to fetch current user to verify token
-    await api.getCurrentUser()
+    const current = await api.getCurrentUser()
+    if (!current.is_active) {
+      removeToken()
+      return false
+    }
+    const user: User = {
+      id: current.id, username: current.username, role: current.role,
+      isActive: current.is_active, email: current.email, fullName: current.full_name,
+    }
+    setStoredUser(user)
     return true
   } catch (error) {
     // Token is invalid or expired

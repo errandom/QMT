@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator'
 import { FileXls, FunnelSimple, CalendarBlank, Users, Tag, Warning, CheckCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
+import { api } from '@/lib/api'
 
 interface ScheduleExportDialogProps {
   open: boolean
@@ -64,6 +65,7 @@ export default function ScheduleExportDialog({
   // Date range
   const [startDate, setStartDate] = useState(initialFilters?.startDate || '')
   const [endDate, setEndDate] = useState(initialFilters?.endDate || '')
+  const [exporting, setExporting] = useState(false)
 
   // Get active teams only
   const activeTeams = useMemo(() => teams.filter(t => t.isActive), [teams])
@@ -165,13 +167,21 @@ export default function ScheduleExportDialog({
 
   // Handle export
   const handleExport = async () => {
+    if (exporting) return
+    setExporting(true)
     try {
-      await exportToExcel(events, { events, teams, fields, sites }, exportFilters)
-      toast.success(`Exported ${filteredEvents.length} events to Excel`)
+      if (!startDate || !endDate) throw new Error('Select a start and end date (maximum 366 days) before exporting')
+      const from = new Date(`${startDate}T00:00:00Z`)
+      const to = new Date(`${endDate}T00:00:00Z`)
+      to.setUTCDate(to.getUTCDate() + 1)
+      if (to <= from || to.getTime() - from.getTime() > 366 * 86400000) throw new Error('Choose an interval of at most 366 days')
+      const completeEvents = await api.getEvents({ from: from.toISOString(), to: to.toISOString() })
+      await exportToExcel(completeEvents, { events: completeEvents, teams, fields, sites }, exportFilters)
+      toast.success(`Exported ${filterEventsForExport(completeEvents, exportFilters).length} events to Excel`)
       onOpenChange(false)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to export schedule')
-    }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to export schedule')
+    } finally { setExporting(false) }
   }
 
   // Reset filters when dialog opens
@@ -203,7 +213,7 @@ export default function ScheduleExportDialog({
             Export Schedule to Excel
           </DialogTitle>
           <DialogDescription>
-            Configure filters to export events matching your criteria. Leave filters empty to include all events.
+            Select an explicit date range of at most 366 days. All pages in that range are fetched before export; the preview below uses the currently loaded schedule only.
           </DialogDescription>
         </DialogHeader>
 
@@ -376,12 +386,12 @@ export default function ScheduleExportDialog({
               {filteredEvents.length > 0 ? (
                 <Badge className="bg-green-100 text-green-800 border-green-200">
                   <CheckCircle size={14} className="mr-1" weight="fill" />
-                  Ready to Export
+                  Loaded preview only
                 </Badge>
               ) : (
                 <Badge variant="destructive">
                   <Warning size={14} className="mr-1" weight="fill" />
-                  No Events
+                  No loaded matches
                 </Badge>
               )}
             </div>
@@ -416,11 +426,11 @@ export default function ScheduleExportDialog({
           </Button>
           <Button 
             onClick={handleExport}
-            disabled={filteredEvents.length === 0}
+            disabled={exporting || !startDate || !endDate}
             style={{ backgroundColor: COLORS.NAVY }}
           >
             <FileXls size={16} className="mr-2" weight="duotone" />
-            Export {filteredEvents.length} Events
+            {exporting ? 'Exporting...' : 'Fetch and export selected range'}
           </Button>
         </DialogFooter>
       </DialogContent>
