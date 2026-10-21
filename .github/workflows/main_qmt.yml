@@ -1,10 +1,19 @@
-name: QMT validation (no deployment)
+name: QMT validation and manual acceptance image
 
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_acceptance_image:
+        description: Publish the tested image for explicitly authorized acceptance only
+        type: boolean
+        default: false
+      approved_commit:
+        description: Exact reviewed 40-character source commit; required for publication
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -39,30 +48,52 @@ jobs:
       - name: Build non-root deployment image without publishing
         run: docker build --tag qmt:validation .
       - name: Smoke-test the image without SQL or external providers
+        run: bash scripts/smoke-image.sh
+
+  publish-acceptance-image:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_acceptance_image && github.ref == 'refs/heads/copilot/qmt-cost-controlled-relaunch-20261021'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Require the exact reviewed source commit
+        env:
+          APPROVED_COMMIT: ${{ inputs.approved_commit }}
         run: |
-          docker run --rm --entrypoint node qmt:validation --check scripts/budget-guard.cjs
-          container="qmt-validation-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          cleanup() {
-            status=$?
-            trap - EXIT
-            if [ "$status" -ne 0 ]; then
-              docker logs "$container" || echo "::error::Container logs unavailable for $container"
-            fi
-            if ! docker rm --force "$container" >/dev/null; then
-              echo "::error::Could not remove validation container $container"
-              if [ "$status" -eq 0 ]; then status=1; fi
-            fi
-            exit "$status"
-          }
-          trap cleanup EXIT
-          docker run --detach --name "$container" --cpus 0.25 --memory 512m \
-            --publish 127.0.0.1:8080:3000 \
-            --env JWT_SECRET=synthetic-ci-runtime-secret-not-a-production-credential qmt:validation
-          curl --fail --silent --show-error --retry 15 --retry-delay 2 --retry-all-errors \
-            --retry-max-time 45 --connect-timeout 2 --max-time 5 \
-            --output "$RUNNER_TEMP/qmt-health.json" http://127.0.0.1:8080/api/health
-          node -e "if(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).ok!==true)process.exit(1)" "$RUNNER_TEMP/qmt-health.json"
-          test "$(docker exec "$container" id -u)" -ne 0
-          curl --fail --silent --show-error http://127.0.0.1:8080/ | grep 'id="root"'
-          curl --fail --silent --show-error http://127.0.0.1:8080/api/capabilities | \
-            node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const c=JSON.parse(s);if(c.ai!==false||c.spond!==false)process.exit(1)})"
+          [[ "$APPROVED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$APPROVED_COMMIT" = "$GITHUB_SHA"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build the acceptance image without credentials or operational data
+        run: |
+          docker build --tag qmt:validation \
+            --label org.opencontainers.image.source=https://github.com/errandom/QMT \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" .
+      - name: Verify the exact image before publishing
+        run: bash scripts/smoke-image.sh
+      - name: Publish the immutable-source tag and record the registry digest
+        id: publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/errandom/qmt:acceptance-$GITHUB_SHA"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag qmt:validation "$image"
+          docker push "$image"
+          digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
+          [[ "$digest" =~ ^ghcr\.io/errandom/qmt@sha256:[0-9a-f]{64}$ ]]
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          printf 'Source commit: `%s`\n\nPublished image: `%s`\n\nAnonymous pull must pass before Azure provisioning.\n' "$GITHUB_SHA" "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Require anonymous digest pull before this image is usable by Azure
+        env:
+          IMAGE_DIGEST: ${{ steps.publication.outputs.digest }}
+        run: |
+          mkdir "$RUNNER_TEMP/qmt-anonymous-docker"
+          docker --config "$RUNNER_TEMP/qmt-anonymous-docker" pull "$IMAGE_DIGEST"
+      - name: Remove the job registry login
+        if: always()
+        run: docker logout ghcr.io

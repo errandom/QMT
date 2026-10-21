@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.16'
+version: '1.17'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -92,6 +92,18 @@ Eight new script-level regression tests passed; the integrated normal suite
 passed 99 tests with its separate real-SQL suite skipped. The workflows now
 compile six templates. TASK-004 remains open: no image publication, provisioning,
 budget activation, actual Azure initialization or launch approval occurred.
+
+**Acceptance authorization update, 2026-10-21:** the owner explicitly approved
+bounded disabled B1 foundation acceptance, image publication, protected fresh
+credentials/bootstrap and conditional removal of newly created acceptance-owned
+resources only when no operational data exists. This is not public launch,
+DNS/site publication, main merge, production guard activation or acceptance of
+budget overruns. Actual current-month billing/headroom must be checked privately.
+The manual `main_qmt.yml` publication path requires the reviewed commit and exact
+candidate branch, waits for validation, uses a separate package-write job and
+tests anonymous digest pull. Default push/PR checks stay read-only; Azure
+provisioning still requires a usable image, protected credentials and budget
+headroom. Do not broaden the local GitHub token to make publication work.
 
 **Ownership:** Copilot executes technical work using available authorized tools,
 prepares decision-ready evidence and fixes failures. The owner supplies only
@@ -373,6 +385,7 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 - **FILE-012**: `infra\app-service.bicep`, `infra\app-service-cost-model.json`, `test\app-service-infra.test.cjs` and `test\app-service-cost.test.cjs`: unselected B1 foundation, subnet-only SQL service-endpoint route, isolated monitoring, comparison and offline contracts. Existing CI compiles/reports this option without publishing/deploying it; the ACA cost gate does not authorize it, and `--app-service --release` always fails.
 - **FILE-013**: `scripts\initialize-app-service.cjs`, `scripts\provision-database-user.cjs` and `test\database-bootstrap.test.cjs`: approval-gated fresh B1 initialization through a temporary exact-IPv4 SQL rule, protected matching credentials, operator-only migration/readiness checks, atomic limited-principal/admin setup and verified cleanup. No application start or deployment is performed; an interrupted process requires independent cleanup of the reported rule ID.
 - **FILE-014**: `infra\app-service-acceptance.bicep`, `scripts\prepare-app-service.ps1` and `test\app-service-preflight.test.cjs`: disabled subscription foundation, default-offline compilation and explicitly selected read-only provider preview with exact manifest/SKU review.
+- **FILE-015**: `.github\workflows\main_qmt.yml`, `scripts\smoke-image.sh` and `test\acceptance-image.test.cjs`: read-only default validation, separate manually selected exact-source publisher, shared real-image smoke checks, ephemeral package token and required anonymous digest pull. No Azure deployment operation is added.
 
 ## 6. Testing
 
@@ -386,6 +399,7 @@ error rate, data integrity and staff usability; the runbook and next decision ar
 - **TEST-008**: `node --test test\budget-guard.test.cjs test\app-service-infra.test.cjs` verifies exact-site scope, malformed-state rejection, read-only default, threshold/manual behavior, stop verification/failure and explicit ongoing fixed charges. Compile `infra\app-service.bicep` and `infra\budget-guard.bicep` without cloud writes. These checks do not validate live connectivity, SQL grants, image/proxy behavior or billing.
 - **TEST-009**: `node --test test\database-bootstrap.test.cjs` checks preview isolation, scope/credential rejection, parameterized principal creation, single-IP-only changes, SQL/create/cleanup failures and bounded firewall-only connection retries. `npm run test:sql` must additionally prove atomic rollback of principal/admin creation, contained-user login, operational-only DML and refusal of migration-table/schema/role privileges; all existing booking/request cases must pass using those application credentials before any live acceptance.
 - **TEST-010**: `node --test test\app-service-preflight.test.cjs` executes the actual PowerShell preparation with mocked CLI responses, checking offline default, explicit subscription, provider errors, destructive/unresolved/cross-venture changes, exact manifest, SKU/isolation and rejected group names. An authorized actual provider what-if must independently resolve all 17 QMT foundation creates; passing preview never authorizes an apply.
+- **TEST-011**: `node --test test\acceptance-image.test.cjs` checks the manual/branch/exact-commit publisher gate, separation of package-write permission, shared runtime checks and anonymous-pull requirement. Actual CI must smoke-test the image, and an explicitly approved manual run must independently prove registry push and anonymous digest access before provisioning.
 
 ## 7. Risks & Assumptions
 

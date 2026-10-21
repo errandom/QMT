@@ -70,7 +70,7 @@ Hosting templates use Container Apps Consumption with one always-running replica
 Basic SQL candidate, not a Premium App Service plan. They include an optional
 Consumption-only environment and four-week weekly long-term backup retention;
 none is deployed and restoration/performance remain unverified.
-`infra/app-service.bicep` also prepares an **unselected Linux B1 alternative** with
+`infra/app-service.bicep` also prepares a **Linux B1 acceptance candidate** with
 Always On, a QMT-owned SQL logical server/database, subnet service-endpoint access
 and monitoring. It defaults to an offline app for acceptance preparation; even a
 stopped B1 app incurs the plan's fixed charge. This alternative is not covered by
@@ -80,6 +80,11 @@ the app fixed disabled. `scripts/prepare-app-service.ps1` compiles it offline;
 its explicit `-AzureWhatIf` mode uses synthetic parameters and rejects unresolved,
 missing, extra, cross-venture or non-B1 changes without deploying anything.
 See `DEPLOYMENT.md` for the exact private-output and approval requirements.
+Ordinary CI remains validation-only. An explicitly selected manual run on the
+reviewed candidate branch can publish its exact-commit acceptance image using
+job-scoped package permissions; it never deploys Azure resources. Anonymous
+digest pull is required before provisioning, including owner-configured public
+package visibility if GHCR initially creates the package private.
 The owner rejected idle sleeping and approved suspension at monthly budget
 exhaustion. A scoped budget reader/revision suspender, manual fallback and hourly
 job/heartbeat-alert template are prepared locally. The guard also supports exact-site

@@ -7,8 +7,14 @@ before reuse; deleting examples does not remove them from Git history.
 
 ## Boundaries and authorization
 
-The checked-in workflows validate only. They do not log into Azure, publish images,
-create resources, run a production migration, change DNS, or deploy. The manual
+Push and pull-request workflows validate only. An explicitly selected manual run
+of `main_qmt.yml` can additionally publish an acceptance image after validation:
+`publish_acceptance_image=true`, the exact reviewed `approved_commit`, and the
+named candidate branch are required. Package-write permission exists only in
+that separate job, using its ephemeral GitHub token; ordinary validation remains
+read-only. Both jobs use `scripts/smoke-image.sh` to verify the actual built image.
+No workflow logs into Azure, creates cloud resources, runs a production migration,
+changes DNS, or deploys. The manual
 preflight additionally uses a `qmt-release` GitHub environment: configure required
 reviewers and restricted release branches before relying on that approval surface.
 Local code changes are not spending authorization.
@@ -144,7 +150,7 @@ egress allowlist or separately priced private networking, prove connectivity fro
 the actual environment, and reject release if it cannot meet the security/budget
 constraints. No permissive firewall rule is created by either template.
 
-### Lower-cost always-on alternative (prepared, not selected or authorized)
+### Lower-cost always-on acceptance candidate (not deployed)
 
 The 2026-10-21 read-only preflight found no surviving QMT resources in the selected
 subscription. The existing shared Consumption environment has no custom VNet;
@@ -152,7 +158,10 @@ its broad published outbound-address set is not a verified narrow SQL allowlist.
 Do not solve this by opening SQL to all Azure services or changing that environment.
 
 `infra/app-service.bicep` is a separate Linux Basic B1 candidate, **not** the former
-Premium App Service footprint and not an approved hosting change. The official
+Premium App Service footprint. On 2026-10-21 the owner authorized bounded, disabled
+foundation acceptance and conditional cleanup of test-only resources, not public
+production release. Actual current-month headroom, protected credentials and an
+anonymously pullable image remain required before provisioning. The official
 Switzerland North B1 Linux retail quote retrieved 2026-10-21 is USD 0.0198 or
 CHF 0.0165/hour: USD 14.7312 or CHF 12.276 for 744 hours of hosting alone, before
 SQL, backups, logs, traffic, automation, DNS and tax. Meter ID:
@@ -211,6 +220,17 @@ An independent inventory afterward still found no QMT resource group. This
 proves preview execution, not deployment. Actual provisioning must separately
 use protected fresh credentials, the approved published digest and bounded
 spending authorization; this script implements no deployment operation.
+
+For the separately authorized image operation, dispatch `main_qmt.yml` on the
+exact reviewed candidate branch with `publish_acceptance_image=true` and
+`approved_commit=<full-head-sha>`. The job rebuilds and smoke-tests the image,
+publishes only `ghcr.io/errandom/qmt:acceptance-<full-head-sha>`, and records the
+registry digest in its summary. It then attempts a digest pull with a fresh,
+unauthenticated Docker configuration. A push alone is not Azure image readiness.
+New GHCR packages default private; if the anonymous check fails, the owner must
+make this package public in GitHub's package settings and anonymous access must
+be independently verified. Do not add registry credentials to Azure, expand the
+local GitHub token or create a paid registry to bypass this check.
 
 Separate read-only checks on 2026-10-21 listed Switzerland North for subscription
 Linux B1, reported Web regional usage of 0/30 instances and SQL server usage of
