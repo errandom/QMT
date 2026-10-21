@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.20'
+version: '1.21'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -44,8 +44,16 @@ Protected bootstrap and the live pristine-data/cleanup audit passed. QMTadmin
 exists, operational tables are empty, operator SQL access was removed, and the
 application remains explicitly disabled. The real provider state `Disabled` is
 accepted only with `enabled=false`, alongside the previously supported `Stopped`.
-A genuine post-bootstrap restore point and the single approved Basic restore
-remain pending. Public release and production cost controls remain gated.
+The single approved Basic restore is blocked by Azure backup readiness. Both
+bounded waits ended without submitting a restore; no waiter remains active.
+At 21:48 Zurich, the Online Basic/Local source was Available in Resource Health,
+but its dedicated restore-point inventory was empty. A protected SQL read also
+returned no completed backups; the operator rule was removed and the app stayed
+disabled. Reconcile the exact target and protected receipt on resumption; do not
+loop waiters, fabricate a restore point or repeat an ambiguous restore request.
+Operator commit `9178eace4b11e143264fbfd1c6105aff8ccf110d` passed exact CI
+`39659275216`; the validated runtime image is unchanged.
+Public release and production cost controls remain gated.
 The cleanup deadline remains October 22, 2026, 14:50:55 Zurich; deletion itself
 has not been exercised. The provisioned foundation can incur charges.
 The detailed ten-step status is authoritative over historical checkpoints below.
@@ -56,7 +64,7 @@ The detailed ten-step status is authoritative over historical checkpoints below.
 | 2. Full operating envelope | Partial | Verify the complete ongoing QMT-only cost envelope and live response controls; bounded acceptance is not production approval. |
 | 3. Application candidate | Published | Retain the validated immutable runtime image; persist and validate operator-only changes separately. |
 | 4. Infrastructure and release plumbing | Disabled foundation verified | Preserve isolated B1/Basic configuration; production release plumbing remains gated. Failed historical deployment receipts are retained. |
-| 5. Database, administrator and restore | Bootstrap verified; restore pending | QMTadmin and least-privilege SQL user exist; operator access is removed. Await an actual post-bootstrap restore point, perform one Basic restore and verify it. |
+| 5. Database, administrator and restore | Bootstrap verified; restore blocked | QMTadmin and least-privilege SQL user exist; operator access is removed. Both bounded waits ended without a request. Reconcile the protected receipt and target; require a genuine Azure restore point before the single Basic restore and audit. |
 | 6. AI-free launch | Complete | Keep paid AI and alternative providers disabled; optional AI work is deferred. |
 | 7. Deployed application and club acceptance | Not executed | Verify actual browser workflows and production empty-state onboarding under separately approved enablement. |
 | 8. Budget alerts, suspension and recovery | Prepared only | Deploy and test QMT-only attribution, notification and suspension; do not claim that app stop removes fixed charges. |

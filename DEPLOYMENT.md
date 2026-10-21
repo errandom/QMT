@@ -35,8 +35,21 @@ The site is explicitly disabled; this provider reports `Disabled`, not `Stopped`
 Initialization accepts either exact non-running state only with `enabled=false`,
 and still rejects a running, enabled or unknown-state site.
 
-One post-initialization Basic restore remains pending availability of a genuine
-Azure restore point. No restore is inferred from successful bootstrap.
+The post-initialization Basic restore is blocked by actual backup readiness.
+Both bounded readiness waits ended without a restore request. At 21:48 Zurich
+on October 21, the source was Online/Basic with Local backup redundancy and
+Azure Resource Health reported Available, but the dedicated restore-point API
+returned no restore points. A protected SQL read then confirmed no completed
+backups in `sys.dm_database_backups`; its temporary single-IP rule was removed
+and the app remained disabled. No restore target was created and no waiter
+remains active. Do not infer a restore from successful bootstrap, repeatedly
+restart waiters, submit a speculative restore or replay the failed deployment.
+On resumption, reconcile the protected receipt and exact target first; perform
+the single approved restore only after Azure exposes a genuine post-bootstrap
+restore point. If readiness remains absent, investigate with Azure support
+without assuming support charges or broader operating approval.
+Operator commit `9178eace4b11e143264fbfd1c6105aff8ccf110d` passed exact validation
+run `39659275216`; the runtime image remains unchanged.
 The real current-owner Windows cleanup task remains armed with its original
 October 22, 2026, 14:50:55 Zurich deadline, but
 requires a logged-in owner, working machine/network and Azure authentication.
