@@ -1,5 +1,6 @@
 import type { Event } from './types'
 import { Team, Field, Site } from './types'
+import { formatEventTimeRange } from './utils'
 
 export interface ShareConfig {
   groupPhone?: string  // Legacy: for fallback wa.me link
@@ -45,16 +46,14 @@ function formatEventMessage(
   // Calculate duration if both times are available
   let duration = 90 // default
   if (event.startTime && event.endTime) {
-    const [startHour, startMin] = event.startTime.split(':').map(Number)
-    const [endHour, endMin] = event.endTime.split(':').map(Number)
-    const startMinutes = startHour * 60 + startMin
-    const endMinutes = endHour * 60 + endMin
-    duration = endMinutes - startMinutes
+    const start = Date.parse(`${event.date}T${event.startTime}:00Z`)
+    const end = Date.parse(`${event.endDate || event.date}T${event.endTime}:00Z`)
+    duration = (end - start) / 60000
   }
 
   return (
     `${statusEmoji} ${typeEmoji} *${event.title || event.eventType}*\n\n` +
-    `🕐 ${event.startTime || 'TBD'} - ${event.endTime || 'TBD'} (${duration} min)\n` +
+    `🕐 ${formatEventTimeRange(event)} (${duration} scheduled min)\n` +
     `📅 ${date}\n` +
     `👥 ${teamNames || 'No teams assigned'}\n` +
     `📍 ${location}\n` +
@@ -104,7 +103,7 @@ async function shareMessage(message: string, title: string, config?: ShareConfig
 
 // Legacy function name for backwards compatibility
 function sendWhatsAppNotification(message: string, config: ShareConfig): void {
-  shareMessage(message, 'Renegades Event', config)
+  shareMessage(message, 'Club event', config)
 }
 
 

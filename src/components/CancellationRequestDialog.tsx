@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { api } from '@/lib/api'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,7 @@ export default function CancellationRequestDialog({
   eventTime
 }: CancellationRequestDialogProps) {
   const { setCancellationRequests } = useData()
+  const requestKey = useRef(crypto.randomUUID())
   
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -55,7 +57,15 @@ export default function CancellationRequestDialog({
       createdAt: new Date().toISOString()
     }
 
-    setCancellationRequests((current = []) => [...current, newRequest])
+    try {
+      const saved = await api.createRequest('cancellation', newRequest, requestKey.current)
+      setCancellationRequests(current => [...current, { ...newRequest, id: saved.id }])
+      requestKey.current = crypto.randomUUID()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Request was not saved')
+      setIsSubmitting(false)
+      return
+    }
     
     toast.success('Cancellation request submitted')
     setIsSubmitting(false)

@@ -5,17 +5,30 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { CalendarBlank } from '@phosphor-icons/react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useState } from 'react'
+import { formatEventTimeRange } from '@/lib/utils'
 
 interface ScheduleViewProps {
   sportFilter: 'All Sports' | SportType
   teamFilter: string
 }
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-const TIME_SLOTS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30']
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+function mondayOf(date: string) {
+  const day = new Date(`${date}T00:00:00Z`)
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7))
+  return day.toISOString().slice(0, 10)
+}
 
 export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewProps) {
-  const { events, teams, fields, sites } = useData()
+  const { events, teams, fields, sites, eventWindow, refreshData, isLoading, error } = useData()
+  const [weekStart, setWeekStart] = useState(() => mondayOf(new Date().toISOString().slice(0, 10)))
+  const weekDates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(`${weekStart}T00:00:00Z`)
+    date.setUTCDate(date.getUTCDate() + index)
+    return date.toISOString().slice(0, 10)
+  })
 
   const allEvents = events.filter((event) => {
     if (teamFilter !== 'all') {
@@ -32,40 +45,15 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return true
   })
 
-  // Deduplicate recurring events - show each recurring event only once in the weekly view
-  // Multiple DB rows exist for each occurrence, but we only need one representative instance
-  const displayEvents = (() => {
-    const getRecurringSignature = (event: Event): string => {
-      return [
-        event.title,
-        event.startTime,
-        event.endTime,
-        event.eventType,
-        (event.teamIds || []).sort().join(','),
-        (event.fieldIds || []).sort().join(','),
-        (event.recurringDays || []).sort().join(',')
-      ].join('|')
-    }
-
-    const seen = new Set<string>()
-    const deduped: Event[] = []
-
-    for (const event of allEvents) {
-      if (event.isRecurring && event.recurringDays && event.recurringDays.length > 0) {
-        // For recurring events, keep only one representative instance
-        const sig = getRecurringSignature(event)
-        if (!seen.has(sig)) {
-          seen.add(sig)
-          deduped.push(event)
-        }
-      } else {
-        // Non-recurring events are always included
-        deduped.push(event)
-      }
-    }
-
-    return deduped
-  })()
+  // Recurrence is materialized in SQL: display actual dated occurrences, not a synthetic template week.
+  const displayEvents = allEvents.flatMap(event => weekDates.flatMap(date => {
+    const endDate = event.endDate || event.date
+    if (event.date > date || endDate < date) return []
+    const startTime = event.date === date ? event.startTime : '00:00'
+    const endTime = endDate === date ? event.endTime : '24:00'
+    if (endTime <= startTime) return []
+    return [{ ...event, date, startTime, endTime, originalEvent: event }]
+  }))
 
   // Helper to get field IDs for an event (supports both fieldIds array and legacy fieldId)
   const getEventFieldIds = (event: any): string[] => {
@@ -96,8 +84,6 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   const getEventPosition = (startTime: string, endTime: string) => {
     const start = timeToMinutes(startTime)
     const end = timeToMinutes(endTime)
-    const scheduleStart = 17 * 60
-    const scheduleEnd = 22 * 60
     
     if (end <= scheduleStart || start >= scheduleEnd) return null
     
@@ -115,6 +101,9 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     const [hours, minutes] = time.split(':').map(Number)
     return hours * 60 + minutes
   }
+  const scheduleStart = displayEvents.reduce((start, event) => Math.max(0, Math.min(start, timeToMinutes(event.startTime))), 17 * 60)
+  const scheduleEnd = displayEvents.reduce((end, event) => Math.min(24 * 60, Math.max(end, timeToMinutes(event.endTime))), 22 * 60)
+  const timeLabel = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 
   const getEventsForSiteFieldDay = (siteId: string, fieldId: string, dayIndex: number) => {
     return displayEvents.filter(event => {
@@ -122,14 +111,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
       // Check if this field is one of the event's fields
       if (!eventFieldIds.includes(fieldId)) return false
       
-      // For recurring events, check if the day matches
-      if (event.isRecurring && event.recurringDays) {
-        return event.recurringDays.includes(dayIndex)
-      }
-      // For one-time events, check if the event's date falls on this day of the week
-      const eventDate = new Date(event.date)
-      const eventDayOfWeek = eventDate.getDay() === 0 ? 7 : eventDate.getDay() // Sunday = 7
-      return eventDayOfWeek === dayIndex
+      return event.date === weekDates[dayIndex - 1]
     })
   }
 
@@ -189,19 +171,39 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return { rowCount: rows.length, eventRowMap }
   }
 
+  const nextWeek = new Date(`${weekStart}T00:00:00Z`)
+  nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+  const weekOutsideWindow = `${weekStart}T00:00:00.000Z` < eventWindow.from
+    || nextWeek.toISOString() > eventWindow.to
+  const weekControls = <div className="flex flex-wrap items-center gap-3">
+    <label>Week containing <input className="rounded border p-2" type="date" value={weekStart} onChange={event => {
+      if (event.target.value) setWeekStart(mondayOf(event.target.value))
+    }} /></label>
+    <span>{weekDates[0]} to {weekDates[6]}</span>
+    {weekOutsideWindow && <button className="rounded border p-2" disabled={isLoading}
+      onClick={() => void refreshData({ from: `${weekStart}T00:00:00.000Z`, to: nextWeek.toISOString() })}>
+      Load this week (outside loaded window)
+    </button>}
+  </div>
+
   if (displayEvents.length === 0) {
     return (
+      <div className="space-y-4">
+      {weekControls}
       <Alert>
         <CalendarBlank className="h-4 w-4" />
         <AlertDescription>
-          No events scheduled for the current planning period.
+          {isLoading ? 'Loading schedule...' : error ? 'The schedule could not be loaded; retry before relying on availability.'
+            : weekOutsideWindow ? 'Load the selected week to check its schedule.' : 'No matching events in the selected week.'}
         </AlertDescription>
       </Alert>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {weekControls}
       {activeSites.map(site => {
         const siteFields = fields.filter(f => f.siteId === site.id)
         if (siteFields.length === 0) return null
@@ -213,8 +215,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <div className="min-w-[800px]">
-                  <div className="grid grid-cols-6 gap-2 mb-2">
+                <div className="min-w-[1100px]">
+                  <div className="grid grid-cols-8 gap-2 mb-2">
                     <div className="text-sm font-medium" style={{ color: '#6b7280' }}>Location</div>
                     {DAYS.map(day => (
                       <div key={day} className="text-sm font-medium text-center" style={{ color: '#001f3f' }}>
@@ -229,7 +231,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                     const isMeetingLocation = fieldEvents.length > 0 && fieldEvents.every(e => e.eventType === 'Meeting' || e.eventType === 'Other')
                     
                     return (
-                    <div key={field.id} className="grid grid-cols-6 gap-2 mb-4">
+                    <div key={field.id} className="grid grid-cols-8 gap-2 mb-4">
                       <div className="text-sm font-medium flex items-center" style={{ color: '#001f3f' }}>
                         {isMeetingLocation ? site.name : field.name}
                       </div>
@@ -293,7 +295,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                           </div>
                                         )}
                                         <div className="text-muted-foreground">
-                                          <span className="font-medium">Time:</span> {event.startTime} - {event.endTime}
+                                          <span className="font-medium">Time:</span> {event.originalEvent.date} {formatEventTimeRange(event.originalEvent)}
                                         </div>
                                         <div className="flex items-center gap-1">
                                           <span className="font-medium text-muted-foreground">Status:</span>
@@ -317,13 +319,13 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                     )
                   })}
 
-                  <div className="grid grid-cols-6 gap-2 mt-2 pt-2 border-t border-white/30">
+                  <div className="grid grid-cols-8 gap-2 mt-2 pt-2 border-t border-white/30">
                     <div></div>
                     {DAYS.map(day => (
                       <div key={day} className="flex justify-between text-[10px] px-1" style={{ color: '#6b7280' }}>
-                        <span>17:00</span>
-                        <span>19:30</span>
-                        <span>22:00</span>
+                        <span>{timeLabel(scheduleStart)}</span>
+                        <span>{timeLabel(Math.round((scheduleStart + scheduleEnd) / 2))}</span>
+                        <span>{timeLabel(scheduleEnd)}</span>
                       </div>
                     ))}
                   </div>

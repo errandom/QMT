@@ -4,112 +4,143 @@ const path = require('path');
 const sql = require('mssql');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { readConfig } = require('./server/config.cjs');
+const { createLazyPool } = require('./server/pool.cjs');
+const { createLimiter, eventRange, validateEvent } = require('./server/limits.cjs');
+const { createLogger } = require('./server/logger.cjs');
+const { registerBookingRoutes } = require('./server/bookings.cjs');
+const { registerRequestRoutes } = require('./server/requests.cjs');
 
-// Azure OpenAI for AI event creation
-let AzureOpenAI;
-try {
-  const openai = require('openai');
-  AzureOpenAI = openai.AzureOpenAI;
-} catch (e) {
-  console.log('[AI] OpenAI package not available - AI features disabled');
-}
-
+function createApp({ env = process.env, connect } = {}) {
+const config = readConfig(env);
+const console = createLogger();
 const app = express();
-
-// --- Log early and clearly so you see it in Log Stream ---
-console.log('QMT starting at', new Date().toISOString(), 'PORT =', process.env.PORT);
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 // Express basics
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Port: App Service injects PORT (e.g., 8080). Fall back locally.
-const port = process.env.PORT || 3000;
+app.use(express.json({ limit: '32kb' }));
+app.use(express.urlencoded({ extended: false, limit: '32kb' }));
 
 // JWT Secret for authentication
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = config.jwtSecret;
 
 // ------------------------------
 // Azure SQL connection settings
 // ------------------------------
 const sqlConfig = {
-  server: process.env.SQL_SERVER,           // e.g., myserver.database.windows.net
-  database: process.env.SQL_DATABASE,       // e.g., QMT
-  user: process.env.SQL_USER,
-  password: process.env.SQL_PASSWORD,
+  server: env.SQL_SERVER,
+  database: env.SQL_DATABASE,
+  user: env.SQL_USER,
+  password: env.SQL_PASSWORD,
+  connectionTimeout: 10000,
+  requestTimeout: 10000,
   options: {
     encrypt: true,                          // REQUIRED for Azure SQL
     trustServerCertificate: false,
-    enableArithAbort: true,
-    connectTimeout: 30000,                  // 30 seconds
-    requestTimeout: 30000                   // 30 seconds
+    enableArithAbort: true
   },
   pool: {
-    max: 10,
+    max: config.poolMax,
     min: 0,
     idleTimeoutMillis: 30000
-  },
-  // Add connection retry logic
-  connectionRetryTimeout: 60000
+  }
 };
 
-// Maintain a single pool with proper initialization tracking
-let poolPromise = null;
-let poolConnecting = false;
-
-async function getPool() {
-  // If we already have a connected pool, return it
-  if (poolPromise) {
-    return poolPromise;
-  }
-  
-  // If another request is currently connecting, wait for it
-  if (poolConnecting) {
-    // Wait a bit and retry - the other request will set poolPromise
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return getPool();
-  }
-
-  // CHECK IF CREDENTIALS ARE MISSING
+const database = createLazyPool(connect || (async () => {
   if (!sqlConfig.server || !sqlConfig.database || !sqlConfig.user || !sqlConfig.password) {
-    console.error('❌ CRITICAL: Database credentials missing!');
-    console.error('Missing:', {
-      SQL_SERVER: !sqlConfig.server,
-      SQL_DATABASE: !sqlConfig.database,
-      SQL_USER: !sqlConfig.user,
-      SQL_PASSWORD: !sqlConfig.password
-    });
-    console.error('Set these environment variables in Azure App Service Configuration');
     throw new Error('Database credentials not configured');
   }
+  const pool = new sql.ConnectionPool(sqlConfig);
+  try { return await pool.connect(); }
+  catch (error) { await pool.close(); throw error; }
+}), console.error);
+const getPool = database.getPool;
+app.locals.close = database.close;
 
-  // Mark that we're connecting
-  poolConnecting = true;
-  
-  console.log('Attempting SQL connection with config:', {
-    server: sqlConfig.server || 'NOT SET',
-    database: sqlConfig.database || 'NOT SET',
-    user: sqlConfig.user || 'NOT SET',
-    passwordSet: !!sqlConfig.password,
-    options: sqlConfig.options
-  });
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  const collection = req.path.split('/')[1];
+  const json = res.json.bind(res);
+  res.json = body => {
+    if (res.statusCode >= 500) return json({ error: 'Service unavailable; retry later' });
+    if (req.method === 'GET' && !req.headers.authorization) {
+      const allowed = {
+        teams: ['id', 'name', 'sport', 'age_group', 'active'],
+        sites: ['id', 'name', 'address', 'city', 'zip_code', 'latitude', 'longitude', 'is_sports_facility', 'amenities', 'active'],
+        fields: ['id', 'name', 'site_id', 'location_type', 'field_type', 'surface_type', 'has_lights', 'capacity', 'active'],
+        equipment: ['id', 'name', 'category', 'quantity', 'condition', 'location'],
+        events: ['id', 'description', 'event_type', 'status', 'start_time', 'end_time', 'field_id', 'field_ids', 'team_id', 'team_ids', 'recurring_days', 'recurring_end_date', 'game_location', 'away_street', 'away_zip', 'away_city'],
+      }[collection];
+      if (allowed && res.statusCode < 400) {
+        const clean = value => Object.fromEntries(Object.entries(value).filter(([key]) => allowed.includes(key)));
+        return json(Array.isArray(body) ? body.map(clean) : clean(body));
+      }
+      return json(body);
+    }
+    return json(body);
+  };
+  next();
+});
 
-  try {
-    const pool = await sql.connect(sqlConfig);
-    console.log('✓ SQL Pool connected successfully');
-    poolPromise = Promise.resolve(pool);
-    return pool;
-  } catch (err) {
-    console.error('✗ SQL connection failed:', {
-      message: err.message,
-      code: err.code,
-      originalError: err.originalError?.message
-    });
-    throw err;
-  } finally {
-    poolConnecting = false;
+app.get('/api/capabilities', (_req, res) => res.json({
+  ai: config.aiEnabled, spond: config.spondEnabled, weather: false,
+  clubName: config.clubName, timezone: config.timezone,
+  transport: Boolean(config.transportEmail),
+}));
+
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next();
+  return apiLimit(req, res, next);
+});
+const apiLimit = createLimiter({ limit: config.requestsPerMinute, key: () => 'application' });
+const loginLimit = createLimiter({ limit: 5 });
+const submissionLimit = createLimiter({ limit: 10 });
+app.use('/api', (req, res, next) => {
+  if (req.path === '/warmup') return res.status(404).json({ error: 'Warmup is intentionally disabled' });
+  if (req.path === '/llm/complete') return res.status(410).json({ error: 'Generic model completion has been retired' });
+  if (req.path.startsWith('/spond') && !config.spondEnabled) {
+    return res.status(503).json({ error: 'Spond is disabled by deployment policy' });
   }
-}
+  if (req.path === '/events/create-from-natural-language') {
+    return res.status(410).json({ error: 'Legacy AI event creation is retired; use the reviewed booking editor' });
+  }
+  if (req.path === '/auth/login') return loginLimit(req, res, next);
+  if (req.method === 'POST' && req.path === '/requests') return submissionLimit(req, res, next);
+  const publicRead = req.method === 'GET' &&
+    /^\/(health|teams(?:\/\d+)?|events(?:\/\d+)?|sites(?:\/\d+)?|fields(?:\/\d+)?|equipment(?:\/\d+)?)$/.test(req.path);
+  if (publicRead && !req.headers.authorization) return next();
+  verifyToken(req, res, async () => {
+    try {
+      const pool = await getPool();
+      const result = await pool.request().input('id', sql.Int, req.user.id)
+        .query('SELECT role, is_active, username FROM users WHERE id = @id');
+      const user = result.recordset[0];
+      if (!user?.is_active) return res.status(401).json({ error: 'Inactive or expired session' });
+      req.user.role = user.role;
+      req.user.username = user.username;
+      req.authChecked = true;
+      if (!publicRead && !req.path.startsWith('/auth/') && !req.path.startsWith('/settings')
+          && !['admin', 'mgmt'].includes(user.role)) {
+        return res.status(403).json({ error: 'Operations access required' });
+      }
+      next();
+    } catch (error) {
+      console.error('Session verification failed', error);
+      res.status(503).json({ error: 'Session verification unavailable' });
+    }
+  });
+});
+app.use('/api/events', (req, res, next) => {
+  if (['POST', 'PUT'].includes(req.method) && !req.path.includes('transport-request')
+      && !req.path.includes('natural-language')) {
+    try { validateEvent(req.body); }
+    catch (error) { return res.status(400).json({ error: error.message }); }
+  }
+  next();
+});
+registerBookingRoutes(app, { getPool, logger: console });
+registerRequestRoutes(app, { getPool, logger: console });
 
 // ------------------------------
 // Diagnostic routes
@@ -183,6 +214,7 @@ app.get('/api/diagnostic', async (_req, res) => {
 
 // Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
+  if (req.authChecked) return next();
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
@@ -649,13 +681,21 @@ app.delete('/api/teams/:id', async (req, res) => {
 });
 
 // Events
-app.get('/api/events', async (_req, res) => {
+app.get('/api/events', async (req, res) => {
+  let range;
+  try { range = eventRange(req.query); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
   try {
     console.log('[GET /api/events] 🔄 Fetching events...');
     const pool = await getPool();
     console.log('[GET /api/events] ✓ Pool obtained');
-    const result = await pool.request().query(`
-      SELECT 
+    const result = await pool.request()
+      .input('from', sql.DateTime2, range.from)
+      .input('to', sql.DateTime2, range.to)
+      .input('limit', sql.Int, range.limit)
+      .input('after', sql.Int, range.after)
+      .query(`
+      SELECT TOP (@limit)
         e.*,
         f.name as field_name,
         s.name as site_name,
@@ -667,7 +707,8 @@ app.get('/api/events', async (_req, res) => {
         WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
       ) f
       LEFT JOIN sites s ON f.site_id = s.id
-      ORDER BY e.start_time DESC
+      WHERE e.end_time > @from AND e.start_time < @to AND e.id > @after
+      ORDER BY e.id ASC
     `);
     console.log('[GET /api/events] ✓ Query executed, recordset length:', result.recordset?.length);
     console.log('[GET /api/events] ✓ Returning data:', result.recordset);
@@ -713,754 +754,18 @@ app.get('/api/events/:id', async (req, res) => {
   }
 });
 
-// Helper function to generate recurring event dates
-function generateRecurringDates(startDate, endDate, recurringDays) {
-  const dates = [];
-  const current = new Date(startDate);
-  
-  // Set to start of day to avoid time zone issues
-  current.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-  
-  while (current <= end) {
-    // Get day of week (1=Monday, 7=Sunday)
-    const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay(); // Convert Sunday from 0 to 7
-    
-    if (recurringDays.includes(dayOfWeek)) {
-      dates.push(new Date(current));
-    }
-    
-    // Move to next day
-    current.setDate(current.getDate() + 1);
-  }
-  
-  return dates;
-}
 
-app.post('/api/events', async (req, res) => {
-  try {
-    const { team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
 
-    // Handle field_ids: accept either field_ids (new) or field_id (legacy)
-    // Convert to comma-separated string for storage
-    let fieldIdsStr = null;
-    if (field_ids) {
-      fieldIdsStr = field_ids; // Already a comma-separated string from frontend
-    } else if (field_id) {
-      fieldIdsStr = String(field_id); // Convert single field_id to string
-    }
 
-    // Handle recurring_days as comma-separated string
-    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
 
-    console.log('[Events POST] ===== INCOMING REQUEST =====');
-    console.log('[Events POST] field_ids:', field_ids, 'field_id:', field_id, 'fieldIdsStr:', fieldIdsStr);
-    console.log('[Events POST] recurring_days:', recurring_days, 'type:', typeof recurring_days);
-    console.log('[Events POST] recurring_end_date:', recurring_end_date, 'type:', typeof recurring_end_date);
-    console.log('[Events POST] recurringDaysStr:', recurringDaysStr);
 
-    const pool = await getPool();
 
-    // Check if game location columns exist (migration might not have been run)
-    const gameLocationColumnCheck = await pool.request().query(`
-      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'game_location'
-    `);
-    const hasGameLocationColumns = gameLocationColumnCheck.recordset.length > 0;
-    console.log('[Events POST] hasGameLocationColumns:', hasGameLocationColumns);
 
-    // Check if this is a recurring event
-    const hasRecurringDays = recurringDaysStr && 
-                              typeof recurringDaysStr === 'string' && 
-                              recurringDaysStr.trim().length > 0;
-    
-    const hasRecurringEndDate = recurring_end_date &&
-                                 recurring_end_date !== null &&
-                                 recurring_end_date !== '' &&
-                                 recurring_end_date !== 'null' &&
-                                 recurring_end_date !== 'undefined';
-    
-    const shouldGenerateRecurring = hasRecurringDays && hasRecurringEndDate;
-
-    console.log('[Events POST] Should generate recurring:', shouldGenerateRecurring);
-    console.log('[Events POST] hasRecurringDays:', hasRecurringDays, 'hasRecurringEndDate:', hasRecurringEndDate);
-
-    if (shouldGenerateRecurring) {
-      console.log('[Events POST] ✅ GENERATING RECURRING EVENTS');
-      
-      // Parse recurring days
-      const daysArray = recurringDaysStr.split(',').map(d => parseInt(d.trim()));
-      
-      // Parse the start time to extract date and time components
-      const startDateTime = new Date(start_time);
-      const endDateTime = new Date(end_time);
-      
-      // Calculate time duration in milliseconds
-      const duration = endDateTime.getTime() - startDateTime.getTime();
-      
-      // Generate all applicable dates
-      const recurringDates = generateRecurringDates(
-        startDateTime,
-        new Date(recurring_end_date),
-        daysArray
-      );
-      
-      console.log('[Events POST] Creating', recurringDates.length, 'recurring events');
-      console.log('[Events POST] Days array:', daysArray);
-      console.log('[Events POST] Date range:', startDateTime.toISOString(), 'to', recurring_end_date);
-      
-      // Create individual events for each date
-      const createdEvents = [];
-      
-      for (const date of recurringDates) {
-        // Set the time from the original start_time
-        const eventStart = new Date(date);
-        eventStart.setHours(startDateTime.getHours(), startDateTime.getMinutes(), startDateTime.getSeconds());
-        
-        // Calculate end time based on duration
-        const eventEnd = new Date(eventStart.getTime() + duration);
-        
-        console.log('[Events POST] Creating event for', eventStart.toISOString());
-        
-        // Check if field_ids column exists
-        const columnCheck = await pool.request().query(`
-          SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'field_ids'
-        `);
-        const hasFieldIdsColumn = columnCheck.recordset.length > 0;
-        
-        // Calculate first field ID for backwards compatibility with JOINs
-        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-        
-        let result;
-        if (hasFieldIdsColumn && hasGameLocationColumns) {
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId)
-            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .input('game_location', sql.NVarChar, game_location || null)
-            .input('away_street', sql.NVarChar, away_street || null)
-            .input('away_zip', sql.NVarChar, away_zip || null)
-            .input('away_city', sql.NVarChar, away_city || null)
-            .input('transport_requested', sql.Bit, transport_requested || false)
-            .query(`
-              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
-            `);
-        } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId)
-            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .query(`
-              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
-            `);
-        } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
-          // Fallback: use field_id column only
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .input('game_location', sql.NVarChar, game_location || null)
-            .input('away_street', sql.NVarChar, away_street || null)
-            .input('away_zip', sql.NVarChar, away_zip || null)
-            .input('away_city', sql.NVarChar, away_city || null)
-            .input('transport_requested', sql.Bit, transport_requested || false)
-            .query(`
-              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
-            `);
-        } else {
-          // Fallback: use field_id column without game location columns
-          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .query(`
-              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
-            `);
-        }
-        
-        createdEvents.push(result.recordset[0]);
-      }
-      
-      console.log('[Events POST] Created', createdEvents.length, 'recurring events successfully');
-      
-      // Fetch all created events with joins
-      if (createdEvents.length > 0) {
-        const eventIds = createdEvents.map(e => e.id);
-        const eventsWithDetails = await pool.request()
-          .query(`
-            SELECT 
-              e.*,
-              f.name as field_name,
-              s.name as site_name,
-              s.address as site_address
-            FROM events e
-            OUTER APPLY (
-              SELECT TOP 1 f.id, f.name, f.site_id
-              FROM fields f
-              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
-            ) f
-            LEFT JOIN sites s ON f.site_id = s.id
-            WHERE e.id IN (${eventIds.join(',')})
-          `);
-        
-        res.status(201).json(eventsWithDetails.recordset);
-      } else {
-        res.status(201).json([]);
-      }
-    } else {
-      console.log('[Events POST] ❌ Creating single event (not recurring)');
-      
-      // Check if field_ids column exists
-      const columnCheck = await pool.request().query(`
-        SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'field_ids'
-      `);
-      const hasFieldIdsColumn = columnCheck.recordset.length > 0;
-      
-      let result;
-      // Calculate first field ID for backwards compatibility with JOINs
-      const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-      
-      if (hasFieldIdsColumn && hasGameLocationColumns) {
-        // Single event (non-recurring) with field_ids and game location columns
-        result = await pool.request()
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, firstFieldId)
-          .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .input('game_location', sql.NVarChar, game_location || null)
-          .input('away_street', sql.NVarChar, away_street || null)
-          .input('away_zip', sql.NVarChar, away_zip || null)
-          .input('away_city', sql.NVarChar, away_city || null)
-          .input('transport_requested', sql.Bit, transport_requested || false)
-          .query(`
-            INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-            OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
-          `);
-      } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
-        // Single event with field_ids but without game location columns
-        result = await pool.request()
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, firstFieldId)
-          .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .query(`
-            INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
-            OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
-          `);
-      } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
-        // Fallback: use field_id column with game location columns
-        result = await pool.request()
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, firstFieldId || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .input('game_location', sql.NVarChar, game_location || null)
-          .input('away_street', sql.NVarChar, away_street || null)
-          .input('away_zip', sql.NVarChar, away_zip || null)
-          .input('away_city', sql.NVarChar, away_city || null)
-          .input('transport_requested', sql.Bit, transport_requested || false)
-          .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-            OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
-          `);
-      } else {
-        // Fallback: use field_id column without game location columns
-        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-        result = await pool.request()
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, firstFieldId || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status || 'Planned')
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
-            OUTPUT INSERTED.*
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
-          `);
-      }
-      
-      // Fetch the created event with joins
-      const createdEvent = await pool.request()
-        .input('id', sql.Int, result.recordset[0].id)
-        .query(`
-          SELECT 
-            e.*,
-            f.name as field_name,
-            s.name as site_name,
-            s.address as site_address
-          FROM events e
-          OUTER APPLY (
-              SELECT TOP 1 f.id, f.name, f.site_id
-              FROM fields f
-              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
-            ) f
-          LEFT JOIN sites s ON f.site_id = s.id
-          WHERE e.id = @id
-        `);
-      
-      console.log('[Events POST] Created single event:', result.recordset[0].id);
-      res.status(201).json(createdEvent.recordset[0]);
-    }
-  } catch (err) {
-    console.error('Error creating event:', err);
-    res.status(500).json({ error: 'Failed to create event' });
-  }
-});
-
-app.put('/api/events/:id', async (req, res) => {
-  try {
-    const { team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, generate_recurring, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested } = req.body;
-
-    // Handle field_ids: accept either field_ids (new) or field_id (legacy)
-    let fieldIdsStr = null;
-    if (field_ids) {
-      fieldIdsStr = field_ids;
-    } else if (field_id) {
-      fieldIdsStr = String(field_id);
-    }
-
-    // Handle recurring_days as comma-separated string
-    const recurringDaysStr = recurring_days && Array.isArray(recurring_days) ? recurring_days.join(',') : (recurring_days || null);
-
-    const pool = await getPool();
-
-    // Check if field_ids column exists
-    const columnCheck = await pool.request().query(`
-      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'field_ids'
-    `);
-    const hasFieldIdsColumn = columnCheck.recordset.length > 0;
-
-    // Check if game location columns exist
-    const gameLocationColumnCheck = await pool.request().query(`
-      SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('events') AND name = 'game_location'
-    `);
-    const hasGameLocationColumns = gameLocationColumnCheck.recordset.length > 0;
-
-    // Check if we should generate recurring events (convert single to recurring)
-    const hasRecurringDays = recurringDaysStr && 
-                              typeof recurringDaysStr === 'string' && 
-                              recurringDaysStr.trim().length > 0;
-    
-    const hasRecurringEndDate = recurring_end_date &&
-                                 recurring_end_date !== null &&
-                                 recurring_end_date !== '' &&
-                                 recurring_end_date !== 'null' &&
-                                 recurring_end_date !== 'undefined';
-    
-    const shouldGenerateRecurring = generate_recurring && hasRecurringDays && hasRecurringEndDate;
-
-    console.log('[Events PUT] Should generate recurring:', shouldGenerateRecurring);
-
-    if (shouldGenerateRecurring) {
-      console.log('[Events PUT] ✅ Converting to recurring events');
-      
-      // Delete the original event
-      await pool.request()
-        .input('id', sql.Int, req.params.id)
-        .query('DELETE FROM events WHERE id = @id');
-      
-      // Parse recurring days
-      const daysArray = recurringDaysStr.split(',').map(d => parseInt(d.trim()));
-      
-      // Parse the start time to extract date and time components
-      const startDateTime = new Date(start_time);
-      const endDateTime = new Date(end_time);
-      
-      // Calculate time duration in milliseconds
-      const duration = endDateTime.getTime() - startDateTime.getTime();
-      
-      // Generate all applicable dates
-      const recurringDates = generateRecurringDates(
-        startDateTime,
-        new Date(recurring_end_date),
-        daysArray
-      );
-      
-      console.log('[Events PUT] Creating', recurringDates.length, 'recurring events');
-      
-      // Create individual events for each date
-      const createdEvents = [];
-      
-      // Calculate first field ID for backwards compatibility with JOINs
-      const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-      
-      for (const date of recurringDates) {
-        const eventStart = new Date(date);
-        eventStart.setHours(startDateTime.getHours(), startDateTime.getMinutes(), startDateTime.getSeconds());
-        const eventEnd = new Date(eventStart.getTime() + duration);
-        
-        let result;
-        if (hasFieldIdsColumn && hasGameLocationColumns) {
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId)
-            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .input('game_location', sql.NVarChar, game_location || null)
-            .input('away_street', sql.NVarChar, away_street || null)
-            .input('away_zip', sql.NVarChar, away_zip || null)
-            .input('away_city', sql.NVarChar, away_city || null)
-            .input('transport_requested', sql.Bit, transport_requested || false)
-            .query(`
-              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
-            `);
-        } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId)
-            .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .query(`
-              INSERT INTO events (team_ids, field_id, field_ids, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @field_ids, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
-            `);
-        } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .input('game_location', sql.NVarChar, game_location || null)
-            .input('away_street', sql.NVarChar, away_street || null)
-            .input('away_zip', sql.NVarChar, away_zip || null)
-            .input('away_city', sql.NVarChar, away_city || null)
-            .input('transport_requested', sql.Bit, transport_requested || false)
-            .query(`
-              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance, game_location, away_street, away_zip, away_city, transport_requested)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance, @game_location, @away_street, @away_zip, @away_city, @transport_requested)
-            `);
-        } else {
-          const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-          result = await pool.request()
-            .input('team_ids', sql.NVarChar, team_ids || null)
-            .input('field_id', sql.Int, firstFieldId || null)
-            .input('event_type', sql.NVarChar, event_type)
-            .input('start_time', sql.DateTime, eventStart)
-            .input('end_time', sql.DateTime, eventEnd)
-            .input('description', sql.NVarChar, description || null)
-            .input('notes', sql.NVarChar, notes || null)
-            .input('status', sql.NVarChar, status || 'Planned')
-            .input('recurring_days', sql.NVarChar, null)
-            .input('recurring_end_date', sql.Date, null)
-            .input('other_participants', sql.NVarChar, other_participants || null)
-            .input('estimated_attendance', sql.Int, estimated_attendance || null)
-            .query(`
-              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, recurring_days, recurring_end_date, other_participants, estimated_attendance)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @recurring_days, @recurring_end_date, @other_participants, @estimated_attendance)
-            `);
-        }
-        
-        createdEvents.push(result.recordset[0]);
-      }
-      
-      // Fetch all created events with joins
-      if (createdEvents.length > 0) {
-        const eventIds = createdEvents.map(e => e.id);
-        const eventsWithDetails = await pool.request()
-          .query(`
-            SELECT 
-              e.*,
-              f.name as field_name,
-              s.name as site_name,
-              s.address as site_address
-            FROM events e
-            OUTER APPLY (
-              SELECT TOP 1 f.id, f.name, f.site_id
-              FROM fields f
-              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
-            ) f
-            LEFT JOIN sites s ON f.site_id = s.id
-            WHERE e.id IN (${eventIds.join(',')})
-          `);
-        
-        console.log('[Events PUT] Created', createdEvents.length, 'recurring events');
-        res.json(eventsWithDetails.recordset);
-      } else {
-        res.json([]);
-      }
-    } else {
-      // Regular update (no recurring generation)
-      let result;
-      if (hasFieldIdsColumn && hasGameLocationColumns) {
-        result = await pool.request()
-          .input('id', sql.Int, req.params.id)
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status)
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .input('game_location', sql.NVarChar, game_location || null)
-          .input('away_street', sql.NVarChar, away_street || null)
-          .input('away_zip', sql.NVarChar, away_zip || null)
-          .input('away_city', sql.NVarChar, away_city || null)
-          .input('transport_requested', sql.Bit, transport_requested || false)
-          .query(`
-            UPDATE events 
-            SET team_ids = @team_ids, field_ids = @field_ids, event_type = @event_type,
-                start_time = @start_time, end_time = @end_time, description = @description,
-                notes = @notes, status = @status, recurring_days = @recurring_days,
-                recurring_end_date = @recurring_end_date, other_participants = @other_participants,
-                estimated_attendance = @estimated_attendance, game_location = @game_location,
-                away_street = @away_street, away_zip = @away_zip, away_city = @away_city,
-                transport_requested = @transport_requested, updated_at = GETDATE()
-            OUTPUT INSERTED.*
-            WHERE id = @id
-          `);
-      } else if (hasFieldIdsColumn && !hasGameLocationColumns) {
-        result = await pool.request()
-          .input('id', sql.Int, req.params.id)
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_ids', sql.NVarChar, fieldIdsStr || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status)
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .query(`
-            UPDATE events 
-            SET team_ids = @team_ids, field_ids = @field_ids, event_type = @event_type,
-                start_time = @start_time, end_time = @end_time, description = @description,
-                notes = @notes, status = @status, recurring_days = @recurring_days,
-                recurring_end_date = @recurring_end_date, other_participants = @other_participants,
-                estimated_attendance = @estimated_attendance, updated_at = GETDATE()
-            OUTPUT INSERTED.*
-            WHERE id = @id
-          `);
-      } else if (!hasFieldIdsColumn && hasGameLocationColumns) {
-        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-        result = await pool.request()
-          .input('id', sql.Int, req.params.id)
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, firstFieldId || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status)
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .input('game_location', sql.NVarChar, game_location || null)
-          .input('away_street', sql.NVarChar, away_street || null)
-          .input('away_zip', sql.NVarChar, away_zip || null)
-          .input('away_city', sql.NVarChar, away_city || null)
-          .input('transport_requested', sql.Bit, transport_requested || false)
-          .query(`
-            UPDATE events 
-            SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
-                start_time = @start_time, end_time = @end_time, description = @description,
-                notes = @notes, status = @status, recurring_days = @recurring_days,
-                recurring_end_date = @recurring_end_date, other_participants = @other_participants,
-                estimated_attendance = @estimated_attendance, game_location = @game_location,
-                away_street = @away_street, away_zip = @away_zip, away_city = @away_city,
-                transport_requested = @transport_requested, updated_at = GETDATE()
-            OUTPUT INSERTED.*
-            WHERE id = @id
-          `);
-      } else {
-        const firstFieldId = fieldIdsStr ? parseInt(fieldIdsStr.split(',')[0]) : null;
-        result = await pool.request()
-          .input('id', sql.Int, req.params.id)
-          .input('team_ids', sql.NVarChar, team_ids || null)
-          .input('field_id', sql.Int, firstFieldId || null)
-          .input('event_type', sql.NVarChar, event_type)
-          .input('start_time', sql.DateTime, start_time)
-          .input('end_time', sql.DateTime, end_time)
-          .input('description', sql.NVarChar, description || null)
-          .input('notes', sql.NVarChar, notes || null)
-          .input('status', sql.NVarChar, status)
-          .input('recurring_days', sql.NVarChar, recurringDaysStr)
-          .input('recurring_end_date', sql.Date, recurring_end_date || null)
-          .input('other_participants', sql.NVarChar, other_participants || null)
-          .input('estimated_attendance', sql.Int, estimated_attendance || null)
-          .query(`
-            UPDATE events 
-            SET team_ids = @team_ids, field_id = @field_id, event_type = @event_type,
-                start_time = @start_time, end_time = @end_time, description = @description,
-                notes = @notes, status = @status, recurring_days = @recurring_days,
-                recurring_end_date = @recurring_end_date, other_participants = @other_participants,
-                estimated_attendance = @estimated_attendance, updated_at = GETDATE()
-            OUTPUT INSERTED.*
-            WHERE id = @id
-          `);
-      }
-
-      console.log('[Events PUT] Updated event:', req.params.id);
-
-      if (result.recordset.length === 0) {
-        return res.status(404).json({ error: 'Event not found' });
-      }
-      
-      // Fetch with joins
-      const updatedEvent = await pool.request()
-        .input('id', sql.Int, req.params.id)
-        .query(`
-          SELECT 
-            e.*,
-            f.name as field_name,
-            s.name as site_name,
-            s.address as site_address
-          FROM events e
-          OUTER APPLY (
-              SELECT TOP 1 f.id, f.name, f.site_id
-              FROM fields f
-              WHERE CHARINDEX(',' + CAST(f.id AS VARCHAR) + ',', ',' + ISNULL(e.field_ids, '') + ',') > 0
-            ) f
-          LEFT JOIN sites s ON f.site_id = s.id
-          WHERE e.id = @id
-        `);
-      
-      res.json(updatedEvent.recordset[0]);
-    }
-  } catch (err) {
-    console.error('Error updating event:', err);
-    res.status(500).json({ error: 'Failed to update event' });
-  }
-});
-
-app.delete('/api/events/:id', async (req, res) => {
-  try {
-    const pool = await getPool();
-    await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .query('DELETE FROM events WHERE id = @id');
-    res.status(204).send();
-  } catch (err) {
-    console.error('Error deleting event:', err);
-    res.status(500).json({ error: 'Failed to delete event' });
-  }
-});
-
-// Transport Request Email - sends email for away games
+// Generate an operator-reviewed transport draft; this route never sends mail.
 app.post('/api/events/:id/transport-request', async (req, res) => {
+  if (!config.transportEmail) {
+    return res.status(503).json({ error: 'A club transport contact must be configured before generating transport drafts' });
+  }
   try {
     const pool = await getPool();
     
@@ -1515,28 +820,26 @@ app.post('/api/events/:id/transport-request', async (req, res) => {
       }
     }
     
-    // Add sports@renegades.ch to CC
-    ccRecipients.push('sports@renegades.ch');
-    
     // Format event details
     const eventDate = new Date(event.start_time);
     const formattedDate = eventDate.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric', timeZone: 'UTC'
     });
     
     const startTime = eventDate.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false, timeZone: 'UTC'
     });
     
-    const endTime = new Date(event.end_time).toLocaleTimeString('en-US', {
+    const endDate = new Date(event.end_time);
+    const endTime = endDate.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false, timeZone: 'UTC'
     });
     
     // Build the away address
@@ -1555,7 +858,7 @@ EVENT DETAILS:
 Team(s): ${teamNames.join(', ') || 'TBD'}
 Event: ${event.description || 'Away Game'}
 Date: ${formattedDate}
-Time: ${startTime} - ${endTime}
+Time: ${startTime} - ${eventDate.toISOString().slice(0, 10) === endDate.toISOString().slice(0, 10) ? '' : endDate.toISOString().slice(0, 10) + ' '}${endTime}
 
 DESTINATION:
 ${awayAddress || 'Address not specified'}
@@ -1563,9 +866,9 @@ ${awayAddress || 'Address not specified'}
 Please confirm availability and provide details for the transport arrangement.
 
 Thank you,
-Renegades Operations`;
+${config.clubName} operations`;
 
-    // Update event to mark transport request as sent
+    // The legacy sent_at column records draft generation, not mail delivery.
     await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('transport_request_sent_at', sql.DateTime, new Date())
@@ -1578,7 +881,7 @@ Renegades Operations`;
     res.json({
       success: true,
       email: {
-        to: 'transport@renegades.ch',
+        to: config.transportEmail,
         cc: [...new Set(ccRecipients)], // Remove duplicates
         subject: subject,
         body: body
@@ -1590,493 +893,6 @@ Renegades Operations`;
     res.status(500).json({ error: 'Failed to create transport request' });
   }
 });
-
-// AI Event Creation - Natural Language Parsing
-const AI_SYSTEM_PROMPT = `You are an AI assistant that parses natural language event descriptions for a sports team management app. 
-The app is for "Renegades," an American Football club in Oslo, Norway.
-
-Your task is to extract structured event information from natural language input.
-
-IMPORTANT RULES:
-1. Always respond with valid JSON only - no markdown, no explanations
-2. Times should be in 24-hour format (HH:mm)
-3. Dates should be in ISO format (YYYY-MM-DD)
-4. For recurring days, use: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
-5. Event types: "Practice", "Game", "Meeting", "Other"
-6. If duration is mentioned but not end time, calculate end time
-7. Default duration is 90 minutes for Practice, 180 minutes for Game, 60 minutes for Meeting
-8. If no year is specified, assume 2026
-9. Parse team names as they appear (e.g., "U19", "Seniors", "U15")
-10. For games, extract opponent if mentioned
-
-Return a JSON object with this structure:
-{
-  "success": true,
-  "events": [
-    {
-      "title": "string - event title",
-      "eventType": "Practice" | "Game" | "Meeting" | "Other",
-      "startTime": "HH:mm",
-      "endTime": "HH:mm",
-      "teamNames": ["array of team names"],
-      "siteName": "venue/site name if mentioned",
-      "fieldName": "specific field if mentioned",
-      "opponent": "opponent name for games",
-      "notes": "any additional notes",
-      "isRecurring": boolean,
-      "date": "YYYY-MM-DD for single events",
-      "recurringDays": [1-7 array for recurring],
-      "startDate": "YYYY-MM-DD for recurring series start",
-      "endDate": "YYYY-MM-DD for recurring series end"
-    }
-  ],
-  "summary": "Human-readable summary of what will be created"
-}
-
-If you cannot parse the input, return:
-{
-  "success": false,
-  "events": [],
-  "summary": "",
-  "error": "Description of what's missing or unclear"
-}`;
-
-app.post('/api/events/create-from-natural-language', async (req, res) => {
-  try {
-    const { input, confirm, defaultTeamId, defaultFieldId, editedEvents } = req.body;
-    
-    // If editedEvents are provided (user edited the preview), use those directly
-    if (confirm && editedEvents && Array.isArray(editedEvents)) {
-      console.log('[AI Events] Creating events from edited preview:', editedEvents.length, 'events');
-      
-      const pool = await getPool();
-      const createdEvents = [];
-      
-      for (const event of editedEvents) {
-        if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
-          // Create recurring events
-          const start = new Date(event.date);
-          const end = new Date(event.recurringEndDate);
-          const days = event.recurringDays;
-          
-          let current = new Date(start);
-          while (current <= end) {
-            const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
-            if (days.includes(dayOfWeek)) {
-              const eventDate = current.toISOString().split('T')[0];
-              const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
-              const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
-              
-              const insertResult = await pool.request()
-                .input('team_ids', sql.NVarChar, (event.teamIds || []).join(','))
-                .input('field_id', sql.Int, event.fieldId || null)
-                .input('event_type', sql.NVarChar, event.eventType || 'Other')
-                .input('start_time', sql.DateTime, startDateTime)
-                .input('end_time', sql.DateTime, endDateTime)
-                .input('description', sql.NVarChar, event.title)
-                .input('notes', sql.NVarChar, event.notes || null)
-                .input('status', sql.NVarChar, 'Planned')
-                .input('other_participants', sql.NVarChar, event.otherParticipants || null)
-                .query(`
-                  INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
-                  OUTPUT INSERTED.*
-                  VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
-                `);
-              
-              createdEvents.push(insertResult.recordset[0]);
-            }
-            current.setDate(current.getDate() + 1);
-          }
-        } else {
-          // Create single event
-          const eventDate = event.date;
-          const startDateTime = new Date(`${eventDate}T${event.startTime}:00`);
-          const endDateTime = new Date(`${eventDate}T${event.endTime}:00`);
-          
-          const insertResult = await pool.request()
-            .input('team_ids', sql.NVarChar, (event.teamIds || []).join(','))
-            .input('field_id', sql.Int, event.fieldId || null)
-            .input('event_type', sql.NVarChar, event.eventType || 'Other')
-            .input('start_time', sql.DateTime, startDateTime)
-            .input('end_time', sql.DateTime, endDateTime)
-            .input('description', sql.NVarChar, event.title)
-            .input('notes', sql.NVarChar, event.notes || null)
-            .input('status', sql.NVarChar, 'Planned')
-            .input('other_participants', sql.NVarChar, event.otherParticipants || null)
-            .query(`
-              INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status, other_participants)
-              OUTPUT INSERTED.*
-              VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status, @other_participants)
-            `);
-          
-          createdEvents.push(insertResult.recordset[0]);
-        }
-      }
-
-      return res.json({
-        success: true,
-        summary: `Created ${createdEvents.length} event(s) from edited preview`,
-        created: createdEvents.length,
-        events: createdEvents,
-      });
-    }
-    
-    if (!input || typeof input !== 'string') {
-      return res.status(400).json({ error: 'Input text is required' });
-    }
-
-    console.log('[AI Events] Processing:', input.substring(0, 100));
-    if (defaultTeamId) console.log('[AI Events] Default team ID:', defaultTeamId);
-    if (defaultFieldId) console.log('[AI Events] Default field ID:', defaultFieldId);
-
-    // Check if AI is available
-    const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
-    const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
-    const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
-
-    if (!AzureOpenAI || !azureEndpoint || !azureApiKey) {
-      console.log('[AI Events] Azure OpenAI not configured, using fallback parser');
-      // Fallback to regex-based parsing
-      const parsed = parseEventWithRegex(input);
-      // Apply defaults to fallback parser results
-      if (parsed.success && parsed.events) {
-        for (const event of parsed.events) {
-          if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
-            event.teamIds = [defaultTeamId];
-          }
-          if (defaultFieldId && !event.fieldId) {
-            event.fieldId = defaultFieldId;
-          }
-        }
-      }
-      return res.json(parsed);
-    }
-
-    // Get context from database
-    const pool = await getPool();
-    const [teamsResult, sitesResult, fieldsResult] = await Promise.all([
-      pool.request().query('SELECT id, name FROM teams WHERE active = 1'),
-      pool.request().query('SELECT id, name FROM sites'),
-      pool.request().query('SELECT id, name, site_id FROM fields'),
-    ]);
-
-    const context = {
-      teams: teamsResult.recordset,
-      sites: sitesResult.recordset,
-      fields: fieldsResult.recordset,
-      currentDate: new Date().toISOString().split('T')[0],
-    };
-
-    // Build context for AI
-    let contextStr = '';
-    if (context.teams.length) {
-      contextStr += `\\nAvailable teams: ${context.teams.map(t => t.name).join(', ')}`;
-    }
-    if (context.sites.length) {
-      contextStr += `\\nAvailable sites: ${context.sites.map(s => s.name).join(', ')}`;
-    }
-    contextStr += `\\nCurrent date: ${context.currentDate}`;
-
-    const userMessage = `Context:${contextStr}\\n\\nParse this event description:\\n"${input}"`;
-
-    try {
-      const client = new AzureOpenAI({
-        endpoint: azureEndpoint,
-        apiKey: azureApiKey,
-        apiVersion: '2024-08-01-preview',
-      });
-
-      const response = await client.chat.completions.create({
-        model: azureDeployment,
-        messages: [
-          { role: 'system', content: AI_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage }
-        ],
-        max_tokens: 1024,
-        temperature: 0.3,
-      });
-
-      let content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from AI');
-      }
-
-      // Clean markdown if present
-      content = content.trim();
-      if (content.startsWith('\`\`\`json')) content = content.slice(7);
-      else if (content.startsWith('\`\`\`')) content = content.slice(3);
-      if (content.endsWith('\`\`\`')) content = content.slice(0, -3);
-      content = content.trim();
-
-      const parsed = JSON.parse(content);
-
-      if (!parsed.success) {
-        return res.json(parsed);
-      }
-
-      // Convert parsed events to API format
-      const apiEvents = convertParsedToApiEvents(parsed.events, context);
-
-      // Apply defaults if not specified in the parsed events
-      for (const event of apiEvents) {
-        // Apply default team if no teams were parsed
-        if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
-          event.teamIds = [defaultTeamId];
-        }
-        // Apply default field if no field was parsed
-        if (defaultFieldId && !event.fieldId) {
-          event.fieldId = defaultFieldId;
-        }
-      }
-
-      if (!confirm) {
-        // Preview mode - return what would be created
-        const totalEvents = calculateTotalEvents(apiEvents);
-        return res.json({
-          success: true,
-          summary: parsed.summary,
-          totalEvents,
-          events: apiEvents,
-        });
-      }
-
-      // Create events
-      const created = await createEventsFromParsed(pool, apiEvents);
-      return res.json({
-        success: true,
-        created,
-        message: `Created ${created} event(s)`,
-      });
-
-    } catch (aiError) {
-      console.error('[AI Events] AI parsing failed:', aiError);
-      // Fallback to regex
-      const parsed = parseEventWithRegex(input);
-      // Apply defaults to fallback parser results
-      if (parsed.success && parsed.events) {
-        for (const event of parsed.events) {
-          if (defaultTeamId && (!event.teamIds || event.teamIds.length === 0)) {
-            event.teamIds = [defaultTeamId];
-          }
-          if (defaultFieldId && !event.fieldId) {
-            event.fieldId = defaultFieldId;
-          }
-        }
-      }
-      return res.json(parsed);
-    }
-
-  } catch (err) {
-    console.error('[AI Events] Error:', err);
-    res.status(500).json({ error: 'Failed to process event', details: err.message });
-  }
-});
-
-// Helper function: Regex-based fallback parser
-function parseEventWithRegex(input) {
-  const lowerInput = input.toLowerCase();
-  
-  // Detect event type
-  let eventType = 'Other';
-  if (/practice|training|workout/i.test(input)) eventType = 'Practice';
-  else if (/game|match|vs|versus|against/i.test(input)) eventType = 'Game';
-  else if (/meeting|meet/i.test(input)) eventType = 'Meeting';
-
-  // Extract time
-  const timeMatch = input.match(/(\\d{1,2})(:\\d{2})?\\s*(am|pm)?/i);
-  let startTime = '18:00';
-  if (timeMatch) {
-    let hours = parseInt(timeMatch[1]);
-    const minutes = timeMatch[2] ? timeMatch[2].slice(1) : '00';
-    const meridiem = timeMatch[3]?.toLowerCase();
-    if (meridiem === 'pm' && hours < 12) hours += 12;
-    if (meridiem === 'am' && hours === 12) hours = 0;
-    startTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
-  }
-
-  // Calculate end time based on event type
-  const [sh, sm] = startTime.split(':').map(Number);
-  const duration = eventType === 'Practice' ? 90 : eventType === 'Game' ? 180 : 60;
-  const endMinutes = sh * 60 + sm + duration;
-  const endTime = `${Math.floor(endMinutes / 60).toString().padStart(2, '0')}:${(endMinutes % 60).toString().padStart(2, '0')}`;
-
-  // Detect team names
-  const teamPatterns = ['seniors', 'juniors', 'u19', 'u17', 'u15', 'u13', 'u11', 'veterans', 'ladies', 'women', 'men'];
-  const teamNames = teamPatterns.filter(t => lowerInput.includes(t.toLowerCase()));
-
-  // Detect recurring pattern
-  const isRecurring = /every|weekly|each/i.test(input);
-  const dayMap = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
-  const recurringDays = [];
-  for (const [day, num] of Object.entries(dayMap)) {
-    if (lowerInput.includes(day)) recurringDays.push(num);
-  }
-
-  // Create title
-  const title = `${teamNames.length > 0 ? teamNames[0].charAt(0).toUpperCase() + teamNames[0].slice(1) : ''} ${eventType}`.trim();
-
-  return {
-    success: true,
-    summary: `Will create ${isRecurring ? 'recurring ' : ''}${eventType.toLowerCase()} event${isRecurring ? 's' : ''}`,
-    totalEvents: isRecurring ? 10 : 1,
-    events: [{
-      title: title || eventType,
-      eventType,
-      startTime,
-      endTime,
-      teamIds: [],
-      teamNames,
-      isRecurring,
-      recurringDays: recurringDays.length > 0 ? recurringDays : undefined,
-      date: isRecurring ? undefined : new Date().toISOString().split('T')[0],
-    }]
-  };
-}
-
-// Helper function: Convert parsed events to API format
-function convertParsedToApiEvents(events, context) {
-  const teamMap = new Map(context.teams.map(t => [t.name.toLowerCase(), t.id]));
-  const fieldMap = new Map(context.fields.map(f => [f.name.toLowerCase(), { id: f.id, siteId: f.site_id }]));
-
-  return events.map(event => {
-    // Match team names to IDs
-    const teamIds = (event.teamNames || [])
-      .map(name => {
-        // Try exact match first, then partial match
-        for (const [teamName, id] of teamMap.entries()) {
-          if (teamName.includes(name.toLowerCase()) || name.toLowerCase().includes(teamName)) {
-            return id;
-          }
-        }
-        return null;
-      })
-      .filter(id => id !== null);
-
-    // Match field
-    let fieldId = null;
-    if (event.fieldName) {
-      for (const [fieldName, data] of fieldMap.entries()) {
-        if (fieldName.includes(event.fieldName.toLowerCase())) {
-          fieldId = data.id;
-          break;
-        }
-      }
-    }
-
-    return {
-      title: event.title,
-      eventType: event.eventType,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      teamIds,
-      fieldId,
-      isRecurring: event.isRecurring,
-      recurringDays: event.recurringDays,
-      date: event.date || event.startDate,
-      recurringEndDate: event.endDate,
-      notes: event.notes,
-      opponent: event.opponent,
-    };
-  });
-}
-
-// Helper function: Calculate total events including recurring
-function calculateTotalEvents(events) {
-  let total = 0;
-  for (const event of events) {
-    if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
-      const start = new Date(event.date);
-      const end = new Date(event.recurringEndDate);
-      let current = new Date(start);
-      while (current <= end) {
-        const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
-        if (event.recurringDays.includes(dayOfWeek)) {
-          total++;
-        }
-        current.setDate(current.getDate() + 1);
-      }
-    } else {
-      total++;
-    }
-  }
-  return total || 1;
-}
-
-// Helper function: Create events in database
-async function createEventsFromParsed(pool, events) {
-  let created = 0;
-  
-  for (const event of events) {
-    try {
-      if (event.isRecurring && event.recurringDays && event.recurringEndDate) {
-        // Create recurring events
-        const start = new Date(event.date);
-        const end = new Date(event.recurringEndDate);
-        let current = new Date(start);
-        
-        while (current <= end) {
-          const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay();
-          if (event.recurringDays.includes(dayOfWeek)) {
-            const [sh, sm] = event.startTime.split(':');
-            const [eh, em] = event.endTime.split(':');
-            
-            const startDateTime = new Date(current);
-            startDateTime.setHours(parseInt(sh), parseInt(sm), 0);
-            
-            const endDateTime = new Date(current);
-            endDateTime.setHours(parseInt(eh), parseInt(em), 0);
-
-            await pool.request()
-              .input('team_ids', sql.NVarChar, event.teamIds.join(',') || null)
-              .input('field_id', sql.Int, event.fieldId || null)
-              .input('event_type', sql.NVarChar, event.eventType)
-              .input('start_time', sql.DateTime, startDateTime)
-              .input('end_time', sql.DateTime, endDateTime)
-              .input('description', sql.NVarChar, event.title)
-              .input('notes', sql.NVarChar, event.notes || null)
-              .input('status', sql.NVarChar, 'Planned')
-              .query(`
-                INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status)
-                VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status)
-              `);
-            created++;
-          }
-          current.setDate(current.getDate() + 1);
-        }
-      } else {
-        // Create single event
-        const eventDate = new Date(event.date);
-        const [sh, sm] = event.startTime.split(':');
-        const [eh, em] = event.endTime.split(':');
-        
-        const startDateTime = new Date(eventDate);
-        startDateTime.setHours(parseInt(sh), parseInt(sm), 0);
-        
-        const endDateTime = new Date(eventDate);
-        endDateTime.setHours(parseInt(eh), parseInt(em), 0);
-
-        await pool.request()
-          .input('team_ids', sql.NVarChar, event.teamIds.join(',') || null)
-          .input('field_id', sql.Int, event.fieldId || null)
-          .input('event_type', sql.NVarChar, event.eventType)
-          .input('start_time', sql.DateTime, startDateTime)
-          .input('end_time', sql.DateTime, endDateTime)
-          .input('description', sql.NVarChar, event.title)
-          .input('notes', sql.NVarChar, event.notes || null)
-          .input('status', sql.NVarChar, 'Planned')
-          .query(`
-            INSERT INTO events (team_ids, field_id, event_type, start_time, end_time, description, notes, status)
-            VALUES (@team_ids, @field_id, @event_type, @start_time, @end_time, @description, @notes, @status)
-          `);
-        created++;
-      }
-    } catch (err) {
-      console.error('[AI Events] Error creating event:', err);
-    }
-  }
-  
-  return created;
-}
 
 // Sites
 app.get('/api/sites', async (_req, res) => {
@@ -2561,128 +1377,15 @@ app.delete('/api/equipment/:id', async (req, res) => {
 });
 
 // Requests
-app.get('/api/requests', async (_req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT 
-        r.*,
-        t.name as team_name,
-        f.name as field_name,
-        s.name as site_name
-      FROM requests r
-      LEFT JOIN teams t ON r.team_id = t.id
-      LEFT JOIN fields f ON r.field_id = f.id
-      LEFT JOIN sites s ON f.site_id = s.id
-      ORDER BY r.created_at DESC
-    `);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error fetching requests:', err);
-    res.status(500).json({ error: 'Failed to fetch requests' });
-  }
-});
 
-app.get('/api/requests/:id', async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .query(`
-        SELECT 
-          r.*,
-          t.name as team_name,
-          f.name as field_name,
-          s.name as site_name
-        FROM requests r
-        LEFT JOIN teams t ON r.team_id = t.id
-        LEFT JOIN fields f ON r.field_id = f.id
-        LEFT JOIN sites s ON f.site_id = s.id
-        WHERE r.id = @id
-      `);
 
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Request not found' });
-    }
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error fetching request:', err);
-    res.status(500).json({ error: 'Failed to fetch request' });
-  }
-});
 
-app.post('/api/requests', async (req, res) => {
-  try {
-    const { request_type, requestor_name, requestor_phone, requestor_email, team_id, field_id, 
-            event_type, requested_date, requested_time, duration, description } = req.body;
 
-    const pool = await getPool();
-    const result = await pool.request()
-      .input('request_type', sql.NVarChar, request_type)
-      .input('requestor_name', sql.NVarChar, requestor_name)
-      .input('requestor_phone', sql.NVarChar, requestor_phone || null)
-      .input('requestor_email', sql.NVarChar, requestor_email || null)
-      .input('team_id', sql.Int, team_id || null)
-      .input('field_id', sql.Int, field_id || null)
-      .input('event_type', sql.NVarChar, event_type || null)
-      .input('requested_date', sql.Date, requested_date || null)
-      .input('requested_time', sql.Time, requested_time || null)
-      .input('duration', sql.Int, duration || null)
-      .input('description', sql.NVarChar, description || null)
-      .query(`
-        INSERT INTO requests 
-        (request_type, requestor_name, requestor_phone, requestor_email, team_id, field_id, 
-         event_type, requested_date, requested_time, duration, description, status)
-        OUTPUT INSERTED.*
-        VALUES 
-        (@request_type, @requestor_name, @requestor_phone, @requestor_email, @team_id, @field_id,
-         @event_type, @requested_date, @requested_time, @duration, @description, 'pending')
-      `);
 
-    res.status(201).json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error creating request:', err);
-    res.status(500).json({ error: 'Failed to create request' });
-  }
-});
 
-app.put('/api/requests/:id', async (req, res) => {
-  try {
-    const { status, admin_notes } = req.body;
-    const pool = await getPool();
-    const result = await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .input('status', sql.NVarChar, status)
-      .input('admin_notes', sql.NVarChar, admin_notes || null)
-      .query(`
-        UPDATE requests 
-        SET status = @status, admin_notes = @admin_notes, updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `);
 
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Request not found' });
-    }
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error updating request:', err);
-    res.status(500).json({ error: 'Failed to update request' });
-  }
-});
 
-app.delete('/api/requests/:id', async (req, res) => {
-  try {
-    const pool = await getPool();
-    await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .query('DELETE FROM requests WHERE id = @id');
-    res.status(204).send();
-  } catch (err) {
-    console.error('Error deleting request:', err);
-    res.status(500).json({ error: 'Failed to delete request' });
-  }
-});
+
 
 // ------------------------------
 // User Settings API
@@ -2794,7 +1497,6 @@ app.delete('/api/settings/:key', verifyToken, async (req, res) => {
 // Spond API client (simplified for server.js)
 const SPOND_API_BASE = 'https://api.spond.com/core/v1/';
 let spondToken = null;
-let spondTokenExpiry = null;
 
 async function spondLogin(username, password) {
   console.log('[Spond] Attempting login for:', username);
@@ -3122,9 +1824,6 @@ app.get('/api/spond/groups', verifyToken, requireAdminOrMgmt, async (req, res) =
       if (hasSubgroups) {
         // Build a map of member IDs to count subgroup members
         // Parent group members have full profile data, subgroups reference by ID
-        const parentMemberIds = new Set(
-          (group.members || []).map(m => m.id || m)
-        );
         
         for (const subgroup of group.subGroups) {
           // Subgroup members can be either:
@@ -4726,98 +3425,23 @@ const distDir = path.join(__dirname, 'dist');
 
 // ⭐ GitHub Spark KV Store Backend (REQUIRED!)
 // This stores data in memory - used by useKV hook on frontend
-const kvStore = new Map();
+app.use('/_spark', (_req, res) => res.status(410).json({ error: 'Spark runtime has been retired' }));
 
-app.post('/_spark/kv/:key', express.json(), (req, res) => {
-  try {
-    const { key } = req.params;
-    const { value } = req.body;
-    console.log(`[KV] Storing key "${key}"`, value ? `(${JSON.stringify(value).length} bytes)` : '');
-    kvStore.set(key, value);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[KV] Error storing key:', err);
-    res.status(500).json({ error: 'Failed to store key' });
-  }
-});
 
-app.get('/_spark/kv/:key', (req, res) => {
-  try {
-    const { key } = req.params;
-    const value = kvStore.get(key);
-    console.log(`[KV] Retrieved key "${key}"`, value ? `(${JSON.stringify(value).length} bytes)` : '(empty)');
-    if (value === undefined) {
-      return res.status(404).json({ error: 'Key not found' });
-    }
-    res.json(value);
-  } catch (err) {
-    console.error('[KV] Error retrieving key:', err);
-    res.status(500).json({ error: 'Failed to retrieve key' });
-  }
-});
+
+
 
 // ⭐ Spark lifecycle endpoint
-app.post('/_spark/loaded', (_req, res) => {
-  console.log('[Spark] Client loaded');
-  res.json({ ok: true });
-});
+
 
 // ------------------------------
 // Generic LLM endpoint for frontend use
 // ------------------------------
-app.post('/api/llm/complete', async (req, res) => {
-  try {
-    const { prompt, jsonMode } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
 
-    const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
-    const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
-    const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
-
-    if (!AzureOpenAI || !azureEndpoint || !azureApiKey) {
-      return res.status(503).json({ error: 'LLM service not configured' });
-    }
-
-    const client = new AzureOpenAI({
-      endpoint: azureEndpoint,
-      apiKey: azureApiKey,
-      apiVersion: '2024-08-01-preview',
-    });
-
-    const response = await client.chat.completions.create({
-      model: azureDeployment,
-      messages: [
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 1024,
-      temperature: 0.7,
-      ...(jsonMode && { response_format: { type: 'json_object' } })
-    });
-
-    let content = response.choices[0]?.message?.content;
-    if (!content) {
-      return res.status(500).json({ error: 'No response from LLM' });
-    }
-
-    // Clean markdown code blocks if present
-    content = content.trim();
-    if (content.startsWith('```json')) content = content.slice(7);
-    else if (content.startsWith('```')) content = content.slice(3);
-    if (content.endsWith('```')) content = content.slice(0, -3);
-    content = content.trim();
-
-    res.json({ content });
-  } catch (error) {
-    console.error('[LLM] Error:', error);
-    res.status(500).json({ error: 'LLM request failed' });
-  }
-});
 
 // Serve the Vite production build (must come before fallback)
-app.use(express.static(distDir, { maxAge: '1h' }));
+app.use('/assets', express.static(path.join(distDir, 'assets'), { maxAge: '1y', immutable: true }));
+app.use(express.static(distDir, { maxAge: 0 }));
 
 // Handle unmatched API routes (return JSON 404 instead of HTML)
 app.all('/api/*', (req, res) => {
@@ -4834,38 +3458,31 @@ app.get('*', (req, res) => {
 // ------------------------------
 app.use((err, _req, res, _next) => {
   console.error('UNHANDLED ERROR:', err);
-  res.status(500).json({ error: 'Internal Server Error' });
+  res.status(err.status === 413 ? 413 : err instanceof SyntaxError ? 400 : 500)
+    .json({ error: err.status === 413 ? 'Request body too large' : 'Request failed' });
 });
 
-// Extra safety: log unhandled promise rejections / exceptions
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION:', err);
-});
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION:', err);
-});
+return app;
+}
 
-// ------------------------------
-// Start the server (bind to all interfaces)
-// ------------------------------
-app.listen(port, '0.0.0.0', async () => {
-  console.log(`QMT app listening on port ${port}`);
-  console.log('Environment variables check:', {
-    SQL_SERVER: process.env.SQL_SERVER,
-    SQL_DATABASE: process.env.SQL_DATABASE,
-    SQL_USER: process.env.SQL_USER,
-    SQL_PASSWORD: process.env.SQL_PASSWORD ? '***SET***' : 'MISSING',
-    NODE_ENV: process.env.NODE_ENV
+module.exports = { createApp };
+
+if (require.main === module) {
+  require('dotenv').config({ quiet: true });
+  const app = createApp();
+  const { port } = readConfig();
+  const server = app.listen(port, '0.0.0.0', () => {
+    console.info(`QMT listening on port ${server.address().port}; optional providers disabled by default`);
   });
-
-  // Test database connection on startup
-  try {
-    console.log('Testing database connection...');
-    const pool = await getPool();
-    await pool.request().query('SELECT 1 AS test');
-    console.log('✓ Database connection successful');
-  } catch (err) {
-    console.error('✗ Database connection failed on startup:', err.message);
-    console.error('Full error:', err);
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => {
+      const deadline = setTimeout(() => process.exit(1), 15000);
+      deadline.unref();
+      server.close(async () => {
+        try { await app.locals.close(); clearTimeout(deadline); }
+        catch (error) { console.error('Database shutdown failed', error.code); process.exitCode = 1; }
+      });
+      server.closeIdleConnections();
+    });
   }
-});
+}

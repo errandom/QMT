@@ -8,6 +8,8 @@ import { Event, Team, Field, Site } from '@/lib/types'
 import { shareEvent } from '@/lib/whatsappService'
 import { toast } from 'sonner'
 import { getToken } from '@/lib/api'
+import { useCapabilities } from '@/hooks/useCapabilities'
+import { formatEventTimeRange } from '@/lib/utils'
 
 interface EventChange {
   field: string
@@ -38,6 +40,7 @@ export default function EventUpdateShareDialog({
   updateType
 }: EventUpdateShareDialogProps) {
   const [sharing, setSharing] = useState(false)
+  const { capabilities } = useCapabilities()
   const [pushingToSpond, setPushingToSpond] = useState(false)
   const [spondPushResult, setSpondPushResult] = useState<'success' | 'error' | 'already' | null>(null)
 
@@ -69,12 +72,12 @@ export default function EventUpdateShareDialog({
     }
     
     // Time change
-    if (originalEvent.startTime !== event.startTime || originalEvent.endTime !== event.endTime) {
+    if (formatEventTimeRange(originalEvent) !== formatEventTimeRange(event)) {
       changes.push({
         field: 'time',
         label: 'Time',
-        before: `${originalEvent.startTime} - ${originalEvent.endTime}`,
-        after: `${event.startTime} - ${event.endTime}`
+        before: formatEventTimeRange(originalEvent),
+        after: formatEventTimeRange(event)
       })
     }
     
@@ -151,12 +154,9 @@ export default function EventUpdateShareDialog({
       }
     })
     
-    // CC recipients: only bewilligungen and sports
-    const ccRecipients = ['bewilligungen@igacr.ch', 'sports@renegades.ch']
-    
     return {
       to: [...new Set(toRecipients)],
-      cc: ccRecipients
+      cc: []
     }
   }
 
@@ -164,8 +164,8 @@ export default function EventUpdateShareDialog({
   // A team must be assigned and the team should be linked to a Spond group (we check backend-side)
   const hasTeams = eventTeams.length > 0
   const isAlreadyInSpond = Boolean(event.spondId)
-  const canPushToSpond = hasTeams && updateType !== 'cancel' // Can't push cancelled events as new
-  const canUpdateInSpond = isAlreadyInSpond && updateType !== 'create' // Can update already-linked events
+  const canPushToSpond = capabilities?.spond && hasTeams && updateType !== 'cancel'
+  const canUpdateInSpond = capabilities?.spond && isAlreadyInSpond && updateType !== 'create'
 
   const handlePushToSpond = async () => {
     setPushingToSpond(true)
@@ -261,7 +261,7 @@ export default function EventUpdateShareDialog({
       body = `The following event has been CANCELLED:\n\n` +
         `📅 Event: ${eventTitle}\n` +
         `📆 Date: ${formattedDate}\n` +
-        `⏰ Time: ${event.startTime} - ${event.endTime}\n` +
+        `⏰ Time: ${formatEventTimeRange(event)}\n` +
         `📍 Location: ${locationName}\n` +
         `👥 Team(s): ${teamNames}\n\n` +
         `We apologize for any inconvenience.\n\n`
@@ -280,7 +280,7 @@ export default function EventUpdateShareDialog({
       body += `${'─'.repeat(30)}\n\n` +
         `CURRENT DETAILS:\n` +
         `📆 Date: ${formattedDate}\n` +
-        `⏰ Time: ${event.startTime} - ${event.endTime}\n` +
+        `⏰ Time: ${formatEventTimeRange(event)}\n` +
         `📍 Location: ${locationName}\n` +
         `👥 Team(s): ${teamNames}\n` +
         `📋 Status: ${event.status}\n\n`
@@ -288,18 +288,17 @@ export default function EventUpdateShareDialog({
       body = `Event details for your reference:\n\n` +
         `📅 Event: ${eventTitle}\n` +
         `📆 Date: ${formattedDate}\n` +
-        `⏰ Time: ${event.startTime} - ${event.endTime}\n` +
+        `⏰ Time: ${formatEventTimeRange(event)}\n` +
         `📍 Location: ${locationName}\n` +
         `👥 Team(s): ${teamNames}\n` +
         `📋 Status: ${event.status}\n\n`
     }
     
     body += `Please let us know if you have any questions.\n\n` +
-      `Quick - Mean - Tough!\n` +
-      `AFC Zurich Renegades`
+      `Club operations`
     
     // Build mailto URL
-    const toParam = recipients.to.length > 0 ? recipients.to.join(',') : 'sports@renegades.ch'
+    const toParam = recipients.to.join(',')
     const ccParam = recipients.cc.length > 0 ? `&cc=${recipients.cc.join(',')}` : ''
     
     // Add importance header (note: mailto doesn't support importance, but we include it in subject)
@@ -338,7 +337,7 @@ export default function EventUpdateShareDialog({
           <div className="bg-muted/50 rounded-lg p-3 space-y-1">
             <p className="font-medium text-sm">{event.title || `${event.eventType}`}</p>
             <p className="text-xs text-muted-foreground">
-              {formatDate(event.date)} • {event.startTime} - {event.endTime}
+              {formatDate(event.date)} • {formatEventTimeRange(event)}
             </p>
             <p className="text-xs text-muted-foreground">{locationName}</p>
             <p className="text-xs text-muted-foreground">
@@ -370,7 +369,7 @@ export default function EventUpdateShareDialog({
           <Separator />
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Email will be sent to team managers with coaches and sports@renegades.ch in CC.
+              Opens an email draft addressed only to the site's and teams' recorded contacts.
             </p>
           </div>
         </div>

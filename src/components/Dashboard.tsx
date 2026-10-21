@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Cube, MapPin, ListBullets, Calendar, Football, FootballHelmet, Plus, Briefcase } from '@phosphor-icons/react'
 import EventList from './EventList'
 import ScheduleView from './ScheduleView'
-import FacilityRequestDialog from './FacilityRequestDialog'
-import EquipmentRequestDialog from './EquipmentRequestDialog'
+const FacilityRequestDialog = lazy(() => import('./FacilityRequestDialog'))
+const EquipmentRequestDialog = lazy(() => import('./EquipmentRequestDialog'))
 import LoginDialog from './LoginDialog'
 import { User, SportType } from '@/lib/types'
 import { useData } from '@/contexts/DataContext'
@@ -25,6 +25,8 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
   const [viewMode, setViewMode] = useState<'list' | 'schedule'>('list')
   const [showFacilityDialog, setShowFacilityDialog] = useState(false)
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false)
+  const [facilityLoaded, setFacilityLoaded] = useState(false)
+  const [equipmentLoaded, setEquipmentLoaded] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const { teams } = useData()
 
@@ -184,7 +186,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Select>
 
             <Button 
-              onClick={() => setShowFacilityDialog(true)} 
+              onClick={() => { setFacilityLoaded(true); setShowFacilityDialog(true) }}
               className="group w-[140px] h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
               style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
             >
@@ -196,7 +198,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
             </Button>
 
             <Button 
-              onClick={() => setShowEquipmentDialog(true)} 
+              onClick={() => { setEquipmentLoaded(true); setShowEquipmentDialog(true) }}
               className="group w-[140px] h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
               style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
             >
@@ -274,7 +276,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
           <div className="flex flex-col gap-2 sm:hidden">
             <div className="flex gap-2">
               <Button 
-                onClick={() => setShowFacilityDialog(true)} 
+                onClick={() => { setFacilityLoaded(true); setShowFacilityDialog(true) }}
                 className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
                 style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
               >
@@ -286,7 +288,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
               </Button>
 
               <Button 
-                onClick={() => setShowEquipmentDialog(true)} 
+                onClick={() => { setEquipmentLoaded(true); setShowEquipmentDialog(true) }}
                 className="group flex-1 h-10 border-white/20 transition-all text-white text-sm hover:shadow-[0_0_20px_rgba(0,31,63,0.8)]" 
                 style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }}
               >
@@ -430,15 +432,17 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
         </div>
       </div>
 
-      <FacilityRequestDialog
+      <Suspense fallback={<p role="status">Loading request form...</p>}>
+      {facilityLoaded && <FacilityRequestDialog
         open={showFacilityDialog}
         onOpenChange={setShowFacilityDialog}
-      />
+      />}
 
-      <EquipmentRequestDialog
+      {equipmentLoaded && <EquipmentRequestDialog
         open={showEquipmentDialog}
         onOpenChange={setShowEquipmentDialog}
-      />
+      />}
+      </Suspense>
 
       <LoginDialog
         open={showLoginDialog}

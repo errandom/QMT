@@ -1,0 +1,11 @@
+{
+  "asOf": "2026-10-21",
+  "region": "switzerlandnorth",
+  "sku": "B1",
+  "operatingSystem": "Linux",
+  "instances": 1,
+  "hourlyUsd": 0.0198,
+  "hourlyChf": 0.0165,
+  "meterId": "1114cccb-d03c-4e4e-9ea8-14358c9eee53",
+  "priceSource": "https://prices.azure.com/api/retail/prices"
+}

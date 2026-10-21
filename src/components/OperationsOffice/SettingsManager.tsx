@@ -15,12 +15,14 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 import SpondIntegration from './SpondIntegration'
+import { useCapabilities } from '@/hooks/useCapabilities'
 
 interface SettingsManagerProps {
   currentUser: User
 }
 
 export default function SettingsManager({ currentUser }: SettingsManagerProps) {
+  const { capabilities, error: capabilitiesError } = useCapabilities()
   const [showDialog, setShowDialog] = useState(false)
   const [showProfileDialog, setShowProfileDialog] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
@@ -122,7 +124,6 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('[SettingsManager] Form submitted with data:', formData);
     
     if (!formData.username || !formData.role) {
       toast.error('Username and role are required')
@@ -276,7 +277,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
       </div>
 
       {/* Spond Integration */}
-      <SpondIntegration />
+      {capabilities?.spond ? <SpondIntegration /> : <p className="text-sm text-muted-foreground">{capabilitiesError || 'Spond is disabled for the low-cost pilot.'}</p>}
 
       <Card>
         <CardHeader>
