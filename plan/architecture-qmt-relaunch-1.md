@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.14'
+version: '1.15'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -23,8 +23,9 @@ AI and external synchronization disabled. Publish the product page at
 acceptance. American football and flag football are the initial audience.
 
 **Current position:** substantial hardening, tests, deployment templates and
-marketing drafts exist. A review candidate and validation-only CI are being
-prepared under the owner's renewed instruction to continue implementation
+marketing drafts exist. Draft PR #6 is published and its corrected candidate
+passed real-SQL, Linux image startup and all validation-only CI checks on
+2026-10-21 under the owner's renewed instruction to continue implementation
 autonomously. Production deployment, image publication, DNS and website
 publication remain separate, unexecuted operations.
 The owner clarified that QMT supports their real football club's practice/game
@@ -37,7 +38,8 @@ any subsequently discovered backup. The original specification establishes a sou
 working club identity. All 49 SQL provider regions in the selected subscription
 returned no deleted logical servers or long-term backups in 98 successful queries.
 Historical browser caches are a possible, unverified recovery route and must not
-be cleared or refreshed before preservation. Local SQL and Linux-container verification remain unavailable.
+be cleared or refreshed before preservation. Local SQL and Linux-container
+execution remain unavailable; actual verification passed on GitHub's Linux runner.
 The source-backed club, canonical timezone and owner-controlled administrator
 login are selected in the private brief. Their local configuration was checked
 without SQL or production credentials. Full cost-envelope acceptance, actual protected
@@ -56,16 +58,23 @@ Consumption environment has no custom VNet; SQL networking is unresolved.
 `infra\app-service.bicep` now prepares an unselected Linux B1 alternative with
 Always On and QMT-owned subnet/SQL/monitoring foundations. The guard supports
 exact-site stop/state verification with site-only read/stop permissions; fixed
-B1 plan charges continue. No hosting pivot, repository publication or cloud
-spending was authorized. Existing cost/release commands remain ACA-only; B1
+B1 plan charges continue. No hosting pivot or cloud spending was authorized;
+the later candidate publication is recorded below. Existing cost/release commands remain ACA-only; B1
 needs a complete model and independent acceptance. A protected single-operator-IP
 bootstrap path, limited contained SQL principal, transactional administrator setup
 and verified temporary-rule cleanup are now implemented locally, not run in Azure.
 The real-SQL suite now uses the limited principal for application workflows and
-checks bootstrap rollback; Docker-capable execution remains outstanding.
+checks bootstrap rollback; Docker-capable execution subsequently passed in CI.
 
-**Candidate execution update, 2026-10-21:** use a separate review branch and draft
-pull request to run the prepared validation-only workflow. Do not merge into
+**Candidate execution update, 2026-10-21:** draft PR #6 on
+`copilot/qmt-cost-controlled-relaunch-20261021` passed validation-only run
+`39592325727` at commit `c4f87cd662698f36344a77e291f1e299705c33d7`.
+The initial run `39591709652` passed SQL and image build but failed its immediate
+health request with a connection reset. The corrected workflow bounds startup
+retries, requires `ok: true` and a non-root running container, prints failure logs,
+and verifies exact-container cleanup. The same transient reset recurred and
+recovered during the successful run; runtime checks were not removed.
+Do not merge into
 `main`, dispatch the legacy deployment workflow, publish an image, provision
 resources or alter DNS as part of candidate validation. Historical billing
 amounts and all private configuration remain outside the published candidate.
@@ -214,7 +223,19 @@ and infrastructure compilation pass for the same candidate commit.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-003 | Copilot reviews the full diff, fixes relevant failures and, after approval, pushes a reviewable candidate and runs `.github\workflows\main_qmt.yml` on its Docker-capable runner. Use `npm test`, `npm run test:sql`, `npm run lint`, `npm run build` and both Bicep compilations. Verify fresh/legacy-schema transactions, conflict races, recurrence/update rollback, request idempotency, restart persistence and non-root image startup. Record sanitized run/commit references in `plan\evidence\relaunch-acceptance-2026-10-20.md`. A skipped SQL suite or merely written workflow is not a pass. Record the existing bundle-size warning and assess actual browser performance later. | | |
+| TASK-003 | Copilot reviews the full diff, fixes relevant failures and, after approval, pushes a reviewable candidate and runs `.github\workflows\main_qmt.yml` on its Docker-capable runner. Use `npm test`, `npm run test:sql`, `npm run lint`, `npm run build` and all five Bicep compilations. Verify fresh/legacy-schema transactions, conflict races, recurrence/update rollback, request idempotency, restart persistence and non-root image startup. Record sanitized run/commit references below. A skipped SQL suite or merely written workflow is not a pass. Record the existing bundle-size warning and assess actual browser performance later. | ✅ | 2026-10-21 |
+
+**TASK-003 evidence:** run `39592325727`, commit
+`c4f87cd662698f36344a77e291f1e299705c33d7`: 91 normal-suite tests passed
+(the SQL suite is intentionally skipped in that invocation); the separate
+disposable-SQL invocation passed all 11 tests with zero skips, including atomic
+administrator/contained-user bootstrap rollback and restricted operational DML.
+Lint, typecheck/frontend build, both cost reports, all five Bicep compilations,
+Linux image build and non-root health/frontend/disabled-provider smoke passed.
+The existing 522.50 kB minified initial-bundle warning remains; deployed browser
+performance, Azure Basic networking/initialization and production acceptance
+are not established by these runner results. Cost-report success is not release
+approval; every live release-evidence flag remains gated.
 
 ### Implementation Phase 4
 
