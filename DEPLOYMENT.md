@@ -1,6 +1,6 @@
 # QMT controlled relaunch
 
-Evaluated 2026-10-21. **Disabled acceptance foundation partially provisioned;
+Evaluated 2026-10-21. **Disabled acceptance foundation provisioned and initialized;
 public release remains blocked.**
 This replaces the old App Service guide, including its unsafe example credentials
 and broad SQL-network advice. Rotate every historical credential and signing key
@@ -14,19 +14,36 @@ digest pull and an independent manifest request passed. The first exact-scope
 apply created hosting/network/monitoring foundations, but Azure rejected SQL
 creation with `PasswordNotComplex`. The protected SQL credentials were repaired;
 the administrator's application password and signing key were preserved.
-The guarded continuation did not submit another deployment: its provider
-what-if remained HTTP 202 with an empty body after bounded polling. Its exact
-pending operation is retained privately for resumption, not automatic retries.
-Independent live inventory still contains only the QMT B1 plan, virtual network,
-Log Analytics workspace and budget guard environment; these can incur charges.
-Live inspect-only cleanup verified the narrowly qualified empty partial stack,
-including absence of the SQL server, application and retained backups. The real
-current-owner Windows cleanup task was re-executed successfully after source
-revalidation and returned `not_due` with its original deadline. It is armed, but
+The old provider preview subsequently failed with `DeploymentWhatIfTimeout`.
+After independently confirming that terminal failure, one fresh preview succeeded.
+`scripts/review-app-service-continuation.cjs` verified the exact 17 approved IDs,
+independent live ownership/capacity/network/logging invariants and only four
+explicit resource-specific reference/default reconciliations before one continuation.
+No general permission to modify resources was introduced.
+
+The continuation created the Basic database and disabled application, but its
+retention operation failed `LongTermRetentionMissingWeekOfYear`. A separate
+provider preview and exact-policy repair supplied `weekOfYear: 1`, keeping
+weekly retention `P4W` and monthly/yearly retention `PT0S`. Live Azure normalized
+the unused week back to zero and confirmed the intended weekly-only policy.
+The failed deployment history is retained; it was not replayed to obtain a green status.
+Protected initialization created the schema, least-privilege application user
+and QMTadmin, and verified removal of the single-IP operator rule. Live cleanup
+inspection verified the unchanged administrator, zero operational rows, Basic
+SQL, immutable image, Always On and absence of retained backups.
+The site is explicitly disabled; this provider reports `Disabled`, not `Stopped`.
+Initialization accepts either exact non-running state only with `enabled=false`,
+and still rejects a running, enabled or unknown-state site.
+
+One post-initialization Basic restore remains pending availability of a genuine
+Azure restore point. No restore is inferred from successful bootstrap.
+The real current-owner Windows cleanup task remains armed with its original
+October 22, 2026, 14:50:55 Zurich deadline, but
 requires a logged-in owner, working machine/network and Azure authentication.
 No resource deletion was executed or proven by that pre-deadline check.
-Initialization, restore, live SQL connectivity and cost-response acceptance
-remain unverified. Historical proposal sections below do not override this
+The provisioned foundation can incur charges. Restore and production
+cost-response/application acceptance remain unverified.
+Historical proposal sections below do not override this
 current status or the owner's separately recorded bounded acceptance approval.
 
 ## Boundaries and authorization
@@ -215,7 +232,8 @@ subnet-only SQL rule does not grant the local machine or GitHub-hosted runner
 bootstrap access. The separately approval-gated `scripts/initialize-app-service.cjs`
 now prepares a temporary **single-operator IPv4** path, with verified cleanup and
 no broad access; see the protected initialization procedure below. Disposable SQL
-checks passed in CI, but initialization against Azure Basic remains untested.
+checks passed in CI; protected initialization and a live empty-data audit have
+also passed against the disabled Azure Basic acceptance foundation.
 Do not present this as a verified one-command deployment.
 
 ### Subscription-scoped B1 foundation preview
@@ -459,7 +477,7 @@ immediately afterward. The application user needs only the operational tables' r
 DML permissions and permission to acquire the database application lock, not
 schema modification rights. Verify these exact grants in staging.
 
-### Protected B1 fresh initialization (prepared, not executed)
+### Protected B1 fresh initialization (executed for disabled acceptance)
 
 `npm run db:provision-user` is a no-connection preview. For a separately authorized
 operator with the approved narrow SQL path, `-- --apply` additionally requires
@@ -504,7 +522,8 @@ az account get-access-token --resource https://management.azure.com/ --query acc
 ```
 
 The operator verifies the server's QMT tag/region/administrator, exact Basic online
-database, and exact disabled/stopped site. The read-only App Service settings-list
+database, and exact site with `enabled=false` and provider state `Stopped` or
+`Disabled`. Running, enabled and unknown-state sites are rejected. The read-only App Service settings-list
 operation checks that the deployed SQL credentials match and both integrations
 remain disabled; secret values are held in memory and never printed. A new random
 `qmt-bootstrap-` rule is created for exactly the operator address, without modifying

@@ -183,10 +183,22 @@ test('approved initialization creates only one single-IP rule, verifies cleanup 
   assert.ok(!JSON.stringify(result).includes(env.QMT_APP_SQL_PASSWORD));
 });
 
+test('the actual Disabled provider state is accepted only with the site explicitly disabled', async () => {
+  const h = harness({ intercept: call => call.id === siteId
+    ? json({ id: siteId, tags: { solution: 'QMT' }, properties: { enabled: false, state: 'Disabled' } }) : undefined });
+  const result = await runInitialization({ env, execute: true, token, ...h });
+  assert.equal(result.status, 'initialized');
+  assert.equal(h.installed, false);
+  assert.equal(h.calls.filter(call => call.id === siteId).length, 2);
+});
+
 test('cloud identity, tier and prelaunch isolation are checked before creating operator access', async () => {
   for (const [id, body] of [
     [serverId, { id: serverId, name: 'foreign' }],
     [siteId, { id: siteId, tags: { solution: 'QMT' }, properties: { enabled: true, state: 'Running' } }],
+    [siteId, { id: siteId, tags: { solution: 'QMT' }, properties: { enabled: true, state: 'Disabled' } }],
+    [siteId, { id: siteId, tags: { solution: 'QMT' }, properties: { enabled: false, state: 'Running' } }],
+    [siteId, { id: siteId, tags: { solution: 'QMT' }, properties: { enabled: false, state: 'Unknown' } }],
     [`${serverId}/databases/qmt-production`, { id: `${serverId}/databases/qmt-production`, sku: { name: 'S0' }, properties: { status: 'Online' } }],
     [`${siteId}/config/appsettings/list`, { properties: {
       SQL_SERVER: env.SQL_SERVER, SQL_DATABASE: env.SQL_DATABASE,

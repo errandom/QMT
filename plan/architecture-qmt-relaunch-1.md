@@ -1,6 +1,6 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.19'
+version: '1.20'
 date_created: 2026-10-20
 last_updated: 2026-10-21
 owner: errandom
@@ -33,17 +33,21 @@ passed with actual protected parameters. The first apply created the QMT hosting
 network, monitoring and guard environment but SQL creation failed its password
 policy. Only the unusable SQL credentials were repaired in protected storage;
 the application administrator credential and signing key were preserved.
-The foundation is not yet accepted, the application remains offline, and public
-release, real initialization/restoration and production cost controls remain gated.
-The guarded continuation submitted no second deployment: the exact pending
-provider preview remained HTTP 202 with no final result after bounded polling.
-Its protected operation receipt is preserved for resumption; no retry process
-is left applying resources. Independent live inspection verified only the four
-non-data foundation resources, no server/application or retained backups, and
-eligibility for the narrowly qualified SQL-policy-failure cleanup path. The
-actual cleanup task passed another pre-deadline no-op after the validated
-source receipt was refreshed; its original deadline was not reset. Deletion
-itself has not been exercised. The partial foundation can incur charges.
+The old preview terminated with `DeploymentWhatIfTimeout`; one new successful
+preview passed the exact-manifest and independently checked four-delta reviewer
+before one continuation was submitted. SQL and the disabled application now exist.
+The continuation's retention operation failed `LongTermRetentionMissingWeekOfYear`;
+a separate provider preview and exact-policy repair fixed it without increasing
+weekly retention or enabling monthly/yearly backups. The failed deployment history
+remains visible and is not an instruction to replay the whole stack.
+Protected bootstrap and the live pristine-data/cleanup audit passed. QMTadmin
+exists, operational tables are empty, operator SQL access was removed, and the
+application remains explicitly disabled. The real provider state `Disabled` is
+accepted only with `enabled=false`, alongside the previously supported `Stopped`.
+A genuine post-bootstrap restore point and the single approved Basic restore
+remain pending. Public release and production cost controls remain gated.
+The cleanup deadline remains October 22, 2026, 14:50:55 Zurich; deletion itself
+has not been exercised. The provisioned foundation can incur charges.
 The detailed ten-step status is authoritative over historical checkpoints below.
 
 | Step | Current status | Remaining outcome |
@@ -51,8 +55,8 @@ The detailed ten-step status is authoritative over historical checkpoints below.
 | 1. Production brief and data decision | Complete | Fresh production and manual application entry are selected; preserve any subsequently found history. |
 | 2. Full operating envelope | Partial | Verify the complete ongoing QMT-only cost envelope and live response controls; bounded acceptance is not production approval. |
 | 3. Application candidate | Published | Retain the validated immutable runtime image; persist and validate operator-only changes separately. |
-| 4. Infrastructure and release plumbing | Partial, blocked | Resolve the protected continuation preview, complete the exact disabled foundation and verify its actual configuration. |
-| 5. Database, administrator and restore | Not executed | Initialize QMTadmin through protected single-IP access, remove that access, perform one Basic restore and verify it. |
+| 4. Infrastructure and release plumbing | Disabled foundation verified | Preserve isolated B1/Basic configuration; production release plumbing remains gated. Failed historical deployment receipts are retained. |
+| 5. Database, administrator and restore | Bootstrap verified; restore pending | QMTadmin and least-privilege SQL user exist; operator access is removed. Await an actual post-bootstrap restore point, perform one Basic restore and verify it. |
 | 6. AI-free launch | Complete | Keep paid AI and alternative providers disabled; optional AI work is deferred. |
 | 7. Deployed application and club acceptance | Not executed | Verify actual browser workflows and production empty-state onboarding under separately approved enablement. |
 | 8. Budget alerts, suspension and recovery | Prepared only | Deploy and test QMT-only attribution, notification and suspension; do not claim that app stop removes fixed charges. |
@@ -159,8 +163,9 @@ uses and removes a temporary exact-IPv4 SQL rule but never deletes the stack.
 The current normal suite passed 113 checks; its separate SQL invocation was
 intentionally skipped. Ten cleanup checks cover retained-backup ownership timestamps
 and preservation-safe handling of the specific no-SQL credential-policy failure.
-Those mocks do not establish a
-successful live database audit, restore or resource deletion.
+Those mocks alone do not establish live acceptance. The later protected bootstrap
+and independent live empty-data audit passed on October 21. Actual restore and
+resource deletion still require their own receipts.
 
 **Ownership:** Copilot executes technical work using available authorized tools,
 prepares decision-ready evidence and fixes failures. The owner supplies only

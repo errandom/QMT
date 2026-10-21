@@ -132,8 +132,8 @@ async function runInitialization({
     || server.properties?.administratorLogin !== env.SQL_USER) throw new Error('SQL server identity/configuration mismatch');
   const site = await arm(config.siteId, { web: true });
   if (!sameId(site.id, config.siteId) || site.tags?.solution !== 'QMT'
-    || site.properties?.enabled !== false || site.properties?.state !== 'Stopped') {
-    throw new Error('Bootstrap requires the exact QMT site to remain disabled and stopped');
+    || site.properties?.enabled !== false || !['Stopped', 'Disabled'].includes(site.properties?.state)) {
+    throw new Error('Bootstrap requires the exact QMT site to remain disabled in a non-running provider state');
   }
   const database = await arm(config.databaseId);
   if (!sameId(database.id, config.databaseId) || database.sku?.name !== 'Basic'
@@ -158,7 +158,7 @@ async function runInitialization({
     await initialize(env);
     executionSignal.throwIfAborted();
     const after = await arm(config.siteId, { web: true });
-    if (!sameId(after.id, config.siteId) || after.properties?.enabled !== false || after.properties?.state !== 'Stopped') {
+    if (!sameId(after.id, config.siteId) || after.properties?.enabled !== false || !['Stopped', 'Disabled'].includes(after.properties?.state)) {
       throw new Error('QMT prelaunch isolation changed during initialization');
     }
   } catch (error) { operationError = error; }

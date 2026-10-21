@@ -36,5 +36,6 @@ resource longTermRetention 'Microsoft.Sql/servers/databases/backupLongTermRetent
     weeklyRetention: 'P4W'
     monthlyRetention: 'PT0S'
     yearlyRetention: 'PT0S'
+    weekOfYear: 1
   }
 }

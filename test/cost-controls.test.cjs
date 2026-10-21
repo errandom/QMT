@@ -198,6 +198,14 @@ test('budget must cover every modeled scenario, not only the nominal stress scen
   assert.ok(result.problems.includes('A modeled scenario exceeds approved monthly budget'));
 });
 
+test('weekly-only SQL retention includes the provider-required week without enabling annual backups', () => {
+  const template = fs.readFileSync(path.join(__dirname, '..', 'infra', 'database.bicep'), 'utf8');
+  assert.match(template, /weeklyRetention:\s*'P4W'/);
+  assert.match(template, /monthlyRetention:\s*'PT0S'/);
+  assert.match(template, /yearlyRetention:\s*'PT0S'/);
+  assert.match(template, /weekOfYear:\s*1\b/);
+});
+
 test('always-on model and deployment never assume idle sleeping or a shorter month', () => {
   const template = fs.readFileSync(path.join(__dirname, '..', 'infra', 'main.bicep'), 'utf8');
   assert.match(template, /minReplicas:\s*1\b/);
