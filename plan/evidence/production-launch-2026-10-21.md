@@ -62,17 +62,47 @@ DPAPI-backed credential UI. Username remains **QMTadmin**; no password is in the
 shortcut, repository, website or launch receipt. The persistent helper is inside
 the owner/SYSTEM-only local vault, outside OneDrive.
 
-The working application link is intentionally the Azure hostname. GoDaddy
-authoritative DNS currently has neither required record. Add:
+At the October 21 launch, the working application link intentionally used the
+Azure hostname. GoDaddy authoritative DNS had neither required record:
 
 | Type | Name | Value |
 |------|------|-------|
 | CNAME | `qmt` | `qmt-production-au5trtsh5mkl2.azurewebsites.net` |
 | TXT | `asuid.qmt` | `40911895E149BAE1BC8132C5B9C466E23AA3DEE438509FBB03DB6B09545F75F7` |
 
-After independent DNS verification, bind `qmt.errandom.com`, issue and verify the
-free managed certificate, then change the product CTA. Do not move nameservers
-or affect ARGOS. Resolve notification-test rejection and verify actual delivery.
+These domain tasks were completed as recorded below. Resolve notification-test
+rejection and verify actual delivery.
 The full two-session request/review/export, mobile/performance, forwarded-header
 and DST matrix is not claimed by the bounded core checks above. Collect seven
 dated post-launch cost/error/backup observations and review the keep-live decision.
+
+## Branded-domain cutover, October 22, 2026
+
+The owner authorized the exact two-record GoDaddy change and delegated
+completion. Both records above were saved once. Both authoritative nameservers
+and public resolver `1.1.1.1` subsequently returned the exact values. Observed
+DNS TTL was 3600 seconds. Apex/www, mail, ARGOS and nameservers were unchanged.
+
+The existing Azure application received the `qmt.errandom.com` hostname binding.
+One free managed-certificate request was accepted at 06:37:18 UTC and reported
+Succeeded at 06:40:38 UTC. The CLI certificate inventory still returned an empty
+list; direct ARM retrieval of `Microsoft.Web/certificates/qmt.errandom.com`
+confirmed issuance, avoiding a duplicate request.
+
+- Certificate subject: `qmt.errandom.com`.
+- Thumbprint: `6090D71C6EC17D925CC07D74D287BE149E52C144`.
+- Current expiry: April 22, 2027, 23:59:59 UTC; preserve renewal prerequisites.
+- Binding: `SniEnabled` on the exact custom hostname.
+- Initial TLS propagation briefly returned a name mismatch; no validation bypass
+  was used. The complete trusted-HTTPS check passed at **08:47:50 Zurich**.
+- Root, both referenced JS/CSS assets, health, QMTadmin API login/identity,
+  database check and SQL-backed sites read passed.
+- No operational rows or credentials changed; the immutable runtime, B1/Basic
+  resources, Always On and QMT-only budget safeguards are unchanged.
+- The original Azure HTTPS hostname is retained, without a forced redirect.
+
+Website commit `f71b6dae0a9a6303aa84395bcc9ccb18f5e3561b` replaced only the
+existing product CTA target with `https://qmt.errandom.com`. Its exact Pages
+build reported `built`; the publicly served product CTA and main-site QMT
+navigation passed at **08:49:05 Zurich**. Notification delivery, extended
+acceptance and stabilization remain open.

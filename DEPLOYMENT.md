@@ -1,14 +1,17 @@
 # QMT controlled relaunch
 
-Evaluated 2026-10-21. **The owner-authorized single-club pilot is live.**
+Evaluated 2026-10-22. **The owner-authorized single-club pilot is live.**
 The explicit instruction to go live was recorded at 22:39 Zurich. It supersedes
 the disabled-acceptance-only authorization below; it does not approve AI,
 cross-venture changes, automatic budget recovery or unlimited spending.
 The independent product page is `https://www.errandom.com/QMT/`, linked from
-the main website. Its **Open QMT** link currently targets the verified HTTPS
-application at `https://qmt-production-au5trtsh5mkl2.azurewebsites.net`.
-Do not publish a broken `qmt.errandom.com` link: GoDaddy CNAME/TXT records,
-hostname binding and its managed certificate remain outstanding.
+the main website. The verified branded application is
+`https://qmt.errandom.com`, now used by the published **Open QMT** link.
+The approved GoDaddy CNAME/TXT records resolve,
+Azure's hostname is bound with managed SNI TLS, and trusted HTTPS, assets,
+administrator API sign-in and SQL-backed reads passed on October 22.
+The original Azure hostname remains available; no forced redirect was added.
+Keep both DNS records for hostname ownership and managed-certificate renewal.
 
 The existing Linux B1 single-worker, Always On app and Basic SQL database were
 promoted, not replaced. QMTadmin API and real Edge-browser sign-in passed.
@@ -36,7 +39,8 @@ the old initialization/restore/deployment. The owner receives the unchanged
 administrator credential through the local masked **QMT administrator access**
 desktop shortcut, not chat or a plaintext file.
 See `plan/evidence/production-launch-2026-10-21.md` for exact evidence and
-remaining DNS, notification, extended acceptance and seven-day stabilization work.
+the dated domain cutover and remaining notification, extended acceptance and
+seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
 ## Historical disabled-foundation preparation

@@ -1,8 +1,8 @@
 ---
 goal: Return QMT to service under errandom through ten owner-light release steps
-version: '1.23'
+version: '1.24'
 date_created: 2026-10-20
-last_updated: 2026-10-21
+last_updated: 2026-10-22
 owner: errandom
 status: 'In progress'
 tags: [architecture, relaunch, deployment, cost-control, acceptance]
@@ -19,8 +19,8 @@ does not relax either document's controls or authorize cloud expenditure.
 
 **Production relaunch:** the owner's football club; core scheduling, requests, equipment and exports;
 AI and external synchronization disabled. Publish the product page at
-`www.errandom.com/QMT/`. The live application currently uses the verified Azure
-HTTPS hostname; `qmt.errandom.com` remains the DNS-dependent final hostname.
+`www.errandom.com/QMT/`. The live application uses the verified branded
+HTTPS hostname `qmt.errandom.com`; the Azure hostname remains available.
 American football and flag football are the initial audience.
 
 **Current position, 2026-10-21:** the owner explicitly authorized go-live at
@@ -34,10 +34,18 @@ enabled with query validation. Notification test requests fail in Azure, so
 email delivery remains unverified. The temporary restored database was removed.
 The old acceptance cleanup task is disabled and its operator is retired;
 production data must never be deleted by replaying acceptance cleanup.
-The local masked administrator shortcut is available to the owner. Custom DNS,
-notification delivery, extended workflow/mobile acceptance and seven dated
+The local masked administrator shortcut is available to the owner.
+Notification delivery, extended workflow/mobile acceptance and seven dated
 stabilization observations remain open. No generic release flag was changed to
 represent uncollected evidence. See `evidence/production-launch-2026-10-21.md`.
+
+**Domain update, 2026-10-22:** the two approved GoDaddy records resolve on both
+authoritative nameservers and a public resolver. Azure's custom hostname and
+managed SNI certificate are bound. Trusted HTTPS, application assets,
+administrator API sign-in and SQL-backed reads passed without operational data
+changes. The published product CTA points to the branded origin; its exact Pages
+build and the main-site-to-product navigation passed public verification. Existing
+hosting, data, credentials, default hostname and budget controls are preserved.
 
 | Step | Current status | Remaining outcome |
 |------|----------------|-------------------|
@@ -49,7 +57,7 @@ represent uncollected evidence. See `evidence/production-launch-2026-10-21.md`.
 | 6. AI-free launch | Complete | AI and external synchronization remain disabled. |
 | 7. Deployed application and club acceptance | Core acceptance passed | Complete the extended two-session/request/export/DST/mobile matrix; do not claim it ran. |
 | 8. Budget alerts, suspension and recovery | Hourly control active; email test blocked | Verify email delivery; continue cost/usage observation. Stop/recovery and retained guard logs passed. |
-| 9. Application/domain/product publication | Live on Azure HTTPS and errandom | Add verified GoDaddy records, bind the custom hostname and issue its managed certificate. |
+| 9. Application/domain/product publication | Complete | Preserve DNS/managed TLS and the independent product page; no runtime redeployment needed. |
 | 10. Seven-day stabilization | Started; not complete | Collect seven dated observations; no unattended agent is implied. |
 
 **Historical disabled-acceptance checkpoint (superseded by production promotion):**
@@ -460,7 +468,16 @@ with no dead CTA, unintended data exposure or cross-venture change.
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-009 | Copilot prepares the final acceptance packet and site preview, obtains Gate C, and configures the approved `qmt.errandom.com` DNS/TLS binding. Promote the accepted stack/candidate rather than provisioning an unpriced second copy. Update `..\site\QMT\index.html` to link to the verified live app and publish it with the homepage card in `..\site\index.html` through the website's approved process. Verify DNS, certificate, public schedule, staff sign-in, main-site navigation and the `/QMT/` product page externally. Preserve the existing apex-to-www behavior. If cutover fails, execute the rehearsed rollback and keep the independent page truthful. | | |
+| TASK-009 | Copilot prepares the final acceptance packet and site preview, obtains Gate C, and configures the approved `qmt.errandom.com` DNS/TLS binding. Promote the accepted stack/candidate rather than provisioning an unpriced second copy. Update `..\site\QMT\index.html` to link to the verified live app and publish it with the homepage card in `..\site\index.html` through the website's approved process. Verify DNS, certificate, public schedule, staff sign-in, main-site navigation and the `/QMT/` product page externally. Preserve the existing apex-to-www behavior. If cutover fails, execute the rehearsed rollback and keep the independent page truthful. | ✅ | 2026-10-22 |
+
+**TASK-009 evidence:** the owner-authorized controlled pilot is published on the
+existing stack. October 21 API/browser/core scheduling evidence and October 22
+custom-origin trusted HTTPS/API/assets/sign-in/SQL checks are recorded in
+`evidence/production-launch-2026-10-21.md`. Website commit
+`f71b6dae0a9a6303aa84395bcc9ccb18f5e3561b` built successfully; the homepage,
+product page and branded CTA passed public verification at 08:49:05 Zurich.
+This publication completion does not certify TASK-008's unresolved notification
+delivery, the extended acceptance matrix or seven-day stabilization.
 
 ### Implementation Phase 10
 
