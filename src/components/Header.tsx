@@ -66,9 +66,16 @@ export default function Header({ currentUser, onLogin, onLogout, onNavigate, cur
         <div className="container mx-auto px-4 py-3 sm:py-5 max-w-7xl">
           <div className="flex items-center justify-between">
             <div className="flex-1 pr-3">
-              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg" style={{letterSpacing: '0.095em'}}>QMT | Operations</h1>
+                <a
+                  href="https://www.errandom.com/QMT/"
+                  className="rounded-sm text-xs text-white/70 underline-offset-4 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                >
+                  an errandom product
+                </a>
+              </div>
               <p className="text-sm text-white/95 tracking-[0.095em] font-medium">{capabilities?.clubName || 'QMT by errandom'}</p>
-              <a href="https://www.errandom.com/QMT/" className="text-xs text-white underline">About QMT on errandom</a>
             </div>
             
             <div className="flex items-center gap-3 sm:flex-row">
