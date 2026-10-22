@@ -106,3 +106,64 @@ existing product CTA target with `https://qmt.errandom.com`. Its exact Pages
 build reported `built`; the publicly served product CTA and main-site QMT
 navigation passed at **08:49:05 Zurich**. Notification delivery, extended
 acceptance and stabilization remain open.
+
+## October 22 UI-only production update
+
+The owner's instruction, "okay, now please deploy it", authorized deployment of
+the two previously reviewed local UI refinements. No infrastructure expansion,
+data migration, credential change, AI activation or budget-policy change was
+included.
+
+- Runtime source: `b8a43313c2c2b0c8fc73212d370b18b56b14e755`.
+- PR #7 merge: `92f726d7546b7ba71dae85f599292fbae865238e`.
+- Exact-source validation/publication: `39791274017`, successful; validation
+  includes real disposable SQL, lint/build, template compilation and image smoke.
+- Publication job: `119869190234`; exact-commit gate, image smoke and fresh
+  anonymous digest pull all passed. The existing named candidate branch and
+  approval checks were preserved, not broadened.
+- PR validation: `39791357583`, successful; main validation:
+  `39792410526`, successful.
+- New application image:
+  `ghcr.io/errandom/qmt@sha256:b22324538b8545512d78518b8eb0931b6813892ce1a153b400553038b39cb26d`.
+- Previous application/compatible code-rollback image:
+  `ghcr.io/errandom/qmt@sha256:5d1a7ce14520fadcf88120be60dc143a995d1cc9b4141a4f77f4b63940241b8e`.
+
+The existing site's sole image property was patched at **16:05:22 Zurich**.
+An earlier Windows CLI pipe-quoting error left the old image and Running state
+unchanged, independently verified before the successful JSON-file ARM patch.
+The subsequent read-back confirmed the exact new digest. No bootstrap,
+infrastructure apply, cleanup, restore or stop/resume rehearsal was repeated.
+Backend, dependency manifests and schema sources are unchanged from the previous
+runtime source; the separate budget guard intentionally retains the old image.
+
+Protected, read-only application acceptance passed at **16:06:17 Zurich**:
+trusted root and both local JS/CSS assets, health, QMTadmin authentication,
+identity, SQL connectivity and sites read. Passwords/tokens remained in memory.
+No operational fixtures were created, deleted or altered.
+
+An isolated public Edge browser passed at **16:06:26 Zurich**:
+the former About link was absent and a single **an errandom product** attribution
+linked to the existing product page beside **QMT | Operations**. The native
+schedule disclosure opened with the keyboard and closed normally. Computed
+glass-card radius, navy title/button, associated labels and semantic dates were
+present. At 1440px the form had three columns; at 390px it stacked into one
+column, with the card and date inputs fitting the viewport. No unhandled
+JavaScript exceptions occurred. Displayed dates remained
+`2026-10-15` to `2027-01-20`; the inclusive-end loading behavior is unchanged.
+Served application assets were `index-DazQFGuW.js` and `index-peoG7pxG.css`.
+
+Independent before/after snapshots matched all 25 non-image invariants:
+application identity/enabled/HTTPS settings; B1 single-worker plan and Always On;
+Basic Online production SQL; checksum of all app settings; exact QMT-only
+CHF 30 Monthly budget definition; guard identity, schedule, arguments, resources
+and image; heartbeat rule; managed TLS binding/thumbprint; and disabled acceptance
+cleanup. Azure's delayed current-spend read was CHF 0 at both observations, not
+a promise of zero costs or an exact CHF 30 invoice cap.
+
+Private receipts are `qmt-ui-image-publication.json`,
+`qmt-ui-deployment-operation.json`, `qmt-ui-settings-before.json`,
+`qmt-ui-settings-after.json`, `qmt-custom-domain-check-result.json` and
+`qmt-ui-browser-check-result.json`. Current-release handoffs reference these
+separately from the historical launch/restore/stop-rehearsal evidence.
+Email delivery, the remaining extended acceptance matrix and seven-day
+stabilization are still unverified; this UI update does not close them.

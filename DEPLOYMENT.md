@@ -43,6 +43,41 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
+## Current UI release: October 22, 2026
+
+The owner-approved header and schedule-window refinements are live at
+`https://qmt.errandom.com`. The header now places **an errandom product** beside
+**QMT | Operations**, without the former prominent About link. The schedule
+window uses the existing glass-card surface, navy/accent palette, shared form
+controls and responsive layout; its date-loading behavior is unchanged.
+
+Source `b8a43313c2c2b0c8fc73212d370b18b56b14e755` was validated and published by
+manual run `39791274017`, including an anonymous immutable-digest pull. PR #7
+merged as `92f726d7546b7ba71dae85f599292fbae865238e`; main validation
+`39792410526` also passed. The current application image is
+`ghcr.io/errandom/qmt@sha256:b22324538b8545512d78518b8eb0931b6813892ce1a153b400553038b39cb26d`.
+The previous application image, retained for code rollback, is
+`ghcr.io/errandom/qmt@sha256:5d1a7ce14520fadcf88120be60dc143a995d1cc9b4141a4f77f4b63940241b8e`.
+Server, dependency and schema sources are unchanged between these images.
+
+Only the existing site's `config/web.properties.linuxFxVersion` was updated.
+On Windows, use a JSON-file ARM configuration patch for this value: passing its
+literal pipe through `az.cmd` can be parsed as a command pipeline. A failed CLI
+attempt was independently reconciled as leaving the old image Running before
+the successful exact-property patch; no stack deployment was replayed.
+
+At **16:06:26 Zurich**, trusted public Edge rendering passed at 1440px and 390px,
+including the attribution, real design styles, keyboard-operated disclosure
+and single-column mobile form. Trusted HTTPS/assets, health, protected
+administrator API sign-in and SQL-backed reads also passed. Before/after
+snapshots matched 25 non-image invariants, including a checksum of all app
+settings, B1 single-worker Always On, Basic SQL, managed TLS, budget definition,
+guard identity/configuration/image and heartbeat rule. No operational rows or
+credentials were changed, and no resources or migrations were created.
+The guard deliberately retains its previous approved image. Notification
+delivery, extended acceptance and stabilization remain open.
+See the dated UI-release section in the production evidence below.
+
 ## Historical disabled-foundation preparation
 
 This replaces the old App Service guide, including its unsafe example credentials
