@@ -231,7 +231,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sites.map((site) => (
           <Card key={site.id} className={!site.isActive ? 'opacity-60' : ''}>
             <CardHeader>
@@ -274,7 +274,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="text-sm space-y-2">
+            <CardContent className="flex flex-1 flex-col gap-2 text-sm">
               <div style={{ color: COLORS.CHARCOAL }}>
                 <div className="font-medium">{site.address}</div>
                 <div className="text-muted-foreground">{site.zipCode} {site.city}</div>
@@ -282,7 +282,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
               <div className="text-xs text-muted-foreground">
                 Contact: {site.contactFirstName} {site.contactLastName}
               </div>
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1">
                 {site.amenities.parking && <Badge variant="outline" className="text-xs">Parking</Badge>}
                 {site.amenities.toilets && <Badge variant="outline" className="text-xs">Toilets</Badge>}
                 {site.amenities.lockerRooms && <Badge variant="outline" className="text-xs">Lockers</Badge>}
@@ -291,7 +291,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                 {site.amenities.equipmentStash && <Badge variant="outline" className="text-xs">Equipment</Badge>}
               </div>
               {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-                <div className="flex items-center justify-between pt-2 border-t">
+                <div className="mt-auto flex items-center justify-between pt-2 border-t">
                   <span className="text-xs font-medium" style={{ color: COLORS.CHARCOAL }}>Status</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: COLORS.CHARCOAL }}>
