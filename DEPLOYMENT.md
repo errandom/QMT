@@ -43,7 +43,35 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
-## Current UI release: October 22, 2026
+## Current UI release: October 28, 2026
+
+The owner-approved Sites card layout is live at `https://qmt.errandom.com`.
+Cards use equal-height grid rows, and their status controls stay at the bottom
+when amenity tags wrap or screen width changes. Permissions and status behavior
+are unchanged.
+
+Source `a6e75b8e56196be87712c92e7a3c9507dff9840f` passed exact-source
+validation/publication `40776169926`. PR #8 merged as
+`42c6ee764483dcc54f044e31b05f1d52c8a64b5f`; main validation `40776973274`
+passed. The current application image is
+`ghcr.io/errandom/qmt@sha256:bc08e479fd0ccf1e4ac1f0bf1b9239e70395a5c933c21a2a24971fc21c85e6a4`.
+The previous application image, retained for compatible code rollback, is
+`ghcr.io/errandom/qmt@sha256:b22324538b8545512d78518b8eb0931b6813892ce1a153b400553038b39cb26d`.
+Backend, dependencies and schema are unchanged.
+
+Only `config/web.properties.linuxFxVersion` was patched on the already-running
+site, using a JSON-file ARM patch. At **23:07:17 Zurich**, trusted HTTPS, health,
+SQL-backed sites read and anonymous rejection by the protected database probe
+passed. Live entry JS/CSS and the OperationsOffice chunk matched the published
+container byte-for-byte; the Windows build has different asset hashes and was
+not used as the production byte reference. Before/after snapshots matched all
+26 non-image invariants, including app settings, B1 single-worker Always On,
+Basic Online SQL, managed TLS, resource inventory, budget and guard configuration.
+No operational data, credentials, resources, migrations or budget policy changed.
+The separate guard retains its approved image. Notification delivery, extended
+acceptance and stabilization remain open. See the October 28 evidence below.
+
+## Previous UI release: October 22, 2026
 
 The owner-approved header and schedule-window refinements are live at
 `https://qmt.errandom.com`. The header now places **an errandom product** beside
@@ -54,9 +82,9 @@ controls and responsive layout; its date-loading behavior is unchanged.
 Source `b8a43313c2c2b0c8fc73212d370b18b56b14e755` was validated and published by
 manual run `39791274017`, including an anonymous immutable-digest pull. PR #7
 merged as `92f726d7546b7ba71dae85f599292fbae865238e`; main validation
-`39792410526` also passed. The current application image is
+`39792410526` also passed. That release's application image was
 `ghcr.io/errandom/qmt@sha256:b22324538b8545512d78518b8eb0931b6813892ce1a153b400553038b39cb26d`.
-The previous application image, retained for code rollback, is
+Its previous application image was
 `ghcr.io/errandom/qmt@sha256:5d1a7ce14520fadcf88120be60dc143a995d1cc9b4141a4f77f4b63940241b8e`.
 Server, dependency and schema sources are unchanged between these images.
 

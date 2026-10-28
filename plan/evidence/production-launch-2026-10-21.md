@@ -167,3 +167,62 @@ Private receipts are `qmt-ui-image-publication.json`,
 separately from the historical launch/restore/stop-rehearsal evidence.
 Email delivery, the remaining extended acceptance matrix and seven-day
 stabilization are still unverified; this UI update does not close them.
+
+## October 28 Sites card layout production update
+
+The owner's instruction, "okay - go ahead and deploy", authorized the reviewed
+Sites card layout fix. Its only application changes are four class substitutions
+in `SitesManager.tsx`: equal-height grid rows, flex-growing card content,
+wrapping amenity tags and a bottom-anchored status row. Shared components,
+permissions, backend, dependencies and schema are unchanged.
+
+- Runtime source: `a6e75b8e56196be87712c92e7a3c9507dff9840f`.
+- PR #8 merge: `42c6ee764483dcc54f044e31b05f1d52c8a64b5f`.
+- Exact-source validation/publication: `40776169926`, successful; publication
+  job `123127342914` passed image smoke, the exact-commit gate and a fresh
+  anonymous immutable-digest pull.
+- PR validation `40776169536` and main validation `40776973274` passed,
+  including the existing disposable SQL, lint/build and image checks.
+- New application image:
+  `ghcr.io/errandom/qmt@sha256:bc08e479fd0ccf1e4ac1f0bf1b9239e70395a5c933c21a2a24971fc21c85e6a4`.
+- Previous compatible code-rollback image:
+  `ghcr.io/errandom/qmt@sha256:b22324538b8545512d78518b8eb0931b6813892ce1a153b400553038b39cb26d`.
+
+Local Chromium layout checks passed at 375, 768, 1024, 1200 and 1720px:
+equal card heights across rows, status controls at bottom padding, wrapping
+amenities without overlap and no horizontal overflow. Synthetic fixtures
+included zero through six tags, long content, active/inactive sites and
+administrator/management versus visitor controls. The pre-fix layout reproduced
+the floating-status problem. These are local synthetic checks, not a claim of
+new authenticated production-browser acceptance.
+
+The already-enabled, Running app received one exact-property JSON-file ARM
+patch to `config/web.properties.linuxFxVersion`; read-back confirmed the new
+digest. No stop/start, infrastructure deployment, initialization or cleanup
+was replayed. At **23:07:17 Zurich**, trusted public HTTPS, health, SQL-backed
+sites read and HTTP 401 for anonymous `/api/db-check` passed. AI and Spond
+remained disabled, and no operational rows were written.
+
+The initial byte check correctly rejected the Windows build's different asset
+names. The live names matched the publication build log. An independent anonymous
+registry read verified the manifest digest, source revision, non-root Linux
+image configuration and compiled UI layer digest
+`sha256:2213153c1bf94a7244184a666720de46f5995532375414e7517f5969fc9929eb`.
+Files extracted from that verified layer matched all three live assets exactly:
+`index-KwYm1WAd.js`, `index-DFkLsRKg.css` and
+`OperationsOffice-CW-CdrsP.js`. The served OperationsOffice chunk contains the
+equal-row and bottom-anchoring layout classes.
+
+Before/after snapshots matched all 26 non-image invariants: application identity,
+enabled/Running state, HTTPS, hostnames, managed TLS, plan, network and identity;
+non-image web configuration and all app settings checksums; B1 single-worker
+Always On; Basic Online SQL tier, size and redundancy; guard identity,
+configuration and image/template; budget definition; heartbeat rule; and
+resource inventory. The separate budget guard retains its approved image.
+
+Secret-free private receipts are `qmt-release-before.json`,
+`qmt-release-after.json`, `qmt-release-image.json` and
+`qmt-release-live-result.json` in the operator session artifacts. Credentials
+and operational record contents are not retained there. Notification delivery,
+extended acceptance and stabilization remain open; this layout release does
+not close them.
