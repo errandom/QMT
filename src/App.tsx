@@ -68,11 +68,50 @@ function App() {
     )
   }
 
+  const scheduleWindow = (
+    <details className="group glass-card mb-6 text-card-foreground" style={{ borderRadius: SIZES.BORDER_RADIUS }}>
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[inherit] px-4 py-3 transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#248bcc] sm:px-5 [&::-webkit-details-marker]:hidden">
+        <CalendarBlank size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" className="shrink-0" style={{ color: COLORS.ACCENT }} aria-hidden="true" />
+        <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
+          <span className="text-sm font-semibold" style={{ color: COLORS.NAVY }}>Loaded schedule window</span>
+          <span className="text-xs tabular-nums text-muted-foreground sm:text-sm">
+            <time dateTime={eventWindow.from.slice(0, 10)} className="whitespace-nowrap">{eventWindow.from.slice(0, 10)}</time>
+            {' to '}
+            <time dateTime={eventWindow.to.slice(0, 10)} className="whitespace-nowrap">{eventWindow.to.slice(0, 10)}</time>
+          </span>
+        </span>
+        <CaretDown size={SIZES.ICON_SIZE_SMALL} className="shrink-0 text-muted-foreground group-open:rotate-180 motion-safe:transition-transform" aria-hidden="true" />
+      </summary>
+      <form className="grid gap-4 border-t border-[#001f3f]/10 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:p-5" onSubmit={event => {
+        event.preventDefault()
+        const from = new Date(`${rangeStart}T00:00:00Z`)
+        const to = new Date(`${rangeEnd}T00:00:00Z`)
+        to.setUTCDate(to.getUTCDate() + 1)
+        if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime())
+            || to <= from || to.getTime() - from.getTime() > 366 * 86400000) {
+          toast.error('Select a valid date range of at most 366 days')
+          return
+        }
+        void refreshData({ from: from.toISOString(), to: to.toISOString() })
+      }}>
+        <div className="space-y-2">
+          <Label htmlFor="schedule-range-start" className="text-foreground">From</Label>
+          <Input id="schedule-range-start" className="h-10" type="date" required value={rangeStart} onChange={event => setRangeStart(event.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="schedule-range-end" className="text-foreground">Through</Label>
+          <Input id="schedule-range-end" className="h-10" type="date" required value={rangeEnd} onChange={event => setRangeEnd(event.target.value)} />
+        </div>
+        <Button className="w-full text-white sm:w-auto" style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }} type="submit" disabled={isLoading}>Load selected range</Button>
+      </form>
+    </details>
+  )
+
   return (
     <>
       <Toaster />
       <div className="min-h-screen bg-background">
-        <Header 
+        <Header
           currentUser={currentUser}
           onLogin={handleSetUser}
           onLogout={handleLogout}
@@ -80,53 +119,21 @@ function App() {
           currentView={view}
         />
         <main className="container mx-auto px-4 py-6 max-w-7xl">
-          <details className="group glass-card mb-6 text-card-foreground" style={{ borderRadius: SIZES.BORDER_RADIUS }}>
-            <summary className="flex cursor-pointer list-none items-center gap-3 rounded-[inherit] px-4 py-3 transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#248bcc] sm:px-5 [&::-webkit-details-marker]:hidden">
-              <CalendarBlank size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" className="shrink-0" style={{ color: COLORS.ACCENT }} aria-hidden="true" />
-              <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
-                <span className="text-sm font-semibold" style={{ color: COLORS.NAVY }}>Loaded schedule window</span>
-                <span className="text-xs tabular-nums text-muted-foreground sm:text-sm">
-                  <time dateTime={eventWindow.from.slice(0, 10)} className="whitespace-nowrap">{eventWindow.from.slice(0, 10)}</time>
-                  {' to '}
-                  <time dateTime={eventWindow.to.slice(0, 10)} className="whitespace-nowrap">{eventWindow.to.slice(0, 10)}</time>
-                </span>
-              </span>
-              <CaretDown size={SIZES.ICON_SIZE_SMALL} className="shrink-0 text-muted-foreground group-open:rotate-180 motion-safe:transition-transform" aria-hidden="true" />
-            </summary>
-            <form className="grid gap-4 border-t border-[#001f3f]/10 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:p-5" onSubmit={event => {
-              event.preventDefault()
-              const from = new Date(`${rangeStart}T00:00:00Z`)
-              const to = new Date(`${rangeEnd}T00:00:00Z`)
-              to.setUTCDate(to.getUTCDate() + 1)
-              if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime())
-                  || to <= from || to.getTime() - from.getTime() > 366 * 86400000) {
-                toast.error('Select a valid date range of at most 366 days')
-                return
-              }
-              void refreshData({ from: from.toISOString(), to: to.toISOString() })
-            }}>
-              <div className="space-y-2">
-                <Label htmlFor="schedule-range-start" className="text-foreground">From</Label>
-                <Input id="schedule-range-start" className="h-10" type="date" required value={rangeStart} onChange={event => setRangeStart(event.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="schedule-range-end" className="text-foreground">Through</Label>
-                <Input id="schedule-range-end" className="h-10" type="date" required value={rangeEnd} onChange={event => setRangeEnd(event.target.value)} />
-              </div>
-              <Button className="w-full text-white sm:w-auto" style={{ ...STYLES.BUTTON_BASE, ...STYLES.NAVY_BUTTON }} type="submit" disabled={isLoading}>Load selected range</Button>
-            </form>
-          </details>
           {view === 'dashboard' ? (
             <Dashboard 
               currentUser={currentUser} 
               onLogin={handleSetUser}
               onNavigateToOffice={() => setView('office')}
+              scheduleWindow={scheduleWindow}
             />
           ) : (
-            <Suspense fallback={<p role="status">Loading operations office...</p>}><OperationsOffice
-              currentUser={currentUser!} 
-              onNavigateToDashboard={() => setView('dashboard')}
-            /></Suspense>
+            <>
+              {scheduleWindow}
+              <Suspense fallback={<p role="status">Loading operations office...</p>}><OperationsOffice
+                currentUser={currentUser!}
+                onNavigateToDashboard={() => setView('dashboard')}
+              /></Suspense>
+            </>
           )}
         </main>
       </div>

@@ -20,9 +20,67 @@ test('browser API contracts', async t => {
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
   });
-  const { api, apiRequest } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  const { api, apiRequest, ApiError } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
   const json = (body, status = 200) => new Response(JSON.stringify(body), {
     status, headers: { 'Content-Type': 'application/json' },
+  });
+  await t.test('booking conflicts preserve typed detail and overrides are sent only when explicitly requested', async () => {
+    const conflict = {
+      eventId: 7, title: 'Existing practice', eventType: 'Practice', status: 'Confirmed',
+      startTime: '2026-11-03T18:30:00Z', endTime: '2026-11-03T20:00:00Z',
+      requestedStartTime: '2026-11-03T18:00:00Z', requestedEndTime: '2026-11-03T19:00:00Z',
+      fields: [{ id: 1, name: 'Practice field', siteName: 'Synthetic site' }],
+      teams: [{ id: 3, name: 'Other team' }],
+    };
+    const calls = [];
+    let malformed = false;
+    const mock = t.mock.method(globalThis, 'fetch', async (_url, options) => {
+      const body = JSON.parse(options.body);
+      calls.push(body);
+      if (body.allow_conflicts === true) return json({
+        id: 9, start_time: conflict.requestedStartTime, end_time: conflict.requestedEndTime,
+      });
+      return json({ error: 'Location overlap', code: 'BOOKING_CONFLICT',
+        conflicts: [malformed ? { eventId: 7 } : conflict], hasMoreConflicts: false }, 409);
+    });
+    try {
+      await assert.rejects(api.createEvent({ description: 'Draft' }), error => {
+        assert.ok(error instanceof ApiError);
+        assert.equal(error.status, 409);
+        assert.deepEqual(error.bookingConflict, { conflicts: [conflict], hasMoreConflicts: false });
+        return true;
+      });
+      assert.equal(calls[0].allow_conflicts, undefined);
+      const saved = await api.updateEvent(9, { description: 'Draft', allow_conflicts: true });
+      assert.equal(saved.id, '9');
+      assert.equal(calls[1].allow_conflicts, true);
+      malformed = true;
+      await assert.rejects(api.createEvent({}), error => {
+        assert.equal(error.bookingConflict, undefined);
+        return true;
+      });
+    } finally { mock.mock.restore(); }
+  });
+  await t.test('site schedule URLs and booking names survive API reads, writes and explicit clearing', async () => {
+    const source = 'https://example.com/public-plan';
+    const mock = t.mock.method(globalThis, 'fetch', async (_url, options) => {
+      if (options.method === 'POST' || options.method === 'PUT') {
+        const body = JSON.parse(options.body);
+        return json({ id: 1, published_schedule_url: body.publishedScheduleUrl, published_booking_name: body.publishedBookingName });
+      }
+      return json([{ id: 1, published_schedule_url: source, published_booking_name: 'Synthetic Club' }]);
+    });
+    try {
+      const [site] = await api.getSites();
+      assert.equal(site.publishedScheduleUrl, source);
+      assert.equal(site.publishedBookingName, 'Synthetic Club');
+      const created = await api.createSite({ publishedScheduleUrl: source, publishedBookingName: 'Synthetic Club' });
+      assert.equal(created.publishedScheduleUrl, source);
+      assert.equal(created.publishedBookingName, 'Synthetic Club');
+      const cleared = await api.updateSite(1, { publishedScheduleUrl: null, publishedBookingName: null });
+      assert.equal(cleared.publishedScheduleUrl, '');
+      assert.equal(cleared.publishedBookingName, '');
+    } finally { mock.mock.restore(); }
   });
   await t.test('cursor pagination keeps a fixed time window and fetches every page', async () => {
     const calls = [];

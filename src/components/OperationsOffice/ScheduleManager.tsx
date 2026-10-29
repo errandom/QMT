@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { Event, EventType, EventStatus, GameLocation, Team, Field, User } from '@/lib/types'
-import { api, apiRequest } from '@/lib/api'
+import { api, apiRequest, ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -33,6 +34,10 @@ import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 import ScheduleExportDialog from '@/components/ScheduleExportDialog'
 import { useCapabilities } from '@/hooks/useCapabilities'
 import { formatEventTimeRange } from '@/lib/utils'
+import { usePublishedSchedules } from '@/hooks/usePublishedSchedules'
+import { publishedScheduleKey, publishedSites } from '@/lib/publishedSchedule'
+import PublishedBookingCheck from './PublishedBookingCheck'
+import SharedFieldNotice, { SharedFieldBadge } from '../SharedFieldNotice'
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -46,6 +51,13 @@ const WEEKDAYS = [
 
 interface ScheduleManagerProps {
   currentUser: User | null
+}
+
+function formatBookingInterval(start: string, end: string) {
+  return `${start.slice(0, 10)} ${formatEventTimeRange({
+    date: start.slice(0, 10), endDate: end.slice(0, 10),
+    startTime: start.slice(11, 16), endTime: end.slice(11, 16),
+  })}`
 }
 
 // Generates a draft only; the operator's mail client sends it.
@@ -65,9 +77,16 @@ async function sendTransportRequest(eventId: string | number): Promise<void> {
 
 export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const { capabilities } = useCapabilities()
-  const { events, setEvents, teams, fields, sites } = useData()
+  const { events, setEvents, teams, fields, sites, eventWindow } = useData()
   const [showDialog, setShowDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const savingRef = useRef(false)
+  const conflictRef = useRef<HTMLElement>(null)
+  const [conflictReview, setConflictReview] = useState<{
+    draftKey: string
+    details: NonNullable<ApiError['bookingConflict']>
+  } | null>(null)
 
   // Share dialog state
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -115,6 +134,13 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     awayCity: '',
     transportRequested: false
   })
+
+  const draftKey = JSON.stringify({ formData, editingId: editingEvent?.id })
+  const activeConflictReview = conflictReview?.draftKey === draftKey ? conflictReview.details : null
+  const canOverrideConflict = !!currentUser && ['admin', 'mgmt'].includes(currentUser.role)
+  useEffect(() => {
+    if (activeConflictReview) conflictRef.current?.focus()
+  }, [activeConflictReview])
 
   // Calculate how many recurring events will be created
   const calculateRecurringCount = () => {
@@ -215,6 +241,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   }, [formData.fieldIds, locationOptions])
 
   const handleCreate = () => {
+    setConflictReview(null)
     setEditingEvent(null)
     setFormData({
       title: '',
@@ -236,6 +263,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   }
 
   const handleEdit = (event: Event) => {
+    setConflictReview(null)
     setEditingEvent(event)
     // Populate form including recurring data and game location if it exists
     setFormData({
@@ -381,7 +409,14 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+    await saveEvent()
+  }
+
+  const saveEvent = async (allowConflicts = false) => {
+    if (savingRef.current || (allowConflicts && (!activeConflictReview || !canOverrideConflict))) return
+    savingRef.current = true
+    setIsSaving(true)
+    setConflictReview(null)
     try {
       // For Confirmed events, require at least one location (unless it's an away game)
       const isAwayGame = formData.eventType === 'Game' && formData.gameLocation === 'away'
@@ -401,9 +436,28 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         return
       }
 
+      const start = Date.parse(`${formData.date}T${formData.startTime}Z`)
+      const end = Date.parse(`${formData.endDate || formData.date}T${formData.endTime}Z`)
+      const lastEnd = formData.isRecurring && formData.recurringEndDate
+        ? Date.parse(`${formData.recurringEndDate}T${formData.startTime}Z`) + end - start
+        : end
+      if (allowConflicts && formData.fieldIds?.length &&
+          (start < Date.parse(eventWindow.from) || lastEnd > Date.parse(eventWindow.to))) {
+        // Load peers before saving so out-of-window overrides also show shared use immediately.
+        const peers: Event[] = []
+        for (let from = start; from < lastEnd; from += 366 * 86400000) {
+          peers.push(...await api.getEvents({
+            from: new Date(from).toISOString(),
+            to: new Date(Math.min(lastEnd, from + 366 * 86400000)).toISOString(),
+          }))
+        }
+        setEvents(current => [...new Map([...current, ...peers].map(event => [event.id, event])).values()])
+      }
+
       if (editingEvent) {
         // Editing existing event
         const apiData = {
+          allow_conflicts: allowConflicts,
           team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
           field_ids: formData.fieldIds && formData.fieldIds.length > 0 ? formData.fieldIds.join(',') : null,
           event_type: formData.eventType,
@@ -459,6 +513,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       } else {
         // Creating new event
         const apiData = {
+          allow_conflicts: allowConflicts,
           team_ids: formData.teamIds && formData.teamIds.length > 0 ? formData.teamIds.join(',') : null,
           field_ids: formData.fieldIds && formData.fieldIds.length > 0 ? formData.fieldIds.join(',') : null,
           event_type: formData.eventType,
@@ -520,20 +575,16 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       }
       
       setShowDialog(false)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving event:', error)
-      
-      // Handle field booking conflicts
-      if (error.status === 409) {
-        toast.error(error.message || 'Field booking conflict detected', {
-          duration: 5000,
-          description: error.conflictingEvent ? 
-            'This time slot is already booked for another game.' : 
-            undefined
-        })
+      if (error instanceof ApiError && error.bookingConflict) {
+        setConflictReview({ draftKey, details: error.bookingConflict })
       } else {
-        toast.error(error.message || 'Failed to save event')
+        toast.error(error instanceof Error ? error.message : 'Failed to save event')
       }
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
     }
   }
 
@@ -604,6 +655,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     setFilterStartDate('')
     setFilterEndDate('')
   }
+
+  const canCheckPublished = !!currentUser && ['admin', 'mgmt'].includes(currentUser.role)
+  const published = usePublishedSchedules(filteredAndSortedEvents, sites, fields, capabilities?.timezone, canCheckPublished)
 
   return (
     <div className="space-y-4">
@@ -725,91 +779,115 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {canCheckPublished && sites.some(site => site.publishedScheduleUrl) && (
+        <p className="text-xs text-muted-foreground">
+          {capabilities?.timezone
+            ? "Today's published bookings refresh every 5 minutes while this view is visible."
+            : 'Automatic checks await club settings; manual checks are available.'}
+          {' '}Source data may be cached for up to 1 minute. Checks never change QMT bookings or send notifications.
+        </p>
+      )}
+      <OperationsCardGrid columns={2}>
         {filteredAndSortedEvents.map((event) => (
           <Card key={event.id} className="glass-card">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2 flex-1">
-                  <CardTitle className="text-base">{event.title}</CardTitle>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge variant="secondary">{event.eventType}</Badge>
-                    <Badge>{event.status}</Badge>
-                    {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
-                  </div>
-                </div>
-                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-                  <div className="flex gap-1 shrink-0">
-                    {event.status === 'Cancelled' && (() => {
-                      const eventFieldIds = event.fieldIds || []
-                      const primaryField = eventFieldIds.length > 0 ? fields.find(f => f.id === eventFieldIds[0]) : null
-                      const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
-                      return site?.contactEmail ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-amber-600 hover:text-amber-600 hover:bg-amber-600/10"
-                          onClick={() => handleNotifyCancellation(event)}
-                          title="Notify site contact of cancellation"
-                        >
-                          <Envelope size={18} weight="bold" />
-                        </Button>
-                      ) : null
-                    })()}
-                    {capabilities?.transport && event.eventType === 'Game' && event.gameLocation === 'away' && event.status !== 'Cancelled' && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8"
-                        onClick={() => void sendTransportRequest(event.id)}
-                        title="Open transport email draft" aria-label="Open transport email draft">
-                        <Bus size={18} weight="bold" />
+            <OperationsCardHeader
+              title={event.title}
+              badges={
+                <>
+                  <Badge variant="secondary">{event.eventType}</Badge>
+                  <Badge>{event.status}</Badge>
+                  {!!event.sharedFieldBookings?.length && <SharedFieldBadge />}
+                  {event.isRecurring && <Badge variant="outline">Recurring</Badge>}
+                </>
+              }
+              actions={currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                <>
+                  {event.status === 'Cancelled' && (() => {
+                    const eventFieldIds = event.fieldIds || []
+                    const primaryField = eventFieldIds.length > 0 ? fields.find(f => f.id === eventFieldIds[0]) : null
+                    const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
+                    return site?.contactEmail ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-amber-600 hover:text-amber-600 hover:bg-amber-600/10"
+                        onClick={() => handleNotifyCancellation(event)}
+                        title="Notify site contact of cancellation"
+                      >
+                        <Envelope size={18} weight="bold" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-600/10"
-                      onClick={() => handleShare(event)}
-                      title="Share event"
-                    >
-                      <ShareNetwork size={18} weight="bold" />
+                    ) : null
+                  })()}
+                  {capabilities?.transport && event.eventType === 'Game' && event.gameLocation === 'away' && event.status !== 'Cancelled' && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8"
+                      onClick={() => void sendTransportRequest(event.id)}
+                      title="Open transport email draft" aria-label="Open transport email draft">
+                      <Bus size={18} weight="bold" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
-                      onClick={() => handleEdit(event)}
-                      title="Edit event"
-                    >
-                      <PencilSimple size={18} weight="bold" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDeleteClick(event)}
-                      title="Delete event"
-                    >
-                      <Trash size={18} weight="bold" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm space-y-1">
-              <div className="flex items-center gap-2">
-                <CalendarBlank size={14} />
-                {event.date} • {formatEventTimeRange(event)}
-              </div>
-              {event.teamIds && event.teamIds.length > 0 && (
-                <div className="text-xs text-muted-foreground">
-                  Teams: {event.teamIds.map(id => teams.find(t => t.id === id)?.name).join(', ')}
-                </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-600/10"
+                    onClick={() => handleShare(event)}
+                    title="Share event"
+                  >
+                    <ShareNetwork size={18} weight="bold" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                    onClick={() => handleEdit(event)}
+                    title="Edit event"
+                  >
+                    <PencilSimple size={18} weight="bold" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteClick(event)}
+                    title="Delete event"
+                  >
+                    <Trash size={18} weight="bold" />
+                  </Button>
+                </>
               )}
+            />
+            <CardContent className="flex flex-1 flex-col gap-1 text-sm">
+              <OperationsCardSection name="timing" className="flex items-start gap-2">
+                <CalendarBlank size={14} className="mt-0.5 shrink-0" />
+                <span>{event.date} • {formatEventTimeRange(event)}</span>
+              </OperationsCardSection>
+              <OperationsCardSection name="teams" className="text-xs text-muted-foreground">
+                {event.teamIds && event.teamIds.length > 0 && (
+                  <>
+                    Teams: {event.teamIds.map(id => teams.find(t => t.id === id)?.name).join(', ')}
+                  </>
+                )}
+              </OperationsCardSection>
+              <OperationsCardSection name="published-booking" className="space-y-2">
+                {canCheckPublished && publishedSites(event, fields, sites).map(site => (
+                  <PublishedBookingCheck key={site.id} event={event} site={site} fields={fields} teams={teams}
+                    state={published.results[publishedScheduleKey(site, event.date)]}
+                    onCheck={() => void published.check(site, event.date)} />
+                ))}
+              </OperationsCardSection>
+              <OperationsCardSection name="shared-field">
+                <SharedFieldNotice event={event} fields={fields} sites={sites} teams={teams} />
+              </OperationsCardSection>
             </CardContent>
           </Card>
         ))}
-      </div>
+      </OperationsCardGrid>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={open => {
+        if (!savingRef.current) {
+          setShowDialog(open)
+          if (!open) setConflictReview(null)
+        }
+      }}>
         <DialogContent 
           className="w-[95vw] max-w-3xl max-h-[95vh] overflow-y-auto operations-dialog p-4 sm:p-6"
           style={{
@@ -824,6 +902,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 pb-20 sm:pb-4">
+            <fieldset disabled={isSaving} className="min-w-0 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title" style={{ color: COLORS.CHARCOAL }}>Event Title *</Label>
               <Input
@@ -1241,6 +1320,33 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
               )}
             </div>
 
+            {activeConflictReview && (
+              <section ref={conflictRef} tabIndex={-1} role="alert" aria-labelledby="booking-conflict-heading"
+                className="space-y-3 rounded-md border border-amber-500 bg-amber-50 p-4 text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2">
+                <h3 id="booking-conflict-heading" className="font-semibold">Location booking conflict</h3>
+                <p className="text-sm">
+                  Nothing has been saved. {activeConflictReview.conflicts.length}{activeConflictReview.hasMoreConflicts ? '+' : ''} overlapping
+                  {' '}booking{activeConflictReview.conflicts.length === 1 ? '' : 's'} found for this {formData.isRecurring ? 'series' : 'event'}.
+                </p>
+                <ul className="max-h-64 space-y-3 overflow-y-auto text-sm break-words" tabIndex={0} aria-label="Overlapping bookings">
+                  {activeConflictReview.conflicts.map(conflict => (
+                    <li key={`${conflict.eventId}:${conflict.requestedStartTime}`} className="rounded border border-amber-200 bg-white p-3 space-y-1">
+                      <p className="font-semibold">{conflict.title} <span className="font-normal">({conflict.eventType}, {conflict.status})</span></p>
+                      <p>{conflict.fields.map(field => `${field.siteName} / ${field.name}`).join('; ')}</p>
+                      <p>Teams: {conflict.teams.map(team => team.name).join(', ') || 'No team assigned'}</p>
+                      <p>Already booked: {formatBookingInterval(conflict.startTime, conflict.endTime)}</p>
+                      <p>Your occurrence: {formatBookingInterval(conflict.requestedStartTime, conflict.requestedEndTime)}</p>
+                    </li>
+                  ))}
+                </ul>
+                {activeConflictReview.hasMoreConflicts && <p className="text-sm">Showing the first 200 overlaps; additional overlaps exist.</p>}
+                <p className="text-sm">
+                  Change the date, time or location and save again, or choose Save anyway to share the overlapping fields
+                  {' '}for {formData.isRecurring ? 'the entire series' : 'this event'}. No team will have exclusive use of the full field during overlaps. Existing bookings will not be changed.
+                </p>
+              </section>
+            )}
+
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                 <Button 
                   type="button" 
@@ -1264,9 +1370,16 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   border: 'none'
                 }}
               >
-                {editingEvent ? 'Save' : 'Create'}
+                {isSaving ? 'Saving...' : activeConflictReview ? 'Check again' : editingEvent ? 'Save' : 'Create'}
               </Button>
+              {activeConflictReview && canOverrideConflict && (
+                <Button type="button" className="w-full sm:w-auto min-h-[44px]" variant="destructive"
+                  onClick={() => void saveEvent(true)}>
+                  Save anyway{formData.isRecurring ? ' (entire series)' : ''}
+                </Button>
+              )}
             </div>
+            </fieldset>
           </form>
         </DialogContent>
       </Dialog>
@@ -1280,7 +1393,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
             setShareDialogEvent(null)
             setShareDialogOriginalEvent(null)
           }}
-          event={shareDialogEvent}
+          event={events.find(event => event.id === shareDialogEvent.id) || shareDialogEvent}
           originalEvent={shareDialogOriginalEvent}
           teams={teams}
           fields={fields}

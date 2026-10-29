@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Cube, MapPin, ListBullets, Calendar, Football, FootballHelmet, Plus, Briefcase } from '@phosphor-icons/react'
@@ -17,9 +17,10 @@ interface DashboardProps {
   currentUser: User | null
   onLogin?: (user: User) => void
   onNavigateToOffice?: () => void
+  scheduleWindow?: ReactNode
 }
 
-export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: DashboardProps) {
+export default function Dashboard({ currentUser, onLogin, onNavigateToOffice, scheduleWindow }: DashboardProps) {
   const [sportFilter, setSportFilter] = useState<'All Sports' | SportType>('All Sports')
   const [teamFilter, setTeamFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'schedule'>('list')
@@ -424,6 +425,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice }: 
 
         <div>
           <h2 className="text-xl font-semibold mb-4 drop-shadow-lg" style={{ color: COLORS.NAVY }}>Upcoming Events</h2>
+          {scheduleWindow}
           {viewMode === 'list' ? (
             <EventList sportFilter={sportFilter} teamFilter={teamFilter} />
           ) : (

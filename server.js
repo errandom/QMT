@@ -10,6 +10,7 @@ const { createLimiter, eventRange, validateEvent } = require('./server/limits.cj
 const { createLogger } = require('./server/logger.cjs');
 const { registerBookingRoutes } = require('./server/bookings.cjs');
 const { registerRequestRoutes } = require('./server/requests.cjs');
+const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./server/published-schedules.cjs');
 
 function createApp({ env = process.env, connect } = {}) {
 const config = readConfig(env);
@@ -141,6 +142,7 @@ app.use('/api/events', (req, res, next) => {
 });
 registerBookingRoutes(app, { getPool, logger: console });
 registerRequestRoutes(app, { getPool, logger: console });
+registerPublishedScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone });
 
 // ------------------------------
 // Diagnostic routes
@@ -941,6 +943,8 @@ app.get('/api/sites/:id', async (req, res) => {
 
 app.post('/api/sites', async (req, res) => {
   try {
+    const schedule = siteScheduleSchema.safeParse(req.body);
+    if (!schedule.success) return res.status(400).json({ error: schedule.error.issues[0].message });
     const { 
       name, 
       address, 
@@ -973,18 +977,20 @@ app.post('/api/sites', async (req, res) => {
       .input('contact_email', sql.NVarChar, contactEmail || null)
       .input('is_sports_facility', sql.Bit, isSportsFacility !== false)
       .input('amenities', sql.NVarChar, amenities || null)
+      .input('published_schedule_url', sql.NVarChar(2048), schedule.data.publishedScheduleUrl || null)
+      .input('published_booking_name', sql.NVarChar(200), schedule.data.publishedBookingName || null)
       .input('active', sql.Bit, isActive !== false)
       .query(`
         INSERT INTO sites (
           name, address, city, zip_code, latitude, longitude,
           contact_first_name, contact_last_name, contact_phone, contact_email,
-          is_sports_facility, amenities, active
+          is_sports_facility, amenities, active, published_schedule_url, published_booking_name
         )
         OUTPUT INSERTED.*
         VALUES (
           @name, @address, @city, @zip_code, @latitude, @longitude,
           @contact_first_name, @contact_last_name, @contact_phone, @contact_email,
-          @is_sports_facility, @amenities, @active
+          @is_sports_facility, @amenities, @active, @published_schedule_url, @published_booking_name
         )
       `);
 
@@ -998,6 +1004,8 @@ app.post('/api/sites', async (req, res) => {
 
 app.put('/api/sites/:id', async (req, res) => {
   try {
+    const schedule = siteScheduleSchema.safeParse(req.body);
+    if (!schedule.success) return res.status(400).json({ error: schedule.error.issues[0].message });
     const { 
       name, 
       address, 
@@ -1031,6 +1039,10 @@ app.put('/api/sites/:id', async (req, res) => {
       .input('contact_email', sql.NVarChar, contactEmail || null)
       .input('is_sports_facility', sql.Bit, isSportsFacility !== undefined ? isSportsFacility : true)
       .input('amenities', sql.NVarChar, amenities || null)
+      .input('published_schedule_url', sql.NVarChar(2048), schedule.data.publishedScheduleUrl ?? null)
+      .input('published_schedule_url_present', sql.Bit, schedule.data.publishedScheduleUrl !== undefined)
+      .input('published_booking_name', sql.NVarChar(200), schedule.data.publishedBookingName ?? null)
+      .input('published_booking_name_present', sql.Bit, schedule.data.publishedBookingName !== undefined)
       .input('active', sql.Bit, isActive !== undefined ? isActive : true)
       .query(`
         UPDATE sites 
@@ -1046,6 +1058,8 @@ app.put('/api/sites/:id', async (req, res) => {
             contact_email = @contact_email,
             is_sports_facility = @is_sports_facility,
             amenities = @amenities,
+            published_schedule_url = CASE WHEN @published_schedule_url_present = 1 THEN @published_schedule_url ELSE published_schedule_url END,
+            published_booking_name = CASE WHEN @published_booking_name_present = 1 THEN @published_booking_name ELSE published_booking_name END,
             active = @active,
             updated_at = GETDATE()
         OUTPUT INSERTED.*

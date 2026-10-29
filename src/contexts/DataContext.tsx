@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, Dispatch, SetStateAction } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode, Dispatch, SetStateAction } from 'react'
 import { api, getToken } from '@/lib/api'
 import type { Event, Team, Site, Field, Equipment, FacilityRequest, EquipmentRequest, CancellationRequest } from '@/lib/types'
+import { withFieldSharing } from '@/lib/fieldSharing'
 
 interface DataContextType {
   events: Event[]
@@ -30,7 +31,8 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined)
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [events, setEvents] = useState<Event[]>([])
+  const [storedEvents, setEvents] = useState<Event[]>([])
+  const events = useMemo(() => withFieldSharing(storedEvents), [storedEvents])
   const [teams, setTeams] = useState<Team[]>([])
   const [sites, setSites] = useState<Site[]>([])
   const [fields, setFields] = useState<Field[]>([])

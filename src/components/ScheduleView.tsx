@@ -7,6 +7,10 @@ import { CalendarBlank } from '@phosphor-icons/react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useState } from 'react'
 import { formatEventTimeRange } from '@/lib/utils'
+import { formatSharedFieldBookings } from '@/lib/fieldSharing'
+import SharedFieldNotice from './SharedFieldNotice'
+import { buildWeeklyProgram } from '@/lib/scheduleProgram'
+import { Button } from '@/components/ui/button'
 
 interface ScheduleViewProps {
   sportFilter: 'All Sports' | SportType
@@ -23,6 +27,7 @@ function mondayOf(date: string) {
 
 export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewProps) {
   const { events, teams, fields, sites, eventWindow, refreshData, isLoading, error } = useData()
+  const [view, setView] = useState<'program' | 'week'>('program')
   const [weekStart, setWeekStart] = useState(() => mondayOf(new Date().toISOString().slice(0, 10)))
   const weekDates = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(`${weekStart}T00:00:00Z`)
@@ -45,8 +50,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return true
   })
 
-  // Recurrence is materialized in SQL: display actual dated occurrences, not a synthetic template week.
-  const displayEvents = allEvents.flatMap(event => weekDates.flatMap(date => {
+  const weeklyEvents = allEvents.flatMap(event => weekDates.flatMap(date => {
     const endDate = event.endDate || event.date
     if (event.date > date || endDate < date) return []
     const startTime = event.date === date ? event.startTime : '00:00'
@@ -54,6 +58,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     if (endTime <= startTime) return []
     return [{ ...event, date, startTime, endTime, originalEvent: event }]
   }))
+  const displayEvents: (Event & { originalEvent: Event; programDates?: string[] })[] = view === 'program'
+    ? buildWeeklyProgram(allEvents, weekDates, eventWindow) : weeklyEvents
 
   // Helper to get field IDs for an event (supports both fieldIds array and legacy fieldId)
   const getEventFieldIds = (event: any): string[] => {
@@ -66,10 +72,13 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     return []
   }
 
+  const bookedFieldIds = new Set(displayEvents.flatMap(getEventFieldIds))
+  const bookedFields = fields.filter(field => bookedFieldIds.has(field.id))
+
   // Filter sites to only show those with events, sorted by event count (most events first)
   const activeSites = sites
     .map(site => {
-      const siteFields = fields.filter(f => f.siteId === site.id)
+      const siteFields = bookedFields.filter(f => f.siteId === site.id)
       const siteFieldIds = siteFields.map(f => f.id)
       const eventCount = displayEvents.filter(e => {
         const eventFieldIds = getEventFieldIds(e)
@@ -185,15 +194,29 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
       Load this week (outside loaded window)
     </button>}
   </div>
+  const viewControls = <div className="space-y-3">
+    <div role="group" aria-label="Schedule view" className="flex flex-wrap gap-2">
+      <Button variant={view === 'program' ? 'default' : 'charcoal'} aria-pressed={view === 'program'}
+        onClick={() => setView('program')}>Weekly program</Button>
+      <Button variant={view === 'week' ? 'default' : 'charcoal'} aria-pressed={view === 'week'}
+        onClick={() => setView('week')}>Specific week</Button>
+    </div>
+    {view === 'program'
+      ? <p className="text-sm text-muted-foreground">
+        Recurring program from loaded bookings ({eventWindow.from.slice(0, 10)} to {eventWindow.to.slice(0, 10)}).
+        {' '}Repeated dates are combined. Use Specific week for actual bookings, one-off events and exceptions.
+      </p> : weekControls}
+  </div>
 
   if (displayEvents.length === 0) {
     return (
       <div className="space-y-4">
-      {weekControls}
+      {viewControls}
       <Alert>
         <CalendarBlank className="h-4 w-4" />
         <AlertDescription>
           {isLoading ? 'Loading schedule...' : error ? 'The schedule could not be loaded; retry before relying on availability.'
+            : view === 'program' ? 'No matching recurring events in the loaded schedule.'
             : weekOutsideWindow ? 'Load the selected week to check its schedule.' : 'No matching events in the selected week.'}
         </AlertDescription>
       </Alert>
@@ -203,9 +226,9 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
 
   return (
     <div className="space-y-6">
-      {weekControls}
+      {viewControls}
       {activeSites.map(site => {
-        const siteFields = fields.filter(f => f.siteId === site.id)
+        const siteFields = bookedFields.filter(f => f.siteId === site.id)
         if (siteFields.length === 0) return null
 
         return (
@@ -241,8 +264,9 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                         const { rowCount, eventRowMap } = assignEventRows(dayEvents)
                         
                         return (
-                          <div key={day} className="relative rounded-lg border" style={{
-                            height: '120px', // Fixed height for all day boxes
+                          <div key={day} className={`relative rounded-lg border ${view === 'program' ? 'space-y-2 p-2' : ''}`} style={{
+                            minHeight: '120px',
+                            height: view === 'week' ? '120px' : undefined,
                             background: 'rgba(255, 255, 255, 0.4)',
                             borderColor: 'rgba(36, 139, 204, 0.3)'
                           }}>
@@ -257,25 +281,35 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                 const rowIndex = eventRowMap.get(event.id) || 0
                                 const totalRows = Math.max(rowCount, 1)
                                 const rowHeight = 120 / totalRows
+                                const sharedFieldBookings = (event.sharedFieldBookings || []).filter(booking =>
+                                  booking.fieldId === field.id
+                                  && (view === 'program' || (`${booking.date}T${booking.startTime}` < `${event.date}T${event.endTime}`
+                                  && `${booking.endDate}T${booking.endTime}` > `${event.date}T${event.startTime}`)))
+                                const sharingLabel = view === 'program' ? 'Shared on some dates' : 'Shared field'
                                 
                                 return (
                                   <Tooltip key={event.id}>
                                     <TooltipTrigger asChild>
                                       <div
-                                        className="absolute rounded px-1 flex items-center justify-center text-xs font-medium cursor-pointer hover:brightness-110 transition-all overflow-hidden shadow-md"
+                                        tabIndex={0}
+                                        aria-label={`${view === 'program' ? `${day}, ${event.startTime} - ${event.endTime}, ${eventTeams.map(team => team.name).join(', ')}, ` : ''}${event.title || event.eventType}${sharedFieldBookings.length
+                                          ? `; ${sharingLabel} - full field not exclusively available. ${formatSharedFieldBookings(sharedFieldBookings, fields, sites, teams)}`
+                                          : ''}`}
+                                        className={`${view === 'program' ? 'relative p-2 gap-1 break-words' : 'absolute px-1 items-center justify-center overflow-hidden'} rounded flex flex-col text-xs font-medium cursor-pointer hover:brightness-110 transition-all shadow-md`}
                                         style={{
-                                          ...position,
-                                          top: `${rowIndex * rowHeight + 4}px`,
-                                          height: `${rowHeight - 8}px`,
+                                          ...(view === 'week' ? { ...position, top: `${rowIndex * rowHeight + 4}px`, height: `${rowHeight - 8}px` } : {}),
                                           backgroundColor: isCancelled ? '#9ca3af' : teamColor.bg,
                                           color: teamColor.text,
                                           opacity: isCancelled ? 0.6 : 1,
                                           textDecoration: isCancelled ? 'line-through' : 'none'
                                         }}
                                       >
-                                        <span className="truncate">
+                                        {view === 'program' && <span className="font-semibold">{event.startTime} - {event.endTime}</span>}
+                                        {view === 'program' && eventTeams.length > 0 && <span>{eventTeams.map(team => team.name).join(', ')}</span>}
+                                        <span className={view === 'week' ? 'truncate' : ''}>
                                           {event.title || event.eventType}
                                         </span>
+                                        {sharedFieldBookings.length > 0 && <span className="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-950">{sharingLabel}</span>}
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent className="glass-card border-white/30 max-w-xs">
@@ -295,9 +329,13 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                           </div>
                                         )}
                                         <div className="text-muted-foreground">
-                                          <span className="font-medium">Time:</span> {event.originalEvent.date} {formatEventTimeRange(event.originalEvent)}
+                                          <span className="font-medium">Time:</span> {view === 'program'
+                                            ? `${event.startTime} - ${event.endTime}` : `${event.originalEvent.date} ${formatEventTimeRange(event.originalEvent)}`}
                                         </div>
-                                        <div className="flex items-center gap-1">
+                                        {event.programDates && <div className="text-muted-foreground">
+                                          Loaded occurrences: {event.programDates[0]} to {event.programDates[event.programDates.length - 1]} ({event.programDates.length} dates)
+                                        </div>}
+                                        {view === 'week' && <div className="flex items-center gap-1">
                                           <span className="font-medium text-muted-foreground">Status:</span>
                                           <Badge 
                                             variant={event.status === 'Confirmed' ? 'default' : event.status === 'Cancelled' ? 'destructive' : 'secondary'}
@@ -305,7 +343,8 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                                           >
                                             {event.status}
                                           </Badge>
-                                        </div>
+                                        </div>}
+                                        <SharedFieldNotice event={{ ...event.originalEvent, sharedFieldBookings }} fields={fields} sites={sites} teams={teams} />
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
@@ -319,7 +358,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                     )
                   })}
 
-                  <div className="grid grid-cols-8 gap-2 mt-2 pt-2 border-t border-white/30">
+                  {view === 'week' && <div className="grid grid-cols-8 gap-2 mt-2 pt-2 border-t border-white/30">
                     <div></div>
                     {DAYS.map(day => (
                       <div key={day} className="flex justify-between text-[10px] px-1" style={{ color: '#6b7280' }}>
@@ -328,7 +367,7 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
                         <span>{timeLabel(scheduleEnd)}</span>
                       </div>
                     ))}
-                  </div>
+                  </div>}
                 </div>
               </div>
             </CardContent>

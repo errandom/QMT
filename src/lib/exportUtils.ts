@@ -1,4 +1,5 @@
 import { Event, Team, Field, Site } from './types'
+import { formatSharedFieldBookings, withFieldSharing } from './fieldSharing'
 
 // Pure JavaScript CSV export - no external dependencies needed
 
@@ -29,6 +30,8 @@ export interface ExportRow {
   'Other Participants': string
   'Estimated Attendance': number | string
   'Field': string
+  'Field Allocation': string
+  'Shared Field Details': string
   'Site': string
   'Site Address': string
   'Recurring': string
@@ -116,7 +119,9 @@ export function transformEventsForExport(
   events: Event[],
   data: ExportData
 ): ExportRow[] {
+  const sharedEvents = new Map(withFieldSharing(data.events).map(event => [event.id, event]))
   return events.map(event => {
+    const sharedBookings = sharedEvents.get(event.id)?.sharedFieldBookings || []
     // Get team names
     const teamNames = event.teamIds
       ? event.teamIds
@@ -170,6 +175,8 @@ export function transformEventsForExport(
       'Other Participants': event.otherParticipants || '',
       'Estimated Attendance': event.estimatedAttendance || '',
       'Field': fieldNames,
+      'Field Allocation': sharedBookings.length ? 'Shared - full field not exclusively available' : '',
+      'Shared Field Details': formatSharedFieldBookings(sharedBookings, data.fields, data.sites, data.teams),
       'Site': siteNames.join(', '),
       'Site Address': siteAddresses.join(' | '),
       'Recurring': event.isRecurring ? 'Yes' : 'No',

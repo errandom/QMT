@@ -3,7 +3,8 @@ import { useData } from '@/contexts/DataContext'
 import { Team, SportType, RosterSize, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -180,62 +181,64 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
 
   const renderTeamCard = (team: Team) => (
     <Card key={team.id} className={!team.isActive ? 'opacity-60' : ''}>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
-              <Users size={16} />
-              {team.name}
-            </CardTitle>
-            <Badge variant={team.isActive ? 'default' : 'destructive'} className="text-xs">
-              {team.isActive ? 'Active' : 'Inactive'}
-            </Badge>
-          </div>
-          {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
-                onClick={() => handleEdit(team)}
-                title="Edit team"
-              >
-                <PencilSimple size={18} weight="bold" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => handleDelete(team.id)}
-                title="Delete team"
-              >
-                <Trash size={18} weight="bold" />
-              </Button>
+      <OperationsCardHeader
+        title={team.name}
+        icon={<Users size={16} className="mt-0.5" />}
+        badges={
+          <Badge variant={team.isActive ? 'default' : 'destructive'} className="text-xs">
+            {team.isActive ? 'Active' : 'Inactive'}
+          </Badge>
+        }
+        actions={currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+              onClick={() => handleEdit(team)}
+              title="Edit team"
+            >
+              <PencilSimple size={18} weight="bold" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => handleDelete(team.id)}
+              title="Delete team"
+            >
+              <Trash size={18} weight="bold" />
+            </Button>
+          </>
+        )}
+      />
+      <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+        <OperationsCardSection name="roster">
+          {team.rosterSize && (
+            <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+              <span className="text-muted-foreground">Roster: </span>
+              {team.rosterSize}
             </div>
           )}
-        </div>
-      </CardHeader>
-      <CardContent className="text-sm space-y-2">
-        {team.rosterSize && (
-          <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-            <span className="text-muted-foreground">Roster: </span>
-            {team.rosterSize}
-          </div>
-        )}
-        {team.headCoach && (
-          <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-            <span className="text-muted-foreground">Coach: </span>
-            {team.headCoach.firstName} {team.headCoach.lastName}
-          </div>
-        )}
-        {team.teamManager && (
-          <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-            <span className="text-muted-foreground">Manager: </span>
-            {team.teamManager.firstName} {team.teamManager.lastName}
-          </div>
-        )}
+        </OperationsCardSection>
+        <OperationsCardSection name="coach">
+          {team.headCoach && (
+            <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+              <span className="text-muted-foreground">Coach: </span>
+              {team.headCoach.firstName} {team.headCoach.lastName}
+            </div>
+          )}
+        </OperationsCardSection>
+        <OperationsCardSection name="manager">
+          {team.teamManager && (
+            <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+              <span className="text-muted-foreground">Manager: </span>
+              {team.teamManager.firstName} {team.teamManager.lastName}
+            </div>
+          )}
+        </OperationsCardSection>
         {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-          <div className="flex items-center justify-between pt-2 border-t">
+          <div className="mt-auto flex items-center justify-between pt-2 border-t">
             <span className="text-xs font-medium" style={{ color: COLORS.CHARCOAL }}>Status</span>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: COLORS.CHARCOAL }}>
@@ -268,18 +271,18 @@ export default function TeamsManager({ currentUser }: TeamsManagerProps) {
       {tackleTeams.length > 0 && (
         <div className="space-y-3">
           <h3 className="font-semibold text-lg">Tackle Football</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <OperationsCardGrid>
             {tackleTeams.map(renderTeamCard)}
-          </div>
+          </OperationsCardGrid>
         </div>
       )}
 
       {flagTeams.length > 0 && (
         <div className="space-y-3">
           <h3 className="font-semibold text-lg">Flag Football</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <OperationsCardGrid>
             {flagTeams.map(renderTeamCard)}
-          </div>
+          </OperationsCardGrid>
         </div>
       )}
 

@@ -17,10 +17,25 @@ const bookingSchema = z.object({
   transport_requested: z.boolean().optional(),
   recurring_days: z.union([z.string(), z.array(z.number().int())]).nullable().optional(),
   recurring_end_date: optionalText(10),
+  allow_conflicts: z.boolean().optional(),
 });
 
 class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
+}
+
+class BookingConflictError extends HttpError {
+  constructor(rows) {
+    super(409, 'The selected location is already booked during this interval');
+    this.conflicts = rows.slice(0, 200).map(row => ({
+      eventId: row.id, title: row.description || row.event_type,
+      eventType: row.event_type, status: row.status,
+      startTime: row.start_time, endTime: row.end_time,
+      requestedStartTime: row.requested_start, requestedEndTime: row.requested_end,
+      fields: JSON.parse(row.fields), teams: JSON.parse(row.teams),
+    }));
+    this.hasMoreConflicts = rows.length > 200;
+  }
 }
 
 function ids(value) {
@@ -104,23 +119,43 @@ async function saveBooking(tx, body, id) {
       .query('SELECT id FROM teams WHERE id = @id AND active = 1');
     if (!active.recordset.length) throw new HttpError(400, 'A selected team is unavailable');
   }
-  const saved = [];
-  for (const { start, end } of dates) {
-    if (fields.length && !['Cancelled', 'Completed'].includes(body.status)) {
+  if (fields.length && !['Cancelled', 'Completed'].includes(body.status)) {
+    if (dates.some(({ start }, index) => index > 0 && start < dates[index - 1].end)) {
+      throw new HttpError(409, 'Recurring occurrences overlap each other. Shorten the duration or change the weekdays.');
+    }
+    if (!body.allow_conflicts) {
       const conflicts = await new sql.Request(tx)
-        .input('from', sql.DateTime2, start).input('to', sql.DateTime2, end)
-        .input('id', sql.Int, id !== undefined && !saved.length ? id : null).input('fields', sql.NVarChar(255), fields.join(','))
+        .input('intervals', sql.NVarChar(sql.MAX), JSON.stringify(dates.map(({ start, end }) => ({
+          start: start.toISOString().slice(0, -1), end: end.toISOString().slice(0, -1),
+        }))))
+        .input('id', sql.Int, id ?? null)
+        .input('fields', sql.NVarChar(255), fields.join(','))
         .query(`
-          SELECT TOP 1 e.id FROM events e
+          SELECT TOP (201) e.id, e.description, e.event_type, COALESCE(e.status, 'Planned') AS status, e.start_time, e.end_time,
+            occurrence.start_time AS requested_start, occurrence.end_time AS requested_end,
+            (SELECT f.id, f.name, s.name AS siteName FROM fields f JOIN sites s ON s.id = f.site_id
+              WHERE CHARINDEX(',' + CONVERT(nvarchar(20), f.id) + ',',
+                ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0
+                AND f.id IN (SELECT TRY_CONVERT(int, value) FROM STRING_SPLIT(@fields, ','))
+              ORDER BY f.id FOR JSON PATH) AS fields,
+            (SELECT t.id, t.name FROM teams t
+              WHERE CHARINDEX(',' + CONVERT(nvarchar(20), t.id) + ',',
+                ',' + COALESCE(NULLIF(e.team_ids, ''), CONVERT(nvarchar(20), e.team_id), '') + ',') > 0
+              ORDER BY t.id FOR JSON PATH) AS teams
+          FROM OPENJSON(@intervals) WITH (start_time datetime2 '$.start', end_time datetime2 '$.end') occurrence
+          JOIN events e ON e.start_time < occurrence.end_time AND e.end_time > occurrence.start_time
           WHERE (@id IS NULL OR e.id <> @id)
             AND ISNULL(e.status, 'Planned') NOT IN ('Cancelled', 'Completed', 'cancelled', 'completed')
-            AND e.start_time < @to AND e.end_time > @from
             AND EXISTS (SELECT 1 FROM STRING_SPLIT(@fields, ',') f
               WHERE CHARINDEX(',' + f.value + ',',
                 ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0)
+          ORDER BY occurrence.start_time, e.start_time, e.id
         `);
-      if (conflicts.recordset.length) throw new HttpError(409, 'The selected field is already booked during this interval');
+      if (conflicts.recordset.length) throw new BookingConflictError(conflicts.recordset);
     }
+  }
+  const saved = [];
+  for (const { start, end } of dates) {
     const request = new sql.Request(tx);
     const values = {
       team_ids: [sql.NVarChar(255), teams.join(',') || null],
@@ -166,15 +201,23 @@ function registerBookingRoutes(app, { getPool, logger }) {
             .query('DELETE FROM events OUTPUT DELETED.id WHERE id = @id');
           if (!deleted.recordset.length) throw new HttpError(404, 'Event not found');
         });
+        if (method !== 'delete' && req.body.allow_conflicts === true) {
+          logger.warn('Booking overlap override saved', { userId: req.user.id, eventIds: (Array.isArray(result) ? result : [result]).map(event => event.id) });
+        }
         if (method === 'delete') return res.status(204).end();
         res.status(method === 'post' ? 201 : 200).json(result);
       } catch (error) {
         logger.error('Booking operation failed', error);
         res.status(error instanceof HttpError ? error.status : 503)
-          .json({ error: error instanceof HttpError ? error.message : 'Booking operation unavailable; retry later' });
+          .json({
+            error: error instanceof HttpError ? error.message : 'Booking operation unavailable; retry later',
+            ...(error instanceof BookingConflictError ? {
+              code: 'BOOKING_CONFLICT', conflicts: error.conflicts, hasMoreConflicts: error.hasMoreConflicts,
+            } : {}),
+          });
       }
     });
   }
 }
 
-module.exports = { HttpError, ids, bookingDates, bookingSchema, transaction, saveBooking, registerBookingRoutes };
+module.exports = { HttpError, BookingConflictError, ids, bookingDates, bookingSchema, transaction, saveBooking, registerBookingRoutes };

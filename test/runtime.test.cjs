@@ -110,9 +110,119 @@ test('current database role wins over an old administrator JWT', async () => {
       body: JSON.stringify({ username: 'another', password: 'synthetic-only', role: 'admin' }),
     });
     assert.equal(response.status, 403);
+    const booking = await fetch(base + '/api/events', {
+      method: 'POST', headers: { Authorization: ['Bearer', token].join(' '), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_type: 'Practice', start_time: '2026-11-03T18:00:00Z',
+        end_time: '2026-11-03T19:00:00Z', field_ids: '1', allow_conflicts: true,
+      }),
+    });
+    assert.equal(booking.status, 403);
   }, async () => pool);
 });
 
+test('site schedule settings round-trip, clear explicitly, survive old update payloads and remain out of public DTOs', async () => {
+  const source = 'https://www.sportanlagen-app.net/Public/Spielplan?k=9&m=Synthetic&size=1&tag=0';
+  let site = { id: 1, name: 'Synthetic Site', published_schedule_url: null, published_booking_name: null };
+  let writes = 0;
+  const pool = {
+    connected: true, on() { }, async close() { },
+    request() {
+      const inputs = {};
+      return {
+        input(name, _type, value) { inputs[name] = value; return this; },
+        async query(query) {
+          if (query.includes('SELECT role, is_active, username FROM users')) {
+            return { recordset: [{ role: 'mgmt', username: 'test', is_active: true }] };
+          }
+          if (query.includes('INSERT INTO sites')) {
+            writes++;
+            assert.match(query, /@published_schedule_url, @published_booking_name/);
+            site = { ...site, published_schedule_url: inputs.published_schedule_url, published_booking_name: inputs.published_booking_name };
+          }
+          if (query.includes('UPDATE sites')) {
+            writes++;
+            assert.match(query, /CASE WHEN @published_schedule_url_present = 1 THEN @published_schedule_url ELSE published_schedule_url END/);
+            assert.match(query, /CASE WHEN @published_booking_name_present = 1 THEN @published_booking_name ELSE published_booking_name END/);
+            if (inputs.published_schedule_url_present) site.published_schedule_url = inputs.published_schedule_url;
+            if (inputs.published_booking_name_present) site.published_booking_name = inputs.published_booking_name;
+          }
+          return { recordset: [{ ...site }] };
+        },
+      };
+    },
+  };
+  await withApp(async base => {
+    const token = jwt.sign({ id: 1, role: 'mgmt', username: 'test' }, secret);
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const write = async (method, body) => fetch(`${base}/api/sites${method === 'POST' ? '' : '/1'}`, {
+      method, headers, body: JSON.stringify({ name: site.name, ...body }),
+    });
+    const created = await write('POST', { publishedScheduleUrl: ` ${source} `, publishedBookingName: ' Synthetic Club ' });
+    assert.equal(created.status, 201);
+    assert.equal((await created.json()).published_schedule_url, source);
+    assert.equal(site.published_booking_name, 'Synthetic Club');
+    const updated = await write('PUT', { isActive: false });
+    assert.equal(updated.status, 200);
+    assert.equal((await updated.json()).published_schedule_url, source);
+    assert.equal(site.published_booking_name, 'Synthetic Club');
+    const publicSite = await (await fetch(`${base}/api/sites/1`)).json();
+    assert.ok(!Object.hasOwn(publicSite, 'published_schedule_url'));
+    assert.ok(!Object.hasOwn(publicSite, 'published_booking_name'));
+    const cleared = await write('PUT', { publishedScheduleUrl: '', publishedBookingName: null });
+    assert.equal(cleared.status, 200);
+    assert.equal((await cleared.json()).published_schedule_url, null);
+    assert.equal(site.published_booking_name, null);
+    const before = writes;
+    for (const bad of ['javascript:alert(1)', 'https://user:pass@example.com/', 5]) {
+      assert.equal((await write('PUT', { publishedScheduleUrl: bad })).status, 400);
+    }
+    assert.equal(writes, before);
+  }, async () => pool);
+});
+
+test('published schedule checks require fresh operations permission and validate identifiers before reading source settings', async () => {
+  let role = 'user', active = true, reads = 0;
+  let source = null;
+  const pool = {
+    connected: true, on() { }, async close() { },
+    request() {
+      return {
+        input() { return this; },
+        async query(query) {
+          if (query.includes('SELECT role, is_active, username FROM users')) {
+            return { recordset: [{ role, username: 'test', is_active: active }] };
+          }
+          assert.match(query, /SELECT published_schedule_url FROM sites WHERE id = @id/);
+          reads++;
+          return { recordset: [{ published_schedule_url: source }] };
+        },
+      };
+    },
+  };
+  await withApp(async base => {
+    const url = `${base}/api/sites/1/published-schedule?date=2026-10-29`;
+    const token = jwt.sign({ id: 1, role: 'admin', username: 'test' }, secret);
+    const headers = { Authorization: `Bearer ${token}` };
+    assert.equal((await fetch(url)).status, 401);
+    assert.equal((await fetch(url, { headers })).status, 403);
+    assert.equal(reads, 0);
+    role = 'mgmt';
+    const response = await fetch(url, { headers });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).status, 'not_configured');
+    source = 'https://example.com/public-plan';
+    const unsupported = await fetch(url, { headers });
+    assert.equal((await unsupported.json()).status, 'unsupported');
+    assert.equal(reads, 2);
+    for (const path of ['/1/published-schedule?date=2026-02-31', '/2147483648/published-schedule?date=2026-10-29', '/1/published-schedule?date=x']) {
+      assert.equal((await fetch(`${base}/api/sites${path}`, { headers })).status, 400);
+    }
+    assert.equal(reads, 2);
+    active = false;
+    assert.equal((await fetch(url, { headers })).status, 401);
+  }, async () => pool);
+});
 test('invalid event ranges fail before SQL and oversized bodies are rejected', async () => {
   await withApp(async base => {
     assert.equal((await fetch(base + '/api/events?limit=501')).status, 400);

@@ -3,7 +3,8 @@ import { useData } from '@/contexts/DataContext'
 import { Site, Amenity, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,6 +35,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
     contactLastName: '',
     contactPhone: '',
     contactEmail: '',
+    publishedScheduleUrl: '',
+    publishedBookingName: '',
     isSportsFacility: true,
     amenities: {
       parking: false,
@@ -59,6 +62,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
       contactLastName: '',
       contactPhone: '',
       contactEmail: '',
+      publishedScheduleUrl: '',
+      publishedBookingName: '',
       isSportsFacility: true,
       amenities: {
         parking: false,
@@ -87,6 +92,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
       contactLastName: site.contactLastName,
       contactPhone: site.contactPhone,
       contactEmail: site.contactEmail,
+      publishedScheduleUrl: site.publishedScheduleUrl || '',
+      publishedBookingName: site.publishedBookingName || '',
       isSportsFacility: site.isSportsFacility,
       amenities: site.amenities,
       isActive: site.isActive
@@ -131,6 +138,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         contactLastName: formData.contactLastName || null,
         contactPhone: formData.contactPhone || null,
         contactEmail: formData.contactEmail || null,
+        publishedScheduleUrl: formData.publishedScheduleUrl?.trim() || null,
+        publishedBookingName: formData.publishedBookingName?.trim() || null,
         isSportsFacility: formData.isSportsFacility,
         amenities: JSON.stringify(formData.amenities),
         isActive: formData.isActive
@@ -204,6 +213,8 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
           contactLastName: site.contactLastName || null,
           contactPhone: site.contactPhone || null,
           contactEmail: site.contactEmail || null,
+          publishedScheduleUrl: site.publishedScheduleUrl || null,
+          publishedBookingName: site.publishedBookingName || null,
           isSportsFacility: site.isSportsFacility,
           amenities: JSON.stringify(site.amenities),
           isActive: !currentActive
@@ -231,57 +242,60 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
         </Button>
       </div>
 
-      <div className="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <OperationsCardGrid>
         {sites.map((site) => (
           <Card key={site.id} className={!site.isActive ? 'opacity-60' : ''}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
-                    <MapPin size={16} />
-                    {site.name}
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    {site.isSportsFacility && (
-                      <Badge variant="secondary" className="text-xs">Sports Facility</Badge>
-                    )}
-                    <Badge variant={site.isActive ? 'default' : 'destructive'} className="text-xs">
-                      {site.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-                </div>
-                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
-                      onClick={() => handleEdit(site)}
-                      title="Edit site"
-                    >
-                      <PencilSimple size={18} weight="bold" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(site.id)}
-                      title="Delete site"
-                    >
-                      <Trash size={18} weight="bold" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
+            <OperationsCardHeader
+              title={site.name}
+              icon={<MapPin size={16} className="mt-0.5" />}
+              actions={currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                    onClick={() => handleEdit(site)}
+                    title="Edit site"
+                  >
+                    <PencilSimple size={18} weight="bold" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(site.id)}
+                    title="Delete site"
+                  >
+                    <Trash size={18} weight="bold" />
+                  </Button>
+                </>
+              )}
+              badges={
+                <>
+                  {site.isSportsFacility && (
+                    <Badge variant="secondary" className="text-xs">Sports Facility</Badge>
+                  )}
+                  <Badge variant={site.isActive ? 'default' : 'destructive'} className="text-xs">
+                    {site.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                </>
+              }
+            />
             <CardContent className="flex flex-1 flex-col gap-2 text-sm">
               <div style={{ color: COLORS.CHARCOAL }}>
-                <div className="font-medium">{site.address}</div>
-                <div className="text-muted-foreground">{site.zipCode} {site.city}</div>
+                <OperationsCardSection name="address" className="font-medium">{site.address}</OperationsCardSection>
+                <OperationsCardSection name="locality" className="text-muted-foreground">{site.zipCode} {site.city}</OperationsCardSection>
               </div>
-              <div className="text-xs text-muted-foreground">
+              <OperationsCardSection name="contact" className="text-xs text-muted-foreground">
                 Contact: {site.contactFirstName} {site.contactLastName}
-              </div>
+              </OperationsCardSection>
+              <OperationsCardSection name="published-schedule" className="text-xs">
+                {site.publishedScheduleUrl && (
+                  <a href={site.publishedScheduleUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    Published schedule
+                  </a>
+                )}
+              </OperationsCardSection>
               <div className="flex flex-wrap gap-1">
                 {site.amenities.parking && <Badge variant="outline" className="text-xs">Parking</Badge>}
                 {site.amenities.toilets && <Badge variant="outline" className="text-xs">Toilets</Badge>}
@@ -310,7 +324,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </OperationsCardGrid>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent 
@@ -444,6 +458,39 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
                   style={{ color: COLORS.CHARCOAL }}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="publishedScheduleUrl" style={{ color: COLORS.CHARCOAL }}>Published schedule source (optional)</Label>
+              <Input
+                id="publishedScheduleUrl"
+                name="publishedScheduleUrl"
+                type="url"
+                maxLength={2048}
+                value={formData.publishedScheduleUrl || ''}
+                onChange={(e) => setFormData({ ...formData, publishedScheduleUrl: e.target.value })}
+                aria-describedby="published-schedule-help"
+                placeholder="https://..."
+                style={{ color: COLORS.CHARCOAL }}
+              />
+              <p id="published-schedule-help" className="text-xs text-muted-foreground">
+                Link to the facility's public allocation plan. Automatic checks support sportanlagen-app.net; other sources remain available for manual review.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="publishedBookingName" style={{ color: COLORS.CHARCOAL }}>Published booking name (optional)</Label>
+              <Input
+                id="publishedBookingName"
+                name="publishedBookingName"
+                maxLength={200}
+                value={formData.publishedBookingName || ''}
+                onChange={(e) => setFormData({ ...formData, publishedBookingName: e.target.value })}
+                aria-describedby="published-booking-help"
+                style={{ color: COLORS.CHARCOAL }}
+              />
+              <p id="published-booking-help" className="text-xs text-muted-foreground">
+                Exact team or club name shown in the public plan, if different from QMT team names. Pitch names (including sections such as A/B) must also match for an automatic match.
+              </p>
             </div>
 
             <div className="space-y-3">

@@ -3,7 +3,8 @@ import { useData } from '@/contexts/DataContext'
 import { Equipment, Team, User } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -121,53 +122,51 @@ export default function EquipmentManager({ currentUser }: EquipmentManagerProps)
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <OperationsCardGrid>
         {equipment.map((eq) => (
           <Card key={eq.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
-                    <Cube size={16} />
-                    {eq.name}
-                  </CardTitle>
-                  <Badge variant="outline">Qty: {eq.quantity}</Badge>
-                </div>
-                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
-                      onClick={() => handleEdit(eq)}
-                      title="Edit equipment"
-                    >
-                      <PencilSimple size={18} weight="bold" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(eq.id)}
-                      title="Delete equipment"
-                    >
-                      <Trash size={18} weight="bold" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              {eq.description && (
-                <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>{eq.description}</div>
+            <OperationsCardHeader
+              title={eq.name}
+              icon={<Cube size={16} className="mt-0.5" />}
+              badges={<Badge variant="outline">Qty: {eq.quantity}</Badge>}
+              actions={currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-[#248bcc] hover:text-[#248bcc] hover:bg-[#248bcc]/10"
+                    onClick={() => handleEdit(eq)}
+                    title="Edit equipment"
+                  >
+                    <PencilSimple size={18} weight="bold" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(eq.id)}
+                    title="Delete equipment"
+                  >
+                    <Trash size={18} weight="bold" />
+                  </Button>
+                </>
               )}
-              <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-                <span className="text-muted-foreground">Assigned to:</span> {getTeamName(eq.assignedTeamId)}
-              </div>
+            />
+            <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+              <OperationsCardSection name="description">
+                {eq.description && (
+                  <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>{eq.description}</div>
+                )}
+              </OperationsCardSection>
+              <OperationsCardSection name="assignment">
+                <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                  <span className="text-muted-foreground">Assigned to:</span> {getTeamName(eq.assignedTeamId)}
+                </div>
+              </OperationsCardSection>
             </CardContent>
           </Card>
         ))}
-      </div>
+      </OperationsCardGrid>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent 
