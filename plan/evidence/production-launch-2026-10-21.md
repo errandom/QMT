@@ -226,3 +226,63 @@ Secret-free private receipts are `qmt-release-before.json`,
 and operational record contents are not retained there. Notification delivery,
 extended acceptance and stabilization remain open; this layout release does
 not close them.
+
+## October 30 complete operations production update
+
+The owner authorized "push this all into production for me please" on
+October 29 at 23:46 Zurich. Release verification completed after midnight
+on October 30; the immutable container assets were verified at 00:05 Zurich.
+
+- Exact runtime source: `f7edf8b180024deb5c1dfb2293dbc19c346e41c9`.
+- PR #9 merge: `118367534cdb2c624c762fbff847b2e5183a48e6`.
+- Exact-source validation/publication `40969738295` and PR validation
+  `40969737588` passed. Disposable SQL migration/transaction, lint, build,
+  infrastructure compilation, non-root image smoke and anonymous digest
+  pull gates were preserved.
+- Local complete suite: 159 passed, one disposable-SQL skip; lint,
+  typecheck and production build passed. Real SQL integration ran in CI.
+- Application image:
+  `ghcr.io/errandom/qmt@sha256:9b1fa71ec753315974386650c47177f6908799f1239e630bb9929cd87cbee4d5`.
+- Compatible previous application image:
+  `ghcr.io/errandom/qmt@sha256:bc08e479fd0ccf1e4ac1f0bf1b9239e70395a5c933c21a2a24971fc21c85e6a4`.
+
+Released aligned Operations Office card sections; optional per-site published
+schedule URL and booking-name mapping; conservative published allocation checks;
+detailed conflict warnings with explicit overrides; derived shared-field
+indicators across views and sharing/export; booked-fields-only schedule rows;
+the default recurring Weekly program with Specific week retained; and the
+loaded-window disclosure immediately below Upcoming Events.
+
+An initial SCM basic-authentication probe returned 401; no authentication
+setting was changed. Existing Azure bearer authentication succeeded. A
+temporary bundled copy of the repository migration/readiness tools connected
+from the existing application network using protected operator credentials.
+Migration 003 added `published_schedule_url nvarchar(2048) NULL` and
+`published_booking_name nvarchar(200) NULL`. All three migration checksums,
+nullable column definitions and database readiness passed. SHA-256 fingerprints
+of all eight operational tables were unchanged, excluding only the new nullable
+columns. Temporary remote files, including the credential payload, were removed.
+There was no SQL firewall, principal, role or permission change.
+
+One exact-property ARM patch changed the already-running application's
+`config/web.properties.linuxFxVersion`. No stop/start, resource deployment,
+initialization, restore or deletion was replayed. Before/after snapshots matched
+26 non-image invariants, including app settings and non-image web configuration,
+network/firewall, B1 single-worker Always On, Basic Online SQL, managed TLS,
+resource inventory and the budget/independent guard configuration.
+
+Independent anonymous registry reads verified the manifest digest, source
+revision, non-root runtime and compiled UI layer. All seven live HTML/JS/CSS
+assets matched container bytes over trusted HTTPS. Protected administrator
+sign-in, SQL readiness, unchanged authenticated operational collections,
+published metadata reads, unconfigured-source response and invalid-date rejection
+passed. Actual production Chromium verified the range disclosure immediately
+after Upcoming Events at 1440px and 390px, Weekly program/Specific week switching,
+zero horizontal mobile overflow and no uncaught exceptions.
+
+Secret-free operator receipts are `qmt-complete-release-before.json`,
+`qmt-complete-release-after.json`, `qmt-complete-image.json`,
+`qmt-complete-live-assets.json`, `qmt-live-after.json`,
+`qmt-migration-apply-result.txt` and `qmt-complete-browser.json`.
+Code rollback retains the additive schema/migration record. Notification
+delivery, extended acceptance and stabilization are not closed by this release.

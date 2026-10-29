@@ -43,7 +43,45 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
-## Current UI release: October 28, 2026
+## Current operations release: October 30, 2026
+
+The owner's October 29 instruction to "push this all into production" is
+fulfilled at `https://qmt.errandom.com`, with live verification after midnight
+Zurich on October 30. This release includes aligned Operations Office cards,
+optional published facility schedule sources and checks, detailed booking
+conflict review with explicit overrides, shared-field indicators, booked-fields-only
+scheduling, the recurring Weekly program and the range selector below Upcoming Events.
+Specific week remains available for actual dated bookings and exceptions.
+
+Runtime source `f7edf8b180024deb5c1dfb2293dbc19c346e41c9` passed exact-source
+validation/publication `40969738295`, including disposable SQL integration and
+anonymous digest pull. PR #9 merged as
+`118367534cdb2c624c762fbff847b2e5183a48e6`.
+The current application image is
+`ghcr.io/errandom/qmt@sha256:9b1fa71ec753315974386650c47177f6908799f1239e630bb9929cd87cbee4d5`.
+The previous compatible code-rollback image is
+`ghcr.io/errandom/qmt@sha256:bc08e479fd0ccf1e4ac1f0bf1b9239e70395a5c933c21a2a24971fc21c85e6a4`.
+
+Migration `003-published-schedules.sql` was applied through Azure-authenticated
+SCM using the existing app network, without changing SQL firewall or permissions.
+It adds only two nullable site columns. All migration checksums and database
+readiness checks passed, and fingerprints of all eight operational tables were
+unchanged. Temporary remote migration files and credentials were removed.
+For code rollback, retain the additive columns and migration record; do not
+replay initialization, restore or event deletion.
+
+Only the already-running site's image configuration was patched. All 26
+non-image before/after invariants matched, including application settings,
+network/firewall, B1 single-worker Always On, Basic SQL, managed TLS, resource
+inventory, budget and the independent guard's identity, configuration and image.
+Trusted live HTTPS matched all seven container assets byte-for-byte; protected
+administrator sign-in, SQL, metadata reads and published-schedule route validation
+passed with operational collections unchanged. Actual production Chromium checks
+passed for desktop/mobile disclosure placement, both schedule modes, zero
+horizontal mobile overflow and no uncaught exceptions.
+Notification delivery, extended acceptance and stabilization remain open.
+
+## Previous UI release: October 28, 2026
 
 The owner-approved Sites card layout is live at `https://qmt.errandom.com`.
 Cards use equal-height grid rows, and their status controls stay at the bottom
