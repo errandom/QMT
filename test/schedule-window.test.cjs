@@ -7,7 +7,7 @@ const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 
-function loadApp({ from = '2026-10-15', through = '2027-01-20', isLoading = false } = {}) {
+function loadApp({ from = '2026-10-15', through = '2027-01-20', isLoading = false, view = 'dashboard' } = {}) {
   const filename = path.join(__dirname, '..', 'src', 'App.tsx');
   const { outputText } = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
@@ -21,7 +21,8 @@ function loadApp({ from = '2026-10-15', through = '2027-01-20', isLoading = fals
   loaded.require = id => {
     if (id === 'react') return {
       ...React, useEffect() {},
-      useState: () => [[from, through, null, 'dashboard', false][stateIndex++], () => {}],
+      lazy: () => () => React.createElement('div', null, 'Operations Office content'),
+      useState: () => [[from, through, null, view, false][stateIndex++], () => {}],
     };
     if (id === '@/contexts/DataContext') return { useData: () => ({
       eventWindow: { from: '2026-10-15T00:00:00.000Z', to: '2027-01-20T00:00:00.000Z' },
@@ -29,7 +30,31 @@ function loadApp({ from = '2026-10-15', through = '2027-01-20', isLoading = fals
     }) };
     if (id === '@/lib/auth') return {};
     if (id === 'sonner') return { toast: { error: message => errors.push(message) } };
-    if (['@/components/ui/sonner', '@/components/Header', '@/components/Dashboard', '@phosphor-icons/react'].includes(id)) {
+    if (id === '@/components/Dashboard') {
+      const file = path.join(__dirname, '..', 'src', 'components', 'Dashboard.tsx');
+      const dashboard = new Module(file, loaded);
+      dashboard.paths = loaded.paths;
+      dashboard.require = dependency => {
+        if (dependency === 'react') return React;
+        if (dependency === '@/contexts/DataContext') return { useData: () => ({ teams: [] }) };
+        if (dependency === '@/lib/teamUtils') return {};
+        if (['./EventList', './ScheduleView'].includes(dependency)) {
+          return { default: () => React.createElement('div', null, 'Events content') };
+        }
+        if (dependency === '@/components/ui/select') {
+          return new Proxy({}, { get: () => ({ children }) => React.createElement('div', null, children) });
+        }
+        if (['./LoginDialog', '@phosphor-icons/react'].includes(dependency)) {
+          return new Proxy({}, { get: () => () => null });
+        }
+        return loaded.require(dependency);
+      };
+      dashboard._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+        compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+      }).outputText, file);
+      return dashboard.exports;
+    }
+    if (['@/components/ui/sonner', '@/components/Header', '@phosphor-icons/react'].includes(id)) {
       return new Proxy({}, { get: () => () => null });
     }
     return original(id);
@@ -58,7 +83,7 @@ function loadApp({ from = '2026-10-15', through = '2027-01-20', isLoading = fals
   function find(node, type) {
     if (!React.isValidElement(node)) return;
     if (node.type === type) return node;
-    for (const child of React.Children.toArray(node.props.children)) {
+    for (const child of React.Children.toArray([node.props.children, node.props.scheduleWindow])) {
       const match = find(child, type);
       if (match) return match;
     }
@@ -77,6 +102,19 @@ test('schedule window reuses the site card and form controls with accessible dat
   assert.match(html, /for="schedule-range-end"/);
   assert.equal((html.match(/data-slot="input"/g) || []).length, 2);
   assert.match(html, /<button[^>]*data-slot="button"[^>]*disabled=""[^>]*>Load selected range<\/button>/);
+});
+
+test('schedule window appears after the dashboard navigation and Upcoming Events, before event content', () => {
+  const { html } = loadApp();
+  const heading = html.indexOf('Upcoming Events</h2>');
+  const disclosure = html.indexOf('<details');
+  assert.ok(html.indexOf('All Sports') < heading);
+  assert.ok(heading < disclosure);
+  assert.ok(disclosure < html.indexOf('Events content'));
+  assert.equal((html.match(/Loaded schedule window/g) || []).length, 1);
+  const office = loadApp({ view: 'office' }).html;
+  assert.ok(office.includes('Loaded schedule window'));
+  assert.ok(office.indexOf('<details') < office.indexOf('Operations Office content'));
 });
 
 test('schedule date controls retain inclusive end-date conversion and range validation', () => {

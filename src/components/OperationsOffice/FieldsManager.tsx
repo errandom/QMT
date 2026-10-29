@@ -3,7 +3,8 @@ import { useData } from '@/contexts/DataContext'
 import { Field, Site, TurfType, FieldSize, User, LocationType } from '@/lib/types'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader } from './OperationsCards'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -190,30 +191,27 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <OperationsCardGrid>
         {fields.map((field) => {
           const isField = field.locationType !== 'meeting_room'
           return (
-          <Card key={field.id} className={!field.isActive ? 'opacity-60' : ''}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-base flex items-center gap-2" style={{ color: COLORS.NAVY }}>
-                    {isField ? <GridFour size={16} /> : <Buildings size={16} />}
-                    {field.name}
-                  </CardTitle>
-                  <div className="text-xs text-muted-foreground">{getSiteName(field.siteId)}</div>
-                  <div className="flex gap-1">
+            <Card key={field.id} className={!field.isActive ? 'opacity-60' : ''}>
+              <OperationsCardHeader
+                title={field.name}
+                icon={isField ? <GridFour size={16} className="mt-0.5" /> : <Buildings size={16} className="mt-0.5" />}
+                subtitle={getSiteName(field.siteId)}
+                badges={
+                  <>
                     <Badge variant="secondary" className="text-xs">
                       {isField ? 'Field' : 'Meeting Room'}
                     </Badge>
                     <Badge variant={field.isActive ? 'default' : 'destructive'} className="text-xs">
                       {field.isActive ? 'Active' : 'Inactive'}
                     </Badge>
-                  </div>
-                </div>
-                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-                  <div className="flex gap-1">
+                  </>
+                }
+                actions={currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                  <>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -232,39 +230,38 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
                     >
                       <Trash size={18} weight="bold" />
                     </Button>
+                  </>
+                )}
+              />
+              <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                <div className="flex flex-wrap gap-1">
+                  {isField && field.turfType && <Badge variant="outline" className="text-xs">{field.turfType}</Badge>}
+                  {isField && field.fieldSize && <Badge variant="outline" className="text-xs">{field.fieldSize} Field</Badge>}
+                  {isField && field.hasLights && <Badge variant="outline" className="text-xs">Lights</Badge>}
+                  {field.capacity && <Badge variant="outline" className="text-xs">Cap: {field.capacity}</Badge>}
+                </div>
+                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
+                  <div className="mt-auto flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs font-medium" style={{ color: COLORS.CHARCOAL }}>Status</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                        {field.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                      <Switch
+                        checked={field.isActive}
+                        onCheckedChange={() => handleToggleActive(field)}
+                        style={{
+                          backgroundColor: field.isActive ? COLORS.NAVY : undefined
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              <div className="flex flex-wrap gap-1">
-                {isField && field.turfType && <Badge variant="outline" className="text-xs">{field.turfType}</Badge>}
-                {isField && field.fieldSize && <Badge variant="outline" className="text-xs">{field.fieldSize} Field</Badge>}
-                {isField && field.hasLights && <Badge variant="outline" className="text-xs">Lights</Badge>}
-                {field.capacity && <Badge variant="outline" className="text-xs">Cap: {field.capacity}</Badge>}
-              </div>
-              {currentUser && (currentUser.role === 'admin' || currentUser.role === 'mgmt') && (
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-xs font-medium" style={{ color: COLORS.CHARCOAL }}>Status</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-                      {field.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                    <Switch
-                      checked={field.isActive}
-                      onCheckedChange={() => handleToggleActive(field)}
-                      style={{
-                        backgroundColor: field.isActive ? COLORS.NAVY : undefined
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           )
         })}
-      </div>
+      </OperationsCardGrid>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent 

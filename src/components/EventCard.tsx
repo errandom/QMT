@@ -31,6 +31,7 @@ import { Event, Team, Field, Site, EventType } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
 import { COLORS, SIZES } from '@/lib/constants'
 import { formatEventTimeRange } from '@/lib/utils'
+import SharedFieldNotice, { SharedFieldBadge } from './SharedFieldNotice'
 
 interface EventCardProps {
   event: Event
@@ -68,6 +69,8 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const eventFieldIds = event.fieldIds || (legacyFieldId ? [legacyFieldId] : [])
   const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
   const primaryField = eventFields[0]
+  const primaryFieldSize = event.sharedFieldBookings?.some(booking => booking.fieldId === primaryField?.id)
+    ? 'Shared' : primaryField?.fieldSize
   const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : undefined
   const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
   
@@ -150,6 +153,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={eventTypeColors[event.eventType]}>{event.eventType}</Badge>
               <Badge className={statusColors[event.status]}>{event.status}</Badge>
+              {!!event.sharedFieldBookings?.length && <SharedFieldBadge />}
             </div>
             {canRequestCancellation && (
               <Button 
@@ -212,6 +216,7 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
       </CardHeader>
       
       <CardContent className="space-y-2.5 pt-1">
+        <SharedFieldNotice event={event} fields={fields} sites={sites} teams={teams} />
         <div className="flex items-center gap-2 text-base" style={{ color: COLORS.NAVY }}>
           <CalendarBlank style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
           <span className="font-medium">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -314,19 +319,19 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      {primaryField.fieldSize === 'Full' ? (
+                      {primaryFieldSize === 'Full' ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="2" y="3" width="12" height="10" />
                         </svg>
-                      ) : primaryField.fieldSize === 'Shared' ? (
+                      ) : primaryFieldSize === 'Shared' ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="2" y="3" width="12" height="10" />
                           <rect x="2" y="3" width="6" height="10" fill="currentColor" opacity="0.3" />
                         </svg>
                       ) : (
-                        <span>{primaryField.fieldSize}</span>
+                        <span>{primaryFieldSize}</span>
                       )}
-                      {primaryField.fieldSize} Field
+                      {primaryFieldSize} Field
                     </span>
                     {primaryField.capacity && <span>Capacity: {primaryField.capacity}</span>}
                     {eventFields.length > 1 && (

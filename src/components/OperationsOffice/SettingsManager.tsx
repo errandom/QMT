@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { User, UserRole } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -349,25 +350,26 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <OperationsCardGrid>
                 {users.map((user) => (
                   <Card key={user.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback>
-                              {user.username.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-sm">{user.username}</CardTitle>
-                            <Badge variant="secondary" className="mt-1 text-xs">
-                              {user.role}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
+                    <OperationsCardHeader
+                      title={user.username}
+                      titleClassName="text-sm"
+                      icon={
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {user.username.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      }
+                      badges={
+                        <Badge variant="secondary" className="text-xs">
+                          {user.role}
+                        </Badge>
+                      }
+                      actions={
+                        <>
                           <Button
                             variant="outline"
                             size="sm"
@@ -387,23 +389,27 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                           >
                             <Trash size={16} weight="duotone" style={{ color: 'rgb(220, 38, 38)' }} />
                           </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-1">
-                      {user.full_name && (
-                        <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-                          <span className="text-muted-foreground">Name: </span>
-                          {user.full_name}
-                        </div>
-                      )}
-                      {user.email && (
-                        <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
-                          <span className="text-muted-foreground">Email: </span>
-                          {user.email}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1 pt-2">
+                        </>
+                      }
+                    />
+                    <CardContent className="flex flex-1 flex-col gap-1 text-sm">
+                      <OperationsCardSection name="name">
+                        {user.full_name && (
+                          <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                            <span className="text-muted-foreground">Name: </span>
+                            {user.full_name}
+                          </div>
+                        )}
+                      </OperationsCardSection>
+                      <OperationsCardSection name="email">
+                        {user.email && (
+                          <div className="text-xs" style={{ color: COLORS.CHARCOAL }}>
+                            <span className="text-muted-foreground">Email: </span>
+                            {user.email}
+                          </div>
+                        )}
+                      </OperationsCardSection>
+                      <div className="mt-auto flex items-center gap-1 pt-2">
                         <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-xs">
                           {user.is_active ? 'Active' : 'Inactive'}
                         </Badge>
@@ -411,7 +417,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+              </OperationsCardGrid>
             )}
           </div>
 

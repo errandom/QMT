@@ -31,9 +31,33 @@ export interface Site {
   contactLastName: string
   contactPhone: string
   contactEmail: string
+  publishedScheduleUrl?: string
+  publishedBookingName?: string
   isSportsFacility: boolean
   amenities: Amenity
   isActive: boolean
+}
+
+export interface PublishedBooking {
+  startTime: string
+  endTime: string
+  team: string
+  guestTeam: string
+  field: string
+  area: string
+  kind: string
+  information?: string
+}
+
+export interface PublishedSchedule {
+  status: 'available' | 'not_configured' | 'unsupported' | 'date_unavailable' | 'unavailable'
+  date: string
+  publishedDate?: string
+  configuredSourceUrl: string | null
+  sourceUrl: string | null
+  checkedAt?: string
+  message?: string
+  bookings: PublishedBooking[]
 }
 
 export interface Field {
@@ -74,6 +98,30 @@ export interface Team {
   isActive: boolean
 }
 
+export interface BookingConflict {
+  eventId: number
+  title: string
+  eventType: string
+  status: string
+  startTime: string
+  endTime: string
+  requestedStartTime: string
+  requestedEndTime: string
+  fields: { id: number; name: string; siteName: string }[]
+  teams: { id: number; name: string }[]
+}
+
+export interface SharedFieldBooking {
+  fieldId: string
+  eventId: string
+  title: string
+  teamIds: string[]
+  date: string
+  endDate: string
+  startTime: string
+  endTime: string
+}
+
 export interface Event {
   id: string
   title: string
@@ -84,6 +132,7 @@ export interface Event {
   startTime: string
   endTime: string
   fieldIds: string[]  // Multiple fields/meeting rooms can be assigned
+  sharedFieldBookings?: SharedFieldBooking[]
   teamIds: string[]
   otherParticipants?: string
   estimatedAttendance?: number

@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 import { getToken } from '@/lib/api'
 import { useCapabilities } from '@/hooks/useCapabilities'
 import { formatEventTimeRange } from '@/lib/utils'
+import { formatSharedFieldBookings } from '@/lib/fieldSharing'
+import SharedFieldNotice from './SharedFieldNotice'
 
 interface EventChange {
   field: string
@@ -294,6 +296,9 @@ export default function EventUpdateShareDialog({
         `📋 Status: ${event.status}\n\n`
     }
     
+    if (event.sharedFieldBookings?.length) {
+      body += `Shared field - full field not exclusively available.\n${formatSharedFieldBookings(event.sharedFieldBookings, fields, sites, teams)}\n\n`
+    }
     body += `Please let us know if you have any questions.\n\n` +
       `Club operations`
     
@@ -340,6 +345,7 @@ export default function EventUpdateShareDialog({
               {formatDate(event.date)} • {formatEventTimeRange(event)}
             </p>
             <p className="text-xs text-muted-foreground">{locationName}</p>
+            <SharedFieldNotice event={event} fields={fields} sites={sites} teams={teams} />
             <p className="text-xs text-muted-foreground">
               {eventTeams.map(t => t.name).join(', ') || 'No teams assigned'}
             </p>

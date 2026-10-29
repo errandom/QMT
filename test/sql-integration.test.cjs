@@ -59,7 +59,8 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
     await migrate(pool);
     await migrate(pool);
     const migrations = await pool.request().query('SELECT COUNT(*) AS count FROM dbo.qmt_migrations');
-    assert.equal(migrations.recordset[0].count, 2);
+    assert.equal(migrations.recordset[0].count, fs.readdirSync(path.join(__dirname, '..', 'migrations'))
+      .filter(name => /^\d+[-\w]*\.sql$/.test(name)).length);
     const applicationPassword = `aA1!${randomBytes(20).toString('hex')}`;
     const initialization = {
       SQL_USER: process.env.SQL_USER, SQL_PASSWORD: process.env.SQL_PASSWORD,
@@ -150,6 +151,29 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
         ...booking('2027-01-01'), end_time: '2027-01-03T18:00:00Z',
         recurring_days: '1,2,3,4,5,6,7', recurring_end_date: '2027-01-03',
       }, original.id), error => error.status === 409);
+    });
+    await t.test('recurrence reports all overlaps and an explicit override saves without modifying existing bookings', async () => {
+      const first = await save({ ...booking('2027-04-06'), description: 'First existing practice' });
+      const second = await save({ ...booking('2027-04-13'), description: 'Second existing practice' });
+      const series = { ...booking('2027-04-06'), recurring_days: '2', recurring_end_date: '2027-04-13' };
+      await assert.rejects(save(series), error => {
+        assert.equal(error.status, 409);
+        assert.equal(error.conflicts.length, 2);
+        assert.equal(error.conflicts[0].eventId, first.id);
+        assert.equal(error.conflicts[1].eventId, second.id);
+        assert.equal(error.conflicts[0].fields[0].name, 'Synthetic test field');
+        assert.equal(error.conflicts[0].fields[0].siteName, 'Synthetic test site');
+        assert.equal(error.conflicts[0].teams[0].name, 'Synthetic test team');
+        return true;
+      });
+      const saved = await save({ ...series, allow_conflicts: true });
+      assert.equal(saved.length, 2);
+      const originals = await pool.request().input('first', sql.Int, first.id).input('second', sql.Int, second.id)
+        .query('SELECT * FROM events WHERE id IN (@first, @second) ORDER BY id');
+      assert.deepEqual(originals.recordset, [first, second]);
+      await assert.rejects(save(booking('2027-04-06'), first.id), error => error.status === 409);
+      const edited = await save({ ...booking('2027-04-06'), allow_conflicts: true }, first.id);
+      assert.equal(edited.id, first.id);
     });
     const secret = 'synthetic-sql-test-secret-not-a-production-credential';
     const token = jwt.sign({ id: fixture.admin, role: 'admin', username: 'synthetic-test-admin' }, secret);

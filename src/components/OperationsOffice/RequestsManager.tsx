@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react'
+import { ReactNode, useState, useMemo } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { FacilityRequest, EquipmentRequest, CancellationRequest, User, Event } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -19,6 +20,23 @@ import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 
 interface RequestsManagerProps {
   currentUser: User
+}
+
+function RequestDetails({ request, children }: {
+  request: Pick<FacilityRequest, 'requestorName' | 'requestorPhone'>
+  children: ReactNode
+}) {
+  return (
+    <OperationsCardSection name="metadata" className="grid gap-4 sm:grid-cols-2">
+      <OperationsCardSection name="requestor">
+        <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
+      </OperationsCardSection>
+      <OperationsCardSection name="phone">
+        <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
+      </OperationsCardSection>
+      {children}
+    </OperationsCardSection>
+  )
 }
 
 export default function RequestsManager({ currentUser }: RequestsManagerProps) {
@@ -244,21 +262,19 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 No pending cancellation requests.
               </div>
             ) : (
-              <div className="grid gap-4">
+              <OperationsCardGrid columns={1}>
                 {pendingCancellations.map((request) => (
                   <Card key={request.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Prohibit size={18} weight="duotone" />
-                            Cancellation Request - {request.eventTitle}
-                          </CardTitle>
-                          <Badge variant="default">
-                            {request.status}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
+                    <OperationsCardHeader
+                      title={<>Cancellation Request - {request.eventTitle}</>}
+                      icon={<Prohibit size={18} weight="duotone" className="mt-0.5" />}
+                      badges={
+                        <Badge variant="default">
+                          {request.status}
+                        </Badge>
+                      }
+                      actions={
+                        <>
                           <Button
                             size="sm"
                             variant="default"
@@ -275,31 +291,25 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                             <X className="mr-1" size={16} weight="bold" />
                             Reject
                           </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                        </div>
+                        </>
+                      }
+                    />
+                    <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                      <RequestDetails request={request}>
                         <div>
                           <span className="text-muted-foreground">Event Date:</span> {request.eventDate}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Event Time:</span> {request.eventTime}
                         </div>
-                      </div>
-                      <div>
+                      </RequestDetails>
+                      <OperationsCardSection name="justification">
                         <span className="text-muted-foreground">Justification:</span> {request.justification}
-                      </div>
+                      </OperationsCardSection>
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+              </OperationsCardGrid>
             )}
 
             {/* Resolved Cancellation Requests - Collapsible */}
@@ -312,52 +322,42 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <div className="grid gap-4">
+                  <OperationsCardGrid columns={1}>
                     {resolvedCancellations.map((request) => (
                       <Card key={request.id} className="opacity-70">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <CardTitle className="text-base flex items-center gap-2">
-                                <Prohibit size={18} weight="duotone" />
-                                Cancellation Request - {request.eventTitle}
-                              </CardTitle>
-                              <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
-                                {request.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-2">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                            </div>
+                        <OperationsCardHeader
+                          title={<>Cancellation Request - {request.eventTitle}</>}
+                          icon={<Prohibit size={18} weight="duotone" className="mt-0.5" />}
+                          badges={
+                            <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
+                              {request.status}
+                            </Badge>
+                          }
+                        />
+                        <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                          <RequestDetails request={request}>
                             <div>
                               <span className="text-muted-foreground">Event Date:</span> {request.eventDate}
                             </div>
                             <div>
                               <span className="text-muted-foreground">Event Time:</span> {request.eventTime}
                             </div>
-                          </div>
-                          <div>
+                          </RequestDetails>
+                          <OperationsCardSection name="justification">
                             <span className="text-muted-foreground">Justification:</span> {request.justification}
-                          </div>
+                          </OperationsCardSection>
                           {request.reviewedAt && (
-                            <>
+                            <div className="mt-auto space-y-2">
                               <Separator />
                               <div className="text-xs text-muted-foreground">
                                 Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
                               </div>
-                            </>
+                            </div>
                           )}
                         </CardContent>
                       </Card>
                     ))}
-                  </div>
+                  </OperationsCardGrid>
                 </CollapsibleContent>
               </Collapsible>
             )}
@@ -379,21 +379,19 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 No pending facility requests.
               </div>
             ) : (
-              <div className="grid gap-4">
+              <OperationsCardGrid columns={1}>
                 {pendingFacility.map((request) => (
                   <Card key={request.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <ClipboardText size={18} weight="duotone" />
-                            {request.eventType} Request
-                          </CardTitle>
-                          <Badge variant="default">
-                            {request.status}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
+                    <OperationsCardHeader
+                      title={<>{request.eventType} Request</>}
+                      icon={<ClipboardText size={18} weight="duotone" className="mt-0.5" />}
+                      badges={
+                        <Badge variant="default">
+                          {request.status}
+                        </Badge>
+                      }
+                      actions={
+                        <>
                           <Button
                             size="sm"
                             variant="default"
@@ -410,43 +408,43 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                             <X className="mr-1" size={16} weight="bold" />
                             Reject
                           </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                        </div>
+                        </>
+                      }
+                    />
+                    <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                      <RequestDetails request={request}>
                         <div>
                           <span className="text-muted-foreground">Date:</span> {request.date}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
                         </div>
-                      </div>
-                      {request.teamIds && request.teamIds.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
-                        </div>
-                      )}
-                      {request.purpose && (
-                        <div>
-                          <span className="text-muted-foreground">Purpose:</span> {request.purpose}
-                        </div>
-                      )}
-                      {request.description && (
-                        <div>
-                          <span className="text-muted-foreground">Details:</span> {request.description}
-                        </div>
-                      )}
+                      </RequestDetails>
+                      <OperationsCardSection name="teams">
+                        {request.teamIds && request.teamIds.length > 0 && (
+                          <>
+                            <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
+                          </>
+                        )}
+                      </OperationsCardSection>
+                      <OperationsCardSection name="purpose">
+                        {request.purpose && (
+                          <>
+                            <span className="text-muted-foreground">Purpose:</span> {request.purpose}
+                          </>
+                        )}
+                      </OperationsCardSection>
+                      <OperationsCardSection name="description">
+                        {request.description && (
+                          <>
+                            <span className="text-muted-foreground">Details:</span> {request.description}
+                          </>
+                        )}
+                      </OperationsCardSection>
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+              </OperationsCardGrid>
             )}
 
             {/* Resolved Facility Requests - Collapsible */}
@@ -459,64 +457,60 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <div className="grid gap-4">
+                  <OperationsCardGrid columns={1}>
                     {resolvedFacility.map((request) => (
                       <Card key={request.id} className="opacity-70">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <CardTitle className="text-base flex items-center gap-2">
-                                <ClipboardText size={18} weight="duotone" />
-                                {request.eventType} Request
-                              </CardTitle>
-                              <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
-                                {request.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-2">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                            </div>
+                        <OperationsCardHeader
+                          title={<>{request.eventType} Request</>}
+                          icon={<ClipboardText size={18} weight="duotone" className="mt-0.5" />}
+                          badges={
+                            <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
+                              {request.status}
+                            </Badge>
+                          }
+                        />
+                        <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                          <RequestDetails request={request}>
                             <div>
                               <span className="text-muted-foreground">Date:</span> {request.date}
                             </div>
                             <div>
                               <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
                             </div>
-                          </div>
-                          {request.teamIds && request.teamIds.length > 0 && (
-                            <div>
-                              <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
-                            </div>
-                          )}
-                          {request.purpose && (
-                            <div>
-                              <span className="text-muted-foreground">Purpose:</span> {request.purpose}
-                            </div>
-                          )}
-                          {request.description && (
-                            <div>
-                              <span className="text-muted-foreground">Details:</span> {request.description}
-                            </div>
-                          )}
+                          </RequestDetails>
+                          <OperationsCardSection name="teams">
+                            {request.teamIds && request.teamIds.length > 0 && (
+                              <>
+                                <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
+                              </>
+                            )}
+                          </OperationsCardSection>
+                          <OperationsCardSection name="purpose">
+                            {request.purpose && (
+                              <>
+                                <span className="text-muted-foreground">Purpose:</span> {request.purpose}
+                              </>
+                            )}
+                          </OperationsCardSection>
+                          <OperationsCardSection name="description">
+                            {request.description && (
+                              <>
+                                <span className="text-muted-foreground">Details:</span> {request.description}
+                              </>
+                            )}
+                          </OperationsCardSection>
                           {request.reviewedAt && (
-                            <>
+                            <div className="mt-auto space-y-2">
                               <Separator />
                               <div className="text-xs text-muted-foreground">
                                 Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
                               </div>
-                            </>
+                            </div>
                           )}
                         </CardContent>
                       </Card>
                     ))}
-                  </div>
+                  </OperationsCardGrid>
                 </CollapsibleContent>
               </Collapsible>
             )}
@@ -538,21 +532,19 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 No pending equipment requests.
               </div>
             ) : (
-              <div className="grid gap-4">
+              <OperationsCardGrid columns={1}>
                 {pendingEquipment.map((request) => (
                   <Card key={request.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <ClipboardText size={18} weight="duotone" />
-                            Equipment Request
-                          </CardTitle>
-                          <Badge variant="default">
-                            {request.status}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
+                    <OperationsCardHeader
+                      title="Equipment Request"
+                      icon={<ClipboardText size={18} weight="duotone" className="mt-0.5" />}
+                      badges={
+                        <Badge variant="default">
+                          {request.status}
+                        </Badge>
+                      }
+                      actions={
+                        <>
                           <Button
                             size="sm"
                             variant="default"
@@ -569,31 +561,25 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                             <X className="mr-1" size={16} weight="bold" />
                             Reject
                           </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                        </div>
+                        </>
+                      }
+                    />
+                    <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                      <RequestDetails request={request}>
                         <div>
                           <span className="text-muted-foreground">Date Needed:</span> {request.date}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
                         </div>
-                      </div>
-                      <div>
+                      </RequestDetails>
+                      <OperationsCardSection name="equipment">
                         <span className="text-muted-foreground">Equipment:</span> {request.equipmentDescription}
-                      </div>
+                      </OperationsCardSection>
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+              </OperationsCardGrid>
             )}
 
             {/* Resolved Equipment Requests - Collapsible */}
@@ -606,52 +592,42 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <div className="grid gap-4">
+                  <OperationsCardGrid columns={1}>
                     {resolvedEquipment.map((request) => (
                       <Card key={request.id} className="opacity-70">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <CardTitle className="text-base flex items-center gap-2">
-                                <ClipboardText size={18} weight="duotone" />
-                                Equipment Request
-                              </CardTitle>
-                              <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
-                                {request.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-2">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-muted-foreground">Requestor:</span> {request.requestorName}
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Phone:</span> {request.requestorPhone}
-                            </div>
+                        <OperationsCardHeader
+                          title="Equipment Request"
+                          icon={<ClipboardText size={18} weight="duotone" className="mt-0.5" />}
+                          badges={
+                            <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
+                              {request.status}
+                            </Badge>
+                          }
+                        />
+                        <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+                          <RequestDetails request={request}>
                             <div>
                               <span className="text-muted-foreground">Date Needed:</span> {request.date}
                             </div>
                             <div>
                               <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
                             </div>
-                          </div>
-                          <div>
+                          </RequestDetails>
+                          <OperationsCardSection name="equipment">
                             <span className="text-muted-foreground">Equipment:</span> {request.equipmentDescription}
-                          </div>
+                          </OperationsCardSection>
                           {request.reviewedAt && (
-                            <>
+                            <div className="mt-auto space-y-2">
                               <Separator />
                               <div className="text-xs text-muted-foreground">
                                 Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
                               </div>
-                            </>
+                            </div>
                           )}
                         </CardContent>
                       </Card>
                     ))}
-                  </div>
+                  </OperationsCardGrid>
                 </CollapsibleContent>
               </Collapsible>
             )}

@@ -1,6 +1,7 @@
 import type { Event } from './types'
 import { Team, Field, Site } from './types'
 import { formatEventTimeRange } from './utils'
+import { formatSharedFieldBookings } from './fieldSharing'
 
 export interface ShareConfig {
   groupPhone?: string  // Legacy: for fallback wa.me link
@@ -57,6 +58,9 @@ function formatEventMessage(
     `📅 ${date}\n` +
     `👥 ${teamNames || 'No teams assigned'}\n` +
     `📍 ${location}\n` +
+    (event.sharedFieldBookings?.length
+      ? `Shared field - full field not exclusively available.\n${formatSharedFieldBookings(event.sharedFieldBookings, fields, sites, teams)}\n`
+      : '') +
     (event.notes ? `\n📝 ${event.notes}` : '')
   )
 }

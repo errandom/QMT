@@ -1,6 +1,6 @@
 // API Configuration Module
 // Used by frontend to get the correct API base URL
-import type { Event, FacilityRequest, EquipmentRequest, CancellationRequest, UserRole } from './types';
+import type { Event, FacilityRequest, EquipmentRequest, CancellationRequest, UserRole, PublishedSchedule, BookingConflict } from './types';
 export type StoredRequest = (FacilityRequest & { type: 'facility' })
   | (EquipmentRequest & { type: 'equipment' }) | (CancellationRequest & { type: 'cancellation' });
 
@@ -117,6 +117,8 @@ function transformSite(site: any): any {
     contactLastName: site.contactLastName || site.contact_last_name || '',
     contactPhone: site.contactPhone || site.contact_phone || '',
     contactEmail: site.contactEmail || site.contact_email || '',
+    publishedScheduleUrl: site.publishedScheduleUrl || site.published_schedule_url || '',
+    publishedBookingName: site.publishedBookingName || site.published_booking_name || '',
     isSportsFacility: site.isSportsFacility !== undefined ? Boolean(site.isSportsFacility) : (site.is_sports_facility !== undefined ? Boolean(site.is_sports_facility) : true),
     isActive: site.isActive !== undefined ? Boolean(site.isActive) : (site.active !== undefined ? Boolean(site.active) : true),
     amenities
@@ -266,6 +268,27 @@ function transformEvent(event: any): any {
   return transformed;
 }
 
+export class ApiError extends Error {
+  bookingConflict?: { conflicts: BookingConflict[]; hasMoreConflicts: boolean };
+  conflictingEvent?: unknown;
+  conflictedDates?: unknown;
+  constructor(message: string, public readonly status: number) { super(message); }
+}
+
+function isBookingConflict(value: unknown): value is BookingConflict {
+  if (!value || typeof value !== 'object') return false;
+  const strings = ['title', 'eventType', 'status', 'startTime', 'endTime', 'requestedStartTime', 'requestedEndTime'];
+  return 'eventId' in value && Number.isSafeInteger(value.eventId)
+    && strings.every(key => key in value && typeof Reflect.get(value, key) === 'string')
+    && ['startTime', 'endTime', 'requestedStartTime', 'requestedEndTime']
+      .every(key => Number.isFinite(Date.parse(Reflect.get(value, key))))
+    && 'fields' in value && Array.isArray(value.fields) && value.fields.length > 0
+    && value.fields.every(field => field && Number.isSafeInteger(field.id)
+      && typeof field.name === 'string' && typeof field.siteName === 'string')
+    && 'teams' in value && Array.isArray(value.teams)
+    && value.teams.every(team => team && Number.isSafeInteger(team.id) && typeof team.name === 'string');
+}
+
 // Helper function to make API calls
 export async function apiRequest<T>(
   endpoint: string,
@@ -322,11 +345,15 @@ export async function apiRequest<T>(
     console.error(`[API] ❌ Error on ${url}:`, errorMessage);
     
     // Create error with status and data for better handling
-    const apiError: any = new Error(errorMessage);
-    apiError.status = response.status;
+    const apiError = new ApiError(errorMessage, response.status);
     if (errorData) {
       apiError.conflictingEvent = errorData.conflictingEvent;
       apiError.conflictedDates = errorData.conflictedDates;
+      if (response.status === 409 && errorData.code === 'BOOKING_CONFLICT'
+          && Array.isArray(errorData.conflicts) && errorData.conflicts.length > 0
+          && errorData.conflicts.every(isBookingConflict) && typeof errorData.hasMoreConflicts === 'boolean') {
+        apiError.bookingConflict = { conflicts: errorData.conflicts, hasMoreConflicts: errorData.hasMoreConflicts };
+      }
     }
     throw apiError;
   }
@@ -460,6 +487,8 @@ export const api = {
     return sites.map(transformSite);
   },
   getSite: (id: number) => apiRequest<any>(`/sites/${id}`).then(transformSite),
+  getPublishedSchedule: (id: string, date: string) =>
+    apiRequest<PublishedSchedule>(`/sites/${encodeURIComponent(id)}/published-schedule?date=${encodeURIComponent(date)}`),
   createSite: async (data: any) => {
     const response = await apiRequest<any>('/sites', {
       method: 'POST',
