@@ -1,6 +1,6 @@
 // API Configuration Module
 // Used by frontend to get the correct API base URL
-import type { Event, FacilityRequest, EquipmentRequest, CancellationRequest, UserRole, PublishedSchedule, BookingConflict } from './types';
+import type { Event, FacilityRequest, FacilityWorkflowAction, EquipmentRequest, CancellationRequest, UserRole, PublishedSchedule, BookingConflict } from './types';
 export type StoredRequest = (FacilityRequest & { type: 'facility' })
   | (EquipmentRequest & { type: 'equipment' }) | (CancellationRequest & { type: 'cancellation' });
 
@@ -565,9 +565,13 @@ export const api = {
     headers: { 'Idempotency-Key': key },
     body: JSON.stringify({ ...data, type }),
   }),
-  reviewRequest: async (id: string, status: 'Approved' | 'Rejected', fieldId?: string) => {
+  updateFacilityWorkflow: (id: string, action: FacilityWorkflowAction, expectedVersion: number) =>
+    apiRequest<FacilityRequest>(`/requests/${id}/workflow`, {
+      method: 'POST', body: JSON.stringify({ ...action, expectedVersion }),
+    }),
+  reviewRequest: async (id: string, status: 'Approved' | 'Rejected', fieldId?: string, facilityReview?: { expectedVersion: number; decisionNote: string }) => {
     const result = await apiRequest<{ request: StoredRequest; event?: unknown }>(`/requests/${id}/review`, {
-      method: 'POST', body: JSON.stringify({ status, fieldId }),
+      method: 'POST', body: JSON.stringify({ status, fieldId, ...facilityReview }),
     });
     return { request: result.request, event: result.event ? transformEvent(result.event) as Event : undefined };
   },

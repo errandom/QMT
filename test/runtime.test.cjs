@@ -24,7 +24,7 @@ test('boot, probes, retired endpoints and disabled providers never connect to SQ
       ['/api/events/create-from-natural-language', 'POST', 410], ['/api/spond/config', 'GET', 503],
       ['/_spark/kv/private', 'GET', 410], ['/api/events', 'POST', 401],
       ['/api/events/1/transport-request', 'POST', 401],
-      ['/api/requests', 'GET', 401], ['/api/diagnostic', 'GET', 401],
+      ['/api/requests', 'GET', 401], ['/api/requests/1/workflow', 'POST', 401], ['/api/diagnostic', 'GET', 401],
     ]) {
       const response = await fetch(base + url, { method });
       assert.equal(response.status, status, `${method} ${url}`);

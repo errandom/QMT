@@ -7,6 +7,7 @@ import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear, Arro
 import { User, FacilityRequest, EquipmentRequest, CancellationRequest } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
 import { useData } from '@/contexts/DataContext'
+import { needsFacilityAttention } from '@/lib/facilityWorkflow'
 import { COLORS, SIZES } from '@/lib/constants'
 import ScheduleManager from './OperationsOffice/ScheduleManager'
 import RequestsManager from './OperationsOffice/RequestsManager'
@@ -26,7 +27,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
   const { facilityRequests, equipmentRequests, cancellationRequests } = useData()
 
   const hasUnresolvedRequests = 
-    facilityRequests.some(r => r.status === 'Pending') ||
+    facilityRequests.some(needsFacilityAttention) ||
     equipmentRequests.some(r => r.status === 'Pending') ||
     cancellationRequests.some(r => r.status === 'Pending')
 

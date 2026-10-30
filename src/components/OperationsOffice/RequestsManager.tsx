@@ -17,6 +17,8 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
+import FacilityRequestCard from './FacilityRequestCard'
+import { facilityLocations, needsFacilityAttention } from '@/lib/facilityWorkflow'
 
 interface RequestsManagerProps {
   currentUser: User
@@ -58,6 +60,8 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false)
   const [approvalRequest, setApprovalRequest] = useState<FacilityRequest | null>(null)
   const [selectedFieldId, setSelectedFieldId] = useState<string>('')
+  const [decisionNote, setDecisionNote] = useState('')
+  const [isReviewing, setIsReviewing] = useState(false)
 
   // Rejection dialog state (for WhatsApp notification)
   const [showRejectionDialog, setShowRejectionDialog] = useState(false)
@@ -66,23 +70,9 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [sendWhatsAppNotification, setSendWhatsAppNotification] = useState(true)
   const [rejectionMessage, setRejectionMessage] = useState('')
 
-  // Get location options for approval dialog (only sports fields, not meeting rooms)
-  const locationOptions = useMemo(() => {
-    return fields
-      .filter((f: any) => {
-        // Ensure field has a valid id (required for Select component)
-        if (!f.id && f.id !== 0) return false
-        const site = (sites || []).find((s: any) => s.id === f.siteId)
-        // Only include active fields from active sports facilities (not meeting rooms)
-        const isField = !f.locationType || f.locationType === 'field'
-        return f.isActive && site?.isActive && site?.isSportsFacility && isField
-      })
-      .map((f: any) => ({
-        id: String(f.id), // Ensure id is always a string (never empty - Radix UI requires non-empty values)
-        name: f.name || 'Unnamed Field',
-        siteName: (sites || []).find((s: any) => s.id === f.siteId)?.name || 'Unknown Site'
-      }))
-  }, [fields, sites])
+  const locationOptions = useMemo(() =>
+    approvalRequest ? facilityLocations(approvalRequest, fields, sites) : [],
+  [approvalRequest, fields, sites])
 
   // Generate standard rejection message
   const generateRejectionMessage = (request: FacilityRequest | EquipmentRequest | CancellationRequest, type: string) => {
@@ -119,6 +109,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const handleOpenApprovalDialog = (request: FacilityRequest) => {
     setApprovalRequest(request)
     setSelectedFieldId('')
+    setDecisionNote('')
     setShowApprovalDialog(true)
   }
 
@@ -129,17 +120,23 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   ) => {
     setRejectionRequest(request)
     setRejectionRequestType(type)
-    setSendWhatsAppNotification(true)
+    setSendWhatsAppNotification(type !== 'facility')
+    setDecisionNote('')
     setRejectionMessage(generateRejectionMessage(request, type))
     setShowRejectionDialog(true)
   }
 
   // Confirm approval with location
   const handleConfirmApproval = async () => {
-    if (!approvalRequest) return
+    if (!approvalRequest || isReviewing) return
+    setIsReviewing(true)
     try {
-      const result = await api.reviewRequest(approvalRequest.id, 'Approved', selectedFieldId || undefined)
-      setFacilityRequests(current => current.map(item => item.id === result.request.id ? { ...item, status: 'Approved', reviewedAt: result.request.reviewedAt, reviewedBy: result.request.reviewedBy } : item))
+      const result = await api.reviewRequest(approvalRequest.id, 'Approved', selectedFieldId || undefined, {
+        expectedVersion: approvalRequest.workflow?.version || 0, decisionNote,
+      })
+      const saved = result.request
+      if (saved.type !== 'facility') throw new Error('Unexpected request type returned; reload requests')
+      setFacilityRequests(current => current.map(item => item.id === saved.id ? saved : item))
       if (result.event) {
         const created = result.event
         setEvents(current => [...current, created])
@@ -148,36 +145,44 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
         setShareDialogUpdateType('create')
         setShowShareDialog(true)
       }
-      toast.success('Request approved and booking saved')
+      toast.success('Request approved and booking saved. Record the requester notification in the workflow.')
       setShowApprovalDialog(false)
       setApprovalRequest(null)
       setSelectedFieldId('')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Approval was not saved')
-    }
+    } finally { setIsReviewing(false) }
   }
 
   // Confirm rejection with optional WhatsApp notification
   const handleConfirmRejection = async () => {
-    if (!rejectionRequest) return
+    if (!rejectionRequest || isReviewing) return
+    if (rejectionRequestType === 'facility' && !decisionNote.trim()) {
+      toast.error('Provide a reason for rejection')
+      return
+    }
+    setIsReviewing(true)
     try {
-      const result = await api.reviewRequest(rejectionRequest.id, 'Rejected')
+      const result = await api.reviewRequest(rejectionRequest.id, 'Rejected', undefined,
+        rejectionRequestType === 'facility' && 'eventType' in rejectionRequest
+          ? { expectedVersion: rejectionRequest.workflow?.version || 0, decisionNote } : undefined)
       const id = rejectionRequest.id
       const metadata = { status: result.request.status, reviewedAt: result.request.reviewedAt, reviewedBy: result.request.reviewedBy }
-      setFacilityRequests(current => current.map(item => item.id === id ? { ...item, ...metadata } : item))
+      const saved = result.request
+      if (saved.type === 'facility') setFacilityRequests(current => current.map(item => item.id === id ? saved : item))
       setEquipmentRequests(current => current.map(item => item.id === id ? { ...item, ...metadata } : item))
       setCancellationRequests(current => current.map(item => item.id === id ? { ...item, ...metadata } : item))
-      if (sendWhatsAppNotification && rejectionRequest.requestorPhone) {
+      if (rejectionRequestType !== 'facility' && sendWhatsAppNotification && rejectionRequest.requestorPhone) {
         const phone = rejectionRequest.requestorPhone.replace(/[^0-9+]/g, '')
         window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(rejectionMessage)}`, '_blank')
       }
-      toast.success('Request rejection saved')
+      toast.success(rejectionRequestType === 'facility' ? 'Rejection saved. Record the requester notification in the workflow.' : 'Request rejection saved')
       setShowRejectionDialog(false)
       setRejectionRequest(null)
       setRejectionMessage('')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Rejection was not saved')
-    }
+    } finally { setIsReviewing(false) }
   }
 
 
@@ -214,7 +219,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     return teamIds.map((id: string) => (teams as any[]).find((t: any) => t.id === id)?.name || 'Unknown').join(', ')
   }
 
-  const pendingFacilityCount = facilityRequests.filter(r => r.status === 'Pending').length
+  const pendingFacilityCount = facilityRequests.filter(needsFacilityAttention).length
   const pendingEquipmentCount = equipmentRequests.filter(r => r.status === 'Pending').length
   const pendingCancellationCount = cancellationRequests.filter(r => r.status === 'Pending').length
 
@@ -226,21 +231,21 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   // Split requests into pending and resolved
   const pendingCancellations = cancellationRequests.filter(r => r.status === 'Pending')
   const resolvedCancellations = cancellationRequests.filter(r => r.status !== 'Pending')
-  const pendingFacility = facilityRequests.filter(r => r.status === 'Pending')
-  const resolvedFacility = facilityRequests.filter(r => r.status !== 'Pending')
+  const pendingFacility = facilityRequests.filter(needsFacilityAttention)
+  const resolvedFacility = facilityRequests.filter(r => !needsFacilityAttention(r))
   const pendingEquipment = equipmentRequests.filter(r => r.status === 'Pending')
   const resolvedEquipment = equipmentRequests.filter(r => r.status !== 'Pending')
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-w-0 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold">Requests Management</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {pendingCancellationCount > 0 && (
             <Badge variant="destructive">{pendingCancellationCount} pending cancellations</Badge>
           )}
           {pendingFacilityCount > 0 && (
-            <Badge variant="destructive">{pendingFacilityCount} pending facility</Badge>
+            <Badge variant="destructive">{pendingFacilityCount} facility follow-ups</Badge>
           )}
           {pendingEquipmentCount > 0 && (
             <Badge variant="destructive">{pendingEquipmentCount} pending equipment</Badge>
@@ -376,74 +381,12 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             {/* Pending Facility Requests */}
             {pendingFacility.length === 0 ? (
               <div className="text-sm text-muted-foreground p-4 border rounded-lg">
-                No pending facility requests.
+                No facility requests need follow-up.
               </div>
             ) : (
               <OperationsCardGrid columns={1}>
-                {pendingFacility.map((request) => (
-                  <Card key={request.id}>
-                    <OperationsCardHeader
-                      title={<>{request.eventType} Request</>}
-                      icon={<ClipboardText size={18} weight="duotone" className="mt-0.5" />}
-                      badges={
-                        <Badge variant="default">
-                          {request.status}
-                        </Badge>
-                      }
-                      actions={
-                        <>
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => handleOpenApprovalDialog(request)}
-                          >
-                            <Check className="mr-1" size={16} weight="bold" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleOpenRejectionDialog(request, 'facility')}
-                          >
-                            <X className="mr-1" size={16} weight="bold" />
-                            Reject
-                          </Button>
-                        </>
-                      }
-                    />
-                    <CardContent className="flex flex-1 flex-col gap-2 text-sm">
-                      <RequestDetails request={request}>
-                        <div>
-                          <span className="text-muted-foreground">Date:</span> {request.date}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
-                        </div>
-                      </RequestDetails>
-                      <OperationsCardSection name="teams">
-                        {request.teamIds && request.teamIds.length > 0 && (
-                          <>
-                            <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
-                          </>
-                        )}
-                      </OperationsCardSection>
-                      <OperationsCardSection name="purpose">
-                        {request.purpose && (
-                          <>
-                            <span className="text-muted-foreground">Purpose:</span> {request.purpose}
-                          </>
-                        )}
-                      </OperationsCardSection>
-                      <OperationsCardSection name="description">
-                        {request.description && (
-                          <>
-                            <span className="text-muted-foreground">Details:</span> {request.description}
-                          </>
-                        )}
-                      </OperationsCardSection>
-                    </CardContent>
-                  </Card>
-                ))}
+                {pendingFacility.map(request => <FacilityRequestCard key={request.id} request={request}
+                  onApprove={handleOpenApprovalDialog} onReject={request => handleOpenRejectionDialog(request, 'facility')} />)}
               </OperationsCardGrid>
             )}
 
@@ -458,58 +401,8 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
                   <OperationsCardGrid columns={1}>
-                    {resolvedFacility.map((request) => (
-                      <Card key={request.id} className="opacity-70">
-                        <OperationsCardHeader
-                          title={<>{request.eventType} Request</>}
-                          icon={<ClipboardText size={18} weight="duotone" className="mt-0.5" />}
-                          badges={
-                            <Badge variant={request.status === 'Approved' ? 'secondary' : 'destructive'}>
-                              {request.status}
-                            </Badge>
-                          }
-                        />
-                        <CardContent className="flex flex-1 flex-col gap-2 text-sm">
-                          <RequestDetails request={request}>
-                            <div>
-                              <span className="text-muted-foreground">Date:</span> {request.date}
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Time:</span> {request.startTime} ({request.duration} min)
-                            </div>
-                          </RequestDetails>
-                          <OperationsCardSection name="teams">
-                            {request.teamIds && request.teamIds.length > 0 && (
-                              <>
-                                <span className="text-muted-foreground">Teams:</span> {getTeamNames(request.teamIds)}
-                              </>
-                            )}
-                          </OperationsCardSection>
-                          <OperationsCardSection name="purpose">
-                            {request.purpose && (
-                              <>
-                                <span className="text-muted-foreground">Purpose:</span> {request.purpose}
-                              </>
-                            )}
-                          </OperationsCardSection>
-                          <OperationsCardSection name="description">
-                            {request.description && (
-                              <>
-                                <span className="text-muted-foreground">Details:</span> {request.description}
-                              </>
-                            )}
-                          </OperationsCardSection>
-                          {request.reviewedAt && (
-                            <div className="mt-auto space-y-2">
-                              <Separator />
-                              <div className="text-xs text-muted-foreground">
-                                Reviewed by {request.reviewedBy} on {new Date(request.reviewedAt).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+                    {resolvedFacility.map(request => <FacilityRequestCard key={request.id} request={request}
+                      onApprove={handleOpenApprovalDialog} onReject={request => handleOpenRejectionDialog(request, 'facility')} />)}
                   </OperationsCardGrid>
                 </CollapsibleContent>
               </Collapsible>
@@ -655,14 +548,14 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
 
       {/* Facility Approval Dialog - to specify location */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="operations-dialog max-h-[85dvh] overflow-y-auto text-foreground sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin size={20} style={{ color: COLORS.ACCENT }} />
               Approve Facility Request
             </DialogTitle>
             <DialogDescription>
-              Specify the location for this event. You can leave it empty and assign later.
+              Review the allocation and conditions before creating one booking. Notification of the requester is a separate workflow step.
             </DialogDescription>
           </DialogHeader>
 
@@ -684,17 +577,19 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 )}
               </div>
 
+              <p className="text-sm">This creates one booking on {approvalRequest.date}, not a multi-day series. Schedule any remaining dates separately before communicating full approval.</p>
+
               {/* Location Selection */}
               <div className="space-y-2">
-                <Label htmlFor="location">Location (Field/Site)</Label>
+                <Label htmlFor="location">Location ({approvalRequest.locationType === 'meeting_room' ? 'Meeting room' : 'Field'})</Label>
                 <Select value={selectedFieldId} onValueChange={setSelectedFieldId}>
                   <SelectTrigger id="location">
                     <SelectValue placeholder="Select a location (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locationOptions.map((location: any) => (
+                    {locationOptions.map(location => (
                       <SelectItem key={location.id} value={location.id}>
-                        {location.siteName} - {location.name}
+                        {location.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -703,6 +598,11 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   If no location is selected, the event will be created with status "Planned". 
                   With a location, it will be "Confirmed".
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="approval-note">Decision / conditions to share with requester (optional)</Label>
+                <Textarea id="approval-note" value={decisionNote} maxLength={4000}
+                  onChange={event => setDecisionNote(event.target.value)} />
               </div>
             </div>
           )}
@@ -720,6 +620,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             </Button>
             <Button
               onClick={handleConfirmApproval}
+              disabled={isReviewing}
               style={{ backgroundColor: COLORS.ACCENT }}
             >
               <Check size={16} className="mr-2" />
@@ -731,14 +632,16 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
 
       {/* Rejection Dialog - with WhatsApp notification option */}
       <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="operations-dialog max-h-[85dvh] overflow-y-auto text-foreground sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <X size={20} />
               Reject Request
             </DialogTitle>
             <DialogDescription>
-              Reject this request and optionally notify the requestor via WhatsApp.
+              {rejectionRequestType === 'facility'
+                ? 'Record the reason for rejection. Notify the requester and record that communication in the workflow afterward.'
+                : 'Reject this request and optionally prepare a WhatsApp draft for the requester.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -759,8 +662,13 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 </div>
               </div>
 
+              {rejectionRequestType === 'facility' && <div className="space-y-2">
+                <Label htmlFor="rejection-note">Reason / outcome to share with requester *</Label>
+                <Textarea id="rejection-note" value={decisionNote} required maxLength={4000}
+                  onChange={event => setDecisionNote(event.target.value)} />
+              </div>}
               {/* WhatsApp Notification Option */}
-              <div className="flex items-start gap-3 p-3 border rounded-lg">
+              {rejectionRequestType !== 'facility' && <div className="flex items-start gap-3 p-3 border rounded-lg">
                 <Checkbox
                   id="send-whatsapp"
                   checked={sendWhatsAppNotification}
@@ -778,7 +686,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                     Send a message to {rejectionRequest.requestorPhone}
                   </p>
                 </div>
-              </div>
+              </div>}
 
               {/* Message Editor (only shown when WhatsApp is enabled) */}
               {sendWhatsAppNotification && (
@@ -813,6 +721,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             <Button
               variant="destructive"
               onClick={handleConfirmRejection}
+              disabled={isReviewing}
             >
               <X size={16} className="mr-2" />
               Reject Request

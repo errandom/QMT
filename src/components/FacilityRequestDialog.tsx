@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
-import { FacilityRequest, EventType, Team } from '@/lib/types'
+import { FacilityRequest, EventType, LocationType } from '@/lib/types'
 
 interface FacilityRequestDialogProps {
   open: boolean
@@ -18,10 +18,12 @@ interface FacilityRequestDialogProps {
 
 export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRequestDialogProps) {
   const requestKey = useRef(crypto.randomUUID())
-  const { facilityRequests, setFacilityRequests, teams } = useData()
+  const { setFacilityRequests, teams } = useData()
   
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [locationType, setLocationType] = useState<LocationType | ''>('')
   const [eventType, setEventType] = useState<EventType | ''>('')
   const [selectedTeams, setSelectedTeams] = useState<string[]>([])
   const [purpose, setPurpose] = useState('')
@@ -38,6 +40,11 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
 
     if (!eventType) {
       toast.error('Please select an event type')
+      setIsLoading(false)
+      return
+    }
+    if (!locationType) {
+      toast.error('Please select a field or meeting room')
       setIsLoading(false)
       return
     }
@@ -58,6 +65,8 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
       id: `req-${Date.now()}`,
       requestorName: name,
       requestorPhone: phone,
+      requestorEmail: email.trim() || undefined,
+      locationType,
       eventType: eventType as EventType,
       teamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
       purpose: purpose || undefined,
@@ -83,6 +92,8 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
     
     setName('')
     setPhone('')
+    setEmail('')
+    setLocationType('')
     setEventType('')
     setSelectedTeams([])
     setPurpose('')
@@ -108,7 +119,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="w-[95vw] max-w-2xl max-h-[95vh] overflow-y-auto p-4 sm:p-8"
+        className="w-[95vw] max-w-2xl max-h-[85dvh] overflow-y-auto p-4 sm:p-8"
         style={{
           background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(162, 218, 245, 0.92) 100%)',
           backdropFilter: 'blur(16px)'
@@ -128,6 +139,8 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               <Label htmlFor="name" style={{ color: '#001f3f' }}>Name *</Label>
               <Input
                 id="name"
+                autoComplete="name"
+                maxLength={255}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -143,6 +156,8 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               <Input
                 id="phone"
                 type="tel"
+                autoComplete="tel"
+                maxLength={50}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
@@ -154,6 +169,26 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               />
             </div>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="request-email" style={{ color: '#001f3f' }}>Email (optional)</Label>
+            <Input id="request-email" name="requestorEmail" type="email" autoComplete="email" maxLength={254}
+              value={email} onChange={event => setEmail(event.target.value)} className="!bg-white !text-slate-900 !border-[#248bcc]" />
+          </div>
+
+          <fieldset className="space-y-2" style={{ color: '#001f3f' }}>
+            <legend className="text-sm font-medium">Facility type *</legend>
+            <div className="flex flex-wrap gap-3">
+              {([['field', 'Field'], ['meeting_room', 'Meeting room']] as const).map(([value, label]) => (
+                <label key={value} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-md border border-[#248bcc] bg-white px-3">
+                  <input type="radio" name="locationType" value={value} required
+                    checked={locationType === value} onChange={() => setLocationType(value)} />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <p className="text-xs">Fields and meeting rooms follow separate allocation reviews. Submission is not a booking confirmation.</p>
+          </fieldset>
 
           <div className="space-y-2">
             <Label htmlFor="event-type" style={{ color: '#001f3f' }}>Event Type *</Label>
@@ -218,6 +253,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               <Label htmlFor="opponent" style={{ color: '#001f3f' }}>Opponent (optional)</Label>
               <Input
                 id="opponent"
+                maxLength={500}
                 value={opponent}
                 onChange={(e) => setOpponent(e.target.value)}
                 placeholder="Enter opponent team name"
@@ -235,6 +271,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
               <Label htmlFor="purpose" style={{ color: '#001f3f' }}>Purpose *</Label>
               <Input
                 id="purpose"
+                maxLength={500}
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 placeholder="Specify the purpose"
@@ -316,6 +353,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
                 type="number"
                 min={(eventType === 'Game' || eventType === 'Practice') ? 90 : 30}
                 step="30"
+                max="1440"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 required
@@ -332,6 +370,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
             <Label htmlFor="description" style={{ color: '#001f3f' }}>Additional Details</Label>
             <Textarea
               id="description"
+              maxLength={1000}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Any additional context or special requirements..."

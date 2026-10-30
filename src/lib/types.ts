@@ -157,10 +157,49 @@ export interface Event {
   attendanceLastSync?: string
 }
 
+export type FacilityWorkflowStage = 'Received' | 'Acknowledged' | 'In evaluation' | 'Awaiting response' | 'Response received' | 'Approved' | 'Rejected'
+export type FacilityReviewRoute = 'City of Zurich' | 'ZVIS' | 'Other' | 'Internal'
+export type CommunicationChannel = 'Email' | 'WhatsApp' | 'Phone' | 'Other'
+
+export interface FacilityRouting {
+  locationType: LocationType
+  route: FacilityReviewRoute
+  department: string
+  contactEmail: string
+  reference: string
+  followUpDate: string
+  permitNotes: string
+}
+
+export type FacilityWorkflowAction =
+  | ({ action: 'configure' } & FacilityRouting)
+  | { action: 'acknowledge' | 'send' | 'notify'; channel: CommunicationChannel; message: string }
+  | { action: 'response' | 'internal' | 'note'; message: string }
+  | { action: 'evaluate' }
+
+export interface FacilityWorkflow extends Partial<FacilityRouting> {
+  version: number
+  stage: FacilityWorkflowStage
+  outcomeNotifiedAt?: string
+  decisionNote?: string
+  approvedFieldId?: string
+  bookingEventId?: string
+  history: {
+    at: string
+    by: string
+    action: FacilityWorkflowAction['action'] | 'Approved' | 'Rejected'
+    message?: string
+    channel?: CommunicationChannel
+  }[]
+}
+
 export interface FacilityRequest {
   id: string
   requestorName: string
   requestorPhone: string
+  requestorEmail?: string
+  locationType?: LocationType
+  workflow?: FacilityWorkflow
   eventType: EventType
   teamIds?: string[]
   purpose?: string
