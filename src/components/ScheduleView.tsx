@@ -1,16 +1,16 @@
 import { useData } from '@/contexts/DataContext'
-import { Event, SportType, Team, Field, Site } from '@/lib/types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { Event, SportType } from '@/lib/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { CalendarBlank } from '@phosphor-icons/react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useState } from 'react'
+import { CalendarBlank, CaretDown, Clock, MapPin, Users } from '@phosphor-icons/react'
+import { useState, type CSSProperties } from 'react'
 import { formatEventTimeRange } from '@/lib/utils'
 import { formatSharedFieldBookings } from '@/lib/fieldSharing'
 import SharedFieldNotice from './SharedFieldNotice'
 import { buildWeeklyProgram } from '@/lib/scheduleProgram'
 import { Button } from '@/components/ui/button'
+import { getTeamColor } from '@/lib/teamColors'
+import './ScheduleView.css'
 
 interface ScheduleViewProps {
   sportFilter: 'All Sports' | SportType
@@ -61,15 +61,9 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   const displayEvents: (Event & { originalEvent: Event; programDates?: string[] })[] = view === 'program'
     ? buildWeeklyProgram(allEvents, weekDates, eventWindow) : weeklyEvents
 
-  // Helper to get field IDs for an event (supports both fieldIds array and legacy fieldId)
-  const getEventFieldIds = (event: any): string[] => {
-    if (event.fieldIds && event.fieldIds.length > 0) {
-      return event.fieldIds
-    }
-    if (event.fieldId) {
-      return [event.fieldId]
-    }
-    return []
+  const getEventFieldIds = (event: Event): string[] => {
+    if (event.fieldIds?.length) return event.fieldIds
+    return 'fieldId' in event && typeof event.fieldId === 'string' ? [event.fieldId] : []
   }
 
   const bookedFieldIds = new Set(displayEvents.flatMap(getEventFieldIds))
@@ -90,95 +84,17 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
     .sort((a, b) => b.eventCount - a.eventCount)
     .map(({ site }) => site)
 
-  const getEventPosition = (startTime: string, endTime: string) => {
-    const start = timeToMinutes(startTime)
-    const end = timeToMinutes(endTime)
-    
-    if (end <= scheduleStart || start >= scheduleEnd) return null
-    
-    const visibleStart = Math.max(start, scheduleStart)
-    const visibleEnd = Math.min(end, scheduleEnd)
-    const totalMinutes = scheduleEnd - scheduleStart
-    
-    const leftPercent = ((visibleStart - scheduleStart) / totalMinutes) * 100
-    const widthPercent = ((visibleEnd - visibleStart) / totalMinutes) * 100
-    
-    return { left: `${leftPercent}%`, width: `${widthPercent}%` }
-  }
-
-  const timeToMinutes = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number)
-    return hours * 60 + minutes
-  }
-  const scheduleStart = displayEvents.reduce((start, event) => Math.max(0, Math.min(start, timeToMinutes(event.startTime))), 17 * 60)
-  const scheduleEnd = displayEvents.reduce((end, event) => Math.min(24 * 60, Math.max(end, timeToMinutes(event.endTime))), 22 * 60)
-  const timeLabel = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
-
-  const getEventsForSiteFieldDay = (siteId: string, fieldId: string, dayIndex: number) => {
-    return displayEvents.filter(event => {
-      const eventFieldIds = getEventFieldIds(event)
-      // Check if this field is one of the event's fields
-      if (!eventFieldIds.includes(fieldId)) return false
-      
-      return event.date === weekDates[dayIndex - 1]
-    })
-  }
-
-  const getTeamColor = (teamIds: string[], index: number) => {
-    // Updated color palette - grey and blue tones aligned with site theme
-    const colors = [
-      { bg: '#248bcc', text: '#ffffff' }, // Primary blue
-      { bg: '#4a90a4', text: '#ffffff' }, // Teal blue
-      { bg: '#5a6c7d', text: '#ffffff' }, // Grey blue
-      { bg: '#202122ff', text: '#ffffff' }, // Light blue
-      { bg: '#708090', text: '#ffffff' }, // Slate grey
-      { bg: '#4682b4', text: '#ffffff' }  // Steel blue
-    ]
-    const hash = (teamIds[0]?.charCodeAt(0) || 0) + index
-    return colors[hash % colors.length]
-  }
-
-  // Check if two events overlap in time
-  const eventsOverlap = (event1: Event, event2: Event) => {
-    const start1 = timeToMinutes(event1.startTime)
-    const end1 = timeToMinutes(event1.endTime)
-    const start2 = timeToMinutes(event2.startTime)
-    const end2 = timeToMinutes(event2.endTime)
-    return start1 < end2 && start2 < end1
-  }
-
-  // Assign row positions to prevent overlapping
-  const assignEventRows = (events: Event[]) => {
-    const sortedEvents = [...events].sort((a, b) => 
-      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-    )
-    const rows: Event[][] = []
-    
-    sortedEvents.forEach(event => {
-      let placed = false
-      for (let i = 0; i < rows.length; i++) {
-        const rowEvents = rows[i]
-        const hasOverlap = rowEvents.some(e => eventsOverlap(e, event))
-        if (!hasOverlap) {
-          rows[i].push(event)
-          placed = true
-          break
-        }
-      }
-      if (!placed) {
-        rows.push([event])
-      }
-    })
-    
-    const eventRowMap = new Map<string, number>()
-    rows.forEach((row, rowIndex) => {
-      row.forEach(event => {
-        eventRowMap.set(event.id, rowIndex)
-      })
-    })
-    
-    return { rowCount: rows.length, eventRowMap }
-  }
+  const fieldRows = activeSites.flatMap(site => bookedFields
+    .filter(field => field.siteId === site.id)
+    .map(field => ({ site, field, days: weekDates.map(date => displayEvents
+      .filter(event => getEventFieldIds(event).includes(field.id) && event.date === date)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime) || a.title.localeCompare(b.title))) })))
+  const dayCounts = weekDates.map((_, index) => fieldRows.reduce((count, row) => count + row.days[index].length, 0))
+  const dayWeights = dayCounts.map(count => count ? 1 + Math.min(count - 1, 4) * 0.18 : 0)
+  const totalWeight = dayWeights.reduce((sum, weight) => sum + weight, 0)
+  const quietDays = DAYS.filter((_, index) => !dayCounts[index])
+  const shortDate = (date: string) => new Date(`${date}T00:00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 
   const nextWeek = new Date(`${weekStart}T00:00:00Z`)
   nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
@@ -225,155 +141,85 @@ export default function ScheduleView({ sportFilter, teamFilter }: ScheduleViewPr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="schedule-view space-y-4">
       {viewControls}
-      {activeSites.map(site => {
-        const siteFields = bookedFields.filter(f => f.siteId === site.id)
-        if (siteFields.length === 0) return null
-
-        return (
-          <Card key={site.id} className="glass-card border-white/30">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold" style={{ color: '#001f3f' }}>{site.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <div className="min-w-[1100px]">
-                  <div className="grid grid-cols-8 gap-2 mb-2">
-                    <div className="text-sm font-medium" style={{ color: '#6b7280' }}>Location</div>
-                    {DAYS.map(day => (
-                      <div key={day} className="text-sm font-medium text-center" style={{ color: '#001f3f' }}>
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  {siteFields.map(field => {
-                    // Check if this field is used by Meeting/Other events
-                    const fieldEvents = displayEvents.filter(e => getEventFieldIds(e).includes(field.id))
-                    const isMeetingLocation = fieldEvents.length > 0 && fieldEvents.every(e => e.eventType === 'Meeting' || e.eventType === 'Other')
-                    
-                    return (
-                    <div key={field.id} className="grid grid-cols-8 gap-2 mb-4">
-                      <div className="text-sm font-medium flex items-center" style={{ color: '#001f3f' }}>
-                        {isMeetingLocation ? site.name : field.name}
-                      </div>
-                      
-                      {DAYS.map((day, dayIndex) => {
-                        const dayEvents = getEventsForSiteFieldDay(site.id, field.id, dayIndex + 1)
-                        const { rowCount, eventRowMap } = assignEventRows(dayEvents)
-                        
-                        return (
-                          <div key={day} className={`relative rounded-lg border ${view === 'program' ? 'space-y-2 p-2' : ''}`} style={{
-                            minHeight: '120px',
-                            height: view === 'week' ? '120px' : undefined,
-                            background: 'rgba(255, 255, 255, 0.4)',
-                            borderColor: 'rgba(36, 139, 204, 0.3)'
-                          }}>
-                            <TooltipProvider>
-                              {dayEvents.map((event, eventIndex) => {
-                                const position = getEventPosition(event.startTime, event.endTime)
-                                if (!position) return null
-                                
-                                const eventTeams = event.teamIds ? teams.filter(t => event.teamIds.includes(t.id)) : []
-                                const teamColor = getTeamColor(event.teamIds || [], eventIndex)
-                                const isCancelled = event.status === 'Cancelled'
-                                const rowIndex = eventRowMap.get(event.id) || 0
-                                const totalRows = Math.max(rowCount, 1)
-                                const rowHeight = 120 / totalRows
-                                const sharedFieldBookings = (event.sharedFieldBookings || []).filter(booking =>
-                                  booking.fieldId === field.id
-                                  && (view === 'program' || (`${booking.date}T${booking.startTime}` < `${event.date}T${event.endTime}`
-                                  && `${booking.endDate}T${booking.endTime}` > `${event.date}T${event.startTime}`)))
-                                const sharingLabel = view === 'program' ? 'Shared on some dates' : 'Shared field'
-                                
-                                return (
-                                  <Tooltip key={event.id}>
-                                    <TooltipTrigger asChild>
-                                      <div
-                                        tabIndex={0}
-                                        aria-label={`${view === 'program' ? `${day}, ${event.startTime} - ${event.endTime}, ${eventTeams.map(team => team.name).join(', ')}, ` : ''}${event.title || event.eventType}${sharedFieldBookings.length
-                                          ? `; ${sharingLabel} - full field not exclusively available. ${formatSharedFieldBookings(sharedFieldBookings, fields, sites, teams)}`
-                                          : ''}`}
-                                        className={`${view === 'program' ? 'relative p-2 gap-1 break-words' : 'absolute px-1 items-center justify-center overflow-hidden'} rounded flex flex-col text-xs font-medium cursor-pointer hover:brightness-110 transition-all shadow-md`}
-                                        style={{
-                                          ...(view === 'week' ? { ...position, top: `${rowIndex * rowHeight + 4}px`, height: `${rowHeight - 8}px` } : {}),
-                                          backgroundColor: isCancelled ? '#9ca3af' : teamColor.bg,
-                                          color: teamColor.text,
-                                          opacity: isCancelled ? 0.6 : 1,
-                                          textDecoration: isCancelled ? 'line-through' : 'none'
-                                        }}
-                                      >
-                                        {view === 'program' && <span className="font-semibold">{event.startTime} - {event.endTime}</span>}
-                                        {view === 'program' && eventTeams.length > 0 && <span>{eventTeams.map(team => team.name).join(', ')}</span>}
-                                        <span className={view === 'week' ? 'truncate' : ''}>
-                                          {event.title || event.eventType}
-                                        </span>
-                                        {sharedFieldBookings.length > 0 && <span className="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-950">{sharingLabel}</span>}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="glass-card border-white/30 max-w-xs">
-                                      <div className="text-xs space-y-1.5">
-                                        <div className="font-semibold text-sm" style={{ color: '#001f3f' }}>
-                                          {event.title || event.eventType}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                          <span className="font-medium">Type:</span> {event.eventType}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                          <span className="font-medium">Teams:</span> {eventTeams.map(t => t.name).join(', ') || 'None'}
-                                        </div>
-                                        {event.otherParticipants && (
-                                          <div className="text-muted-foreground">
-                                            <span className="font-medium">Participants:</span> {event.otherParticipants}
-                                          </div>
-                                        )}
-                                        <div className="text-muted-foreground">
-                                          <span className="font-medium">Time:</span> {view === 'program'
-                                            ? `${event.startTime} - ${event.endTime}` : `${event.originalEvent.date} ${formatEventTimeRange(event.originalEvent)}`}
-                                        </div>
-                                        {event.programDates && <div className="text-muted-foreground">
-                                          Loaded occurrences: {event.programDates[0]} to {event.programDates[event.programDates.length - 1]} ({event.programDates.length} dates)
-                                        </div>}
-                                        {view === 'week' && <div className="flex items-center gap-1">
-                                          <span className="font-medium text-muted-foreground">Status:</span>
-                                          <Badge 
-                                            variant={event.status === 'Confirmed' ? 'default' : event.status === 'Cancelled' ? 'destructive' : 'secondary'}
-                                            className="text-xs"
-                                          >
-                                            {event.status}
-                                          </Badge>
-                                        </div>}
-                                        <SharedFieldNotice event={{ ...event.originalEvent, sharedFieldBookings }} fields={fields} sites={sites} teams={teams} />
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )
-                              })}
-                            </TooltipProvider>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    )
-                  })}
-
-                  {view === 'week' && <div className="grid grid-cols-8 gap-2 mt-2 pt-2 border-t border-white/30">
-                    <div></div>
-                    {DAYS.map(day => (
-                      <div key={day} className="flex justify-between text-[10px] px-1" style={{ color: '#6b7280' }}>
-                        <span>{timeLabel(scheduleStart)}</span>
-                        <span>{timeLabel(Math.round((scheduleStart + scheduleEnd) / 2))}</span>
-                        <span>{timeLabel(scheduleEnd)}</span>
-                      </div>
-                    ))}
-                  </div>}
-                </div>
+      <p className="text-xs text-muted-foreground">Team colors stay consistent. Select a booking for details and sharing information.</p>
+      <table className="schedule-board" role="table">
+        <caption className="sr-only">{view === 'program' ? 'Recurring weekly program' : 'Bookings for the selected week'}, by day and location</caption>
+        <colgroup>
+          {DAYS.map((day, index) => <col key={day} data-day={day} data-active={dayCounts[index] > 0}
+            style={{ width: dayWeights[index]
+              ? `${(100 - quietDays.length * 4) * dayWeights[index] / totalWeight}%`
+              : '4%' }} />)}
+        </colgroup>
+        <thead role="rowgroup">
+          <tr role="row">
+            {DAYS.map((day, index) => <th key={day} scope="col" role="columnheader" data-active={dayCounts[index] > 0}>
+              <abbr title={day}>{day.slice(0, 3)}</abbr>
+              {view === 'week' && <span className="schedule-header-date">{shortDate(weekDates[index])}</span>}
+              {!dayCounts[index] && <span className="sr-only">: no bookings shown</span>}
+            </th>)}
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          <tr role="row">
+            {DAYS.map((day, dayIndex) => <td key={day} role="cell" aria-colindex={dayIndex + 1}
+              data-day={day} data-has-events={dayCounts[dayIndex] > 0}>
+              <div className="schedule-mobile-day" aria-hidden="true">
+                {day}{view === 'week' && <span>{shortDate(weekDates[dayIndex])}</span>}
               </div>
-            </CardContent>
-          </Card>
-        )
-      })}
+              {!dayCounts[dayIndex] ? <span className="schedule-empty" aria-label="No bookings shown">-</span>
+                : fieldRows.filter(row => row.days[dayIndex].length > 0)
+                  .sort((a, b) => a.days[dayIndex][0].startTime.localeCompare(b.days[dayIndex][0].startTime))
+                  .map(({ site, field, days }) => <section key={field.id} className="schedule-location-group"
+                    aria-label={`${site.name} / ${field.name}`}>
+                    <h3 className="schedule-location">
+                      <span className="schedule-site"><MapPin aria-hidden="true" size={14} />{site.name}</span>
+                      <span className="schedule-field">{field.name}</span>
+                    </h3>
+                    <div className="schedule-bookings">{days[dayIndex].map(event => {
+                      const eventTeamIds = [...new Set(event.teamIds || [])].sort()
+                      const teamColor = eventTeamIds.length === 1 ? getTeamColor(eventTeamIds[0]) : undefined
+                      const sharedFieldBookings = (event.sharedFieldBookings || []).filter(booking =>
+                        booking.fieldId === field.id
+                        && (view === 'program' || (`${booking.date}T${booking.startTime}` < `${event.date}T${event.endTime}`
+                        && `${booking.endDate}T${booking.endTime}` > `${event.date}T${event.startTime}`)))
+                      const sharingLabel = view === 'program' ? 'Shared on some dates' : 'Shared field'
+                      return <details key={event.id} className="schedule-booking" data-event-id={event.originalEvent.id}
+                        data-status={view === 'week' ? event.status : undefined}
+                        style={{ '--booking-accent': teamColor?.foreground || '#475569' } as CSSProperties}>
+                        <summary aria-label={`${day}, ${event.startTime} - ${event.endTime}, ${eventTeamIds.map(id => teams.find(team => team.id === id)?.name || `Team ${id}`).join(', ')}, ${event.title || event.eventType}${view === 'week' ? `, ${event.status}` : ''}${sharedFieldBookings.length
+                          ? `; ${sharingLabel} - full field not exclusively available. ${formatSharedFieldBookings(sharedFieldBookings, fields, sites, teams)}`
+                          : ''}`}>
+                          <span className="schedule-time"><Clock aria-hidden="true" size={13} />{event.startTime} - {event.endTime}<CaretDown aria-hidden="true" size={12} className="schedule-expand" /></span>
+                          {eventTeamIds.length > 0 && <span className="schedule-teams">{eventTeamIds.map(id => {
+                            const color = getTeamColor(id)
+                            return <span key={id} className="schedule-team" data-team-id={id}
+                              style={{ color: color.foreground, backgroundColor: color.background }}>
+                              {teams.find(team => team.id === id)?.name || `Team ${id}`}
+                            </span>
+                          })}</span>}
+                          <span className="schedule-title">{event.title || event.eventType}</span>
+                          <span className="schedule-kind">{event.eventType}{view === 'week' && <> · {event.status}</>}</span>
+                          {sharedFieldBookings.length > 0 && <span className="schedule-sharing"><Users aria-hidden="true" size={13} />{sharingLabel}</span>}
+                        </summary>
+                        <div className="schedule-booking-details">
+                          {event.otherParticipants && <div>Participants: {event.otherParticipants}</div>}
+                          <div>Time: {view === 'program' ? `${event.startTime} - ${event.endTime}`
+                            : `${event.originalEvent.date} ${formatEventTimeRange(event.originalEvent)}`}</div>
+                          {event.programDates && <div>Loaded occurrences: {event.programDates[0]} to {event.programDates[event.programDates.length - 1]} ({event.programDates.length} dates)</div>}
+                          {view === 'week' && <Badge variant={event.status === 'Confirmed' ? 'default'
+                            : event.status === 'Cancelled' ? 'destructive' : 'secondary'}>{event.status}</Badge>}
+                          <SharedFieldNotice event={{ ...event.originalEvent, sharedFieldBookings }} fields={fields} sites={sites} teams={teams} />
+                        </div>
+                      </details>
+                    })}</div>
+                  </section>)}
+            </td>)}
+          </tr>
+        </tbody>
+      </table>
+      {quietDays.length > 0 && <p className="schedule-quiet-note">No bookings shown: {quietDays.join(', ')}.</p>}
     </div>
   )
 }

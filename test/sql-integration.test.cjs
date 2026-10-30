@@ -198,6 +198,22 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       type: 'facility', requestorName: 'Synthetic fixture', requestorPhone: '555-0100',
       eventType: 'Practice', teamIds: [String(fixture.team)], date: '2027-02-01', startTime: '18:00', duration: 60,
     };
+    const prepareFacility = async (id, locationType = 'field') => {
+      let version = 0;
+      for (const action of [
+        { action: 'acknowledge', channel: 'Phone', message: 'Receipt acknowledged.' },
+        { action: 'evaluate' },
+        { action: 'configure', locationType, route: 'ZVIS', department: 'Synthetic allocation office',
+          contactEmail: '', reference: 'TEST', followUpDate: '', permitNotes: '' },
+        { action: 'send', channel: 'Email', message: 'Allocation inquiry sent manually.' },
+        { action: 'response', message: 'Allocation confirmed without additional conditions.' },
+      ]) {
+        const response = await post(`/api/requests/${id}/workflow`, { ...action, expectedVersion: version }, null, true);
+        assert.equal(response.status, 200);
+        version = (await response.json()).workflow.version;
+      }
+      return version;
+    };
     let requestId;
     await t.test('retries are idempotent and changed payload is rejected', async () => {
       const key = randomUUID();
@@ -210,27 +226,56 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       assert.equal((await post('/api/requests', { ...submission, duration: 30 }, key)).status, 409);
     });
     await t.test('process restart retains requests; approval is atomic and cannot be repeated', async () => {
+      assert.equal((await post(`/api/requests/${requestId}/review`, { status: 'Approved', expectedVersion: 0 }, null, true)).status, 409);
+      const expectedVersion = await prepareFacility(requestId);
       await stop();
       await pool.connect();
       base = await start();
       const list = await fetch(base + '/api/requests', { headers: { Authorization: `Bearer ${token}` } });
       assert.equal(list.status, 200);
-      assert.ok((await list.json()).some(request => request.id === requestId));
+      const saved = (await list.json()).find(request => request.id === requestId);
+      assert.equal(saved.workflow.stage, 'Response received');
+      assert.equal(saved.workflow.history.length, 5);
       const approvals = await Promise.all([
-        post(`/api/requests/${requestId}/review`, { status: 'Approved', fieldId: String(fixture.field) }, null, true),
-        post(`/api/requests/${requestId}/review`, { status: 'Approved', fieldId: String(fixture.field) }, null, true),
+        post(`/api/requests/${requestId}/review`, { status: 'Approved', fieldId: String(fixture.field), expectedVersion }, null, true),
+        post(`/api/requests/${requestId}/review`, { status: 'Approved', fieldId: String(fixture.field), expectedVersion }, null, true),
       ]);
       assert.deepEqual(approvals.map(response => response.status).sort(), [200, 409]);
       const approved = await approvals.find(response => response.status === 200).json();
       assert.equal(approved.request.reviewedBy, 'synthetic-test-admin');
       assert.equal(approved.event.field_id, fixture.field);
+      assert.equal(approved.request.workflow.outcomeNotifiedAt, undefined);
+      const notified = await post(`/api/requests/${requestId}/workflow`, {
+        action: 'notify', expectedVersion: approved.request.workflow.version, channel: 'Email', message: 'Outcome sent manually.',
+      }, null, true);
+      assert.equal(notified.status, 200);
+      assert.ok((await notified.json()).workflow.outcomeNotifiedAt);
     });
     await t.test('conflicting approval leaves the request pending and creates no partial booking', async () => {
       const first = await post('/api/requests', submission, randomUUID());
       const id = (await first.json()).id;
-      assert.equal((await post(`/api/requests/${id}/review`, { status: 'Approved', fieldId: String(fixture.field) }, null, true)).status, 409);
+      const expectedVersion = await prepareFacility(id);
+      assert.equal((await post(`/api/requests/${id}/review`, { status: 'Approved', fieldId: String(fixture.field), expectedVersion }, null, true)).status, 409);
       const rows = await pool.request().input('id', sql.Int, id).query('SELECT status FROM requests WHERE id = @id');
       assert.equal(rows.recordset[0].status, 'pending');
+    });
+    await t.test('meeting-room approval rejects a field and creates only the matching room booking', async () => {
+      const room = (await pool.request().input('field', sql.Int, fixture.field).query(`
+        INSERT INTO fields (site_id, name, location_type)
+          OUTPUT INSERTED.id SELECT site_id, 'Synthetic meeting room', 'meeting_room' FROM fields WHERE id = @field
+      `)).recordset[0].id;
+      const submitted = await post('/api/requests', { ...submission, eventType: 'Meeting', locationType: 'meeting_room' }, randomUUID());
+      assert.equal(submitted.status, 201);
+      const id = (await submitted.json()).id;
+      const expectedVersion = await prepareFacility(id, 'meeting_room');
+      assert.equal((await post(`/api/requests/${id}/review`, {
+        status: 'Approved', fieldId: String(fixture.field), expectedVersion,
+      }, null, true)).status, 400);
+      const approved = await post(`/api/requests/${id}/review`, { status: 'Approved', fieldId: String(room), expectedVersion }, null, true);
+      assert.equal(approved.status, 200);
+      const result = await approved.json();
+      assert.equal(result.event.field_id, room);
+      assert.equal(result.request.workflow.approvedFieldId, String(room));
     });
   } finally {
     if (server) await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });

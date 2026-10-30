@@ -36,8 +36,10 @@ function render(data, filters = {}, view = 'week') {
     if (id === '@/lib/utils') return utilities;
     if (id === '@/lib/fieldSharing') return loadLibrary('fieldSharing.ts');
     if (id === '@/lib/scheduleProgram') return loadLibrary('scheduleProgram.ts');
+    if (id === '@/lib/teamColors') return loadLibrary('teamColors.ts');
+    if (id === './ScheduleView.css') return {};
     if (id === './SharedFieldNotice') return { default: () => null };
-    if (id === '@phosphor-icons/react') return { CalendarBlank: () => null };
+    if (id === '@phosphor-icons/react') return new Proxy({}, { get: () => () => null });
     if (id.startsWith('@/components/ui/')) {
       return new Proxy({}, { get: () => ({ children }) => React.createElement('div', null, children) });
     }
@@ -72,7 +74,7 @@ test('weekly schedule shows actual occurrences, including morning/weekend games,
   assert.ok(html.includes('Saturday morning fixture'));
   assert.ok(html.includes('Saturday') && html.includes('Sunday') && html.includes('08:00'));
   assert.ok(!html.includes('Next week must not appear'));
-  assert.equal(html.match(/Current week fixture/g).length, 3);
+  assert.equal(html.match(/data-event-id="1"/g).length, 1);
   assert.ok(render({ ...data, events: [], isLoading: true }).includes('Loading schedule...'));
   assert.ok(render({ ...data, events: [], error: 'synthetic outage' }).includes('retry before relying on availability'));
 
@@ -82,9 +84,9 @@ test('weekly schedule shows actual occurrences, including morning/weekend games,
     { ...event('6', 1, 'Three-day booking', '10:00', '12:00'), endDate: day(3) },
     { ...event('7', -1, 'Ended at week boundary', '22:00', '00:00'), endDate: day(0) },
   ] });
-  assert.equal(multiday.match(/Carry-in booking/g).length, 3);
-  assert.equal(multiday.match(/Overnight booking/g).length, 6);
-  assert.equal(multiday.match(/Three-day booking/g).length, 9);
+  assert.equal(multiday.match(/data-event-id="4"/g).length, 1);
+  assert.equal(multiday.match(/data-event-id="5"/g).length, 2);
+  assert.equal(multiday.match(/data-event-id="6"/g).length, 3);
   assert.ok(!multiday.includes('Ended at week boundary'));
   assert.ok(multiday.includes('00:00') && multiday.includes('24:00'));
   assert.ok(multiday.includes(`${day(5)} 02:00`));
@@ -225,7 +227,7 @@ test('program view shows readable recurring slots, filtered booked fields, and d
   assert.ok(!html.includes('Location one-off'));
   assert.ok(!html.includes('One-off fixture'));
   assert.ok(!html.includes('Week containing'));
-  assert.equal(html.match(/Youth training/g).length, 3);
+  assert.equal(html.match(/class="schedule-booking"/g).length, 2);
   for (const filters of [{ teamFilter: 'youth' }, { sportFilter: 'Flag Football' }]) {
     const filtered = render(data, filters, 'program');
     assert.ok(filtered.includes('Shared on some dates'));
@@ -249,4 +251,57 @@ test('shared time labels and export preserve end dates and carry-in bookings', (
   const [row] = transformEventsForExport([event], { events: [event], teams: [], fields: [], sites: [] });
   assert.match(row['End Date'], /22/);
   assert.equal(row['End Time'], '2:00 AM');
+});
+
+test('compact board preserves team identity across dates, filters, modes and multi-team ordering', () => {
+  const monday = new Date();
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  const day = offset => {
+    const date = new Date(monday);
+    date.setUTCDate(date.getUTCDate() + offset);
+    return date.toISOString().slice(0, 10);
+  };
+  const event = (id, offset, teamIds, changes = {}) => ({
+    id, date: day(offset), title: `Practice ${id}`, startTime: '18:30', endTime: '20:00',
+    eventType: 'Practice', status: 'Confirmed', fieldIds: ['main'], teamIds, isRecurring: true, ...changes,
+  });
+  const data = {
+    events: [event('1', 0, ['11']), event('2', 3, ['11', '10']), event('3', 3, ['10'], { startTime: '17:00' }),
+      event('4', 7, ['11']), event('5', 10, ['10', '11'])],
+    teams: [{ id: '11', name: 'RoyalBlue' }, { id: '10', name: 'SteelBlue' }],
+    fields: [{ id: 'main', siteId: 'site', name: 'Practice field' }], sites: [{ id: 'site', name: 'Training venue' }],
+    eventWindow: { from: `${day(-7)}T00:00:00.000Z`, to: `${day(21)}T00:00:00.000Z` },
+    refreshData: async () => {}, isLoading: false, error: null,
+  };
+  const chipStyles = html => [...html.matchAll(/data-team-id="([^"]+)" style="([^"]+)"/g)]
+    .map(([, id, style]) => [id, style]);
+  const reference = new Map(chipStyles(render(data)));
+  assert.notEqual(reference.get('10'), reference.get('11'));
+  for (const view of ['week', 'program']) {
+    for (const teamFilter of ['all', '11']) {
+      for (const events of [data.events, [...data.events].reverse().map(e => ({ ...e, teamIds: [...e.teamIds].reverse() }))]) {
+        const html = render({ ...data, events }, { teamFilter }, view);
+        for (const [id, style] of chipStyles(html)) assert.equal(style, reference.get(id), `${id}, ${view}, ${teamFilter}`);
+        assert.ok(html.includes('18:30 - 20:00'));
+        assert.ok(html.includes('<summary aria-label="'));
+        assert.ok(html.includes('Training venue'));
+        assert.ok(!html.includes('min-w-[1100px]'));
+      }
+    }
+  }
+  const html = render(data);
+  assert.ok(html.indexOf('data-event-id="3"') < html.indexOf('data-event-id="2"'), 'bookings are chronological within a location');
+  assert.equal((html.match(/<thead /g) || []).length, 1, 'one shared weekday header');
+  const weight = dayName => Number(html.match(new RegExp(`<col data-day="${dayName}"[^>]+style="width:([\\d.]+)%`))[1]);
+  assert.ok(weight('Thursday') > weight('Monday'), 'busier days receive more width');
+  assert.match(html, /<col data-day="Saturday" data-active="false" style="width:4%"/);
+  assert.ok(html.includes('No bookings shown: Tuesday, Wednesday, Friday, Saturday, Sunday.'));
+
+  const weekend = render({ ...data, events: [...data.events,
+    event('6', 5, [], { title: 'Weekend game', startTime: '08:00', endTime: '10:00', eventType: 'Game', isRecurring: false, status: 'Cancelled' })] });
+  assert.match(weekend, /<col data-day="Saturday" data-active="true" style="width:(?!4%)[\d.]+%/);
+  assert.match(weekend, /data-day="Saturday" data-has-events="true"/);
+  assert.ok(weekend.includes('Weekend game') && weekend.includes('08:00 - 10:00'));
+  assert.match(weekend, /data-event-id="6" data-status="Cancelled"/);
+  assert.ok(!weekend.includes('No bookings shown: Tuesday, Wednesday, Friday, Saturday, Sunday.'));
 });
