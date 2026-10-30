@@ -43,7 +43,47 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
-## Current operations release: October 30, 2026
+## Current facility workflow and schedule release: October 30, 2026
+
+The owner's October 30 instruction to push the completed updates into production
+is fulfilled at `https://qmt.errandom.com`, verified at **10:30 Zurich**.
+Facility requests now track receipt acknowledgment, evaluation, City of Zurich /
+ZVIS routing, external response, approval or rejection, and separate requester
+notification. Fields and meeting rooms have distinct allocation choices.
+Communication drafts remain manual: opening or copying one does not record it
+as sent. Game-permit considerations are notes, not a completed permit workflow;
+approval creates one booking, not a multi-day series.
+The release also includes the compact day-first schedule, stable team colors
+and activity-weighted day widths.
+
+Runtime source `5430126f4d804ab7d6a71632618fa28d1cba2535` passed exact-source
+validation/publication `41032940459`, including real disposable SQL integration,
+non-root image smoke checks and anonymous digest pull. PR #10 merged as
+`b87390d5d3910a1164589b2eeddb05241be163f1`; main validation `41033442905` passed.
+The current application image is
+`ghcr.io/errandom/qmt@sha256:819ec8edb000d80b015851e757836399ea799ba66f30d2746957ff69185c6ef3`.
+The previous code-rollback image is
+`ghcr.io/errandom/qmt@sha256:9b1fa71ec753315974386650c47177f6908799f1239e630bb9929cd87cbee4d5`.
+Workflow history uses existing request JSON payloads; no migration was needed.
+Before reverting to the previous backend, review how requests with workflow
+metadata will be handled: the previous backend does not understand that metadata.
+Do not roll back by restoring or deleting operational records.
+
+Only the running site's image configuration changed. All 25 captured non-image
+invariants matched, including app settings, B1 single-worker Always On hosting,
+Basic SQL, TLS, network/firewall, resource inventory, budget and guard settings.
+All seven public frontend assets matched the published container byte-for-byte;
+the container's workflow and request backend files matched the exact source
+commit. Trusted HTTPS, administrator sign-in, SQL health and authenticated
+workflow input validation passed; anonymous workflow writes returned 401.
+The six API collection fingerprints were unchanged: 10 teams, 19 fields, 9 sites,
+210 events in the October 1, 2026 to October 1, 2027 window, no equipment and one
+request. Read-only production Chromium checks confirmed the compact schedule,
+the existing request's workflow, readable desktop/mobile labels, no horizontal
+mobile overflow and no uncaught exceptions. No real request was advanced and
+no communication was sent during verification.
+
+## Previous operations release: October 30, 2026
 
 The owner's October 29 instruction to "push this all into production" is
 fulfilled at `https://qmt.errandom.com`, with live verification after midnight
