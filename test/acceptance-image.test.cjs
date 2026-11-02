@@ -29,7 +29,9 @@ test('the published image is built and smoke-tested before push using the epheme
 });
 
 test('Azure image readiness requires an anonymous digest pull, not authenticated publication alone', () => {
-  assert.match(publisher, /RepoDigests 0/);
+  assert.match(publisher, /docker buildx imagetools inspect "\$image" --format '\{\{json \.Manifest\}\}' \| jq -er '\.digest'/);
+  assert.match(publisher, /digest="ghcr\.io\/errandom\/qmt@\$registry_digest"/);
+  assert.match(publisher, /\[\[ "\$registry_digest" =~ \^sha256:\[0-9a-f\]\{64\}\$ \]\]/);
   assert.match(publisher, /mkdir "\$RUNNER_TEMP\/qmt-anonymous-docker"/);
   assert.match(publisher, /docker --config "\$RUNNER_TEMP\/qmt-anonymous-docker" pull "\$IMAGE_DIGEST"/);
   assert.match(publisher, /Anonymous pull must pass before Azure provisioning/);
