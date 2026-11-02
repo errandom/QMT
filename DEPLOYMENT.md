@@ -43,19 +43,30 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
-## Unreleased operations enhancements: November 2, 2026
+## Live operations enhancements: November 2, 2026
 
-The local release adds linked, explicitly approved email; seasonal requests with
+The release adds linked, explicitly approved email; seasonal requests with
 per-occurrence previews and partial decisions; time-dependent field halves and
-external users; event readiness checklists; and the Actions queue. **It is not
-deployed.** The October 30 release below remains the last verified live release.
-No real emails, migrations, external allocations or schedule edits were made
-while implementing this release.
+external users; event readiness checklists; and the Actions queue. **Deployed and
+verified at 19:25 Zurich.** No real email, external allocation, request decision
+or schedule edit was made during deployment or verification.
 
-Before deploying the new backend, apply additive migration
-`004-operations.sql` with the existing approved migration process and operator
-credentials. Never run initialization against the existing database.
-For an existing runtime principal, a database operator must grant only
+Runtime source `202b0951ddb8b643377e44822ef7da7e5bb8b4a4` passed exact-source
+validation/publication `41499142577`, including disposable SQL integration,
+non-root image smoke checks and anonymous digest pull. PR #11 merged as
+`5bede7df225a980181f19b8310d874b369b94b64`; main validation `41499841673` passed.
+The current application image is
+`ghcr.io/errandom/qmt@sha256:69e5c49aa7dc88605e286abf48d9de824c0b6aa18694495f490d3c67e5806a94`.
+The previous code-rollback image is
+`ghcr.io/errandom/qmt@sha256:819ec8edb000d80b015851e757836399ea799ba66f30d2746957ff69185c6ef3`.
+
+Additive migration `004-operations.sql` was applied through Azure-authenticated
+SCM using the existing app network and operator credentials. All four migration
+checksums and database readiness passed; all eight existing operational table
+fingerprints were unchanged. The existing runtime principal received only the
+12 table-level DML grants below; its login and read access were verified.
+Never run initialization against the existing database or repeat provisioning.
+For another existing runtime principal, a database operator must grant only
 `SELECT, INSERT, UPDATE, DELETE` on `dbo.event_operations`,
 `dbo.external_allocations` and `dbo.request_communications` to that exact
 principal. Review and substitute the already-configured runtime username:
@@ -66,14 +77,30 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.external_allocations TO [exi
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.request_communications TO [existing_qmt_runtime_user];
 ```
 
-These are operator instructions, not automatically executed grants. Fresh
+These grants are already applied in production. Fresh
 provisioning includes the new tables; it deliberately still refuses to modify
 an existing principal. Do not grant database roles, schema changes or migration
 table access. Validate migrations with `db:check` and run the disposable SQL
 suite in CI before release. Local SQL integration requires Docker; no production
 database is an acceptable substitute.
 
-Email is optional and disabled when unconfigured. Supply the four `QMT_MAIL_*`
+Only the running site's image configuration changed after the database step.
+All 13 captured non-image infrastructure invariants matched, including app
+settings, hosting configuration, Basic SQL, TLS, resource inventory, budget
+and guard settings. Eight live public assets matched the published container
+byte-for-byte, and 13 backend files matched the exact source commit.
+Administrator sign-in, SQL-backed reads, protected operations routes and
+read-only desktop/mobile Edge checks passed, with no attempted writes,
+uncaught exceptions, failed API reads or horizontal mobile overflow.
+All six existing API collection fingerprints matched after excluding only the
+new empty external-allocation projection: 10 teams, 9 sites, 19 fields,
+210 events in the October 1, 2026 to October 1, 2027 window, no equipment and
+two requests. Operational metadata, external allocations and linked messages
+were empty. No existing records were changed.
+
+Email is optional and **remains disabled in production**: no `QMT_MAIL_*`
+settings are configured, and the live request workflow displays that nothing
+will be sent until a mailbox is connected. Supply the four `QMT_MAIL_*`
 settings in `.env.template` through the approved secret/configuration channel.
 The adapter uses Microsoft Graph client credentials for the configured club
 mailbox: authorize sending and reading that mailbox only using the tenant's
@@ -96,7 +123,7 @@ backends do not enforce external allocations or preserve the new operational
 metadata, so reverting code requires reviewed operational handling rather than
 assuming the old backend remains functionally equivalent.
 
-## Last live facility workflow and schedule release: October 30, 2026
+## Previous facility workflow and schedule release: October 30, 2026
 
 The owner's October 30 instruction to push the completed updates into production
 is fulfilled at `https://qmt.errandom.com`, verified at **10:30 Zurich**.
