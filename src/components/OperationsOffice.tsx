@@ -16,6 +16,7 @@ import EquipmentManager from './OperationsOffice/EquipmentManager'
 import FieldsManager from './OperationsOffice/FieldsManager'
 import SitesManager from './OperationsOffice/SitesManager'
 import SettingsManager from './OperationsOffice/SettingsManager'
+import OperationsWorkbench from './OperationsOffice/OperationsWorkbench'
 
 interface OperationsOfficeProps {
   currentUser: User | null
@@ -32,6 +33,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
     cancellationRequests.some(r => r.status === 'Pending')
 
   const tabOptions = [
+    { value: 'actions', icon: ClipboardText, label: 'Actions', hasNotification: hasUnresolvedRequests },
     { value: 'schedule', icon: CalendarBlank, label: 'Schedule' },
     { value: 'requests', icon: ClipboardText, label: 'Requests', hasNotification: hasUnresolvedRequests },
     { value: 'teams', icon: Users, label: 'Teams' },
@@ -82,10 +84,10 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
             <div 
               className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
               style={{
-                left: `calc(${activeIndex * 14.286}% + 4px)`,
+                left: `calc(${activeIndex * (100 / tabOptions.length)}% + 4px)`,
                 top: '2px',
                 bottom: '2px',
-                width: 'calc(14.286% - 8px)',
+                width: `calc(${100 / tabOptions.length}% - 8px)`,
                 borderRadius: SIZES.BORDER_RADIUS,
                 background: 'rgba(36, 139, 204, 0.75)',
                 boxShadow: '0 8px 32px rgba(36, 139, 204, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)'
@@ -98,6 +100,8 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
               return (
                 <button
                   key={option.value}
+                  aria-label={option.label}
+                  aria-pressed={activeTab === option.value}
                   onClick={() => setActiveTab(option.value)}
                   className={`group relative z-10 flex-1 flex items-center justify-center gap-2 transition-all duration-300 ${
                     activeTab === option.value 
@@ -126,6 +130,10 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
             <TabsTrigger key={option.value} value={option.value} />
           ))}
         </TabsList>
+
+        <TabsContent value="actions">
+          <OperationsWorkbench onRequests={() => setActiveTab('requests')} />
+        </TabsContent>
 
         <TabsContent value="schedule">
           <ScheduleManager currentUser={currentUser} />

@@ -43,7 +43,60 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
-## Current facility workflow and schedule release: October 30, 2026
+## Unreleased operations enhancements: November 2, 2026
+
+The local release adds linked, explicitly approved email; seasonal requests with
+per-occurrence previews and partial decisions; time-dependent field halves and
+external users; event readiness checklists; and the Actions queue. **It is not
+deployed.** The October 30 release below remains the last verified live release.
+No real emails, migrations, external allocations or schedule edits were made
+while implementing this release.
+
+Before deploying the new backend, apply additive migration
+`004-operations.sql` with the existing approved migration process and operator
+credentials. Never run initialization against the existing database.
+For an existing runtime principal, a database operator must grant only
+`SELECT, INSERT, UPDATE, DELETE` on `dbo.event_operations`,
+`dbo.external_allocations` and `dbo.request_communications` to that exact
+principal. Review and substitute the already-configured runtime username:
+
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.event_operations TO [existing_qmt_runtime_user];
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.external_allocations TO [existing_qmt_runtime_user];
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.request_communications TO [existing_qmt_runtime_user];
+```
+
+These are operator instructions, not automatically executed grants. Fresh
+provisioning includes the new tables; it deliberately still refuses to modify
+an existing principal. Do not grant database roles, schema changes or migration
+table access. Validate migrations with `db:check` and run the disposable SQL
+suite in CI before release. Local SQL integration requires Docker; no production
+database is an acceptable substitute.
+
+Email is optional and disabled when unconfigured. Supply the four `QMT_MAIL_*`
+settings in `.env.template` through the approved secret/configuration channel.
+The adapter uses Microsoft Graph client credentials for the configured club
+mailbox: authorize sending and reading that mailbox only using the tenant's
+mailbox-scoping mechanism. Do not create tenant-wide access for convenience.
+Test with a designated test mailbox/recipient before enabling real sends.
+Provider acceptance is not delivery confirmation. Interrupted sends remain
+visible as sending/unknown; check Sent Items before explicitly composing another
+message. Syncing replies never approves a request automatically. Queue reminders
+are in-app only, not scheduled emails.
+
+Existing events are not guessed into series. New recurring bookings and approved
+seasonal requests receive durable series IDs. Historical series can still be
+edited individually. North/South halves need an agreed physical interpretation;
+no actual Rugby allocation has been entered. Changing a duration with an existing
+explicit timeline is rejected unless a complete replacement timeline is supplied.
+Readiness prompts are not legal requirements or proof of permit approval.
+
+Retain the additive schema and operational records for code rollback. Older
+backends do not enforce external allocations or preserve the new operational
+metadata, so reverting code requires reviewed operational handling rather than
+assuming the old backend remains functionally equivalent.
+
+## Last live facility workflow and schedule release: October 30, 2026
 
 The owner's October 30 instruction to push the completed updates into production
 is fulfilled at `https://qmt.errandom.com`, verified at **10:30 Zurich**.

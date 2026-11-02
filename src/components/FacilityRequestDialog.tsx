@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
 import { FacilityRequest, EventType, LocationType } from '@/lib/types'
+import { requestedDates } from '@/lib/operations'
 
 interface FacilityRequestDialogProps {
   open: boolean
@@ -33,6 +34,10 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
   const [duration, setDuration] = useState('90')
   const [description, setDescription] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [recurring, setRecurring] = useState(false)
+  const [until, setUntil] = useState('')
+  const [weekdays, setWeekdays] = useState<number[]>([])
+  const [exceptions, setExceptions] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,9 +79,15 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
       date,
       startTime,
       duration: parseInt(duration),
+      recurrence: recurring ? { until, weekdays, excludedDates: exceptions.split(/[\s,]+/).filter(Boolean) } : undefined,
       description: description || undefined,
       status: 'Pending',
       createdAt: new Date().toISOString()
+    }
+    if (recurring && (!weekdays.length || !requestedDates(newRequest).length)) {
+      toast.error('Choose weekdays and an end date within one year, leaving at least one requested date')
+      setIsLoading(false)
+      return
     }
 
     try {
@@ -102,6 +113,7 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
     setStartTime('')
     setDuration('90')
     setDescription('')
+    setRecurring(false); setUntil(''); setWeekdays([]); setExceptions('')
     setIsLoading(false)
     onOpenChange(false)
   }
@@ -134,6 +146,20 @@ export default function FacilityRequestDialog({ open, onOpenChange }: FacilityRe
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6 pb-20 sm:pb-4">
+          <fieldset className="space-y-3 rounded border border-[#248bcc] p-3 text-slate-900">
+            <legend>Single date or seasonal request</legend>
+            <label className="flex min-h-12 items-center gap-2"><input type="checkbox" checked={recurring} onChange={event => setRecurring(event.target.checked)} />Request a weekly series</label>
+            {recurring && <>
+              <label className="block">Series end date<Input type="date" required min={date || undefined} value={until} onChange={event => setUntil(event.target.value)} /></label>
+              <fieldset><legend>Requested weekdays</legend><div className="flex flex-wrap gap-3">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((name, index) => <label key={name} className="flex min-h-12 items-center gap-1">
+                  <input type="checkbox" checked={weekdays.includes(index + 1)} onChange={event => setWeekdays(current => event.target.checked ? [...current, index + 1] : current.filter(day => day !== index + 1))} />{name}
+                </label>)}
+              </div></fieldset>
+              <label className="block">Skip dates (YYYY-MM-DD, separated by commas)<Textarea value={exceptions} onChange={event => setExceptions(event.target.value)} /></label>
+              <p className="text-sm">The date below is the first possible date. Each occurrence will be checked individually; partial approval is possible.</p>
+            </>}
+          </fieldset>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name" style={{ color: '#001f3f' }}>Name *</Label>

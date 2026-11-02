@@ -85,7 +85,9 @@ jobs:
           printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker tag qmt:validation "$image"
           docker push "$image"
-          digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
+          registry_digest="$(docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -er '.digest')"
+          [[ "$registry_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          digest="ghcr.io/errandom/qmt@$registry_digest"
           [[ "$digest" =~ ^ghcr\.io/errandom/qmt@sha256:[0-9a-f]{64}$ ]]
           printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           printf 'Source commit: `%s`\n\nPublished image: `%s`\n\nAnonymous pull must pass before Azure provisioning.\n' "$GITHUB_SHA" "$digest" >> "$GITHUB_STEP_SUMMARY"

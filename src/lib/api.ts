@@ -251,6 +251,9 @@ function transformEvent(event: any): any {
     isRecurring,
     recurringDays,
     recurringEndDate,
+    seriesId: event.series_id || event.seriesId || undefined,
+    allocations: event.allocation_json ? JSON.parse(event.allocation_json) : event.allocations || [],
+    externalAllocations: event.external_allocations ? JSON.parse(event.external_allocations) : event.externalAllocations || [],
     notes: event.notes || '',
     estimatedAttendance: event.estimatedAttendance || event.estimated_attendance,
     otherParticipants: event.otherParticipants || event.other_participants,
@@ -569,11 +572,12 @@ export const api = {
     apiRequest<FacilityRequest>(`/requests/${id}/workflow`, {
       method: 'POST', body: JSON.stringify({ ...action, expectedVersion }),
     }),
-  reviewRequest: async (id: string, status: 'Approved' | 'Rejected', fieldId?: string, facilityReview?: { expectedVersion: number; decisionNote: string }) => {
-    const result = await apiRequest<{ request: StoredRequest; event?: unknown }>(`/requests/${id}/review`, {
+  reviewRequest: async (id: string, status: 'Approved' | 'Rejected', fieldId?: string, facilityReview?: { expectedVersion: number; decisionNote: string; approvedDates?: string[] }) => {
+    const result = await apiRequest<{ request: StoredRequest; event?: unknown; events?: unknown[] }>(`/requests/${id}/review`, {
       method: 'POST', body: JSON.stringify({ status, fieldId, ...facilityReview }),
     });
-    return { request: result.request, event: result.event ? transformEvent(result.event) as Event : undefined };
+    return { request: result.request, event: result.event ? transformEvent(result.event) as Event : undefined,
+      events: result.events?.map(transformEvent) as Event[] | undefined };
   },
 
   // User Settings

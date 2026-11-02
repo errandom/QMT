@@ -19,6 +19,7 @@ import { COLORS } from '@/lib/constants'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 import FacilityRequestCard from './FacilityRequestCard'
 import { facilityLocations, needsFacilityAttention } from '@/lib/facilityWorkflow'
+import { operationsApi, requestedDates, type RequestPreview } from '@/lib/operations'
 
 interface RequestsManagerProps {
   currentUser: User
@@ -62,6 +63,10 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [selectedFieldId, setSelectedFieldId] = useState<string>('')
   const [decisionNote, setDecisionNote] = useState('')
   const [isReviewing, setIsReviewing] = useState(false)
+  const [approvedDates, setApprovedDates] = useState<string[]>([])
+  const [preview, setPreview] = useState<RequestPreview[]>([])
+  const [previewField, setPreviewField] = useState('')
+  const [previewBusy, setPreviewBusy] = useState(false)
 
   // Rejection dialog state (for WhatsApp notification)
   const [showRejectionDialog, setShowRejectionDialog] = useState(false)
@@ -110,6 +115,8 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     setApprovalRequest(request)
     setSelectedFieldId('')
     setDecisionNote('')
+    setApprovedDates(requestedDates(request))
+    setPreview([]); setPreviewField('')
     setShowApprovalDialog(true)
   }
 
@@ -129,21 +136,27 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   // Confirm approval with location
   const handleConfirmApproval = async () => {
     if (!approvalRequest || isReviewing) return
+    if (!approvedDates.length) { toast.error('Select at least one date to approve'); return }
+    if (approvalRequest.recurrence && selectedFieldId && previewField !== selectedFieldId) {
+      toast.error('Check all occurrence conflicts before approving this series'); return
+    }
     setIsReviewing(true)
     try {
       const result = await api.reviewRequest(approvalRequest.id, 'Approved', selectedFieldId || undefined, {
-        expectedVersion: approvalRequest.workflow?.version || 0, decisionNote,
+        expectedVersion: approvalRequest.workflow?.version || 0, decisionNote, approvedDates,
       })
       const saved = result.request
       if (saved.type !== 'facility') throw new Error('Unexpected request type returned; reload requests')
       setFacilityRequests(current => current.map(item => item.id === saved.id ? saved : item))
       if (result.event) {
         const created = result.event
-        setEvents(current => [...current, created])
-        setShareDialogOriginalEvent(null)
-        setShareDialogEvent(result.event)
-        setShareDialogUpdateType('create')
-        setShowShareDialog(true)
+        setEvents(current => [...current, ...(result.events || [created])])
+        if (!result.events || result.events.length === 1) {
+          setShareDialogOriginalEvent(null)
+          setShareDialogEvent(result.event)
+          setShareDialogUpdateType('create')
+          setShowShareDialog(true)
+        }
       }
       toast.success('Request approved and booking saved. Record the requester notification in the workflow.')
       setShowApprovalDialog(false)
@@ -555,7 +568,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
               Approve Facility Request
             </DialogTitle>
             <DialogDescription>
-              Review the allocation and conditions before creating one booking. Notification of the requester is a separate workflow step.
+              Review the allocation and each requested date. Notification of the requester is a separate workflow step.
             </DialogDescription>
           </DialogHeader>
 
@@ -577,7 +590,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 )}
               </div>
 
-              <p className="text-sm">This creates one booking on {approvalRequest.date}, not a multi-day series. Schedule any remaining dates separately before communicating full approval.</p>
+              <p className="text-sm">{approvedDates.length} booking(s) selected. Excluded dates require an explanation in the decision note and will be included in the outcome.</p>
 
               {/* Location Selection */}
               <div className="space-y-2">
@@ -599,6 +612,27 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                   With a location, it will be "Confirmed".
                 </p>
               </div>
+              {selectedFieldId && <Button variant="outline" disabled={previewBusy} onClick={async () => {
+                setPreviewBusy(true)
+                try {
+                  const result = await operationsApi.preview(approvalRequest.id, selectedFieldId)
+                  setPreview(result); setPreviewField(selectedFieldId)
+                  setApprovedDates(result.filter(item => !item.conflicts.length).map(item => item.date))
+                } catch (error) { toast.error(error instanceof Error ? error.message : 'Preview failed') }
+                finally { setPreviewBusy(false) }
+              }}>Check every date and suggest alternatives</Button>}
+              <fieldset className="max-h-64 space-y-2 overflow-auto rounded border p-3">
+                <legend>Dates to approve</legend>
+                {requestedDates(approvalRequest).map(date => {
+                  const result = previewField === selectedFieldId ? preview.find(item => item.date === date) : undefined
+                  return <div key={date} className="border-b pb-2 text-sm">
+                    <label className="flex min-h-12 items-center gap-2"><input type="checkbox" checked={approvedDates.includes(date)}
+                      onChange={event => setApprovedDates(current => event.target.checked ? [...current, date].sort() : current.filter(item => item !== date))} />{date}</label>
+                    {result && <p>{result.conflicts.length ? `Conflict: ${result.conflicts.map(item => item.title).join(', ')}` : 'Available at last check'}</p>}
+                    {Boolean(result?.conflicts.length) && <p className="text-muted-foreground">Alternative locations: {result?.alternatives.map(item => item.name).join(', ') || 'None'}. Alternative times: {result?.alternativeTimes.map(item => `${item.start.slice(11, 16)}–${item.end.slice(11, 16)}`).join(', ') || 'None'}. Change the location and recheck, or exclude this date.</p>}
+                  </div>
+                })}
+              </fieldset>
               <div className="space-y-2">
                 <Label htmlFor="approval-note">Decision / conditions to share with requester (optional)</Label>
                 <Textarea id="approval-note" value={decisionNote} maxLength={4000}

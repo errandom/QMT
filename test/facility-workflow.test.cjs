@@ -197,9 +197,11 @@ test('HTTP workflow updates persist, stale writes fail, and booking decisions re
         return rows([row]);
       }
       if (query.startsWith('SELECT location_type')) return rows([{ location_type: value.id === 2 ? 'meeting_room' : 'field' }]);
-      if (query.startsWith('SELECT f.id FROM fields') || query.startsWith('SELECT id FROM teams')) return rows([{ id: value.id }]);
+      if (query.startsWith('SELECT f.id, f.location_type FROM fields') || query.startsWith('SELECT id FROM teams')) return rows([{ id: value.id }]);
       if (query.includes('FROM OPENJSON')) return rows([]);
+      if (query.includes('FROM external_allocations')) return rows([]);
       if (query.startsWith('INSERT INTO events')) {
+        if (value.start_time.toISOString().slice(0, 10) === store.failEventDate) throw new Error('Synthetic late-occurrence failure');
         const event = { id: store.events.length + 1, ...value };
         store.events.push(event);
         return rows([event]);
@@ -278,4 +280,33 @@ test('HTTP workflow updates persist, stale writes fail, and booking decisions re
   assert.equal(cancellationDecision.request.status, 'Approved');
   assert.equal(cancellationDecision.request.workflow, undefined);
   assert.equal(cancellationDecision.event.status, 'Cancelled');
+
+  const seasonal = { ...submission, duration: 90, locationType: 'field',
+    recurrence: { until: '2027-05-10', weekdays: [1], excludedDates: [] } };
+  const prepareSeason = async () => {
+    const created = await post('/api/requests', seasonal, 201, randomUUID());
+    const url = `/api/requests/${created.id}`;
+    await post(`${url}/workflow`, { action: 'acknowledge', expectedVersion: 0, channel: 'Phone', message: 'Receipt.' });
+    await post(`${url}/workflow`, { action: 'evaluate', expectedVersion: 1 });
+    await post(`${url}/workflow`, { action: 'configure', ...routing, route: 'Internal', expectedVersion: 2 });
+    await post(`${url}/workflow`, { action: 'internal', expectedVersion: 3, message: 'Club-managed allocation verified.' });
+    return { id: created.id, url };
+  };
+  const season = await prepareSeason();
+  const review = { status: 'Approved', fieldId: '1', expectedVersion: 4, approvedDates: ['2027-04-26', '2027-05-10'] };
+  await post(`${season.url}/review`, review, 400);
+  await post(`${season.url}/review`, { ...review, approvedDates: ['2027-05-11'] }, 400);
+  await post(`${season.url}/review`, { ...review, approvedDates: ['2027-04-26', '2027-04-26'] }, 400);
+  const partial = await post(`${season.url}/review`, { ...review, decisionNote: 'May 3 is unavailable.' });
+  assert.equal(partial.events.length, 2);
+  assert.ok(partial.events[0].series_id && partial.events[0].series_id === partial.events[1].series_id);
+  assert.deepEqual(partial.request.workflow.approvedDates, review.approvedDates);
+  assert.deepEqual(partial.request.workflow.excludedDates, ['2027-05-03']);
+  assert.deepEqual(partial.request.workflow.bookingEventIds, partial.events.map(event => String(event.id)));
+  const failedSeason = await prepareSeason();
+  const before = structuredClone(store.events);
+  store.failEventDate = '2027-05-10';
+  await post(`${failedSeason.url}/review`, { ...review, decisionNote: 'May 3 is unavailable.' }, 503);
+  assert.deepEqual(store.events, before);
+  assert.equal(store.rows.find(item => String(item.id) === failedSeason.id).status, 'pending');
 });

@@ -13,9 +13,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { OperationsCardHeader, OperationsCardSection } from './OperationsCards'
+import CommunicationsPanel from './CommunicationsPanel'
 
 const actionLabels = {
-  configure: 'Routing saved', acknowledge: 'Receipt acknowledged', evaluate: 'Evaluation started',
+  configure: 'Routing saved', assign: 'Responsibility saved', acknowledge: 'Receipt acknowledged', evaluate: 'Evaluation started',
   send: 'External inquiry sent', response: 'External response recorded', internal: 'Internal review recorded',
   note: 'Note added', notify: 'Requester notified', Approved: 'Approved', Rejected: 'Rejected',
 }
@@ -82,6 +83,7 @@ export default function FacilityRequestCard({ request, onApprove, onReject }: Fa
             onReload={() => setOpen(false)}
             onApprove={() => { setOpen(false); onApprove(request) }}
             onReject={() => { setOpen(false); onReject(request) }} />}
+          {open && <CommunicationsPanel key={`${request.id}-${request.workflow?.version || 0}`} request={request} />}
         </DialogContent>
       </Dialog>
     </Card>
@@ -242,7 +244,9 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
           <strong>Ready for a decision</strong>
           <p className="whitespace-pre-wrap break-words">{latestResponse?.message}</p>
           {workflow?.permitNotes && <p className="whitespace-pre-wrap break-words">Game considerations: {workflow.permitNotes}</p>}
-          <p>Check the approved scope, slot, location and conditions. Approval creates one booking on {request.date}; multi-day requests need separate bookings for the remaining dates.</p>
+          <p>Check the approved scope, slot, location and conditions. {request.recurrence
+            ? 'Review each requested date before approving the selected seasonal bookings.'
+            : `Approval creates one booking on ${request.date}; multi-day requests need separate bookings for the remaining dates.`}</p>
           <div className="flex flex-wrap gap-2">
             <Button disabled={unsavedRouting} onClick={onApprove}>Review approval &amp; booking</Button>
             <Button variant="outline" onClick={() => update({ action: 'evaluate' })}>Continue evaluation</Button>

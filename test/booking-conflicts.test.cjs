@@ -10,6 +10,7 @@ const body = {
 };
 const row = (id, day = '03') => ({
   id, description: 'Existing practice', event_type: 'Practice', status: 'Confirmed',
+  field_ids: '1',
   start_time: new Date(`2026-11-${day}T18:30:00Z`), end_time: new Date(`2026-11-${day}T20:00:00Z`),
   requested_start: new Date(`2026-11-${day}T18:00:00Z`), requested_end: new Date(`2026-11-${day}T19:00:00Z`),
   fields: JSON.stringify([{ id: 1, name: 'Practice field', siteName: 'Synthetic site' }]),
@@ -34,6 +35,8 @@ function database(t, { conflicts = [], unavailableField = false, failWrite = fal
         queries.push({ query, inputs });
         if (query.includes('sp_getapplock')) { locked = true; return { recordset: [] }; }
         if (query.includes('FROM OPENJSON(@intervals)')) return { recordset: conflicts };
+        if (query.includes('FROM external_allocations')) return { recordset: [] };
+        if (query.startsWith('SELECT * FROM events')) return { recordset: [{ id: inputs.id }] };
         if (query.includes('FROM fields f JOIN sites')) return { recordset: unavailableField ? [] : [{ id: inputs.id }] };
         if (query.startsWith('SELECT id FROM')) return { recordset: [{ id: inputs.id }] };
         assert.match(query, /^(INSERT INTO events|UPDATE events)/);

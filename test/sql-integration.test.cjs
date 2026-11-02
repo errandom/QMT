@@ -189,6 +189,10 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       await app.locals.close();
     };
     let base = await start();
+    const put = async (url, body) => fetch(base + url, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
     const post = async (url, body, key, authenticated = false) => fetch(base + url, {
       method: 'POST', headers: { 'Content-Type': 'application/json',
         ...(key ? { 'Idempotency-Key': key } : {}), ...(authenticated ? { Authorization: `Bearer ${token}` } : {}) },
@@ -215,6 +219,29 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       return version;
     };
     let requestId;
+    await t.test('operational metadata and external allocations are private, durable and revision-checked', async () => {
+      assert.equal((await fetch(base + '/api/operations')).status, 401);
+      const north = await save({ ...booking('2027-07-07'), description: 'Synthetic north use',
+        allocations: [{ fieldId: String(fixture.field), zones: ['north'], start: '2027-07-07T18:00:00.000Z', end: '2027-07-07T19:00:00.000Z' }] });
+      await save({ ...booking('2027-07-07'), description: 'Synthetic south use',
+        allocations: [{ fieldId: String(fixture.field), zones: ['south'], start: '2027-07-07T18:00:00.000Z', end: '2027-07-07T19:00:00.000Z' }] });
+      await assert.rejects(save(booking('2027-07-07')), error => error.status === 409);
+      const metadata = { owner: 'Private synthetic owner', expectedRevision: 0, checklist: [] };
+      assert.equal((await put(`/api/operations/events/${north.id}`, metadata)).status, 200);
+      assert.equal((await put(`/api/operations/events/${north.id}`, metadata)).status, 409);
+      const id = randomUUID();
+      const allocation = { fieldId: String(fixture.field), participant: 'Synthetic external user',
+        start: '2027-07-07T17:30:00.000Z', end: '2027-07-07T18:30:00.000Z', zones: ['north'],
+        active: true, expectedRevision: 0 };
+      assert.equal((await put(`/api/operations/external/${id}`, allocation)).status, 409);
+      assert.equal((await put(`/api/operations/external/${id}`, { ...allocation, allowConflicts: true })).status, 200);
+      const stored = await pool.request().input('id', sql.UniqueIdentifier, id)
+        .query('SELECT participant, revision FROM external_allocations WHERE id = @id');
+      assert.equal(stored.recordset[0].revision, 1);
+      const publicEvents = await (await fetch(base + '/api/events?from=2027-07-07T00:00:00Z&to=2027-07-08T00:00:00Z')).json();
+      assert.ok(!JSON.stringify(publicEvents).includes('Private synthetic owner'));
+      assert.ok(JSON.stringify(publicEvents).includes('Synthetic external user'));
+    });
     await t.test('retries are idempotent and changed payload is rejected', async () => {
       const key = randomUUID();
       const first = await post('/api/requests', submission, key);
@@ -276,6 +303,31 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       const result = await approved.json();
       assert.equal(result.event.field_id, room);
       assert.equal(result.request.workflow.approvedFieldId, String(room));
+    });
+    await t.test('seasonal approval rolls back late conflicts and supports explained partial decisions', async () => {
+      await save(booking('2027-06-08'));
+      const submitted = await post('/api/requests', { ...submission, date: '2027-06-01',
+        recurrence: { until: '2027-06-15', weekdays: [2], excludedDates: [] } }, randomUUID());
+      assert.equal(submitted.status, 201);
+      const id = (await submitted.json()).id;
+      const expectedVersion = await prepareFacility(id);
+      const review = { status: 'Approved', fieldId: String(fixture.field), expectedVersion };
+      assert.equal((await post(`/api/requests/${id}/review`, review, null, true)).status, 409);
+      const rolledBack = await pool.request().query("SELECT id FROM events WHERE start_time = '2027-06-01T18:00:00'");
+      assert.equal(rolledBack.recordset.length, 0);
+      const partial = { ...review, approvedDates: ['2027-06-01', '2027-06-15'] };
+      assert.equal((await post(`/api/requests/${id}/review`, partial, null, true)).status, 400);
+      const response = await post(`/api/requests/${id}/review`, { ...partial, decisionNote: 'June 8 is unavailable.' }, null, true);
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.events.length, 2);
+      assert.ok(result.events[0].series_id && result.events[0].series_id === result.events[1].series_id);
+      assert.deepEqual(result.request.workflow.excludedDates, ['2027-06-08']);
+      const series = await fetch(base + `/api/operations/series/${result.events[0].series_id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      assert.equal(series.status, 200);
+      assert.equal((await series.json()).length, 2);
     });
   } finally {
     if (server) await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });

@@ -3,6 +3,7 @@ const { connectionConfig } = require('./migrate.cjs');
 
 const operationalTables = Object.freeze([
   'users', 'teams', 'sites', 'fields', 'events', 'equipment', 'requests', 'user_settings',
+  'event_operations', 'external_allocations', 'request_communications',
 ]);
 
 function applicationCredentials(env) {
@@ -60,7 +61,7 @@ async function main(args = process.argv.slice(2), env = process.env) {
   try {
     await pool.connect();
     await provisionApplicationUser(pool, credentials);
-    console.log('Application principal created with DML on the eight operational tables only. No migration-table, schema, database-role or server grants.');
+    console.log('Application principal created with DML on operational tables only. No migration-table, schema, database-role or server grants.');
   } finally { await pool.close(); }
 }
 

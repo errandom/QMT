@@ -2,6 +2,8 @@ const sql = require('mssql');
 const { z } = require('zod');
 const { HttpError, ids, transaction, saveBooking } = require('./bookings.cjs');
 const { locationType, email, workflowSchema, workflowActionSchema, applyWorkflowAction, reviewFacility } = require('./facility-workflow.cjs');
+const { recurrence, requestDates, interval } = require('./operations-domain.cjs');
+const { randomUUID } = require('node:crypto');
 
 const text = z.string().trim().min(1).max(255);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value =>
@@ -16,6 +18,7 @@ const requestSchema = z.discriminatedUnion('type', [
     teamIds: teamIds.optional(), purpose: z.string().max(500).optional(), opponent: z.string().max(500).optional(),
     date, startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     duration: z.number().int().min(1).max(1440), description: z.string().max(1000).optional(),
+    recurrence: recurrence.optional(),
   }),
   z.object({
     ...base, type: z.literal('equipment'), teamIds: teamIds.min(1), date,
@@ -66,6 +69,7 @@ function registerRequestRoutes(app, { getPool, logger }) {
     const key = z.string().uuid().safeParse(req.headers['idempotency-key']);
     if (!parsed.success || !key.success) throw new HttpError(400, 'Provide valid request details and an Idempotency-Key UUID');
     const body = parsed.data;
+    if (body.type === 'facility') requestDates(body);
     const payload = JSON.stringify(body);
     const result = await transaction(await getPool(), async tx => {
       const existing = await new sql.Request(tx).input('key', sql.UniqueIdentifier, key.data)
@@ -139,6 +143,7 @@ function registerRequestRoutes(app, { getPool, logger }) {
         workflow = reviewFacility(request, req.body.status, details.data.expectedVersion, details.data.decisionNote, req.user.username);
       }
       let event;
+      let events;
       if (req.body.status === 'Approved' && request.type === 'facility') {
         if (req.body.fieldId) {
           const field = await new sql.Request(tx).input('id', sql.Int, ids([req.body.fieldId])[0])
@@ -147,17 +152,30 @@ function registerRequestRoutes(app, { getPool, logger }) {
             throw new HttpError(400, 'Select a location matching the requested field or meeting-room workflow');
           }
         }
-        const start = new Date(`${request.date}T${request.startTime}:00Z`);
-        const end = new Date(start.getTime() + request.duration * 60000);
-        event = await saveBooking(tx, {
+        const allDates = requestDates(request);
+        const selected = z.array(date).min(1).max(367).safeParse(req.body.approvedDates || allDates);
+        if (!selected.success || new Set(selected.data).size !== selected.data.length ||
+            selected.data.some(value => !allDates.includes(value))) throw new HttpError(400, 'Approve only distinct dates from this request');
+        const excluded = allDates.filter(value => !selected.data.includes(value));
+        if (excluded.length && !req.body.decisionNote?.trim()) throw new HttpError(400, 'Explain the dates that could not be approved');
+        const seriesId = request.recurrence ? randomUUID() : undefined;
+        events = [];
+        for (const date of selected.data) {
+          const { start, end } = interval(date, request.startTime, request.duration);
+          events.push(await saveBooking(tx, {
           team_ids: request.teamIds?.join(','), field_ids: req.body.fieldId || null,
-          event_type: request.eventType, start_time: start.toISOString(), end_time: end.toISOString(),
+          event_type: request.eventType, start_time: start, end_time: end,
           description: request.opponent ? `${request.eventType} vs ${request.opponent}` : request.purpose || request.eventType,
           notes: request.description, status: req.body.fieldId ? 'Confirmed' : 'Planned',
           other_participants: request.opponent,
-        });
+          }, undefined, { seriesId }));
+        }
+        event = events[0];
         workflow.approvedFieldId = req.body.fieldId ? String(req.body.fieldId) : undefined;
         workflow.bookingEventId = String(event.id);
+        workflow.bookingEventIds = events.map(item => String(item.id));
+        workflow.approvedDates = selected.data;
+        workflow.excludedDates = excluded;
       } else if (req.body.status === 'Approved' && request.type === 'cancellation') {
         const changed = await new sql.Request(tx).input('id', sql.Int, ids([request.eventId])[0])
           .query(`UPDATE events SET status = 'Cancelled', updated_at = SYSUTCDATETIME()
@@ -171,7 +189,7 @@ function registerRequestRoutes(app, { getPool, logger }) {
         .input('payload', sql.NVarChar(sql.MAX), workflow ? JSON.stringify({ ...JSON.parse(row.payload), workflow }) : row.payload)
         .query(`UPDATE requests SET status = @status, reviewed_at = SYSUTCDATETIME(),
           reviewed_by = @reviewer, payload = @payload, updated_at = SYSUTCDATETIME() OUTPUT INSERTED.* WHERE id = @id`);
-      return { request: requestDto(changed.recordset[0]), event };
+      return { request: requestDto(changed.recordset[0]), event, events };
     });
     res.json(result);
   }));

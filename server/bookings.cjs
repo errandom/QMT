@@ -1,6 +1,7 @@
 const sql = require('mssql');
 const { z } = require('zod');
 const { validateEvent } = require('./limits.cjs');
+const { randomUUID } = require('node:crypto');
 
 const optionalText = max => z.string().max(max).nullable().optional();
 const bookingSchema = z.object({
@@ -18,6 +19,10 @@ const bookingSchema = z.object({
   recurring_days: z.union([z.string(), z.array(z.number().int())]).nullable().optional(),
   recurring_end_date: optionalText(10),
   allow_conflicts: z.boolean().optional(),
+  allocations: z.array(z.object({
+    fieldId: z.string().regex(/^[1-9]\d*$/), zones: z.array(z.enum(['north', 'south'])).max(2),
+    start: z.string().datetime(), end: z.string().datetime(),
+  })).max(60).optional(),
 });
 
 class HttpError extends Error {
@@ -90,7 +95,8 @@ async function transaction(pool, action) {
   }
 }
 
-async function saveBooking(tx, body, id) {
+async function saveBooking(tx, body, id, options = {}) {
+  const { eventAllocations, overlaps, validateAllocations } = require('./operations-domain.cjs');
   const parsed = bookingSchema.safeParse(body);
   if (!parsed.success) throw new HttpError(400, 'Invalid booking details, field types or text lengths');
   body = parsed.data;
@@ -104,16 +110,48 @@ async function saveBooking(tx, body, id) {
       || !['Planned', 'Confirmed', 'Cancelled', 'Completed'].includes(body.status || 'Planned')) {
     throw new HttpError(400, 'Invalid event type or status');
   }
+  let existing;
   if (id !== undefined) {
     const existing = await new sql.Request(tx).input('id', sql.Int, id)
-      .query('SELECT id FROM events WHERE id = @id');
+      .query('SELECT * FROM events WHERE id = @id');
     if (!existing.recordset.length) throw new HttpError(404, 'Event not found');
+    // Keep series membership and spatial restrictions when older clients edit a single occurrence.
+    options = { ...options, existing: existing.recordset[0] };
   }
+  existing = options.existing;
+  const seriesId = options.seriesId || (body.recurring_end_date ? randomUUID() : existing?.series_id) || null;
+  const baseStart = dates[0].start.toISOString();
+  const baseEnd = dates[0].end.toISOString();
+  let allocations = body.allocations;
+  if (allocations?.length) {
+    const shift = dates[0].start.getTime() - new Date(body.start_time.endsWith('Z') ? body.start_time : `${body.start_time}Z`).getTime();
+    allocations = allocations.map(item => ({ ...item, start: new Date(Date.parse(item.start) + shift).toISOString(),
+      end: new Date(Date.parse(item.end) + shift).toISOString() }));
+  }
+  if (allocations === undefined && existing?.allocation_json) {
+    if (JSON.parse(existing.allocation_json).length &&
+        dates[0].end - dates[0].start !== new Date(existing.end_time) - new Date(existing.start_time)) {
+      throw new HttpError(400, 'This booking has time-dependent allocations. Review and supply a complete allocation timeline before changing its duration.');
+    }
+    const shift = dates[0].start.getTime() - new Date(existing.start_time).getTime();
+    allocations = JSON.parse(existing.allocation_json).filter(item => fields.includes(Number(item.fieldId)))
+      .map(item => ({ ...item, start: new Date(Date.parse(item.start) + shift).toISOString(),
+        end: new Date(Date.parse(item.end) + shift).toISOString() }));
+  }
+  allocations = (allocations || []).map(item => ({ ...item, start: new Date(item.start).toISOString(), end: new Date(item.end).toISOString() }));
+  const selectedFields = [];
   for (const field of fields) {
     const active = await new sql.Request(tx).input('id', sql.Int, field)
-      .query('SELECT f.id FROM fields f JOIN sites s ON s.id = f.site_id WHERE f.id = @id AND f.active = 1 AND s.active = 1');
+      .query('SELECT f.id, f.location_type FROM fields f JOIN sites s ON s.id = f.site_id WHERE f.id = @id AND f.active = 1 AND s.active = 1');
     if (!active.recordset.length) throw new HttpError(400, 'A selected field is unavailable');
+    selectedFields.push(active.recordset[0]);
   }
+  validateAllocations(allocations, selectedFields, baseStart, baseEnd);
+  const forDate = start => allocations.map(item => {
+    const shift = start.getTime() - dates[0].start.getTime();
+    return { ...item, start: new Date(Date.parse(item.start) + shift).toISOString(),
+      end: new Date(Date.parse(item.end) + shift).toISOString() };
+  });
   for (const team of teams) {
     const active = await new sql.Request(tx).input('id', sql.Int, team)
       .query('SELECT id FROM teams WHERE id = @id AND active = 1');
@@ -130,8 +168,9 @@ async function saveBooking(tx, body, id) {
         }))))
         .input('id', sql.Int, id ?? null)
         .input('fields', sql.NVarChar(255), fields.join(','))
+        .input('excluded', sql.NVarChar(sql.MAX), JSON.stringify(options.excludeIds || []))
         .query(`
-          SELECT TOP (201) e.id, e.description, e.event_type, COALESCE(e.status, 'Planned') AS status, e.start_time, e.end_time,
+          SELECT TOP (5001) e.id, e.field_id, e.field_ids, e.allocation_json, e.description, e.event_type, COALESCE(e.status, 'Planned') AS status, e.start_time, e.end_time,
             occurrence.start_time AS requested_start, occurrence.end_time AS requested_end,
             (SELECT f.id, f.name, s.name AS siteName FROM fields f JOIN sites s ON s.id = f.site_id
               WHERE CHARINDEX(',' + CONVERT(nvarchar(20), f.id) + ',',
@@ -145,13 +184,27 @@ async function saveBooking(tx, body, id) {
           FROM OPENJSON(@intervals) WITH (start_time datetime2 '$.start', end_time datetime2 '$.end') occurrence
           JOIN events e ON e.start_time < occurrence.end_time AND e.end_time > occurrence.start_time
           WHERE (@id IS NULL OR e.id <> @id)
+            AND e.id NOT IN (SELECT value FROM OPENJSON(@excluded))
             AND ISNULL(e.status, 'Planned') NOT IN ('Cancelled', 'Completed', 'cancelled', 'completed')
             AND EXISTS (SELECT 1 FROM STRING_SPLIT(@fields, ',') f
               WHERE CHARINDEX(',' + f.value + ',',
                 ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0)
           ORDER BY occurrence.start_time, e.start_time, e.id
         `);
-      if (conflicts.recordset.length) throw new BookingConflictError(conflicts.recordset);
+      if (conflicts.recordset.length > 5000) throw new HttpError(409, 'Too many potential conflicts; use a shorter recurrence window');
+      const actual = conflicts.recordset.filter(event => dates.some(({ start, end }) =>
+        eventAllocations({ field_ids: fields.join(','), start_time: start, end_time: end, allocations: forDate(start) })
+          .some(a => eventAllocations(event).some(b => overlaps(a, b)))));
+      if (actual.length) throw new BookingConflictError(actual);
+      const external = await new sql.Request(tx).input('start', sql.DateTime2, dates[0].start)
+        .input('end', sql.DateTime2, dates.at(-1).end)
+        .query('SELECT TOP (5001) * FROM external_allocations WHERE active = 1 AND start_time < @end AND end_time > @start');
+      if (external.recordset.length > 5000) throw new HttpError(409, 'Too many external allocations; use a shorter recurrence window');
+      const blocked = external.recordset.filter(item => dates.some(({ start, end }) =>
+        eventAllocations({ field_ids: fields.join(','), start_time: start, end_time: end, allocations: forDate(start) })
+          .some(a => overlaps(a, { fieldId: String(item.field_id), zones: JSON.parse(item.zones),
+            start: new Date(item.start_time).toISOString(), end: new Date(item.end_time).toISOString() }))));
+      if (blocked.length) throw new HttpError(409, `External allocation conflict: ${blocked.slice(0, 5).map(item => item.participant).join(', ')}`);
     }
   }
   const saved = [];
@@ -174,6 +227,8 @@ async function saveBooking(tx, body, id) {
       away_zip: [sql.NVarChar(20), body.away_zip || null],
       away_city: [sql.NVarChar(255), body.away_city || null],
       transport_requested: [sql.Bit, Boolean(body.transport_requested)],
+      series_id: [sql.UniqueIdentifier, seriesId],
+      allocation_json: [sql.NVarChar(sql.MAX), JSON.stringify(forDate(start))],
     };
     for (const [key, [type, value]] of Object.entries(values)) request.input(key, type, value);
     const columns = Object.keys(values);
