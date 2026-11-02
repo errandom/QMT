@@ -24,9 +24,13 @@ const workflowSchema = z.object({
   decisionNote: z.string().max(4000).optional(),
   approvedFieldId: z.string().regex(/^[1-9]\d*$/).optional(),
   bookingEventId: z.string().regex(/^[1-9]\d*$/).optional(),
+  bookingEventIds: z.array(z.string().regex(/^[1-9]\d*$/)).max(367).optional(),
+  approvedDates: z.array(date).max(367).optional(),
+  excludedDates: z.array(date).max(367).optional(),
+  owner: z.string().max(255).optional(),
   history: z.array(z.object({
     at: z.string().datetime(), by: z.string().min(1).max(255),
-    action: z.enum(['configure', 'acknowledge', 'evaluate', 'send', 'response', 'internal', 'note', 'notify', 'Approved', 'Rejected']),
+    action: z.enum(['configure', 'assign', 'acknowledge', 'evaluate', 'send', 'response', 'internal', 'note', 'notify', 'Approved', 'Rejected']),
     message: z.string().max(16000).optional(), channel: channel.optional(),
   })).max(500),
 });
@@ -40,6 +44,7 @@ const workflowActionSchema = z.discriminatedUnion('action', [
     ...version, action: z.literal(action), message: message.max(4000),
   })),
   z.object({ ...version, action: z.literal('evaluate') }),
+  z.object({ ...version, action: z.literal('assign'), owner: z.string().trim().max(255), followUpDate: z.union([date, z.literal('')]) }),
 ]);
 
 function currentWorkflow(request) {
@@ -67,6 +72,11 @@ function applyWorkflowAction(request, action, actor, at = new Date().toISOString
   };
   let entryMessage = action.message;
   switch (action.action) {
+    case 'assign':
+      workflow.owner = action.owner;
+      workflow.followUpDate = action.followUpDate;
+      entryMessage = `Owner: ${action.owner || 'Unassigned'}; follow-up: ${action.followUpDate || 'None'}`;
+      break;
     case 'configure': {
       requireStage(['Received', 'Acknowledged', 'In evaluation', 'Awaiting response', 'Response received']);
       const responsibilityChanged = ['locationType', 'route', 'department', 'contactEmail']

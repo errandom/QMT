@@ -10,6 +10,8 @@ const { createLimiter, eventRange, validateEvent } = require('./server/limits.cj
 const { createLogger } = require('./server/logger.cjs');
 const { registerBookingRoutes } = require('./server/bookings.cjs');
 const { registerRequestRoutes } = require('./server/requests.cjs');
+const { registerOperationsRoutes } = require('./server/operations.cjs');
+const { registerCommunicationRoutes } = require('./server/communications.cjs');
 const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./server/published-schedules.cjs');
 
 function createApp({ env = process.env, connect } = {}) {
@@ -71,7 +73,7 @@ app.use('/api', (req, res, next) => {
         sites: ['id', 'name', 'address', 'city', 'zip_code', 'latitude', 'longitude', 'is_sports_facility', 'amenities', 'active'],
         fields: ['id', 'name', 'site_id', 'location_type', 'field_type', 'surface_type', 'has_lights', 'capacity', 'active'],
         equipment: ['id', 'name', 'category', 'quantity', 'condition', 'location'],
-        events: ['id', 'description', 'event_type', 'status', 'start_time', 'end_time', 'field_id', 'field_ids', 'team_id', 'team_ids', 'recurring_days', 'recurring_end_date', 'game_location', 'away_street', 'away_zip', 'away_city'],
+        events: ['id', 'description', 'event_type', 'status', 'start_time', 'end_time', 'field_id', 'field_ids', 'team_id', 'team_ids', 'recurring_days', 'recurring_end_date', 'game_location', 'away_street', 'away_zip', 'away_city', 'allocation_json', 'external_allocations'],
       }[collection];
       if (allowed && res.statusCode < 400) {
         const clean = value => Object.fromEntries(Object.entries(value).filter(([key]) => allowed.includes(key)));
@@ -142,6 +144,8 @@ app.use('/api/events', (req, res, next) => {
 });
 registerBookingRoutes(app, { getPool, logger: console });
 registerRequestRoutes(app, { getPool, logger: console });
+registerOperationsRoutes(app, { getPool, logger: console });
+registerCommunicationRoutes(app, { getPool, logger: console });
 registerPublishedScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone });
 
 // ------------------------------
@@ -701,7 +705,12 @@ app.get('/api/events', async (req, res) => {
         e.*,
         f.name as field_name,
         s.name as site_name,
-        s.address as site_address
+        s.address as site_address,
+        (SELECT a.participant, a.field_id, a.start_time, a.end_time, a.zones FROM external_allocations a
+          WHERE a.active = 1 AND a.start_time < e.end_time AND a.end_time > e.start_time
+            AND CHARINDEX(',' + CONVERT(nvarchar(20), a.field_id) + ',',
+              ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0
+          FOR JSON PATH) AS external_allocations
       FROM events e
       OUTER APPLY (
         SELECT TOP 1 f.id, f.name, f.site_id
@@ -735,7 +744,12 @@ app.get('/api/events/:id', async (req, res) => {
           e.*,
           f.name as field_name,
           s.name as site_name,
-          s.address as site_address
+          s.address as site_address,
+          (SELECT a.participant, a.field_id, a.start_time, a.end_time, a.zones FROM external_allocations a
+            WHERE a.active = 1 AND a.start_time < e.end_time AND a.end_time > e.start_time
+              AND CHARINDEX(',' + CONVERT(nvarchar(20), a.field_id) + ',',
+                ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0
+            FOR JSON PATH) AS external_allocations
         FROM events e
         OUTER APPLY (
           SELECT TOP 1 f.id, f.name, f.site_id

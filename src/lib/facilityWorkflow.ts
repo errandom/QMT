@@ -26,6 +26,7 @@ export function facilityMessage(
   const details = [
     `Request #${request.id}: ${request.eventType}`,
     `Date: ${request.date}; start: ${request.startTime}; duration: ${request.duration} minutes`,
+    request.recurrence && `Weekly series through ${request.recurrence.until}; weekdays (Mon=1): ${request.recurrence.weekdays.join(', ')}; skip dates: ${request.recurrence.excludedDates.join(', ') || 'None'}`,
     `Facility type: ${(request.workflow?.locationType || request.locationType) === 'meeting_room' ? 'Meeting room' :
       (request.workflow?.locationType || request.locationType) === 'field' ? 'Field' : 'To be clarified'}`,
     request.teamIds?.length && `Teams: ${request.teamIds.map(id => teams.find(team => team.id === id)?.name || `Team ${id}`).join(', ')}`,
@@ -44,7 +45,9 @@ export function facilityMessage(
     ? `${sites.find(site => site.id === field.siteId)?.name || 'Site'} - ${field.name}`
     : 'No location recorded; allocation must still be confirmed.'
   const decision = request.status === 'Approved'
-    ? `Your facility request has been approved.${request.workflow?.bookingEventId ? '\nOne booking has been created for the date and time below. Other dates or additional bookings require separate confirmation.' : ''}\nLocation: ${allocation}${!field ? '\nThe booking is not a confirmed location allocation.' : ''}`
+    ? `Your facility request has been approved.${request.workflow?.approvedDates
+      ? `\nApproved dates: ${request.workflow.approvedDates.join(', ')}.\nDates not approved: ${request.workflow.excludedDates?.join(', ') || 'None'}. Only the listed approved dates are booked.`
+      : request.workflow?.bookingEventId ? '\nOne booking has been created for the date and time below. Other dates or additional bookings require separate confirmation.' : ''}\nLocation: ${allocation}${!field ? '\nThe booking is not a confirmed location allocation.' : ''}`
     : 'Your facility request has been reviewed and cannot be approved.'
   return `Hi ${request.requestorName},\n\n${decision}\n\n${details}${request.workflow?.decisionNote ? `\n\nDecision / conditions:\n${request.workflow.decisionNote}` : ''}${request.eventType === 'Game' ? '\n\nAny separate game permits still need to be verified.' : ''}\n\nClub operations`
 }

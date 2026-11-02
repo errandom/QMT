@@ -140,6 +140,9 @@ export interface Event {
   isRecurring: boolean
   recurringDays?: number[]
   recurringEndDate?: string
+  seriesId?: string
+  allocations?: FieldAllocation[]
+  externalAllocations?: { participant: string; field_id: number; start_time: string; end_time: string; zones: string }[]
   // Game location fields (for Game events)
   gameLocation?: GameLocation
   awayStreet?: string
@@ -172,6 +175,7 @@ export interface FacilityRouting {
 }
 
 export type FacilityWorkflowAction =
+  | { action: 'assign'; owner: string; followUpDate: string }
   | ({ action: 'configure' } & FacilityRouting)
   | { action: 'acknowledge' | 'send' | 'notify'; channel: CommunicationChannel; message: string }
   | { action: 'response' | 'internal' | 'note'; message: string }
@@ -184,6 +188,10 @@ export interface FacilityWorkflow extends Partial<FacilityRouting> {
   decisionNote?: string
   approvedFieldId?: string
   bookingEventId?: string
+  bookingEventIds?: string[]
+  approvedDates?: string[]
+  excludedDates?: string[]
+  owner?: string
   history: {
     at: string
     by: string
@@ -207,11 +215,19 @@ export interface FacilityRequest {
   date: string
   startTime: string
   duration: number
+  recurrence?: { until: string; weekdays: number[]; excludedDates: string[] }
   description?: string
   status: RequestStatus
   createdAt: string
   reviewedAt?: string
   reviewedBy?: string
+}
+
+export interface FieldAllocation {
+  fieldId: string
+  zones: ('north' | 'south')[]
+  start: string
+  end: string
 }
 
 export interface EquipmentRequest {
