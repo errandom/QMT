@@ -49,6 +49,7 @@ test('Spond errors never disclose raw provider bodies, credentials, network erro
     await assert.rejects(client.get('synthetic-token', endpoint), /Invalid Spond endpoint/);
   }
   await assert.rejects(client.login('', 'private-password'), /required/);
+  await assert.rejects(client.get(undefined, 'groups'), /token is missing/);
 });
 
 test('Spond calls have bounded duration, response bytes and concurrency without automatic POST retries', async () => {

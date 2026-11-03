@@ -20,7 +20,7 @@ function createSpondClient({ fetchImpl = fetch, timeoutMs = 10000, maxBytes = 2 
         || url.username || url.password || url.hash) {
       throw new SpondError('Invalid Spond endpoint', 'INVALID_INPUT');
     }
-    if (token !== undefined && (typeof token !== 'string' || !token.trim())) {
+    if (url.pathname !== '/core/v1/login' && (typeof token !== 'string' || !token.trim())) {
       throw new SpondError('Spond authentication token is missing', 'INVALID_INPUT');
     }
     if (active >= maxConcurrent) throw new SpondError('Spond is busy; retry later', 'BUSY');
