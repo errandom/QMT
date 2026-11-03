@@ -43,6 +43,43 @@ the dated domain cutover and remaining notification, extended acceptance and
 seven-day stabilization work.
 The historical preparation record below does not describe current live state.
 
+## Live request and weekly-widget release: November 3, 2026
+
+The owner's instruction to deploy all completed changes is fulfilled at
+`https://qmt.errandom.com`, verified at **22:30 Zurich**. The release adds
+request deletion with communication-state checks, named outdoor/indoor contact
+presets, assisted F-N meeting-room workbook rows and manual-entry confirmation,
+and the public, read-only `/embed/week` iframe widget. The widget provides
+actual weekly bookings, team filters, week navigation, cancellations, unassigned
+locations and copyable embed HTML. It never restores a visitor's login session.
+
+Runtime source `b5033473c83e24cce5b971d032af39ce26ed318e` passed exact-source
+validation/publication `41721301367`, including disposable SQL integration,
+build/lint, non-root image checks and anonymous registry digest pull.
+PR #13 merged as `07fb39e4c15cda06a1ab4953cf771357c5c14c31`.
+The live image is
+`ghcr.io/errandom/qmt@sha256:f7d1405551c4e88f1983b48dc2b303ee15635cf041b3b031465670bad346aeea`.
+The preceding code-rollback image is
+`ghcr.io/errandom/qmt@sha256:69e5c49aa7dc88605e286abf48d9de824c0b6aa18694495f490d3c67e5806a94`.
+
+No migration or operational write was required. Existing non-image hosting
+configuration and all existing app settings matched their before/after
+fingerprints. Only the image and the private `QMT_MEETING_ROOM_WORKBOOK_URL`
+setting changed. The workbook URL remains outside source, images and public
+client output. Before/after public collection fingerprints matched: 10 teams,
+9 sites, 19 fields, no equipment and all 210 events in the October 1, 2026 to
+October 1, 2027 window. No request was deleted or advanced, no workbook was
+edited and no email was sent during release verification.
+
+Trusted HTTPS served the standalone widget and its linked assets. The weekly
+API returned 10 actual bookings for November 2-8 without private fields.
+Anonymous workbook-target reads and request deletion returned 401.
+The normal application permits same-origin framing only; the widget permits
+HTTPS parents by default. Set `QMT_EMBED_ORIGINS` to the intended HTTPS website
+origins to narrow that policy. This release does not configure email or enable
+Spond or AI. Separate Spond transport groundwork is tracked in draft PR #14;
+it is not part of this deployed image or an authorization to import bookings.
+
 ## Live operations enhancements: November 2, 2026
 
 The release adds linked, explicitly approved email; seasonal requests with
