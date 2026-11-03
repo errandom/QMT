@@ -1,6 +1,6 @@
 // API Configuration Module
 // Used by frontend to get the correct API base URL
-import type { Event, FacilityRequest, FacilityWorkflowAction, EquipmentRequest, CancellationRequest, UserRole, PublishedSchedule, BookingConflict } from './types';
+import type { Event, FacilityRequest, FacilityWorkflowAction, EquipmentRequest, CancellationRequest, UserRole, PublishedSchedule, BookingConflict, PublicWeek } from './types';
 export type StoredRequest = (FacilityRequest & { type: 'facility' })
   | (EquipmentRequest & { type: 'equipment' }) | (CancellationRequest & { type: 'cancellation' });
 
@@ -295,10 +295,11 @@ function isBookingConflict(value: unknown): value is BookingConflict {
 // Helper function to make API calls
 export async function apiRequest<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
+  authenticated = true
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const token = getToken();
+  const token = authenticated ? getToken() : null;
   
   const headers = new Headers(options?.headers);
   if (options?.body) headers.set('Content-Type', 'application/json');
@@ -315,7 +316,7 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && authenticated) {
       // Token expired or invalid - clear auth state
       removeToken();
     }
@@ -372,6 +373,36 @@ export async function apiRequest<T>(
 
 // Example API functions
 export const api = {
+  getPublicWeek: async (week?: string, signal?: AbortSignal): Promise<PublicWeek> => {
+    const query = new URLSearchParams();
+    if (week) query.set('week', week);
+    const data = await apiRequest<{
+      weekStart: string; weekEnd: string; timezone: string; clubName: string;
+      events: Record<string, unknown>[]; teams: Record<string, unknown>[];
+      sites: Record<string, unknown>[]; fields: Record<string, unknown>[];
+    }>(`/public/week${query.size ? `?${query}` : ''}`, {
+      credentials: 'omit', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : undefined,
+    }, false);
+    const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+    const validRow = (row: Record<string, unknown>) => row && typeof row === 'object'
+      && (typeof row.id === 'number' || typeof row.id === 'string');
+    if (!data || typeof data.weekStart !== 'string' || typeof data.weekEnd !== 'string'
+        || !validDate(data.weekStart) || !validDate(data.weekEnd)
+        || new Date(data.weekStart).getUTCDay() !== 1
+        || Date.parse(data.weekEnd) - Date.parse(data.weekStart) !== 6 * 86400000
+        || typeof data.clubName !== 'string' || typeof data.timezone !== 'string'
+        || ![data.events, data.teams, data.sites, data.fields].every(Array.isArray)
+        || ![data.events, data.teams, data.sites, data.fields].every(rows => rows.every(validRow))
+        || !data.events.every(event => typeof event.start_time === 'string' && typeof event.end_time === 'string'
+          && Number.isFinite(Date.parse(event.start_time)) && Number.isFinite(Date.parse(event.end_time))
+          && Date.parse(event.end_time) > Date.parse(event.start_time))) {
+      throw new Error('Invalid public weekly schedule response');
+    }
+    new Intl.DateTimeFormat('en', { timeZone: data.timezone }).format();
+    return { ...data, events: data.events.map(transformEvent), teams: data.teams.map(transformTeam),
+      sites: data.sites.map(transformSite), fields: data.fields.map(transformField) };
+  },
   // Auth
   login: (username: string, password: string) => 
     apiRequest<{ token: string; user: any }>('/auth/login', {
@@ -568,10 +599,15 @@ export const api = {
     headers: { 'Idempotency-Key': key },
     body: JSON.stringify({ ...data, type }),
   }),
+  deleteRequest: (id: string, expectedStatus: StoredRequest['status'], expectedVersion?: number) =>
+    apiRequest<{ id: string }>(`/requests/${id}`, {
+      method: 'DELETE', body: JSON.stringify({ expectedStatus, expectedVersion }),
+    }),
   updateFacilityWorkflow: (id: string, action: FacilityWorkflowAction, expectedVersion: number) =>
     apiRequest<FacilityRequest>(`/requests/${id}/workflow`, {
       method: 'POST', body: JSON.stringify({ ...action, expectedVersion }),
     }),
+  getMeetingRoomWorkbookTarget: () => apiRequest<{ url: string | null }>('/requests/workbook-target'),
   reviewRequest: async (id: string, status: 'Approved' | 'Rejected', fieldId?: string, facilityReview?: { expectedVersion: number; decisionNote: string; approvedDates?: string[] }) => {
     const result = await apiRequest<{ request: StoredRequest; event?: unknown; events?: unknown[] }>(`/requests/${id}/review`, {
       method: 'POST', body: JSON.stringify({ status, fieldId, ...facilityReview }),

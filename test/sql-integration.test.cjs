@@ -329,6 +329,31 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       assert.equal(series.status, 200);
       assert.equal((await series.json()).length, 2);
     });
+    await t.test('deleting a request removes its message history, preserves bookings and survives restart', async () => {
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+      const listed = await (await fetch(base + '/api/requests', { headers })).json();
+      const request = listed.find(item => item.id === requestId);
+      const events = (await pool.request().query('SELECT * FROM events ORDER BY id')).recordset;
+      const messageId = randomUUID();
+      await pool.request().input('id', sql.UniqueIdentifier, messageId).input('request', sql.Int, Number(requestId))
+        .query(`INSERT INTO request_communications
+          (id, request_id, direction, status, recipient, subject, message, recorded_by)
+          VALUES (@id, @request, 'outbound', 'accepted', 'synthetic@example.invalid', 'Synthetic fixture', 'Synthetic message', 'synthetic-test-admin')`);
+      const deletion = await fetch(`${base}/api/requests/${requestId}`, {
+        method: 'DELETE', headers,
+        body: JSON.stringify({ expectedStatus: request.status, expectedVersion: request.workflow.version }),
+      });
+      assert.equal(deletion.status, 200, await deletion.text());
+      assert.equal((await pool.request().input('id', sql.Int, Number(requestId))
+        .query('SELECT id FROM request_communications WHERE request_id = @id')).recordset.length, 0);
+      assert.deepEqual((await pool.request().query('SELECT * FROM events ORDER BY id')).recordset, events);
+      await stop();
+      await pool.connect();
+      base = await start();
+      const remaining = await (await fetch(base + '/api/requests', { headers })).json();
+      assert.ok(remaining.length > 0);
+      assert.ok(!remaining.some(item => item.id === requestId));
+    });
   } finally {
     if (server) await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });
     if (app) await app.locals.close();

@@ -20,6 +20,7 @@ export default function CommunicationsPanel({ request }: { request: FacilityRequ
   const stage = facilityStage(request)
   const action = stage === 'Received' ? 'acknowledge' : stage === 'In evaluation' ? 'send' :
     request.status !== 'Pending' && !request.workflow?.outcomeNotifiedAt ? 'notify' : 'followup'
+  const workbookInquiry = action === 'send' && request.workflow?.route === 'IGACR'
   const [recipient, setRecipient] = useState(action === 'send' || stage === 'Awaiting response' ? request.workflow?.contactEmail || '' : request.requestorEmail || '')
   const [subject, setSubject] = useState(`${request.eventType} request ${request.date}`)
   const [message, setMessage] = useState(action === 'followup' ? '' : facilityMessage(request, action, teams, fields, sites))
@@ -76,6 +77,7 @@ export default function CommunicationsPanel({ request }: { request: FacilityRequ
     </form>
     <p className="text-sm text-muted-foreground">Due follow-ups appear in the Actions queue. Email requires a configured club mailbox. Existing manual email / WhatsApp recording remains available.</p>
     {error && <p role="alert" className="text-destructive whitespace-pre-wrap">{error}</p>}
+    {workbookInquiry ? <p className="text-sm">Initial IGACR meeting-room submission uses the workbook panel above, not an email send. Ownership and follow-up tracking remain available here.</p> :
     <form className="space-y-3" onSubmit={event => { event.preventDefault(); void run(send) }}>
       <fieldset disabled={busy || sendLocked} className="space-y-3">
         <legend className="text-sm font-medium">Email: {action === 'followup' ? 'follow-up or booking change' : action}</legend>
@@ -97,7 +99,7 @@ export default function CommunicationsPanel({ request }: { request: FacilityRequ
         })}>I checked the thread / Sent Items; compose another</Button>}
       </div>
       {!configured && <p role="status" className="text-sm">Mailbox not configured. Nothing will be sent from QMT until it is connected.</p>}
-    </form>
+    </form>}
     <div className="space-y-3">
       <h4 className="font-medium">Communication thread</h4>
       {!messages.length && <p className="text-sm text-muted-foreground">No integrated messages yet. Earlier manual records remain in workflow history.</p>}

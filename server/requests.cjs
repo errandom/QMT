@@ -1,7 +1,7 @@
 const sql = require('mssql');
 const { z } = require('zod');
 const { HttpError, ids, transaction, saveBooking } = require('./bookings.cjs');
-const { locationType, email, workflowSchema, workflowActionSchema, applyWorkflowAction, reviewFacility } = require('./facility-workflow.cjs');
+const { locationType, email, workbookUrl, workflowSchema, workflowActionSchema, applyWorkflowAction, reviewFacility } = require('./facility-workflow.cjs');
 const { recurrence, requestDates, interval } = require('./operations-domain.cjs');
 const { randomUUID } = require('node:crypto');
 
@@ -54,7 +54,7 @@ function requestDto(row) {
   };
 }
 
-function registerRequestRoutes(app, { getPool, logger }) {
+function registerRequestRoutes(app, { getPool, logger, workbookTargetUrl = '' }) {
   const route = handler => async (req, res) => {
     try { await handler(req, res); }
     catch (error) {
@@ -102,6 +102,41 @@ function registerRequestRoutes(app, { getPool, logger }) {
     const result = await (await getPool()).request().input('after', sql.Int, after)
       .query('SELECT TOP (500) * FROM requests WHERE id > @after ORDER BY id');
     res.json(result.recordset.map(requestDto));
+  }));
+
+  app.get('/api/requests/workbook-target', route(async (_req, res) => {
+    const configured = workbookTargetUrl;
+    if (!configured) return res.json({ url: null });
+    const parsed = workbookUrl.safeParse(configured);
+    if (!parsed.success) throw new HttpError(503, 'Configured meeting-room workbook link is invalid');
+    res.json({ url: parsed.data });
+  }));
+
+  app.delete('/api/requests/:id', route(async (req, res) => {
+    const id = positiveId.safeParse(req.params.id);
+    const parsed = z.object({
+      expectedStatus: z.enum(['Pending', 'Approved', 'Rejected']),
+      expectedVersion: z.number().int().min(0).optional(),
+    }).safeParse(req.body);
+    if (!id.success || !parsed.success) throw new HttpError(400, 'Provide a valid request ID and its current status');
+    await transaction(await getPool(), async tx => {
+      const found = await new sql.Request(tx).input('id', sql.Int, Number(id.data))
+        .query('SELECT * FROM requests WHERE id = @id');
+      if (!found.recordset.length) throw new HttpError(404, 'Request not found; refresh requests');
+      const request = requestDto(found.recordset[0]);
+      if (request.status !== parsed.data.expectedStatus ||
+          (request.type === 'facility' && (request.workflow?.version || 0) !== parsed.data.expectedVersion)) {
+        throw new HttpError(409, 'Request has changed; refresh and review it before deleting');
+      }
+      const sending = await new sql.Request(tx).input('id', sql.Int, Number(id.data))
+        .query("SELECT TOP (1) id FROM request_communications WHERE request_id = @id AND status IN ('sending', 'unknown')");
+      if (sending.recordset.length) throw new HttpError(409, 'An email is sending or its delivery is unknown; reconcile it before deleting this request');
+      await new sql.Request(tx).input('id', sql.Int, Number(id.data))
+        .query('DELETE FROM request_communications WHERE request_id = @id');
+      await new sql.Request(tx).input('id', sql.Int, Number(id.data))
+        .query('DELETE FROM requests WHERE id = @id');
+    });
+    res.json({ id: id.data });
   }));
 
   app.post('/api/requests/:id/workflow', route(async (req, res) => {

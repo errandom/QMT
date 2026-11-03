@@ -45,6 +45,17 @@ test('event scans and recurrence are bounded and include same-day recurrence', (
   assert.deepEqual(ids('1,2,1'), [1, 2]);
 });
 
+test('weekly embedding accepts HTTPS origins only and validates the club timezone', () => {
+  assert.equal(readConfig(env).embedAncestors, "'self' https:");
+  assert.equal(readConfig({ ...env, QMT_EMBED_ORIGINS: 'https://club.example/,https://club.example https://www.example:8443' }).embedAncestors,
+    "'self' https://club.example https://www.example:8443");
+  for (const value of ['http://club.example', 'https://club.example/path', 'https://user:pass@club.example',
+    'https://club.example?q=x', 'https://club.example#section', '*', "'none'"]) {
+    assert.throws(() => readConfig({ ...env, QMT_EMBED_ORIGINS: value }), /QMT_EMBED_ORIGINS/);
+  }
+  assert.throws(() => readConfig({ ...env, QMT_TIMEZONE: 'Invalid/timezone' }), /QMT_TIMEZONE/);
+});
+
 test('rate limiter limits and expires buckets without timers', () => {
   let time = 1000;
   const limit = createLimiter({ limit: 2, maxKeys: 1, windowMs: 1000, now: () => time });

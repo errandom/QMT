@@ -3,7 +3,7 @@ import { ClipboardText } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
 import { api } from '@/lib/api'
-import { facilityMessage, facilityStage } from '@/lib/facilityWorkflow'
+import { facilityMessage, facilityRoutingDefaults, facilityStage } from '@/lib/facilityWorkflow'
 import type { CommunicationChannel, FacilityRequest, FacilityRouting, FacilityWorkflowAction } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,21 +14,27 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import CommunicationsPanel from './CommunicationsPanel'
+import RequestDeleteButton from './RequestDeleteButton'
+import MeetingRoomWorkbookPanel from './MeetingRoomWorkbookPanel'
 
 const actionLabels = {
   configure: 'Routing saved', assign: 'Responsibility saved', acknowledge: 'Receipt acknowledged', evaluate: 'Evaluation started',
   send: 'External inquiry sent', response: 'External response recorded', internal: 'Internal review recorded',
   note: 'Note added', notify: 'Requester notified', Approved: 'Approved', Rejected: 'Rejected',
+  'prepare-workbook': 'Workbook rows prepared; entry is still manual', 'enter-workbook': 'Workbook entry manually confirmed; awaiting response',
 }
 const selectClass = 'min-h-12 w-full rounded-md border bg-background px-3 text-base'
 
 function routingFor(request: FacilityRequest): FacilityRouting {
   const workflow = request.workflow
+  const kind = workflow?.locationType || request.locationType || 'field'
+  const defaults = facilityRoutingDefaults(kind, workflow?.facilityEnvironment)
   return {
-    locationType: workflow?.locationType || request.locationType || 'field',
-    route: workflow?.route || 'City of Zurich',
-    department: workflow?.department || '',
-    contactEmail: workflow?.contactEmail || '',
+    locationType: kind,
+    facilityEnvironment: workflow?.facilityEnvironment,
+    route: workflow?.route || defaults.route,
+    department: workflow?.department ?? defaults.department,
+    contactEmail: workflow?.contactEmail ?? defaults.contactEmail,
     reference: workflow?.reference || '',
     followUpDate: workflow?.followUpDate || '',
     permitNotes: workflow?.permitNotes || '',
@@ -56,7 +62,10 @@ export default function FacilityRequestCard({ request, onApprove, onReject }: Fa
           <Badge variant="outline">{kind === 'field' ? 'Field' : kind === 'meeting_room' ? 'Meeting room' : 'Facility type needed'}</Badge>
           {pendingNotification && <Badge variant="outline">Notify requester</Badge>}
         </>}
-        actions={<Button size="sm" onClick={() => setOpen(true)}>Open workflow</Button>} />
+        actions={<>
+          <Button size="sm" onClick={() => setOpen(true)}>Open workflow</Button>
+          <RequestDeleteButton request={request} />
+        </>} />
       <CardContent className="flex flex-1 flex-col gap-2 text-sm">
         <OperationsCardSection name="metadata" className="grid gap-2 sm:grid-cols-2">
           <div><span className="text-muted-foreground">Requester:</span> {request.requestorName}</div>
@@ -71,6 +80,7 @@ export default function FacilityRequestCard({ request, onApprove, onReject }: Fa
           <span>Route: {request.workflow?.route || 'Not assigned'}{request.workflow?.department && ` / ${request.workflow.department}`}</span>
           {request.workflow?.followUpDate && request.status === 'Pending' && <span>Follow up: {request.workflow.followUpDate}</span>}
           {request.workflow?.outcomeNotifiedAt && <span>Requester notified {new Date(request.workflow.outcomeNotifiedAt).toLocaleString()}</span>}
+          {request.workflow?.workbook && <span>Workbook: {request.workflow.workbook.entry ? 'Entered - manually confirmed' : 'Awaiting entry'}</span>}
         </div>
       </CardContent>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -110,7 +120,7 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
   const [note, setNote] = useState('')
   const [response, setResponse] = useState('')
   const communication = stage === 'Received' ? 'acknowledge' :
-    stage === 'In evaluation' && workflow?.route !== 'Internal' ? 'send' :
+    stage === 'In evaluation' && workflow?.route !== 'Internal' && workflow?.route !== 'IGACR' ? 'send' :
       request.status !== 'Pending' && !workflow?.outcomeNotifiedAt ? 'notify' : undefined
   const initialChannel: CommunicationChannel = communication === 'send' ? 'Email' : 'WhatsApp'
   const update = async (action: FacilityWorkflowAction) => {
@@ -124,6 +134,7 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
       toast.success(actionLabels[action.action])
       if (action.action === 'note') setNote('')
       if (action.action === 'response' || action.action === 'internal') setResponse('')
+      return saved
     } catch (failure) {
       const message = failure instanceof Error ? failure.message : 'Workflow action was not saved'
       setError(message)
@@ -174,15 +185,32 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
               <div className="space-y-1">
                 <Label htmlFor={`kind-${request.id}`}>Facility workflow</Label>
                 <select id={`kind-${request.id}`} value={routing.locationType} className={selectClass}
-                  onChange={event => setRouting({ ...routing, locationType: event.target.value as FacilityRouting['locationType'] })}>
+                  onChange={event => {
+                    const locationType = event.target.value as FacilityRouting['locationType']
+                    setRouting({ ...routing, locationType, ...facilityRoutingDefaults(locationType, routing.facilityEnvironment) })
+                  }}>
                   <option value="field">Field allocation</option><option value="meeting_room">Meeting-room allocation</option>
                 </select>
               </div>
+              {routing.locationType === 'field' && <div className="space-y-1">
+                <Label htmlFor={`environment-${request.id}`}>Indoor / outdoor routing preset</Label>
+                <select id={`environment-${request.id}`} value={routing.facilityEnvironment || ''} className={selectClass}
+                  onChange={event => {
+                    const facilityEnvironment = event.target.value as FacilityRouting['facilityEnvironment'] || undefined
+                    setRouting({ ...routing, facilityEnvironment, ...facilityRoutingDefaults(routing.locationType, facilityEnvironment) })
+                  }}>
+                  <option value="">Choose a preset or enter routing manually</option>
+                  <option value="outdoor">Outdoor - Misenga Gossweiler</option>
+                  <option value="indoor">Indoor - André da Silva</option>
+                </select>
+              </div>}
               <div className="space-y-1">
                 <Label htmlFor={`route-${request.id}`}>Review route</Label>
                 <select id={`route-${request.id}`} value={routing.route} className={selectClass}
                   onChange={event => setRouting({ ...routing, route: event.target.value as FacilityRouting['route'] })}>
-                  <option>City of Zurich</option><option>ZVIS</option><option>Other</option><option>Internal</option>
+                  <option>City of Zurich</option><option>ZVIS</option>
+                  {routing.locationType === 'meeting_room' && <option>IGACR</option>}
+                  <option>Other</option><option>Internal</option>
                 </select>
               </div>
               <div className="space-y-1">
@@ -211,12 +239,15 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
               <Textarea id={`permits-${request.id}`} value={routing.permitNotes} maxLength={1000}
                 onChange={event => setRouting({ ...routing, permitNotes: event.target.value })} />
             </div>}
-            <p className="text-xs text-muted-foreground">No department or email address is assumed. Use Internal only when no external allocation decision is needed, and record why. Changing the facility type or responsible contact after an inquiry returns the request to evaluation.</p>
+            <p className="text-xs text-muted-foreground">Outdoor and indoor presets use bewilligungen@zvis.ch with the selected named contact; review and save them before drafting. Meeting rooms default to the IGACR workbook. All routing remains editable. Use Internal only when no external allocation decision is needed, and record why. Changing responsibility after an inquiry returns the request to evaluation; recorded workbook entries require a correction note instead.</p>
             <Button type="submit" variant="outline">Save routing</Button>
           </form>
         </details>}
         {stage === 'In evaluation' && !workflow?.route && <p>Save the responsible route before recording an external inquiry or internal review.</p>}
         {unsavedRouting && <p role="status">Routing edits are not saved. Save routing before advancing the request.</p>}
+        {workflow?.locationType === 'meeting_room' && workflow.route === 'IGACR' && <fieldset disabled={unsavedRouting} className="min-w-0">
+          <MeetingRoomWorkbookPanel request={request} busy={busy || unsavedRouting} onAction={update} />
+        </fieldset>}
         {communication && (communication !== 'send' || Boolean(workflow?.route)) && <fieldset disabled={unsavedRouting} className="min-w-0">
           <CommunicationForm
           key={`${communication}-${workflow?.locationType}-${workflow?.route}-${workflow?.department}-${workflow?.contactEmail}-${workflow?.reference}`}
@@ -288,7 +319,7 @@ function CommunicationForm({ action, request, initialChannel, initialMessage, on
   request: FacilityRequest
   initialChannel: CommunicationChannel
   initialMessage: string
-  onRecord: (channel: CommunicationChannel, message: string) => Promise<void>
+  onRecord: (channel: CommunicationChannel, message: string) => Promise<unknown>
 }) {
   const [message, setMessage] = useState(initialMessage)
   const [channel, setChannel] = useState(initialChannel)

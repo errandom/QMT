@@ -24,6 +24,41 @@ test('browser API contracts', async t => {
   const json = (body, status = 200) => new Response(JSON.stringify(body), {
     status, headers: { 'Content-Type': 'application/json' },
   });
+  await t.test('public weekly transport never reads or clears storage and sends no credentials', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() {
+      throw new Error('Storage is blocked in this third-party frame');
+    } });
+    const week = { weekStart: '2026-11-02', weekEnd: '2026-11-08', timezone: 'Europe/Zurich', clubName: 'Synthetic',
+      events: [{ id: 1, start_time: '2026-11-02T23:00:00Z', end_time: '2026-11-03T01:00:00Z', team_ids: '1,2' }],
+      teams: [{ id: 1, name: 'Synthetic team' }], sites: [], fields: [] };
+    let body = week, status = 200;
+    const controller = new AbortController();
+    const mock = t.mock.method(globalThis, 'fetch', async (url, options) => {
+      assert.equal(url, '/api/public/week?week=2026-11-05');
+      assert.equal(options.credentials, 'omit');
+      assert.equal(options.headers.has('Authorization'), false);
+      assert.ok(options.signal instanceof AbortSignal);
+      return json(body, status);
+    });
+    try {
+      const result = await api.getPublicWeek('2026-11-05', controller.signal);
+      assert.equal(result.events[0].date, '2026-11-02');
+      assert.equal(result.events[0].endDate, '2026-11-03');
+      assert.equal(result.events[0].startTime, '23:00');
+      assert.deepEqual(result.events[0].teamIds, ['1', '2']);
+      for (const malformed of [{ ...week, weekStart: 'bad' }, { ...week, teams: [null] },
+        { ...week, events: [{ id: 1, start_time: 'bad', end_time: 'bad' }] }, { ...week, fields: undefined }]) {
+        body = malformed;
+        await assert.rejects(api.getPublicWeek('2026-11-05'), /Invalid public weekly schedule/);
+      }
+      body = { error: 'Synthetic denied public route' }; status = 401;
+      await assert.rejects(api.getPublicWeek('2026-11-05'), /Synthetic denied public route/);
+    } finally {
+      mock.mock.restore();
+      Object.defineProperty(globalThis, 'localStorage', descriptor);
+    }
+  });
   await t.test('booking conflicts preserve typed detail and overrides are sent only when explicitly requested', async () => {
     const conflict = {
       eventId: 7, title: 'Existing practice', eventType: 'Practice', status: 'Confirmed',
@@ -129,6 +164,48 @@ test('browser API contracts', async t => {
       await api.createRequest('equipment', { equipmentDescription: 'Synthetic fixture' }, key);
       assert.equal(calls[0].headers.get('Idempotency-Key'), key);
       assert.equal(calls[1].headers.get('Idempotency-Key'), key);
+    } finally { mock.mock.restore(); }
+  });
+  await t.test('request deletion sends authenticated current-state checks and surfaces conflicts', async () => {
+    storage.set('auth_token', 'synthetic-operations-token');
+    const calls = [];
+    const mock = t.mock.method(globalThis, 'fetch', async (url, options) => {
+      calls.push({ url, options });
+      return calls.length === 1 ? json({ id: '7' }) : json({ error: 'Request has changed; refresh before deleting' }, 409);
+    });
+    try {
+      assert.deepEqual(await api.deleteRequest('7', 'Rejected', 2), { id: '7' });
+      assert.equal(calls[0].url, '/api/requests/7');
+      assert.equal(calls[0].options.method, 'DELETE');
+      assert.equal(calls[0].options.headers.get('Authorization'), 'Bearer synthetic-operations-token');
+      assert.deepEqual(JSON.parse(calls[0].options.body), { expectedStatus: 'Rejected', expectedVersion: 2 });
+      await assert.rejects(api.deleteRequest('8', 'Pending'), /Request has changed/);
+      assert.deepEqual(JSON.parse(calls[1].options.body), { expectedStatus: 'Pending' });
+    } finally { mock.mock.restore(); }
+  });
+  await t.test('workbook target and preparation use authenticated transport and preserve action revisions and saved scope', async () => {
+    storage.set('auth_token', 'synthetic-operations-token');
+    const calls = [];
+    const target = 'https://igacr.sharepoint.com/sites/vorstand/synthetic-workbook.xlsx';
+    const details = {
+      room: 'Synthetic room', occasion: 'Synthetic meeting', club: 'Synthetic club', participants: 12,
+      responsibleName: 'Synthetic host', responsiblePhone: '5550101', responsibleEmail: 'host@example.invalid',
+      comments: '', workbookUrl: target,
+    };
+    const saved = { id: '7', workflow: { version: 4, workbook: { details, dates: ['2027-04-26'] } } };
+    const mock = t.mock.method(globalThis, 'fetch', async (url, options) => {
+      calls.push({ url, options });
+      return calls.length === 1 ? json({ url: target }) : calls.length === 2 ? json(saved) :
+        json({ error: 'Synthetic workbook target unavailable' }, 503);
+    });
+    try {
+      assert.deepEqual(await api.getMeetingRoomWorkbookTarget(), { url: target });
+      assert.equal(calls[0].url, '/api/requests/workbook-target');
+      assert.equal(calls[0].options.headers.get('Authorization'), 'Bearer synthetic-operations-token');
+      assert.deepEqual(await api.updateFacilityWorkflow('7', { action: 'prepare-workbook', details }, 3), saved);
+      assert.equal(calls[1].url, '/api/requests/7/workflow');
+      assert.deepEqual(JSON.parse(calls[1].options.body), { action: 'prepare-workbook', details, expectedVersion: 3 });
+      await assert.rejects(api.getMeetingRoomWorkbookTarget(), /Synthetic workbook target unavailable/);
     } finally { mock.mock.restore(); }
   });
   await t.test('event end dates survive API transformation', async () => {

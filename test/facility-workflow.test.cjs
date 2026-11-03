@@ -12,7 +12,13 @@ const loaded = new Module(filename, module);
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, filename);
-const { facilityStage, needsFacilityAttention, facilityLocations, facilityMessage } = loaded.exports;
+const { facilityStage, needsFacilityAttention, facilityLocations, facilityMessage, facilityRoutingDefaults } = loaded.exports;
+const workbookFilename = path.join(__dirname, '..', 'src', 'lib', 'facilityWorkbook.ts');
+const workbookModule = new Module(workbookFilename, module);
+workbookModule._compile(ts.transpileModule(fs.readFileSync(workbookFilename, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText, workbookFilename);
+const { meetingRoomRows, meetingRoomTsv } = workbookModule.exports;
 
 const submission = {
   type: 'facility', requestorName: 'Synthetic requester', requestorPhone: '5550100',
@@ -26,6 +32,12 @@ const row = (payload = submission, status = 'pending') => ({
 const routing = {
   locationType: 'field', route: 'ZVIS', department: 'Synthetic allocation office',
   contactEmail: 'allocation@example.invalid', reference: 'TEST-1', followUpDate: '2026-11-02', permitNotes: '',
+};
+const workbookRouting = { ...routing, locationType: 'meeting_room', route: 'IGACR', department: 'IGACR workbook', contactEmail: '' };
+const workbookDetails = {
+  room: 'Synthetic meeting room', occasion: 'Synthetic team meeting', club: 'Synthetic club', participants: 12,
+  responsibleName: 'Synthetic host', responsiblePhone: '5550101', responsibleEmail: 'host@example.invalid',
+  comments: 'Projector requested', workbookUrl: 'https://igacr.sharepoint.com/sites/vorstand/synthetic-workbook.xlsx',
 };
 const advance = (request, action) => ({
   ...request, workflow: applyWorkflowAction(request,
@@ -162,12 +174,101 @@ test('editable drafts preserve request scope and clearly distinguish receipt, bo
   assert.ok(!rejected.includes('One booking has been created'));
 });
 
+test('routing presets distinguish indoor and outdoor contacts and keep meeting rooms on the workbook route', () => {
+  const outdoor = facilityRoutingDefaults('field', 'outdoor');
+  const indoor = facilityRoutingDefaults('field', 'indoor');
+  assert.equal(outdoor.contactEmail, 'bewilligungen@zvis.ch');
+  assert.equal(indoor.contactEmail, outdoor.contactEmail);
+  assert.equal(outdoor.department, 'Misenga Gossweiler');
+  assert.equal(indoor.department, 'André da Silva');
+  assert.equal(facilityRoutingDefaults('field').contactEmail, '');
+  assert.equal(facilityRoutingDefaults('meeting_room', 'indoor').route, 'IGACR');
+  const request = { ...requestDto(row()), workflow: { ...outdoor, facilityEnvironment: 'outdoor' } };
+  assert.match(facilityMessage(request, 'send', [], [], []), /^Hello Misenga Gossweiler,/);
+});
+
+test('workbook preparation and confirmation persist scope without granting approval or allowing duplicate entry', () => {
+  const request = requestDto(row({ ...submission, duration: 90,
+    recurrence: { until: '2027-05-10', weekdays: [1], excludedDates: ['2027-05-03'] } }));
+  const configured = advance(evaluate(request), { action: 'configure', ...workbookRouting });
+  assert.throws(() => advance(configured, { action: 'enter-workbook', firstRow: 40, confirmed: true }), error => error.status === 400);
+  assert.throws(() => advance(configured, { action: 'send', channel: 'Email', message: 'Sent elsewhere.' }), error => error.status === 400);
+  const prepared = advance(configured, { action: 'prepare-workbook', details: workbookDetails });
+  assert.equal(prepared.status, 'Pending');
+  assert.equal(prepared.workflow.stage, 'In evaluation');
+  assert.equal(prepared.workflow.workbook.entry, undefined);
+  assert.deepEqual(prepared.workflow.workbook.dates, ['2027-04-26', '2027-05-10']);
+  assert.equal(prepared.workflow.workbook.preparedBy, 'synthetic-operator');
+  assert.throws(() => advance({ ...prepared, date: '2027-05-03' }, { action: 'enter-workbook', firstRow: 40, confirmed: true }),
+    error => error.status === 409);
+  const rerouted = advance(prepared, { action: 'configure', ...workbookRouting, route: 'Other' });
+  assert.equal(rerouted.workflow.workbook, undefined);
+  assert.equal(requestDto(row({ ...submission, workflow: prepared.workflow })).workflow.workbook.details.room, workbookDetails.room);
+  assert.throws(() => reviewFacility(prepared, 'Approved', prepared.workflow.version, '', 'test'), error => error.status === 409);
+  assert.throws(() => applyWorkflowAction(prepared, { action: 'enter-workbook', firstRow: 40, confirmed: true, expectedVersion: 0 }, 'test'),
+    error => error.status === 409);
+  assert.throws(() => advance(prepared, { action: 'enter-workbook', firstRow: 1048576, confirmed: true }), error => error.status === 400);
+  const entered = advance(prepared, { action: 'enter-workbook', firstRow: 40, confirmed: true });
+  assert.equal(entered.status, 'Pending');
+  assert.equal(entered.workflow.stage, 'Awaiting response');
+  assert.deepEqual(entered.workflow.workbook.entry, { at: '2026-10-30T08:30:00.000Z', by: 'synthetic-operator', firstRow: 40, lastRow: 41 });
+  assert.match(entered.workflow.history.at(-1).message, /Not independently verified; not an approval/);
+  assert.throws(() => reviewFacility(entered, 'Approved', entered.workflow.version, '', 'test'), error => error.status === 409);
+  assert.throws(() => advance(entered, { action: 'enter-workbook', firstRow: 42, confirmed: true }), error => error.status === 409);
+  assert.throws(() => advance(entered, { action: 'configure', ...routing }), error => error.status === 409);
+  const followup = advance(entered, { action: 'configure', ...workbookRouting, followUpDate: '2026-11-05' });
+  assert.deepEqual(followup.workflow.workbook.entry, entered.workflow.workbook.entry);
+  const response = advance(followup, { action: 'response', message: 'Synthetic editor confirmed availability.' });
+  const reevaluated = advance(response, { action: 'evaluate' });
+  assert.throws(() => advance(reevaluated, { action: 'prepare-workbook', details: workbookDetails }), error => error.status === 409);
+  assert.throws(() => advance(reevaluated, { action: 'enter-workbook', firstRow: 42, confirmed: true }), error => error.status === 409);
+  assert.equal(reviewFacility(response, 'Approved', response.workflow.version, 'Allocation reviewed.', 'test').stage, 'Approved');
+});
+
+test('workbook data validates required fields and target; Excel rows stay in F-N with safe text and local-calendar dates', () => {
+  for (const details of [
+    { ...workbookDetails, participants: 0 }, { ...workbookDetails, participants: 1.5 },
+    { ...workbookDetails, responsibleName: ' ' }, { ...workbookDetails, responsibleEmail: '' },
+    { ...workbookDetails, workbookUrl: 'javascript:alert(1)' },
+    { ...workbookDetails, workbookUrl: 'not a valid workbook link' },
+    { ...workbookDetails, workbookUrl: 'https://other.sharepoint.com/file.xlsx' },
+    { ...workbookDetails, workbookUrl: 'https://user:password@igacr.sharepoint.com/file.xlsx' },
+  ]) assert.equal(workflowActionSchema.safeParse({ action: 'prepare-workbook', expectedVersion: 0, details }).success, false);
+  assert.equal(workflowActionSchema.safeParse({ action: 'enter-workbook', expectedVersion: 0, firstRow: 40, confirmed: false }).success, false);
+  assert.equal(workflowActionSchema.safeParse({ action: 'enter-workbook', expectedVersion: 0, firstRow: 2, confirmed: true }).success, false);
+  const configured = advance(evaluate(requestDto(row())), { action: 'configure', ...workbookRouting });
+  const overnight = { ...configured, startTime: '23:00', duration: 60 };
+  assert.throws(() => advance(overnight, { action: 'prepare-workbook', details: workbookDetails }), error => error.status === 400);
+  const rows = meetingRoomRows({ ...configured, duration: 90 }, {
+    ...workbookDetails, room: ' =HYPERLINK("synthetic")\nRoom', occasion: '+Formula',
+    club: '@Formula', comments: '\t-Formula\r\nMore details',
+  }, ['2027-04-26', '2027-05-02']);
+  assert.equal(rows[0].length, 9);
+  assert.equal(rows[0][0], '\'=HYPERLINK("synthetic") Room');
+  assert.equal(rows[0][1], 'MO');
+  assert.equal(rows[1][1], 'SO');
+  assert.equal(rows[0][2], '26.04.2027');
+  assert.equal(rows[0][3], '08:00 - 09:30');
+  assert.equal(rows[0][4], "'+Formula");
+  assert.equal(rows[0][5], "'@Formula");
+  assert.equal(rows[0][6], '12');
+  assert.equal(rows[0][7], 'Synthetic host, 5550101, host@example.invalid');
+  assert.equal(rows[0][8], "'-Formula  More details");
+  assert.equal(meetingRoomTsv(rows).split('\n').length, 2);
+  assert.ok(meetingRoomTsv(rows).split('\n').every(row => row.split('\t').length === 9));
+  const quotedRows = meetingRoomRows(configured, { ...workbookDetails, room: '"Synthetic room"', comments: 'Say "Hello".' }, ['2027-04-26']);
+  assert.ok(meetingRoomTsv(quotedRows).startsWith('"""Synthetic room"""\tMO\t'));
+  assert.ok(meetingRoomTsv(quotedRows).endsWith('"Say ""Hello""."'));
+  assert.throws(() => meetingRoomRows(configured, workbookDetails, ['2027-02-30']), /date is invalid/);
+  assert.throws(() => meetingRoomRows(configured, workbookDetails, []), /need requested dates/);
+});
+
 test('HTTP workflow updates persist, stale writes fail, and booking decisions remain atomic and facility-specific', async t => {
   const express = require('express');
   const sql = require('mssql');
   const { randomUUID } = require('node:crypto');
   const { registerRequestRoutes } = require('../server/requests.cjs');
-  const store = { rows: [], events: [], nextId: 1 };
+  const store = { rows: [], events: [], communications: [], nextId: 1 };
   class Transaction {
     async begin() { this.snapshot = structuredClone(store); }
     on() {}
@@ -190,6 +291,18 @@ test('HTTP workflow updates persist, stale writes fail, and booking decisions re
       }
       if (query.startsWith('SELECT TOP (500)')) return rows(store.rows.filter(row => row.id > value.after));
       if (query.startsWith('SELECT * FROM requests')) return rows(store.rows.filter(row => row.id === value.id));
+      if (query.startsWith('SELECT TOP (1) id FROM request_communications')) {
+        return rows(store.communications.filter(row => row.request_id === value.id && ['sending', 'unknown'].includes(row.status)).slice(0, 1));
+      }
+      if (query.startsWith('DELETE FROM request_communications')) {
+        store.communications = store.communications.filter(row => row.request_id !== value.id);
+        return rows([]);
+      }
+      if (query.startsWith('DELETE FROM requests')) {
+        if (store.failDeleteId === value.id) throw new Error('Synthetic request deletion failure');
+        store.rows = store.rows.filter(row => row.id !== value.id);
+        return rows([]);
+      }
       if (query.startsWith('UPDATE requests')) {
         const row = store.rows.find(row => row.id === value.id);
         row.payload = value.payload;
@@ -309,4 +422,74 @@ test('HTTP workflow updates persist, stale writes fail, and booking decisions re
   await post(`${failedSeason.url}/review`, { ...review, decisionNote: 'May 3 is unavailable.' }, 503);
   assert.deepEqual(store.events, before);
   assert.equal(store.rows.find(item => String(item.id) === failedSeason.id).status, 'pending');
+
+  await t.test('workbook records survive HTTP reloads and confirmation never writes bookings', async () => {
+    const beforeEvents = structuredClone(store.events);
+    const created = await post('/api/requests', { ...submission, duration: 90, locationType: 'meeting_room',
+      recurrence: { until: '2027-05-03', weekdays: [1], excludedDates: [] } }, 201, randomUUID());
+    const url = `/api/requests/${created.id}/workflow`;
+    await post(url, { action: 'acknowledge', expectedVersion: 0, channel: 'Phone', message: 'Receipt.' });
+    await post(url, { action: 'evaluate', expectedVersion: 1 });
+    await post(url, { action: 'configure', ...workbookRouting, expectedVersion: 2 });
+    await post(url, { action: 'prepare-workbook', details: { ...workbookDetails, participants: 0 }, expectedVersion: 3 }, 400);
+    const prepared = await post(url, { action: 'prepare-workbook', details: workbookDetails, expectedVersion: 3 });
+    assert.equal(prepared.workflow.stage, 'In evaluation');
+    assert.equal(prepared.workflow.workbook.entry, undefined);
+    await post(url, { action: 'enter-workbook', firstRow: 40, confirmed: false, expectedVersion: 4 }, 400);
+    await post(url, { action: 'enter-workbook', firstRow: 40, confirmed: true, expectedVersion: 3 }, 409);
+    const entered = await post(url, { action: 'enter-workbook', firstRow: 40, confirmed: true, expectedVersion: 4 });
+    assert.equal(entered.status, 'Pending');
+    assert.equal(entered.workflow.stage, 'Awaiting response');
+    await post(url, { action: 'enter-workbook', firstRow: 42, confirmed: true, expectedVersion: 5 }, 409);
+    await post(`/api/requests/${created.id}/review`, { status: 'Approved', expectedVersion: 5 }, 409);
+    const reloaded = (await (await fetch(base + '/api/requests')).json()).find(item => item.id === created.id);
+    assert.deepEqual(reloaded.workflow.workbook, entered.workflow.workbook);
+    assert.deepEqual(store.events, beforeEvents);
+  });
+
+  await t.test('request deletion validates revisions, removes only linked records and preserves bookings', async () => {
+    const remove = async (id, body, expected = 200) => {
+      const response = await fetch(`${base}/api/requests/${id}`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      const result = await response.json();
+      assert.equal(response.status, expected, JSON.stringify(result));
+      return result;
+    };
+    await remove('1,2', { expectedStatus: 'Pending', expectedVersion: 0 }, 400);
+    await remove('2147483648', { expectedStatus: 'Pending', expectedVersion: 0 }, 400);
+    await remove(created.id, {}, 400);
+    await remove('999999', { expectedStatus: 'Pending', expectedVersion: 0 }, 404);
+    await remove(created.id, { expectedStatus: 'Pending', expectedVersion: 6 }, 409);
+    await remove(created.id, { expectedStatus: 'Approved', expectedVersion: 5 }, 409);
+    await remove(created.id, { expectedStatus: 'Approved' }, 409);
+    const target = await post('/api/requests', submission, 201, randomUUID());
+    const message = { id: 'synthetic-message', request_id: Number(target.id), status: 'sending' };
+    const other = { id: 'unrelated-message', request_id: Number(rejected.id), status: 'received' };
+    store.communications.push(message, other);
+    await remove(target.id, { expectedStatus: 'Pending', expectedVersion: 0 }, 409);
+    store.communications.find(item => item.id === message.id).status = 'unknown';
+    await remove(target.id, { expectedStatus: 'Pending', expectedVersion: 0 }, 409);
+    store.communications.find(item => item.id === message.id).status = 'accepted';
+    store.failDeleteId = Number(target.id);
+    await remove(target.id, { expectedStatus: 'Pending', expectedVersion: 0 }, 503);
+    assert.ok(store.rows.some(item => String(item.id) === target.id));
+    assert.ok(store.communications.some(item => item.request_id === Number(target.id)));
+    delete store.failDeleteId;
+    assert.deepEqual(await remove(target.id, { expectedStatus: 'Pending', expectedVersion: 0 }), { id: target.id });
+    assert.ok(!store.rows.some(item => String(item.id) === target.id));
+    assert.deepEqual(store.communications, [other]);
+    await remove(target.id, { expectedStatus: 'Pending', expectedVersion: 0 }, 404);
+    const events = structuredClone(store.events);
+    for (const [id, body] of [
+      [created.id, { expectedStatus: 'Approved', expectedVersion: 6 }],
+      [rejected.id, { expectedStatus: 'Rejected', expectedVersion: 1 }],
+      [equipment.id, { expectedStatus: 'Approved' }],
+      [cancellation.id, { expectedStatus: 'Approved' }],
+    ]) await remove(id, body);
+    assert.deepEqual(store.events, events);
+    const remaining = await (await fetch(base + '/api/requests')).json();
+    assert.ok(remaining.every(item => ![created.id, rejected.id, equipment.id, cancellation.id, target.id].includes(item.id)));
+    assert.ok(remaining.some(item => item.id === season.id));
+  });
 });
