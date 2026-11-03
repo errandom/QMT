@@ -1519,107 +1519,20 @@ app.delete('/api/settings/:key', verifyToken, async (req, res) => {
 // ------------------------------
 
 // Spond API client (simplified for server.js)
-const SPOND_API_BASE = 'https://api.spond.com/core/v1/';
+const spondClient = require('./server/spond-client.cjs').createSpondClient();
 let spondToken = null;
 
 async function spondLogin(username, password) {
-  console.log('[Spond] Attempting login for:', username);
-  
-  const response = await fetch(`${SPOND_API_BASE}login`, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({ email: username, password })
-  });
-  
-  console.log('[Spond] Login response status:', response.status);
-  
-  if (!response.ok) {
-    let errorMessage = 'Invalid Spond credentials';
-    try {
-      const errorData = await response.json();
-      console.error('[Spond] Login error response:', errorData);
-      
-      // Handle specific Spond error messages
-      if (errorData.errorKey === 'userDoesntHavePassword') {
-        errorMessage = 'This account uses Facebook/social login. Please create a password in the Spond app first, or use an account with email/password login.';
-      } else if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (response.status === 401 || response.status === 403) {
-        errorMessage = 'Invalid email or password. Please check your Spond credentials.';
-      } else if (response.status === 429) {
-        errorMessage = 'Too many login attempts. Please wait a few minutes and try again.';
-      }
-    } catch (e) {
-      console.error('[Spond] Could not parse error response');
-    }
-    throw new Error(errorMessage);
-  }
-  
-  const data = await response.json();
-  
-  if (!data.loginToken) {
-    console.error('[Spond] No token in response:', JSON.stringify(data).substring(0, 200));
-    throw new Error('Spond login failed: No authentication token received.');
-  }
-  
-  console.log('[Spond] Successfully authenticated');
-  return data.loginToken;
+  return spondClient.login(username, password);
 }
 
 async function spondRequest(token, endpoint, params = {}) {
-  // Add query params to include member data for groups endpoint
-  let url = `${SPOND_API_BASE}${endpoint}`;
-  const queryParams = new URLSearchParams(params);
-  
-  if (endpoint === 'groups') {
-    // Request full member data from Spond
-    queryParams.set('includeMembers', 'true');
-  }
-  
-  const queryString = queryParams.toString();
-  if (queryString) {
-    url += '?' + queryString;
-  }
-  
-  console.log('[Spond] Request URL:', url);
-  
-  const response = await fetch(url, {
-    headers: { 
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Spond API error: ${response.status}`);
-  }
-  
-  return await response.json();
+  return spondClient.get(token, endpoint, params);
 }
 
 // POST request to Spond API (for creating/updating events)
 async function spondPostRequest(token, endpoint, body) {
-  const url = `${SPOND_API_BASE}${endpoint}`;
-  console.log('[Spond] POST Request URL:', url);
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Spond API POST error: ${response.status} - ${errorText}`);
-  }
-  
-  return await response.json();
+  return spondClient.post(token, endpoint, body);
 }
 
 // Get Spond integration status
@@ -1669,8 +1582,6 @@ app.post('/api/spond/test', verifyToken, requireAdminOrMgmt, async (req, res) =>
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
-    
-    console.log('[Spond] Testing connection for:', username);
     
     // Try to login
     const token = await spondLogin(username, password);
