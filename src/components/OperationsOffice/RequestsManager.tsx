@@ -18,6 +18,7 @@ import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 import FacilityRequestCard from './FacilityRequestCard'
+import RequestDeleteButton from './RequestDeleteButton'
 import { facilityLocations, needsFacilityAttention } from '@/lib/facilityWorkflow'
 import { operationsApi, requestedDates, type RequestPreview } from '@/lib/operations'
 
@@ -309,6 +310,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                             <X className="mr-1" size={16} weight="bold" />
                             Reject
                           </Button>
+                          <RequestDeleteButton request={request} />
                         </>
                       }
                     />
@@ -351,6 +353,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                               {request.status}
                             </Badge>
                           }
+                          actions={<RequestDeleteButton request={request} />}
                         />
                         <CardContent className="flex flex-1 flex-col gap-2 text-sm">
                           <RequestDetails request={request}>
@@ -467,6 +470,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                             <X className="mr-1" size={16} weight="bold" />
                             Reject
                           </Button>
+                          <RequestDeleteButton request={request} />
                         </>
                       }
                     />
@@ -509,6 +513,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                               {request.status}
                             </Badge>
                           }
+                          actions={<RequestDeleteButton request={request} />}
                         />
                         <CardContent className="flex flex-1 flex-col gap-2 text-sm">
                           <RequestDetails request={request}>

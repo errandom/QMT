@@ -24,7 +24,9 @@ test('boot, probes, retired endpoints and disabled providers never connect to SQ
       ['/api/events/create-from-natural-language', 'POST', 410], ['/api/spond/config', 'GET', 503],
       ['/_spark/kv/private', 'GET', 410], ['/api/events', 'POST', 401],
       ['/api/events/1/transport-request', 'POST', 401],
-      ['/api/requests', 'GET', 401], ['/api/requests/1/workflow', 'POST', 401], ['/api/diagnostic', 'GET', 401],
+      ['/api/requests', 'GET', 401], ['/api/requests/1/workflow', 'POST', 401],
+      ['/api/requests/workbook-target', 'GET', 401],
+      ['/api/requests/1', 'DELETE', 401], ['/api/diagnostic', 'GET', 401],
     ]) {
       const response = await fetch(base + url, { method });
       assert.equal(response.status, status, `${method} ${url}`);
@@ -118,7 +120,34 @@ test('current database role wins over an old administrator JWT', async () => {
       }),
     });
     assert.equal(booking.status, 403);
+    const deletion = await fetch(base + '/api/requests/1', {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expectedStatus: 'Pending', expectedVersion: 0 }),
+    });
+    assert.equal(deletion.status, 403);
+    assert.equal((await fetch(base + '/api/requests/workbook-target', { headers: { Authorization: `Bearer ${token}` } })).status, 403);
   }, async () => pool);
+});
+
+test('workbook target is validated and exposed only through the authenticated operations endpoint', async () => {
+  const target = 'https://igacr.sharepoint.com/sites/vorstand/synthetic-workbook.xlsx';
+  const pool = {
+    connected: true, on() {}, async close() {},
+    request() { return { input() { return this; }, async query() {
+      return { recordset: [{ role: 'mgmt', username: 'test', is_active: true }] };
+    } }; },
+  };
+  for (const [value, status, expected] of [[target, 200, { url: target }], ['', 200, { url: null }],
+    ['javascript:alert(1)', 503], ['not a valid workbook link', 503]]) {
+    await withApp(async base => {
+      assert.equal((await fetch(base + '/api/requests/workbook-target')).status, 401);
+      const token = jwt.sign({ id: 1, role: 'mgmt', username: 'test' }, secret);
+      const response = await fetch(base + '/api/requests/workbook-target', { headers: { Authorization: `Bearer ${token}` } });
+      assert.equal(response.status, status);
+      if (expected) assert.deepEqual(await response.json(), expected);
+      assert.ok(!JSON.stringify(await (await fetch(base + '/api/capabilities')).json()).includes(target));
+    }, async () => pool, { QMT_MEETING_ROOM_WORKBOOK_URL: value });
+  }
 });
 
 test('site schedule settings round-trip, clear explicitly, survive old update payloads and remain out of public DTOs', async () => {

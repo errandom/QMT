@@ -13,6 +13,7 @@ const { registerRequestRoutes } = require('./server/requests.cjs');
 const { registerOperationsRoutes } = require('./server/operations.cjs');
 const { registerCommunicationRoutes } = require('./server/communications.cjs');
 const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./server/published-schedules.cjs');
+const { publicFields, publicRow, registerPublicScheduleRoutes } = require('./server/public-schedule.cjs');
 
 function createApp({ env = process.env, connect } = {}) {
 const config = readConfig(env);
@@ -68,15 +69,9 @@ app.use('/api', (req, res, next) => {
   res.json = body => {
     if (res.statusCode >= 500) return json({ error: 'Service unavailable; retry later' });
     if (req.method === 'GET' && !req.headers.authorization) {
-      const allowed = {
-        teams: ['id', 'name', 'sport', 'age_group', 'active'],
-        sites: ['id', 'name', 'address', 'city', 'zip_code', 'latitude', 'longitude', 'is_sports_facility', 'amenities', 'active'],
-        fields: ['id', 'name', 'site_id', 'location_type', 'field_type', 'surface_type', 'has_lights', 'capacity', 'active'],
-        equipment: ['id', 'name', 'category', 'quantity', 'condition', 'location'],
-        events: ['id', 'description', 'event_type', 'status', 'start_time', 'end_time', 'field_id', 'field_ids', 'team_id', 'team_ids', 'recurring_days', 'recurring_end_date', 'game_location', 'away_street', 'away_zip', 'away_city', 'allocation_json', 'external_allocations'],
-      }[collection];
+      const allowed = publicFields[collection];
       if (allowed && res.statusCode < 400) {
-        const clean = value => Object.fromEntries(Object.entries(value).filter(([key]) => allowed.includes(key)));
+        const clean = value => publicRow(collection, value);
         return json(Array.isArray(body) ? body.map(clean) : clean(body));
       }
       return json(body);
@@ -99,6 +94,7 @@ app.use('/api', (req, res, next) => {
 const apiLimit = createLimiter({ limit: config.requestsPerMinute, key: () => 'application' });
 const loginLimit = createLimiter({ limit: 5 });
 const submissionLimit = createLimiter({ limit: 10 });
+registerPublicScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone, clubName: config.clubName });
 app.use('/api', (req, res, next) => {
   if (req.path === '/warmup') return res.status(404).json({ error: 'Warmup is intentionally disabled' });
   if (req.path === '/llm/complete') return res.status(410).json({ error: 'Generic model completion has been retired' });
@@ -143,7 +139,7 @@ app.use('/api/events', (req, res, next) => {
   next();
 });
 registerBookingRoutes(app, { getPool, logger: console });
-registerRequestRoutes(app, { getPool, logger: console });
+registerRequestRoutes(app, { getPool, logger: console, workbookTargetUrl: env.QMT_MEETING_ROOM_WORKBOOK_URL });
 registerOperationsRoutes(app, { getPool, logger: console });
 registerCommunicationRoutes(app, { getPool, logger: console });
 registerPublishedScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone });
@@ -3468,6 +3464,13 @@ app.use('/_spark', (_req, res) => res.status(410).json({ error: 'Spark runtime h
 
 
 // Serve the Vite production build (must come before fallback)
+app.use((req, res, next) => {
+  const ancestors = req.path === '/embed/week' ? config.embedAncestors : "'self'";
+  res.set('Content-Security-Policy', `frame-ancestors ${ancestors}`);
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+app.get('/embed/week', (_req, res) => res.sendFile(path.join(distDir, 'embed.html')));
 app.use('/assets', express.static(path.join(distDir, 'assets'), { maxAge: '1y', immutable: true }));
 app.use(express.static(distDir, { maxAge: 0 }));
 

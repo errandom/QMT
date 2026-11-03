@@ -161,11 +161,23 @@ export interface Event {
 }
 
 export type FacilityWorkflowStage = 'Received' | 'Acknowledged' | 'In evaluation' | 'Awaiting response' | 'Response received' | 'Approved' | 'Rejected'
-export type FacilityReviewRoute = 'City of Zurich' | 'ZVIS' | 'Other' | 'Internal'
+export type FacilityReviewRoute = 'City of Zurich' | 'ZVIS' | 'IGACR' | 'Other' | 'Internal'
 export type CommunicationChannel = 'Email' | 'WhatsApp' | 'Phone' | 'Other'
+
+export interface PublicWeek {
+  weekStart: string
+  weekEnd: string
+  timezone: string
+  clubName: string
+  events: Event[]
+  teams: Team[]
+  sites: Site[]
+  fields: Field[]
+}
 
 export interface FacilityRouting {
   locationType: LocationType
+  facilityEnvironment?: 'outdoor' | 'indoor'
   route: FacilityReviewRoute
   department: string
   contactEmail: string
@@ -174,12 +186,34 @@ export interface FacilityRouting {
   permitNotes: string
 }
 
+export interface MeetingRoomDetails {
+  room: string
+  occasion: string
+  club: string
+  participants: number
+  responsibleName: string
+  responsiblePhone: string
+  responsibleEmail: string
+  comments: string
+  workbookUrl: string
+}
+
+export interface MeetingRoomWorkbook {
+  details: MeetingRoomDetails
+  dates: string[]
+  preparedAt: string
+  preparedBy: string
+  entry?: { at: string; by: string; firstRow: number; lastRow: number }
+}
+
 export type FacilityWorkflowAction =
   | { action: 'assign'; owner: string; followUpDate: string }
   | ({ action: 'configure' } & FacilityRouting)
   | { action: 'acknowledge' | 'send' | 'notify'; channel: CommunicationChannel; message: string }
   | { action: 'response' | 'internal' | 'note'; message: string }
   | { action: 'evaluate' }
+  | { action: 'prepare-workbook'; details: MeetingRoomDetails }
+  | { action: 'enter-workbook'; firstRow: number; confirmed: true }
 
 export interface FacilityWorkflow extends Partial<FacilityRouting> {
   version: number
@@ -192,6 +226,7 @@ export interface FacilityWorkflow extends Partial<FacilityRouting> {
   approvedDates?: string[]
   excludedDates?: string[]
   owner?: string
+  workbook?: MeetingRoomWorkbook
   history: {
     at: string
     by: string

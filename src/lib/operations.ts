@@ -109,6 +109,9 @@ export function gameReadiness(event: OperationsEvent, metadata?: EventOperations
 }
 export function requestNextAction(request: FacilityRequest) {
   if (request.status !== 'Pending') return request.workflow?.outcomeNotifiedAt ? 'Complete' : 'Notify requester'
+  if (request.workflow?.stage === 'In evaluation' && request.workflow.route === 'IGACR') {
+    return request.workflow.workbook ? 'Enter prepared workbook rows' : 'Prepare meeting-room workbook rows'
+  }
   return ({
     Received: 'Acknowledge receipt', Acknowledged: 'Start evaluation', 'In evaluation': 'Confirm scope and send inquiry',
     'Awaiting response': 'Follow up with department', 'Response received': 'Review allocation and decide',

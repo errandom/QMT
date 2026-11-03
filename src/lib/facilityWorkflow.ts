@@ -1,4 +1,13 @@
-import type { FacilityRequest, FacilityWorkflowStage, Field, Site, Team } from './types'
+import type { FacilityRequest, FacilityRouting, FacilityWorkflowStage, Field, Site, Team } from './types'
+
+export function facilityRoutingDefaults(locationType: FacilityRouting['locationType'], environment?: FacilityRouting['facilityEnvironment']): Pick<FacilityRouting, 'route' | 'department' | 'contactEmail'> {
+  if (locationType === 'meeting_room') return { route: 'IGACR', department: 'IGACR workbook - Im Birch', contactEmail: '' }
+  if (environment) return {
+    route: 'ZVIS', department: environment === 'outdoor' ? 'Misenga Gossweiler' : 'André da Silva',
+    contactEmail: 'bewilligungen@zvis.ch',
+  }
+  return { route: 'City of Zurich', department: '', contactEmail: '' }
+}
 
 export function facilityStage(request: FacilityRequest): FacilityWorkflowStage {
   return request.status === 'Pending' ? request.workflow?.stage || 'Received' : request.status
@@ -29,6 +38,7 @@ export function facilityMessage(
     request.recurrence && `Weekly series through ${request.recurrence.until}; weekdays (Mon=1): ${request.recurrence.weekdays.join(', ')}; skip dates: ${request.recurrence.excludedDates.join(', ') || 'None'}`,
     `Facility type: ${(request.workflow?.locationType || request.locationType) === 'meeting_room' ? 'Meeting room' :
       (request.workflow?.locationType || request.locationType) === 'field' ? 'Field' : 'To be clarified'}`,
+    request.workflow?.facilityEnvironment && `Environment: ${request.workflow.facilityEnvironment}`,
     request.teamIds?.length && `Teams: ${request.teamIds.map(id => teams.find(team => team.id === id)?.name || `Team ${id}`).join(', ')}`,
     request.purpose && `Purpose: ${request.purpose}`,
     request.opponent && `Opponent: ${request.opponent}`,
@@ -38,7 +48,7 @@ export function facilityMessage(
     return `Hi ${request.requestorName},\n\nWe have received your facility request and will evaluate it. This acknowledgment is not a booking confirmation. We will let you know the outcome.\n\n${details}\n\nClub operations`
   }
   if (action === 'send') {
-    return `Hello,\n\nPlease evaluate the following ${request.workflow?.locationType === 'meeting_room' ? 'meeting-room' : 'field'} request and confirm availability, allocation and any conditions.\n\n${details}${request.workflow?.reference ? `\nReference: ${request.workflow.reference}` : ''}${request.eventType === 'Game' ? '\n\nPlease also identify any separate approvals to consider for goods, drinks, food, music or other activities. Facility approval alone is not confirmation of these permits.' : ''}\n\nPlease reply with your decision, conditions and any changes to the requested slot or location.\n\nClub operations`
+    return `Hello${request.workflow?.department ? ` ${request.workflow.department}` : ''},\n\nPlease evaluate the following ${request.workflow?.locationType === 'meeting_room' ? 'meeting-room' : 'field'} request and confirm availability, allocation and any conditions.\n\n${details}${request.workflow?.reference ? `\nReference: ${request.workflow.reference}` : ''}${request.eventType === 'Game' ? '\n\nPlease also identify any separate approvals to consider for goods, drinks, food, music or other activities. Facility approval alone is not confirmation of these permits.' : ''}\n\nPlease reply with your decision, conditions and any changes to the requested slot or location.\n\nClub operations`
   }
   const field = fields.find(item => item.id === request.workflow?.approvedFieldId)
   const allocation = field

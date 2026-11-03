@@ -18,6 +18,12 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: false,
+    rollupOptions: {
+      input: {
+        app: resolve(projectRoot, 'index.html'),
+        embed: resolve(projectRoot, 'embed.html'),
+      },
+    },
   }
 });
