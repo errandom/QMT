@@ -3,7 +3,7 @@ const { connectionConfig } = require('./migrate.cjs');
 
 const operationalTables = Object.freeze([
   'users', 'teams', 'sites', 'fields', 'events', 'equipment', 'requests', 'user_settings',
-  'event_operations', 'external_allocations', 'request_communications',
+  'event_operations', 'external_allocations', 'request_communications', 'spond_review_quotas',
 ]);
 
 function applicationCredentials(env) {

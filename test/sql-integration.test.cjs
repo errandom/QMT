@@ -11,6 +11,8 @@ const { createApp } = require('../server.js');
 const { initializeFreshDatabase } = require('../scripts/initialize-app-service.cjs');
 const { operationalTables } = require('../scripts/provision-database-user.cjs');
 const { checkDatabase } = require('../scripts/check-database.cjs');
+const { checkSpondReview } = require('../scripts/check-spond-review.cjs');
+const { consumeReviewQuota } = require('../server/spond-review-quota.cjs');
 
 test('disposable SQL migration, concurrency, rollback and durable requests', {
   skip: process.env.QMT_TEST_DATABASE_APPROVED !== 'true', timeout: 120000,
@@ -121,6 +123,76 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       SELECT @field AS field, @team AS team, SCOPE_IDENTITY() AS admin;
     `);
     const fixture = seed.recordset[0];
+    await t.test('Spond discovery saves only explicitly reviewed mappings with the restricted runtime principal', async () => {
+      await checkSpondReview(pool);
+      const secret = 'synthetic-spond-sql-test-secret-not-a-credential';
+      const group = 'A'.repeat(32), subgroup = 'B'.repeat(32);
+      let providerWrites = 0;
+      const reviewApp = createApp({
+        env: { JWT_SECRET: secret, NODE_ENV: 'production',
+          QMT_SPOND_REVIEW_ENABLED: 'true', QMT_SPOND_REVIEW_APPROVED: 'true' }, connect: async () => pool,
+        spondReviewClient: {
+          async login() { return 'synthetic-token'; },
+          async get(_token, endpoint) {
+            return endpoint === 'groups' ? [{ id: group, name: 'Synthetic club', subGroups: [{ id: subgroup, name: 'Synthetic test team' }] }] : [];
+          },
+          async post() { providerWrites++; throw new Error('Unexpected provider write'); },
+        },
+      });
+      const reviewServer = reviewApp.listen(0, '127.0.0.1');
+      await new Promise(resolve => reviewServer.once('listening', resolve));
+      try {
+        const base = `http://127.0.0.1:${reviewServer.address().port}/api/spond`;
+        const headers = { Authorization: `Bearer ${jwt.sign({ id: fixture.admin, role: 'admin' }, secret)}`, 'Content-Type': 'application/json' };
+        const post = (route, body) => fetch(`${base}/${route}`, { method: 'POST', headers, body: JSON.stringify(body) });
+        const response = await post('discovery', { username: 'synthetic@example.invalid', password: 'synthetic-not-a-credential' });
+        assert.equal(response.status, 200);
+        const discovery = await response.json();
+        const original = (await pool.request().input('team', sql.Int, fixture.team)
+          .query('SELECT spond_group_id FROM dbo.teams WHERE id = @team')).recordset[0];
+        assert.equal(original.spond_group_id, null);
+        const confirm = { discoveryId: discovery.discoveryId, confirmed: true, mappings: [{ teamId: fixture.team, groupId: subgroup }] };
+        assert.equal((await post('mappings/confirm', confirm)).status, 200);
+        const mapping = (await pool.request().input('team', sql.Int, fixture.team)
+          .query('SELECT spond_group_id, spond_parent_group_id, spond_mapping_reviewed_by, spond_mapping_reviewed_at FROM dbo.teams WHERE id = @team')).recordset[0];
+        assert.equal(mapping.spond_group_id, subgroup);
+        assert.equal(mapping.spond_parent_group_id, group);
+        assert.equal(mapping.spond_mapping_reviewed_by, 'synthetic-test-admin');
+        assert.ok(mapping.spond_mapping_reviewed_at instanceof Date);
+        assert.equal((await post('reconciliation', {
+          discoveryId: discovery.discoveryId, teamId: fixture.team, from: '2026-11-04', to: '2026-11-05',
+        })).status, 200, 'canonical schema must support reconciliation without legacy name columns');
+        assert.equal((await post('sync', {})).status, 409);
+        assert.equal(providerWrites, 0);
+        assert.equal((await pool.request().query('SELECT COUNT(*) AS count FROM dbo.events')).recordset[0].count, 0);
+      } finally {
+        await new Promise(resolve => { reviewServer.close(resolve); reviewServer.closeAllConnections(); });
+      }
+    });
+    await t.test('durable Spond quotas serialize concurrent reservations, survive new workers and reset expired windows', async () => {
+      await pool.request().query('DELETE FROM dbo.spond_review_quotas');
+      const attempts = await Promise.allSettled(Array.from({ length: 4 },
+        () => consumeReviewQuota(pool, fixture.admin, 'discovery')));
+      assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 3);
+      assert.equal(attempts.find(result => result.status === 'rejected').reason.status, 429);
+      const counters = (await pool.request().query(
+        "SELECT subject_id, consumed FROM dbo.spond_review_quotas WHERE action = 'discovery' ORDER BY subject_id",
+      )).recordset;
+      assert.deepEqual(counters, [{ subject_id: 0, consumed: 3 }, { subject_id: fixture.admin, consumed: 3 }]);
+      const workerPool = await new sql.ConnectionPool(pool.config).connect();
+      try {
+        await assert.rejects(consumeReviewQuota(workerPool, fixture.admin, 'discovery'), error => error.status === 429);
+      } finally { await workerPool.close(); }
+      await pool.request().query("UPDATE dbo.spond_review_quotas SET resets_at = DATEADD(second, -1, SYSUTCDATETIME())");
+      await consumeReviewQuota(pool, fixture.admin, 'discovery');
+      assert.ok((await pool.request().query('SELECT consumed FROM dbo.spond_review_quotas')).recordset.every(row => row.consumed === 1));
+      await pool.request().query("UPDATE dbo.spond_review_quotas SET consumed = 29 WHERE subject_id = 0");
+      const globalAttempts = await Promise.allSettled([1001, 1002].map(user => consumeReviewQuota(pool, user, 'discovery')));
+      assert.equal(globalAttempts.filter(result => result.status === 'fulfilled').length, 1);
+      assert.equal(globalAttempts.find(result => result.status === 'rejected').reason.status, 429);
+      assert.equal((await pool.request().query('SELECT consumed FROM dbo.spond_review_quotas WHERE subject_id = 0')).recordset[0].consumed, 30);
+      assert.equal((await pool.request().query('SELECT COUNT(*) AS count FROM dbo.spond_review_quotas WHERE subject_id IN (1001, 1002)')).recordset[0].count, 1);
+    });
     const booking = (date, start = '18:00', end = '19:00') => ({
       event_type: 'Practice', start_time: `${date}T${start}:00Z`, end_time: `${date}T${end}:00Z`,
       team_ids: String(fixture.team), field_ids: String(fixture.field),

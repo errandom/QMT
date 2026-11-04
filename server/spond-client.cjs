@@ -25,7 +25,7 @@ function createSpondClient({ fetchImpl = fetch, timeoutMs = 10000, maxBytes = 2 
     }
     if (active >= maxConcurrent) throw new SpondError('Spond is busy; retry later', 'BUSY');
     for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value));
-    if (url.pathname === '/core/v1/groups') url.searchParams.set('includeMembers', 'true');
+    if (url.pathname === '/core/v1/groups' && !url.searchParams.has('includeMembers')) url.searchParams.set('includeMembers', 'true');
     const controller = new AbortController();
     let timer;
     active++;

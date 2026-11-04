@@ -23,6 +23,8 @@ test('Spond transport preserves login, member queries and explicit single event 
   await client.post(token, 'sponds', { heading: 'Synthetic fixture' });
   assert.equal(calls[3].options.method, 'POST');
   assert.deepEqual(JSON.parse(calls[3].options.body), { heading: 'Synthetic fixture' });
+  await client.get(token, 'groups', { includeMembers: 'false' });
+  assert.equal(calls[4].url.searchParams.get('includeMembers'), 'false', 'discovery must be able to omit member data');
 });
 
 test('Spond errors never disclose raw provider bodies, credentials, network errors or partial login tokens', async () => {

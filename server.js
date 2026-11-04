@@ -14,8 +14,9 @@ const { registerOperationsRoutes } = require('./server/operations.cjs');
 const { registerCommunicationRoutes } = require('./server/communications.cjs');
 const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./server/published-schedules.cjs');
 const { publicFields, publicRow, registerPublicScheduleRoutes } = require('./server/public-schedule.cjs');
+const { registerSpondReviewRoutes } = require('./server/spond-review.cjs');
 
-function createApp({ env = process.env, connect } = {}) {
+function createApp({ env = process.env, connect, spondReviewClient } = {}) {
 const config = readConfig(env);
 const console = createLogger();
 const app = express();
@@ -82,7 +83,7 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/api/capabilities', (_req, res) => res.json({
-  ai: config.aiEnabled, spond: config.spondEnabled, weather: false,
+  ai: config.aiEnabled, spond: false, spondReview: config.spondReviewEnabled, weather: false,
   clubName: config.clubName, timezone: config.timezone,
   transport: Boolean(config.transportEmail),
 }));
@@ -98,7 +99,7 @@ registerPublicScheduleRoutes(app, { getPool, logger: console, timezone: config.t
 app.use('/api', (req, res, next) => {
   if (req.path === '/warmup') return res.status(404).json({ error: 'Warmup is intentionally disabled' });
   if (req.path === '/llm/complete') return res.status(410).json({ error: 'Generic model completion has been retired' });
-  if (req.path.startsWith('/spond') && !config.spondEnabled) {
+  if (req.path.startsWith('/spond') && !config.spondReviewEnabled) {
     return res.status(503).json({ error: 'Spond is disabled by deployment policy' });
   }
   if (req.path === '/events/create-from-natural-language') {
@@ -143,6 +144,8 @@ registerRequestRoutes(app, { getPool, logger: console, workbookTargetUrl: env.QM
 registerOperationsRoutes(app, { getPool, logger: console });
 registerCommunicationRoutes(app, { getPool, logger: console });
 registerPublishedScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone });
+// The controlled review owns this prefix; retained legacy sync handlers below are unreachable.
+registerSpondReviewRoutes(app, { getPool, logger: console, timezone: config.timezone, client: spondReviewClient });
 
 // ------------------------------
 // Diagnostic routes

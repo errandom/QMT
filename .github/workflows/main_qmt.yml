@@ -52,7 +52,7 @@ jobs:
         run: bash scripts/smoke-image.sh
 
   publish-acceptance-image:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_acceptance_image && github.ref == 'refs/heads/copilot/qmt-cost-controlled-relaunch-20261021'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_acceptance_image && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10

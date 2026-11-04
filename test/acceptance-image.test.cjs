@@ -11,7 +11,7 @@ const validation = workflow.slice(0, workflow.indexOf('  publish-acceptance-imag
 test('image publication is a separate manual, branch-bound, exact-commit operation after validation', () => {
   assert.match(validation, /publish_acceptance_image:[\s\S]*?type: boolean\s+default: false/);
   assert.doesNotMatch(validation, /packages: write|docker push|azure\/login/);
-  assert.match(publisher, /if: github\.event_name == 'workflow_dispatch' && inputs\.publish_acceptance_image && github\.ref == 'refs\/heads\/copilot\/qmt-cost-controlled-relaunch-20261021'/);
+  assert.match(publisher, /if: github\.event_name == 'workflow_dispatch' && inputs\.publish_acceptance_image && github\.ref == 'refs\/heads\/main'/);
   assert.match(publisher, /needs: validate/);
   assert.match(publisher, /permissions:\s+contents: read\s+packages: write/);
   assert.match(publisher, /test "\$APPROVED_COMMIT" = "\$GITHUB_SHA"/);

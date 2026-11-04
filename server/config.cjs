@@ -20,11 +20,16 @@ function readConfig(env = process.env) {
   }
   const aiEnabled = flag(env, 'QMT_AI_ENABLED');
   const spondEnabled = flag(env, 'QMT_SPOND_ENABLED');
+  const spondReviewEnabled = flag(env, 'QMT_SPOND_REVIEW_ENABLED') || spondEnabled;
+  const spondReviewApproved = flag(env, 'QMT_SPOND_REVIEW_APPROVED');
   if (aiEnabled) {
     throw new Error('Legacy AI is retired; use the synthetic-only AI benchmark. Production AI requires durable quotas and provider approval');
   }
   if (env.NODE_ENV === 'production' && spondEnabled) {
     throw new Error('External integrations are disabled for production; durable quotas and provider approval are required first');
+  }
+  if (env.NODE_ENV === 'production' && spondReviewEnabled && !spondReviewApproved) {
+    throw new Error('Production Spond review requires explicit provider-access pilot approval via QMT_SPOND_REVIEW_APPROVED');
   }
   const transportEmail = env.QMT_TRANSPORT_EMAIL?.trim() || '';
   const timezone = env.QMT_TIMEZONE || 'Europe/Zurich';
@@ -45,6 +50,7 @@ function readConfig(env = process.env) {
     jwtSecret,
     aiEnabled,
     spondEnabled,
+    spondReviewEnabled,
     embedAncestors: "'self' " + (embedOrigins.length ? [...new Set(embedOrigins.map(origin => new URL(origin).origin))].join(' ') : 'https:'),
     port: integer(env, 'PORT', 3000, 0, 65535),
     poolMax: integer(env, 'SQL_POOL_MAX', 5, 1, 5),
