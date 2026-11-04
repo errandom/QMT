@@ -15,6 +15,7 @@ const env = { JWT_SECRET: 'synthetic-unit-test-secret-not-a-credential' };
 test('configuration fails closed and providers are off by default', () => {
   assert.throws(() => readConfig({}), /JWT_SECRET/);
   assert.equal(readConfig(env).aiEnabled, false);
+  assert.equal(readConfig(env).spondReviewEnabled, false);
   assert.equal(readConfig(env).poolMax, 5);
   assert.throws(() => readConfig({ ...env, QMT_AI_ENABLED: 'yes' }), /true or false/);
   assert.throws(() => readConfig({ ...env, QMT_AI_ENABLED: 'true' }), /Legacy AI is retired/);
@@ -23,6 +24,18 @@ test('configuration fails closed and providers are off by default', () => {
   assert.throws(() => readConfig({ ...env, SQL_POOL_MAX: '50' }), /SQL_POOL_MAX/);
   assert.equal(readConfig(env).transportEmail, '');
   assert.throws(() => readConfig({ ...env, QMT_TRANSPORT_EMAIL: 'a@example.test,b@example.test' }), /single valid email/);
+});
+
+test('production review requires explicit pilot approval without enabling legacy event sync', () => {
+  const production = { ...env, NODE_ENV: 'production', QMT_SPOND_REVIEW_ENABLED: 'true' };
+  assert.throws(() => readConfig(production), /QMT_SPOND_REVIEW_APPROVED/);
+  assert.throws(() => readConfig({ ...production, QMT_SPOND_REVIEW_APPROVED: 'false' }), /approval/);
+  assert.throws(() => readConfig({ ...env, QMT_SPOND_REVIEW_ENABLED: 'yes' }), /true or false/);
+  assert.throws(() => readConfig({ ...env, QMT_SPOND_REVIEW_APPROVED: 'yes' }), /true or false/);
+  const config = readConfig({ ...production, QMT_SPOND_REVIEW_APPROVED: 'true' });
+  assert.equal(config.spondReviewEnabled, true);
+  assert.equal(config.spondEnabled, false);
+  assert.throws(() => readConfig({ ...production, QMT_SPOND_REVIEW_APPROVED: 'true', QMT_SPOND_ENABLED: 'true' }), /disabled for production/);
 });
 
 test('event scans and recurrence are bounded and include same-day recurrence', () => {

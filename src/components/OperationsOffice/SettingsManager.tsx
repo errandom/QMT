@@ -15,7 +15,7 @@ import { Plus, UserCircle, Trash, PencilSimple } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
-import SpondIntegration from './SpondIntegration'
+import SpondReviewPanel from './SpondReviewPanel'
 import { useCapabilities } from '@/hooks/useCapabilities'
 
 interface SettingsManagerProps {
@@ -278,7 +278,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
       </div>
 
       {/* Spond Integration */}
-      {capabilities?.spond ? <SpondIntegration /> : <p className="text-sm text-muted-foreground">{capabilitiesError || 'Spond is disabled for the low-cost pilot.'}</p>}
+      {capabilities?.spondReview && currentUser.role === 'admin' ? <SpondReviewPanel /> : <p className="text-sm text-muted-foreground">{capabilitiesError || 'Spond review is restricted to administrators and remains disabled for the production pilot.'}</p>}
 
       <Card>
         <CardHeader>

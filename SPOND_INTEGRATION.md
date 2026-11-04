@@ -1,5 +1,144 @@
 # Spond Integration Guide
 
+## Controlled review increment: November 4, 2026
+
+The current feature-branch implementation replaces the legacy setup entry point
+with administrator-run discovery, suggested team/group/subgroup mappings,
+per-team review and explicit final confirmation. Discovery itself does not
+save mappings. Existing mappings remain unchanged unless selected and confirmed.
+Mapping confirmation records the reviewing administrator and time in SQL and
+rejects stale discoveries atomically.
+
+Credentials are used only for the discovery login, never persisted to SQL or
+browser storage. Only an administrator-scoped provider token remains in process
+for up to 15 minutes; reconnect after expiry or restart. This is intentionally
+not a persistent background connection.
+
+After confirming mappings, the administrator can preview 1-31 days of events.
+Already-linked and coexisting events are left alone. Overlapping, shifted,
+renamed, cancelled or ambiguous events require human review. Unmatched
+user-created Spond events are preserved, not imported as facility bookings.
+Only unmatched, confirmed QMT events are labelled publication **candidates**,
+never approved sends. Provider timestamps are converted once into the club's
+wall-clock convention. Subgroup previews conservatively inspect the parent
+group until recipient semantics are verified.
+
+Endpoints: `POST /api/spond/discovery`, `POST /api/spond/mappings/confirm`,
+and `POST /api/spond/reconciliation`; all require a current administrator role.
+All legacy Spond credential-storage and sync endpoints are blocked.
+The `spondReview` capability exposes the review UI only;
+the separate event-sync capability `spond` remains false.
+
+Apply the normal, reviewed migration flow for `migrations/005-spond-review.sql`
+in a disposable database before considering release. It adds nullable mapping
+audit/parent columns and an event-link ID while preserving existing values.
+Mapping columns do not require new table permissions.
+
+The same unapplied migration now also creates `dbo.spond_review_quotas`.
+Existing runtime principals need `SELECT`, `INSERT` and `UPDATE` on this table;
+the fresh-principal helper includes it in the normal operational DML grants.
+Do not rerun fresh initialization or recreate an existing production principal.
+
+### Read-only account verification before deployment
+
+Use your own interactive terminal from this checkout:
+
+```powershell
+npm.cmd run spond:verify -- --live
+```
+
+Without `--live`, the command only prints instructions and contacts no provider.
+Live mode refuses redirected/noninteractive input and credential arguments.
+Enter the date window, email and hidden password at the prompts, then select
+one discovered group. Do not reuse a password exposed in chat or put credentials
+in arguments, environment variables, files or captured terminal sessions.
+
+The probe makes one login, one group read with members excluded, and one bounded
+event read using the same query and validation as the review endpoint. It never
+connects to QMT SQL, saves mappings, reserves application quota, or creates,
+updates or deletes provider events. It is an operator-only manual probe, not
+an automatic retry loop. Group names are shown locally for selection; the final
+JSON contains counts/status only, not names, IDs, event details or tokens.
+
+Choose a window with known existing events. An empty sample exits with code 2
+and explicitly leaves event-schema compatibility unverified; errors exit with
+code 1. Success verifies only this account's sampled login/read/schema behavior.
+Pagination/completeness and subgroup recipients remain unverified even on
+success, and no probe result authorizes sync or production activation.
+Retain only the redacted summary with reviewed source/run evidence; do not
+record prompt input. Runtime SQL readiness is a separate `spond:check` step.
+
+### Deployable review-only pilot
+
+**Prepared for review, not deployed or activated.** Review has its own deployment
+gate; `QMT_SPOND_ENABLED=true` remains rejected in production. Keep that legacy
+flag false. `QMT_SPOND_REVIEW_ENABLED` is false by default. In production,
+enabling review additionally requires `QMT_SPOND_REVIEW_APPROVED=true`, recording
+explicit operator approval of the provider-access pilot. This is not a claim
+that Spond has approved this client or that compatibility has been verified.
+
+Discovery reserves durable quota before any login: 3 attempts per administrator
+per 15-minute window and 30 club-wide per UTC day. Confirmation and preview share
+10 actions per administrator per 15 minutes and 120 club-wide per UTC day.
+SQL transactions and a database application lock reserve both scopes atomically.
+Attempts remain consumed even if the subsequent provider/action fails; denied
+reservations consume neither scope. SQL/permission failures fail closed without
+provider calls. Quota exhaustion returns HTTP 429 with `Retry-After`.
+Counters survive worker restarts and use SQL's UTC clock, not the application
+clock. One reusable counter row per action/administrator bounds growth;
+short-lived provider sessions and additional burst/concurrency limits remain
+process-local. Use the existing single-worker deployment for this pilot;
+multi-worker routing/session design is not part of this increment.
+
+Release sequence (requires separate release/production authorization):
+
+1. Review the diff and run the existing PR validation, including
+   `npm run test:sql`, lint, build and Docker smoke checks. Local unit tests do
+   not substitute for disposable-SQL validation. Merge reviewed code to `main`.
+2. Manually dispatch `.github/workflows/main_qmt.yml` on `main` with publication
+   selected and the exact reviewed 40-character `approved_commit`. Publication
+   remains opt-in, runs after validation, and requires anonymous digest pull.
+   Record the immutable image digest; no automatic Azure deployment is added.
+3. Use the existing backup/restore-reviewed operator migration procedure for
+   `005-spond-review.sql`. Keep review disabled while applying schema and
+   granting the existing restricted runtime principal only
+   `SELECT, INSERT, UPDATE ON OBJECT::dbo.spond_review_quotas`.
+   Do not grant migration/schema/database-admin rights to runtime.
+4. With **runtime** SQL credentials and the intended approved pilot settings,
+   run `npm run spond:check` from the reviewed checkout. This read-only preflight
+   checks configuration, required columns and runtime permissions. It makes no
+   provider calls, reserves no quota and saves no mappings. Use `npm.cmd` on Windows.
+5. Deploy the recorded image through the existing image-only App Service flow,
+   preserving other settings, workbook target, budget guard and database.
+   Deploying code with both Spond flags false is safe without pilot activation.
+   Only for an explicitly approved pilot, set `QMT_SPOND_REVIEW_APPROVED=true`
+   and `QMT_SPOND_REVIEW_ENABLED=true`, leaving `QMT_SPOND_ENABLED=false`.
+6. Verify health, normal bookings and capabilities (`spondReview: true`,
+   `spond: false` for an activated pilot). Sign in as a QMT administrator and
+   enter Spond credentials only in the HTTPS review form. Verify real discovery,
+   confirm only the intended pilot mappings, and preview existing/user-created
+   events. Do not create test bookings or provider events in production.
+
+Disable review by setting `QMT_SPOND_REVIEW_ENABLED=false`; transient tokens
+disappear on restart. Leave the additive schema, reviewed mappings and quota
+counters intact. For code rollback, restore the previous recorded image digest
+while keeping both Spond flags false. Do not drop columns or erase event links.
+
+Provider compatibility and response completeness are still unverified; preview
+rows cannot authorize writes. Spond's official event help, checked November 4,
+2026, says it does not offer an open API:
+https://help.spond.com/app/en/articles/127163-creating-and-managing-events-in-spond-groups
+Do not describe this client as an officially supported integration.
+Explicit event review/link decisions and booking-safe idempotent publication
+remain prerequisites for actual sync. Approved persistent secret-backed access
+is additionally required only if background operation is introduced.
+
+## Historical integration (not the current setup procedure)
+
+The remainder documents the retained legacy implementation, not supported
+production instructions. Do not run its standalone SQL scripts or credential
+configuration/import/export endpoints to activate the controlled release.
+
 This document describes how to integrate the Renegades Sports Management app with [Spond.com](https://spond.com).
 
 ## Overview

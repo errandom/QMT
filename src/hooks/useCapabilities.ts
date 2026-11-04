@@ -4,6 +4,7 @@ import { apiRequest } from '@/lib/api'
 export interface Capabilities {
   ai: boolean
   spond: boolean
+  spondReview?: boolean
   weather: boolean
   clubName: string
   timezone: string

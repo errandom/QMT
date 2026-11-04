@@ -1,5 +1,24 @@
 # QMT controlled relaunch
 
+## Spond review release preparation: November 4, 2026 (not deployed)
+
+The Spond increment is an administrator-reviewed discovery/mapping and
+read-only coexistence pilot, not event sync. Its release procedure, migration,
+runtime grants, pilot flags, readiness check and rollback are documented in
+`SPOND_INTEGRATION.md`. The review flag is separate from the legacy sync flag;
+both remain off by default. Production review requires explicit pilot approval.
+SQL-backed administrator/global quotas must succeed before provider calls.
+The interactive, read-only `npm run spond:verify -- --live` probe can check a
+real account before deployment without SQL access, saving credentials or
+changing mappings/events; see `SPOND_INTEGRATION.md` for limits and safe input.
+
+Publication now targets an explicitly reviewed commit on `main`, not the retired
+October acceptance branch, and remains manual after full validation. Do not
+publish or deploy until the current diff has passed disposable-SQL and Docker
+validation. No production image, settings, SQL, mappings or provider data were
+changed by this preparation. The latest live release record is on `origin/main`;
+older records below describe this feature branch's base, not a rollback.
+
 Evaluated 2026-10-22. **The owner-authorized single-club pilot is live.**
 The explicit instruction to go live was recorded at 22:39 Zurich. It supersedes
 the disabled-acceptance-only authorization below; it does not approve AI,

@@ -26,4 +26,4 @@ node -e "if(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).ok!==
 test "$(docker exec "$container" id -u)" -ne 0
 curl --fail --silent --show-error http://127.0.0.1:8080/ | grep 'id="root"'
 curl --fail --silent --show-error http://127.0.0.1:8080/api/capabilities | \
-  node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const c=JSON.parse(s);if(c.ai!==false||c.spond!==false)process.exit(1)})"
+  node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const c=JSON.parse(s);if(c.ai!==false||c.spond!==false||c.spondReview!==false)process.exit(1)})"
