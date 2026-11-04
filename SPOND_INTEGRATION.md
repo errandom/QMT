@@ -54,6 +54,18 @@ This is compatibility evidence, not an official API contract or provider approva
 See `DEPLOYMENT.md` for the actual deployed source; a local correction is not
 automatically live.
 
+### Event protocol compatibility
+
+Active events may omit `cancelled`; omission is normalized to `false`. When
+present, it must be a boolean: `null`, strings and other types are rejected.
+Explicitly cancelled events remain held, and invalid headings or non-positive
+intervals still block the preview. Errors identify the rejected field without
+including event values or identifiers.
+
+The maintained unofficial client's calendar example checks for the optional flag:
+https://github.com/Olen/Spond/blob/master/examples/ical.py
+This does not establish provider completeness or subgroup recipient semantics.
+
 ### Read-only account verification before deployment
 
 Use your own interactive terminal from this checkout:

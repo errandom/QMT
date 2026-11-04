@@ -116,10 +116,18 @@ function reconcileEvents(local, remote, { from, to, timezone }) {
     if (seen.has(id)) throw new ReviewError('Duplicate Spond identifiers in response; preview is incomplete', 502);
     seen.add(id);
     const start = providerTime(event.startTimestamp, timezone), end = providerTime(event.endTimestamp, timezone);
-    if (end <= start || typeof event.heading !== 'string' || typeof event.cancelled !== 'boolean') {
-      throw new ReviewError('Unexpected Spond event structure; compatibility verification required', 502);
+    if (end <= start) {
+      throw new ReviewError('Unexpected Spond event structure: endTimestamp must follow startTimestamp; compatibility verification required', 502);
     }
-    return { id, title: event.heading.slice(0, 255), start, end, cancelled: event.cancelled };
+    if (typeof event.heading !== 'string') {
+      throw new ReviewError('Unexpected Spond event structure: heading must be text; compatibility verification required', 502);
+    }
+    // Active Spond events may omit the cancellation flag.
+    const cancelled = event.cancelled === undefined ? false : event.cancelled;
+    if (typeof cancelled !== 'boolean') {
+      throw new ReviewError('Unexpected Spond event structure: cancelled must be boolean when present; compatibility verification required', 502);
+    }
+    return { id, title: event.heading.slice(0, 255), start, end, cancelled };
   }).filter(event => event.start < +to && event.end > +from);
   const qmt = local.map(event => {
     const start = qmtTime(event.start_time), end = qmtTime(event.end_time);
