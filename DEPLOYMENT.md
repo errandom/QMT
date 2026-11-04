@@ -8,6 +8,9 @@ runtime grants, pilot flags, readiness check and rollback are documented in
 `SPOND_INTEGRATION.md`. The review flag is separate from the legacy sync flag;
 both remain off by default. Production review requires explicit pilot approval.
 SQL-backed administrator/global quotas must succeed before provider calls.
+The interactive, read-only `npm run spond:verify -- --live` probe can check a
+real account before deployment without SQL access, saving credentials or
+changing mappings/events; see `SPOND_INTEGRATION.md` for limits and safe input.
 
 Publication now targets an explicitly reviewed commit on `main`, not the retired
 October acceptance branch, and remains manual after full validation. Do not

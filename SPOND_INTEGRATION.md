@@ -39,6 +39,35 @@ Existing runtime principals need `SELECT`, `INSERT` and `UPDATE` on this table;
 the fresh-principal helper includes it in the normal operational DML grants.
 Do not rerun fresh initialization or recreate an existing production principal.
 
+### Read-only account verification before deployment
+
+Use your own interactive terminal from this checkout:
+
+```powershell
+npm.cmd run spond:verify -- --live
+```
+
+Without `--live`, the command only prints instructions and contacts no provider.
+Live mode refuses redirected/noninteractive input and credential arguments.
+Enter the date window, email and hidden password at the prompts, then select
+one discovered group. Do not reuse a password exposed in chat or put credentials
+in arguments, environment variables, files or captured terminal sessions.
+
+The probe makes one login, one group read with members excluded, and one bounded
+event read using the same query and validation as the review endpoint. It never
+connects to QMT SQL, saves mappings, reserves application quota, or creates,
+updates or deletes provider events. It is an operator-only manual probe, not
+an automatic retry loop. Group names are shown locally for selection; the final
+JSON contains counts/status only, not names, IDs, event details or tokens.
+
+Choose a window with known existing events. An empty sample exits with code 2
+and explicitly leaves event-schema compatibility unverified; errors exit with
+code 1. Success verifies only this account's sampled login/read/schema behavior.
+Pagination/completeness and subgroup recipients remain unverified even on
+success, and no probe result authorizes sync or production activation.
+Retain only the redacted summary with reviewed source/run evidence; do not
+record prompt input. Runtime SQL readiness is a separate `spond:check` step.
+
 ### Deployable review-only pilot
 
 **Prepared for review, not deployed or activated.** Review has its own deployment

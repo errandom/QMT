@@ -75,6 +75,15 @@ function reviewRange(from, to) {
   return { from: start, to: end };
 }
 
+function providerEventQuery(group, range) {
+  return {
+    groupId: group.parentGroupId || group.id,
+    minEndTimestamp: new Date(+range.from - 2 * 86400000).toISOString(),
+    maxEndTimestamp: new Date(+range.to + 2 * 86400000).toISOString(),
+    includeComments: 'false', includeHidden: 'true', max: '501',
+  };
+}
+
 function qmtTime(value) {
   const text = value instanceof Date ? value.toISOString() : value;
   if (typeof text !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z?$/.test(text)) {
@@ -156,4 +165,4 @@ function reconcileEvents(local, remote, { from, to, timezone }) {
     warning: 'Read-only preview. Provider completeness and compatibility are not verified; no row is approved for sync.' };
 }
 
-module.exports = { ReviewError, spondId, flattenGroups, suggestMappings, teamFingerprint, reviewRange, reconcileEvents };
+module.exports = { ReviewError, spondId, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents };

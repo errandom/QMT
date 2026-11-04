@@ -4,7 +4,7 @@ const { z } = require('zod');
 const { createLimiter } = require('./limits.cjs');
 const { createSpondClient, SpondError } = require('./spond-client.cjs');
 const { consumeReviewQuota } = require('./spond-review-quota.cjs');
-const { ReviewError, flattenGroups, suggestMappings, teamFingerprint, reviewRange, reconcileEvents } = require('./spond-review-domain.cjs');
+const { ReviewError, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents } = require('./spond-review-domain.cjs');
 
 const credentialsSchema = z.object({
   username: z.string().trim().email().max(254), password: z.string().min(1).max(4096),
@@ -145,12 +145,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
             ',' + REPLACE(COALESCE(team_ids, ''), ' ', '') + ',') > 0) ORDER BY start_time, id`);
       if (events.recordset.length > 500) throw new ReviewError('Too many QMT events; narrow the interval', 409);
       // Inspect the entire parent group for subgroup mappings: unknown recipient semantics must not hide possible duplicates.
-      const remote = await client.get(session.token, 'sponds', {
-        groupId: group.parentGroupId || group.id,
-        minEndTimestamp: new Date(+range.from - 2 * 86400000).toISOString(),
-        maxEndTimestamp: new Date(+range.to + 2 * 86400000).toISOString(),
-        includeComments: 'false', includeHidden: 'true', max: '501',
-      });
+      const remote = await client.get(session.token, 'sponds', providerEventQuery(group, range));
       const result = reconcileEvents(events.recordset, remote, { ...range, timezone });
       if (teamFingerprint(await readTeams(pool)) !== session.fingerprint) throw new ReviewError('Mapping changed during preview; repeat discovery', 409);
       res.json({ ...result, teamId: input.teamId, from: input.from, to: input.to, timezone,

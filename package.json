@@ -19,6 +19,7 @@
     "release:check": "node scripts/cost-check.cjs --release",
     "db:check": "node scripts/check-database.cjs",
     "spond:check": "node scripts/check-spond-review.cjs",
+    "spond:verify": "node scripts/verify-spond.cjs",
     "admin:bootstrap": "node scripts/bootstrap-admin.cjs",
     "db:provision-user": "node scripts/provision-database-user.cjs",
     "db:initialize-b1": "node scripts/initialize-app-service.cjs",
