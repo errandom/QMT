@@ -1,23 +1,58 @@
 # QMT controlled relaunch
 
-## Spond review release preparation: November 4, 2026 (not deployed)
+## Live Spond review-only pilot: November 4, 2026
 
-The Spond increment is an administrator-reviewed discovery/mapping and
-read-only coexistence pilot, not event sync. Its release procedure, migration,
-runtime grants, pilot flags, readiness check and rollback are documented in
-`SPOND_INTEGRATION.md`. The review flag is separate from the legacy sync flag;
-both remain off by default. Production review requires explicit pilot approval.
-SQL-backed administrator/global quotas must succeed before provider calls.
-The interactive, read-only `npm run spond:verify -- --live` probe can check a
-real account before deployment without SQL access, saving credentials or
-changing mappings/events; see `SPOND_INTEGRATION.md` for limits and safe input.
+The owner-requested deployment is live at `https://qmt.errandom.com`, verified at
+**18:11 Zurich (17:11 UTC)**. Administrators can run discovery, review mapping
+suggestions, explicitly confirm selected mappings, and inspect read-only event
+coexistence. Suggestions are never automatically saved. Actual event
+publication/synchronization is not implemented or enabled by this release.
+See `SPOND_INTEGRATION.md` for workflow, quotas and compatibility limits.
 
-Publication now targets an explicitly reviewed commit on `main`, not the retired
-October acceptance branch, and remains manual after full validation. Do not
-publish or deploy until the current diff has passed disposable-SQL and Docker
-validation. No production image, settings, SQL, mappings or provider data were
-changed by this preparation. The latest live release record is on `origin/main`;
-older records below describe this feature branch's base, not a rollback.
+PR #14 merged as `304749a6476641df2a419dedca246900f4363231`.
+Exact-main publication `41871891351` and main validation `41871835611` succeeded,
+including disposable SQL, lint/build, Bicep, non-root image smoke and anonymous
+digest pull. The live immutable image is
+`ghcr.io/errandom/qmt@sha256:1fadab2013799e6c3703a92d85c3e29c553489e3a2450c73bfc5d64b349af234`.
+The code-rollback image is the November 3 release:
+`ghcr.io/errandom/qmt@sha256:f7d1405551c4e88f1983b48dc2b303ee15635cf041b3b031465670bad346aeea`.
+
+Additive migration `005-spond-review.sql` was applied over the existing four
+verified migrations through Azure-authenticated SCM on the existing app network.
+All five checksums, database readiness and the runtime-credential Spond preflight
+passed. The existing runtime principal received only SELECT, INSERT and UPDATE
+on `dbo.spond_review_quotas`; no principal or broad role was created.
+Fingerprints of all 11 existing operational tables were unchanged, using their
+pre-migration columns. The new quota table was empty. Temporary remote operator
+files and the transient credential input were removed.
+
+Only the immutable image and the two approved review flags changed:
+`QMT_SPOND_REVIEW_ENABLED=true`, `QMT_SPOND_REVIEW_APPROVED=true`.
+`QMT_SPOND_ENABLED=false` remains unchanged. All unrelated settings, non-image
+web configuration, hosting/TLS, SQL tier/retention/firewall, network, budget and
+independent budget-guard fingerprints matched their before/after values.
+No initialization, resource replacement, stop/start rehearsal or workbook edit
+was performed. An initial operator readiness check treated the old runtime's
+missing capability as an error and automatically restored the prior image;
+after correcting the wait condition, the final rollout completed successfully.
+
+Independent anonymous registry reads verified the source label, manifest/layer
+digests and non-root runtime. All 12 live HTML/JS/CSS assets matched the published
+image bytes over trusted HTTPS. Administrator sign-in and review status passed:
+`spondReview:true`, `spond:false`, `mode:review`, `writesEnabled:false`,
+`credentialStorage:none`, `quotas:durable`. Anonymous review status returned 401;
+the retained legacy configuration endpoint returned 409. Before/after public
+collections matched: 10 teams, 9 sites, 19 fields, no equipment and all 210
+events in the October 1, 2026 to October 1, 2027 window.
+
+No provider call, mapping confirmation, operational booking write or participant
+notification was made during release verification. The original interactive
+`scripts\verify-spond.cjs --live` probe was launched in a separate user-owned
+terminal, but no completion receipt existed when the release was recorded.
+**Real-account compatibility remains unverified pending secure terminal input.**
+Do not treat deployment or synthetic tests as proof of provider completeness or
+subgroup semantics. Rollback disables the review flags and restores the
+November 3 image; retain the additive schema and migration ledger.
 
 Evaluated 2026-10-22. **The owner-authorized single-club pilot is live.**
 The explicit instruction to go live was recorded at 22:39 Zurich. It supersedes

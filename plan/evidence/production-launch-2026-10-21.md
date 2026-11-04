@@ -286,3 +286,57 @@ Secret-free operator receipts are `qmt-complete-release-before.json`,
 `qmt-migration-apply-result.txt` and `qmt-complete-browser.json`.
 Code rollback retains the additive schema/migration record. Notification
 delivery, extended acceptance and stabilization are not closed by this release.
+
+## November 4 Spond review-only deployment
+
+The owner requested deployment and execution of the read-only account probe.
+PR #14 was made ready and merged without an administrator/protection bypass;
+reviewed main source is `304749a6476641df2a419dedca246900f4363231`.
+Main validation `41871835611` and exact-source manual publication `41871891351`
+both succeeded, including disposable SQL and container checks. Published/live
+image:
+`ghcr.io/errandom/qmt@sha256:1fadab2013799e6c3703a92d85c3e29c553489e3a2450c73bfc5d64b349af234`.
+
+Existing seven-day SQL retention and a valid restore window were checked before
+the additive migration. A source-bound operator ran the existing migrator and
+readiness tools through Azure-bearer SCM, not the retired acceptance operator.
+All four baseline migration checksums matched; only `005-spond-review.sql` was
+applied. The existing runtime SQL principal received SELECT/INSERT/UPDATE only
+on the new quota table. All five migration checksums, database checks and the
+runtime-credential review preflight passed. All 11 original operational table
+fingerprints matched using pre-migration columns; quota rows were zero.
+The transient credential payload was unlinked before SQL execution, and the
+isolated remote directory and exact uploaded files were removed afterward.
+No firewall, SQL principal, database role or network change was needed.
+
+Two approved review flags were enabled while legacy sync remained false, and
+an exact-property ARM image update selected the immutable digest. An initial
+operator wait-condition error caused automatic code/configuration rollback
+because the old runtime had no `spondReview` field. The condition was corrected
+to wait for that capability; the successful final rollout was verified at
+**17:11:01 UTC / 18:11 Zurich on November 4, 2026**.
+
+Nine before/after invariant groups matched: unrelated app settings, non-image
+web configuration, site hosting/TLS, Basic Online SQL configuration, SQL
+firewall, retention, virtual network, budget, and independent guard. Public
+collection fingerprints matched for 10 teams, 9 sites, 19 fields, no equipment
+and 210 events in the October 2026-October 2027 window.
+Independent anonymous registry inspection verified digest/source/non-root
+identity and the compiled UI layer; all 12 live HTML/JS/CSS asset hashes matched.
+Protected administrator login and read-only review status passed.
+Capabilities reported `spondReview:true`, `spond:false`; review status reported
+no event writes or credential storage and durable quotas. Anonymous review
+status returned 401, and legacy configuration returned 409.
+
+Secret-free session receipts: `qmt-spond-production-database-result.json`,
+`qmt-spond-image-evidence.json`, `qmt-spond-release-before.json`, and
+`qmt-spond-release-result.json`. No real mapping, event, request, workbook or
+notification operation was performed. The original interactive account probe
+was started in a separate user-owned terminal and remains pending secure user
+input; no real-account compatibility claim is made. Completeness, subgroup
+semantics and guarded idempotent event publication remain separate work.
+
+Code rollback is the November 3 image
+`ghcr.io/errandom/qmt@sha256:f7d1405551c4e88f1983b48dc2b303ee15635cf041b3b031465670bad346aeea`
+with review disabled. Keep the additive schema and ledger; do not reinitialize
+or replay the retired acceptance lifecycle.
