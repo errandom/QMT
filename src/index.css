@@ -31,7 +31,8 @@
 
 @media (max-width: 640px) {
   [data-slot="dialog-content"] {
-    max-height: calc(100dvh - 2rem);
+    top: calc(1rem + env(safe-area-inset-top));
+    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     overflow-y: auto;
   }
   input:not([type="checkbox"]):not([type="radio"]), select, textarea {
