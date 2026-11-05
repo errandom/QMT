@@ -50,6 +50,31 @@ test('coexisting user-created events and already-linked events are held without 
   assert.equal(reconcileEvents([local({ spond_id: eventId.toLowerCase() })], [remote()], range).rows[0].classification, 'linked');
 });
 
+test('active provider events may omit cancellation while explicit cancellation remains held', () => {
+  const active = remote();
+  delete active.cancelled;
+  assert.equal(reconcileEvents([local()], [active], range).rows[0].classification, 'coexisting');
+  assert.equal(reconcileEvents([], [active], range).rows[0].classification, 'spond-only');
+  assert.equal(reconcileEvents([], [remote({ cancelled: true })], range).rows[0].classification, 'held');
+});
+
+test('event-format errors identify the rejected field without exposing provider content', () => {
+  const privateValue = 'private-provider-content';
+  for (const [extra, field] of [
+    [{ endTimestamp: '2026-11-04T17:00:00Z' }, 'endTimestamp'],
+    [{ heading: { value: privateValue } }, 'heading'],
+    ...[null, privateValue, 0, [], {}].map(cancelled => [{ cancelled }, 'cancelled']),
+  ]) {
+    assert.throws(() => reconcileEvents([], [remote(extra)], range), error => {
+      assert.equal(error.status, 502);
+      assert.ok(error.message.includes(field));
+      assert.ok(!error.message.includes(privateValue));
+      assert.ok(!error.message.includes(eventId));
+      return true;
+    });
+  }
+});
+
 test('overlapping, renamed, shifted, cancelled, multiply matched and missing-linked events require review', () => {
   for (const [qmt, spond] of [
     [[local()], [remote({ heading: 'Renamed' })]],
@@ -94,7 +119,7 @@ test('bad dates, invalid/oversized provider responses and duplicate identifiers 
     assert.throws(() => reviewRange(...dates));
   }
   for (const invalid of [{ events: [] }, [remote(), remote()], [remote({ startTimestamp: '2026-11-04T18:00:00' })],
-    [remote({ endTimestamp: 'bad' })], [remote({ cancelled: undefined })], Array(501).fill(remote())]) {
+    [remote({ endTimestamp: 'bad' })], [remote({ cancelled: null })], Array(501).fill(remote())]) {
     assert.throws(() => reconcileEvents([local()], invalid, range));
   }
 });

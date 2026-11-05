@@ -1,5 +1,51 @@
 # QMT controlled relaunch
 
+## Live Spond compatibility release: November 5, 2026
+
+The owner requested deployment at **18:08 Zurich**. The image-only rollout
+completed and was verified at **18:17:40 Zurich (17:17:40 UTC)**.
+PR #17 merged without a protection bypass as
+`96052e38c579ee30b84a23eff0da5f520a2e7b91`. Main validation `42071841185`
+and exact-main validation/publication `42071859447` succeeded, including
+disposable SQL, lint/build, image smoke and anonymous digest pull.
+
+Current runtime image:
+`ghcr.io/errandom/qmt@sha256:48413924d2ea56f58ae2ea8973083ac8bdccbdfe3d50973600448d3db96184ea`.
+Immediate code rollback:
+`ghcr.io/errandom/qmt@sha256:1fadab2013799e6c3703a92d85c3e29c553489e3a2450c73bfc5d64b349af234`.
+The November 3 image below is historical, not this release's immediate rollback.
+Independent anonymous registry reads verified the OCI index, Linux amd64
+manifest, configuration digests, exact source labels and non-root runtime.
+
+This deploys `auth2/login` with nested `accessToken.token`, and optional
+event-cancellation parsing. The corrected modules match the source used by the
+successful November 4, 21:41 Zurich account probe at
+`d9031b3833291b86c57d5d6f54f04cc901c81fd0`. That probe verified login,
+discovery and a sampled parent-group event response, not full coverage or
+subgroup recipient semantics. No Spond authentication or provider call was
+repeated during this rollout.
+
+Only `config/web.properties.linuxFxVersion` changed. All app settings remained
+unchanged, including `QMT_SPOND_REVIEW_ENABLED=true`,
+`QMT_SPOND_REVIEW_APPROVED=true` and `QMT_SPOND_ENABLED=false`.
+Ten before/after invariant groups matched: app settings, non-image web
+configuration, hosting/TLS, B1 plan, Basic SQL configuration, SQL firewall,
+backup retention, network, budget and independent budget guard. No migration,
+initialization, grant, resource replacement or infrastructure deployment ran.
+
+The restarted runtime passed trusted-HTTPS health, protected administrator
+sign-in and Spond status: review mode, event writes false, credential storage
+none and durable quotas. Anonymous status returned 401; legacy configuration
+returned 409. Nine traversed live HTML/JS/CSS assets matched their pre-rollout
+bytes. Public collection fingerprints were unchanged: 10 teams, 9 sites,
+19 fields, no equipment and 210 events in the October 1, 2026 to October 1,
+2027 window. No mapping, booking, workbook or message was changed.
+
+The personalized bilingual request drafts remain separate, local and
+undeployed. Actual event synchronization is still disabled and unimplemented.
+The next account action is administrator-led in-app discovery followed by
+explicit human mapping review; no mapping confirmation was automated.
+
 ## Live Spond review-only pilot: November 4, 2026
 
 The owner-requested deployment is live at `https://qmt.errandom.com`, verified at
@@ -46,13 +92,13 @@ collections matched: 10 teams, 9 sites, 19 fields, no equipment and all 210
 events in the October 1, 2026 to October 1, 2027 window.
 
 No provider call, mapping confirmation, operational booking write or participant
-notification was made during release verification. The original interactive
-`scripts\verify-spond.cjs --live` probe was launched in a separate user-owned
-terminal, but no completion receipt existed when the release was recorded.
-**Real-account compatibility remains unverified pending secure terminal input.**
-Do not treat deployment or synthetic tests as proof of provider completeness or
-subgroup semantics. Rollback disables the review flags and restores the
-November 3 image; retain the additive schema and migration ledger.
+notification was made during the original release verification. The interactive
+account probe had not completed at the 18:11 rollout; a later corrected-source
+probe passed at 21:41 Zurich, as recorded in the November 5 release above.
+Do not treat deployment or the sampled probe as proof of provider completeness
+or subgroup semantics. The original November 4 rollback was the November 3
+image with review flags disabled; retain the additive schema and migration
+ledger. Use the newer immediate rollback recorded above for November 5.
 
 Evaluated 2026-10-22. **The owner-authorized single-club pilot is live.**
 The explicit instruction to go live was recorded at 22:39 Zurich. It supersedes

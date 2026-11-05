@@ -30,7 +30,7 @@ function fixture(events) {
 }
 
 test('real-account verifier makes one bounded login/discovery/event read and outputs only a redacted summary', async () => {
-  const f = fixture([{ id: eventId, heading: 'Private event heading', cancelled: false,
+  const f = fixture([{ id: eventId, heading: 'Private event heading',
     startTimestamp: '2026-11-04T17:00:00Z', endTimestamp: '2026-11-04T18:00:00Z' }]);
   const result = await verifySpond(f.options);
   assert.equal(f.calls.length, 3);

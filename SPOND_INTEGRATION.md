@@ -39,6 +39,33 @@ Existing runtime principals need `SELECT`, `INSERT` and `UPDATE` on this table;
 the fresh-principal helper includes it in the normal operational DML grants.
 Do not rerun fresh initialization or recreate an existing production principal.
 
+### Login protocol compatibility
+
+The client uses `POST /core/v1/auth2/login` and reads the bearer token from
+`accessToken.token`. The old `/core/v1/login` endpoint returned HTTP 426 in the
+November 4 account check; a credential-free request to the replacement reached
+authentication validation instead. This does not verify any real account.
+Missing or malformed nested tokens fail closed; there is no fallback to the
+retired endpoint or flat `loginToken` response.
+
+The maintained unofficial client's source documents the replacement:
+https://olen.github.io/Spond/spond/base.html
+This is compatibility evidence, not an official API contract or provider approval.
+See `DEPLOYMENT.md` for the actual deployed source; a local correction is not
+automatically live.
+
+### Event protocol compatibility
+
+Active events may omit `cancelled`; omission is normalized to `false`. When
+present, it must be a boolean: `null`, strings and other types are rejected.
+Explicitly cancelled events remain held, and invalid headings or non-positive
+intervals still block the preview. Errors identify the rejected field without
+including event values or identifiers.
+
+The maintained unofficial client's calendar example checks for the optional flag:
+https://github.com/Olen/Spond/blob/master/examples/ical.py
+This does not establish provider completeness or subgroup recipient semantics.
+
 ### Read-only account verification before deployment
 
 Use your own interactive terminal from this checkout:
