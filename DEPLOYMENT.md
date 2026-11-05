@@ -1,6 +1,73 @@
 # QMT controlled relaunch
 
-## Live Spond compatibility release: November 5, 2026
+## Current phone-ready web and Android release: November 5, 2026
+
+The owner-requested web deployment was verified at **23:43:34 Zurich
+(22:43:34 UTC)**. PR #19 merged as
+`cdfc063a57b7f22385f2fbe0f24133ba4c67ee97`; PR #20 merged as
+`6cb8c28ffdb7a44a817243401a8fe37a452b3f1d`, the exact deployed source.
+PR validation `42121629463`, main validation `42122243333` and exact-main
+validation/publication `42122247770` succeeded. A later documentation-only
+commit does not change this runtime source or require another publication.
+
+Current runtime image:
+`ghcr.io/errandom/qmt@sha256:855fb2b29036023a160ba53ffd3d3db2f7d694b00b76f6e66acdf4dcd12af9d6`.
+Immediate image rollback:
+`ghcr.io/errandom/qmt@sha256:48413924d2ea56f58ae2ea8973083ac8bdccbdfe3d50973600448d3db96184ea`.
+The earlier PR #19 image was published but never deployed.
+Anonymous registry reads verified immutable digests, the exact OCI source
+label and non-root `node` runtime. All 12 live HTML/JS/CSS assets matched
+bytes read directly from this image, not a Windows build with different
+line endings.
+
+English-default/German-switchable message drafts and personalized
+`Quick - Mean - Tough` / user-name signatures are live across the completed
+communication experiences; `QMTadmin` signs as `Kenny`. Human-reviewed
+QMT-to-Spond mapping destinations and save consequences are clearer.
+Phone navigation, touch targets, input sizing, safe areas, wrapping toolbars
+and bounded scrollable dialogs are deployed. Live-asset browser checks at
+360px and 1280px passed all eight Office tabs without horizontal overflow or
+runtime errors, using intercepted synthetic APIs and no operational writes.
+
+App settings, resource inventory and all five public collection fingerprints
+matched before/after: 10 teams, 9 sites, 19 fields, no equipment and 210 events
+in the October 1, 2026 to October 1, 2027 window. Trusted HTTPS health passed.
+`spondReview:true`; Spond sync, AI, weather and transport remain false.
+No migration, infrastructure replacement, grant, provider call, mapping
+confirmation, workbook edit or real message was performed.
+
+**Explicit configuration exception:** the Azure CLI inserted
+`remoteDebuggingVersion: "VS2022"` where the previous value was null.
+`remoteDebuggingEnabled` stayed false. Replacing only this inactive metadata
+value with null reproduces the entire original non-image configuration
+fingerprint exactly. A targeted ARM null patch was ignored by the service.
+The inactive value is retained and documented rather than risking a
+whole-configuration recovery solely to clear it. The only intended
+configuration change was `linuxFxVersion`; do not claim raw non-image
+fingerprints are identical.
+
+Signed **QMT Android 1.0**, package `com.errandom.qmt`, is available locally at
+`android\build\QMT-Android.apk` (Android API26 minimum/API36 target).
+APK SHA256:
+`221b95ffc64d3c1b2af1c524eaf2291f3028e1eeb3eb24d34be3f09e7a247587`.
+Certificate SHA256:
+`923d24f52f718e7d2bd6773cb05b106e06212a3fe10734c3e60c5fcea82fca31`.
+v2/v3 signing, Java/API36 compilation, 18 policy checks and 26 offline
+Android emulator checks passed. The native trusted-HTTPS shell provides
+keyboard/system insets, retry/offline handling and document export.
+Alerts are opt-in, with approximately 15-minute network-connected checks,
+not instant push. Synthetic notification delivery passed; real-account,
+physical-device and battery/reboot delivery remain owner acceptance checks.
+Signing material is outside source/OneDrive; preserve that identity for updates.
+See `android\README.md` for installation, permissions and limitations.
+
+**Next owner step:** transfer the APK to an Android phone, install it, sign in
+normally, enable **Alerts** and grant notification permission. The first complete
+check establishes a silent baseline; observe a later real schedule change or
+new Pending request without expecting exact 15-minute timing. Actual Spond
+synchronization remains disabled and unimplemented.
+
+## Historical Spond compatibility release: November 5, 2026
 
 The owner requested deployment at **18:08 Zurich**. The image-only rollout
 completed and was verified at **18:17:40 Zurich (17:17:40 UTC)**.
@@ -9,7 +76,7 @@ PR #17 merged without a protection bypass as
 and exact-main validation/publication `42071859447` succeeded, including
 disposable SQL, lint/build, image smoke and anonymous digest pull.
 
-Current runtime image:
+Runtime image for that release:
 `ghcr.io/errandom/qmt@sha256:48413924d2ea56f58ae2ea8973083ac8bdccbdfe3d50973600448d3db96184ea`.
 Immediate code rollback:
 `ghcr.io/errandom/qmt@sha256:1fadab2013799e6c3703a92d85c3e29c553489e3a2450c73bfc5d64b349af234`.
@@ -41,8 +108,9 @@ bytes. Public collection fingerprints were unchanged: 10 teams, 9 sites,
 19 fields, no equipment and 210 events in the October 1, 2026 to October 1,
 2027 window. No mapping, booking, workbook or message was changed.
 
-The personalized bilingual request drafts remain separate, local and
-undeployed. Actual event synchronization is still disabled and unimplemented.
+At that time the personalized bilingual request drafts remained separate, local
+and undeployed; the current release above supersedes that status.
+Actual event synchronization is still disabled and unimplemented.
 The next account action is administrator-led in-app discovery followed by
 explicit human mapping review; no mapping confirmation was automated.
 
