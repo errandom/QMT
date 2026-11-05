@@ -12,7 +12,7 @@ const loaded = new Module(filename, module);
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, filename);
-const { facilityStage, needsFacilityAttention, facilityLocations, facilityMessage, facilityRoutingDefaults } = loaded.exports;
+const { facilityStage, needsFacilityAttention, facilityLocations, facilityMessage, facilityMessageSubject, requestRejectionMessage, facilityRoutingDefaults } = loaded.exports;
 const workbookFilename = path.join(__dirname, '..', 'src', 'lib', 'facilityWorkbook.ts');
 const workbookModule = new Module(workbookFilename, module);
 workbookModule._compile(ts.transpileModule(fs.readFileSync(workbookFilename, 'utf8'), {
@@ -25,6 +25,7 @@ const submission = {
   eventType: 'Practice', teamIds: ['1'], date: '2027-04-26', startTime: '08:00', duration: 540,
   description: 'Training camp through April 30; no overnight stay',
 };
+const currentUser = { username: 'operator', fullName: 'Alex Example' };
 const row = (payload = submission, status = 'pending') => ({
   id: 1, request_type: payload.type, payload: JSON.stringify(payload), status,
   created_at: '2026-10-30T08:00:00.000Z',
@@ -160,18 +161,106 @@ test('facility routing filters fields and meeting rooms independently of event t
 
 test('editable drafts preserve request scope and clearly distinguish receipt, booking allocation and game permits', () => {
   const request = { ...requestDto(row()), eventType: 'Game', opponent: 'Synthetic visitors' };
-  const ack = facilityMessage(request, 'acknowledge', [], [], []);
+  const ack = facilityMessage(request, 'acknowledge', [], [], [], currentUser);
   assert.ok(ack.includes('not a booking confirmation'));
   assert.ok(ack.includes('Training camp through April 30'));
-  const inquiry = facilityMessage(request, 'send', [], [], []);
+  const inquiry = facilityMessage(request, 'send', [], [], [], currentUser);
   assert.ok(inquiry.includes('separate approvals'));
   assert.ok(inquiry.includes('Opponent: Synthetic visitors'));
-  const outcome = facilityMessage({ ...request, status: 'Approved' }, 'notify', [], [], []);
+  const outcome = facilityMessage({ ...request, status: 'Approved' }, 'notify', [], [], [], currentUser);
   assert.ok(outcome.includes('allocation must still be confirmed'));
   assert.ok(outcome.includes('separate game permits'));
-  const rejected = facilityMessage({ ...request, status: 'Rejected', workflow: { decisionNote: 'Unavailable.' } }, 'notify', [], [], []);
+  const rejected = facilityMessage({ ...request, status: 'Rejected', workflow: { decisionNote: 'Unavailable.' } }, 'notify', [], [], [], currentUser);
   assert.ok(rejected.includes('Unavailable.'));
   assert.ok(!rejected.includes('One booking has been created'));
+});
+
+test('facility drafts sign the current user, with Kenny for QMTadmin and a username fallback', () => {
+  const request = requestDto(row());
+  for (const [user, name] of [
+    [{ username: 'QMTadmin', fullName: 'System Administrator' }, 'Kenny'],
+    [{ username: 'qmtADMIN' }, 'Kenny'],
+    [{ username: 'operator', fullName: ' Alex Example ' }, 'Alex Example'],
+    [{ username: 'operator', fullName: '   ' }, 'operator'],
+    [{ username: 'another-operator' }, 'another-operator'],
+  ]) {
+    for (const [action, status] of [
+      ['acknowledge', 'Pending'], ['send', 'Pending'], ['notify', 'Approved'], ['notify', 'Rejected'],
+    ]) {
+      const message = facilityMessage({ ...request, status }, action, [], [], [], user);
+      assert.ok(message.endsWith(`\n\nQuick - Mean - Tough\n${name}`), `${action}/${status} signed by ${user.username}`);
+      assert.ok(!message.includes('Club operations'));
+    }
+  }
+});
+
+test('German drafts preserve request scope, free text, signature and booking/permit caveats', () => {
+  const request = { ...requestDto(row()), eventType: 'Game', opponent: 'Synthetic visitors',
+    recurrence: { until: '2027-05-10', weekdays: [1], excludedDates: ['2027-05-03'] },
+    workflow: { ...routing, facilityEnvironment: 'outdoor', decisionNote: 'Original conditions, not translated.' } };
+  const user = { username: 'QMTadmin' };
+  for (const action of ['acknowledge', 'send', 'notify']) {
+    const english = facilityMessage(request, action, [], [], [], user);
+    assert.equal(english, facilityMessage(request, action, [], [], [], user, 'en'));
+    const german = facilityMessage(request, action, [], [], [], user, 'de');
+    assert.match(german, /Anfrage #1: Spiel/);
+    assert.match(german, /Datum: 2027-04-26; Beginn: 08:00; Dauer: 540 Minuten/);
+    assert.match(german, /Wöchentliche Serie bis 2027-05-10/);
+    assert.match(german, /ausgenommene Daten: 2027-05-03/);
+    assert.ok(german.includes(request.description));
+    assert.ok(german.includes('Gegner: Synthetic visitors'));
+    assert.ok(german.endsWith('\n\nQuick - Mean - Tough\nKenny'));
+  }
+  assert.match(facilityMessage(request, 'acknowledge', [], [], [], user, 'de'), /keine Buchungsbestätigung/);
+  const inquiry = facilityMessage(request, 'send', [], [], [], user, 'de');
+  assert.match(inquiry, /^Guten Tag Synthetic allocation office,/);
+  assert.match(inquiry, /Eine Anlagenzuteilung bestätigt diese Bewilligungen nicht/);
+  assert.match(inquiry, /Referenz: TEST-1/);
+  const outcome = facilityMessage({ ...request, status: 'Approved', workflow: {
+    ...request.workflow, bookingEventId: 7,
+  } }, 'notify', [], [], [], user, 'de');
+  assert.match(outcome, /Eine Buchung.*Weitere Daten oder zusätzliche Buchungen benötigen eine separate Bestätigung/);
+  assert.match(outcome, /Zuteilung muss noch bestätigt werden/);
+  assert.match(outcome, /keine bestätigte Ortszuteilung/);
+  assert.ok(outcome.includes(request.workflow.decisionNote));
+  assert.match(outcome, /Spielbewilligungen müssen weiterhin geprüft werden/);
+  const rejected = facilityMessage({ ...request, status: 'Rejected' }, 'notify', [], [], [], user, 'de');
+  assert.match(rejected, /kann nicht genehmigt werden/);
+  assert.ok(!rejected.includes('Eine Buchung'));
+  assert.match(facilityMessageSubject(request, 'de'), /Anfrage zur Anlagennutzung #1 - Spiel, 2027-04-26/);
+});
+
+test('German seasonal outcomes list only approved bookings and preserve the allocated location', () => {
+  const request = { ...requestDto(row()), status: 'Approved', workflow: {
+    approvedDates: ['2027-04-26'], excludedDates: ['2027-05-03'], approvedFieldId: 'pitch',
+  } };
+  const message = facilityMessage(request, 'notify', [], [{ id: 'pitch', name: 'Synthetic pitch', siteId: 'site' }],
+    [{ id: 'site', name: 'Synthetic site' }], currentUser, 'de');
+  assert.match(message, /Genehmigte Daten: 2027-04-26/);
+  assert.match(message, /Nicht genehmigte Daten: 2027-05-03/);
+  assert.match(message, /Nur die aufgeführten genehmigten Daten sind gebucht/);
+  assert.match(message, /Ort: Synthetic site - Synthetic pitch/);
+  assert.ok(!message.includes('keine bestätigte Ortszuteilung'));
+});
+
+test('rejection templates support English and German for facility, equipment and cancellation requests', () => {
+  const user = { username: 'QMTadmin' };
+  for (const [request, type, detail] of [
+    [requestDto(row()), 'facility', '2027-04-26'],
+    [{ requestorName: 'Synthetic requester', equipmentDescription: 'Original equipment description', date: '2027-04-26' },
+      'equipment', 'Original equipment description'],
+    [{ requestorName: 'Synthetic requester', eventTitle: 'Original event title', eventDate: '2027-04-26', eventTime: '19:30' },
+      'cancellation', 'Original event title'],
+  ]) {
+    const english = requestRejectionMessage(request, type, user);
+    assert.equal(english, requestRejectionMessage(request, type, user, 'en'));
+    assert.ok(english.includes(`Your ${type} request has been reviewed`));
+    const german = requestRejectionMessage(request, type, user, 'de');
+    assert.match(german, /^Hallo Synthetic requester,/);
+    assert.match(german, /kann derzeit leider nicht genehmigt werden/);
+    assert.ok(german.includes(detail));
+    assert.ok(german.endsWith('\n\nQuick - Mean - Tough\nKenny'));
+  }
 });
 
 test('routing presets distinguish indoor and outdoor contacts and keep meeting rooms on the workbook route', () => {
@@ -184,7 +273,7 @@ test('routing presets distinguish indoor and outdoor contacts and keep meeting r
   assert.equal(facilityRoutingDefaults('field').contactEmail, '');
   assert.equal(facilityRoutingDefaults('meeting_room', 'indoor').route, 'IGACR');
   const request = { ...requestDto(row()), workflow: { ...outdoor, facilityEnvironment: 'outdoor' } };
-  assert.match(facilityMessage(request, 'send', [], [], []), /^Hello Misenga Gossweiler,/);
+  assert.match(facilityMessage(request, 'send', [], [], [], currentUser), /^Hello Misenga Gossweiler,/);
 });
 
 test('workbook preparation and confirmation persist scope without granting approval or allowing duplicate entry', () => {

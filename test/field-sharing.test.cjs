@@ -119,8 +119,37 @@ test('manual share messages state shared use without implying a particular fract
     if (original) Object.defineProperty(globalThis, 'navigator', original);
     else delete globalThis.navigator;
   });
-  assert.equal(await shareEvent(event, teams, fields, sites), true);
+  assert.equal(await shareEvent(event, teams, fields, sites, { username: 'operator', fullName: 'Alex Example' }), true);
   assert.match(messages[0].text, /Shared field - full field not exclusively available/);
   assert.match(messages[0].text, /shared with Seniors/);
   assert.doesNotMatch(messages[0].text, /half|50%/);
+  assert.ok(messages[0].text.endsWith('Quick - Mean - Tough\nAlex Example'));
+  assert.equal(await shareEvent(event, teams, fields, sites, { username: 'QMTadmin' }, 'de'), true);
+  assert.match(messages[1].text, /Gemeinsam genutztes Spielfeld.*nicht exklusiv/);
+  assert.match(messages[1].text, /gemeinsam mit Seniors/);
+  assert.ok(messages[1].text.endsWith('Quick - Mean - Tough\nKenny'));
+});
+
+test('notification and weekly-summary helpers localize headings and use the provided author', t => {
+  const { notifyEventCreated, notifyEventUpdated, notifyEventCancelled, notifyWeeklySummary } = load('whatsappService');
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const messages = [];
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
+    share: async message => messages.push(message),
+  } });
+  t.after(() => {
+    if (original) Object.defineProperty(globalThis, 'navigator', original);
+    else delete globalThis.navigator;
+  });
+  const author = { username: 'operator', fullName: 'Alex Example' };
+  for (const notify of [notifyEventCreated, notifyEventUpdated, notifyEventCancelled]) {
+    notify(booking('a'), teams, fields, sites, author, 'de');
+  }
+  notifyWeeklySummary([booking('a')], teams, fields, sites, author, 'de', {});
+  assert.match(messages[0].title, /^NEU:/);
+  assert.match(messages[1].title, /^AKTUALISIERUNG:/);
+  assert.match(messages[2].text, /Status: Abgesagt/);
+  assert.match(messages[3].text, /Wochenübersicht/);
+  assert.match(messages[3].text, /Veranstaltungen insgesamt: 1/);
+  for (const message of messages) assert.ok(message.text.endsWith('Quick - Mean - Tough\nAlex Example'));
 });

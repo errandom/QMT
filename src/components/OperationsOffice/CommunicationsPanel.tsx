@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { operationsApi, type Communication } from '@/lib/operations'
-import type { FacilityRequest } from '@/lib/types'
-import { facilityMessage, facilityStage } from '@/lib/facilityWorkflow'
+import type { FacilityRequest, User } from '@/lib/types'
+import { facilityMessage, facilityMessageSubject, facilityStage } from '@/lib/facilityWorkflow'
+import { useMessageDraft } from '@/hooks/useMessageDraft'
 import { useData } from '@/contexts/DataContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+import MessageLanguageSwitch from './MessageLanguageSwitch'
 
-export default function CommunicationsPanel({ request }: { request: FacilityRequest }) {
+export default function CommunicationsPanel({ request, currentUser }: { request: FacilityRequest; currentUser: User }) {
   const { teams, fields, sites, refreshRequests } = useData()
   const [messages, setMessages] = useState<Communication[]>([])
   const [configured, setConfigured] = useState(false)
@@ -22,8 +24,11 @@ export default function CommunicationsPanel({ request }: { request: FacilityRequ
     request.status !== 'Pending' && !request.workflow?.outcomeNotifiedAt ? 'notify' : 'followup'
   const workbookInquiry = action === 'send' && request.workflow?.route === 'IGACR'
   const [recipient, setRecipient] = useState(action === 'send' || stage === 'Awaiting response' ? request.workflow?.contactEmail || '' : request.requestorEmail || '')
-  const [subject, setSubject] = useState(`${request.eventType} request ${request.date}`)
-  const [message, setMessage] = useState(action === 'followup' ? '' : facilityMessage(request, action, teams, fields, sites))
+  const { language, setLanguage, draft, setDraft } = useMessageDraft(language => ({
+    subject: language === 'en' ? `${request.eventType} request ${request.date}` : facilityMessageSubject(request, language),
+    message: facilityMessage(request, action, teams, fields, sites, currentUser, language),
+  }))
+  const { subject, message } = draft
   const [approved, setApproved] = useState(false)
   const sendId = useRef(crypto.randomUUID())
   const sentContent = useRef('')
@@ -81,9 +86,10 @@ export default function CommunicationsPanel({ request }: { request: FacilityRequ
     <form className="space-y-3" onSubmit={event => { event.preventDefault(); void run(send) }}>
       <fieldset disabled={busy || sendLocked} className="space-y-3">
         <legend className="text-sm font-medium">Email: {action === 'followup' ? 'follow-up or booking change' : action}</legend>
+        <MessageLanguageSwitch language={language} onChange={language => { setLanguage(language); setApproved(false) }} />
         <label className="block space-y-1">Recipient<Input type="email" required maxLength={254} value={recipient} onChange={event => { setRecipient(event.target.value); setApproved(false) }} /></label>
-        <label className="block space-y-1">Subject<Input required maxLength={220} value={subject} onChange={event => { setSubject(event.target.value); setApproved(false) }} /></label>
-        <label className="block space-y-1">Message<Textarea required rows={7} maxLength={16000} value={message} onChange={event => { setMessage(event.target.value); setApproved(false) }} /></label>
+        <label className="block space-y-1">Subject<Input lang={language} required maxLength={220} value={subject} onChange={event => { setDraft({ ...draft, subject: event.target.value }); setApproved(false) }} /></label>
+        <label className="block space-y-1">Message<Textarea lang={language} required rows={7} maxLength={16000} value={message} onChange={event => { setDraft({ ...draft, message: event.target.value }); setApproved(false) }} /></label>
         <label className="flex min-h-12 items-center gap-2"><input type="checkbox" required checked={approved} onChange={event => setApproved(event.target.checked)} />I approve sending this exact email to this recipient.</label>
       </fieldset>
       <div className="flex flex-wrap gap-2">

@@ -27,8 +27,9 @@ import {
   Lightning,
   Envelope
 } from '@phosphor-icons/react'
-import { Event, Team, Field, Site, EventType } from '@/lib/types'
+import { Event, Team, Field, Site, EventType, User } from '@/lib/types'
 import CancellationRequestDialog from './CancellationRequestDialog'
+import EventUpdateShareDialog from './EventUpdateShareDialog'
 import { COLORS, SIZES } from '@/lib/constants'
 import { formatEventTimeRange } from '@/lib/utils'
 import SharedFieldNotice, { SharedFieldBadge } from './SharedFieldNotice'
@@ -38,6 +39,7 @@ interface EventCardProps {
   teams: Team[]
   fields: Field[]
   sites: Site[]
+  currentUser: User | null
 }
 
 const eventTypeColors = {
@@ -60,8 +62,9 @@ const statusColors = {
   'Cancelled': 'border-2 border-destructive text-destructive bg-transparent'
 }
 
-export default function EventCard({ event, teams, fields, sites }: EventCardProps) {
+export default function EventCard({ event, teams, fields, sites, currentUser }: EventCardProps) {
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false)
+  const [notificationOpen, setNotificationOpen] = useState(false)
   
   // Support multiple fields - get first field for weather/location display
   // Use type assertion for backward compatibility with old data that may have fieldId
@@ -89,60 +92,6 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
   const locationDisplay = site 
     ? `${site.name} - ${fieldNamesDisplay}` 
     : fieldNamesDisplay
-
-  // Build cancellation notification email
-  const handleNotifyCancellation = () => {
-    const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
-    })
-    const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    const locationName = locationDisplay
-
-    // Collect TO recipients: site manager, team coach, team manager
-    const toRecipients: string[] = []
-    
-    // Add site contact email to TO
-    if (site?.contactEmail) {
-      toRecipients.push(site.contactEmail)
-    }
-    
-    // Add team coaches and managers to TO
-    eventTeams.forEach(team => {
-      if (team.headCoach?.email) {
-        toRecipients.push(team.headCoach.email)
-      }
-      if (team.teamManager?.email) {
-        toRecipients.push(team.teamManager.email)
-      }
-    })
-    
-    // Remove duplicates
-    const uniqueToRecipients = [...new Set(toRecipients)]
-    
-    const subject = encodeURIComponent(
-      `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
-    )
-
-    const body = encodeURIComponent(
-      `The following event has been cancelled:\n\n` +
-      `Event: ${event.title}\n` +
-      `Type: ${event.eventType}\n` +
-      `Date: ${formattedDate}\n` +
-      `Time: ${formatEventTimeRange(event)}\n` +
-      `Location: ${locationName}\n` +
-      (site ? `Address: ${site.address}, ${site.zipCode} ${site.city}\n` : '') +
-      `Team(s): ${teamNames}\n\n` +
-      `We apologize for any inconvenience this may cause.\n\n` +
-      `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
-      `Club operations`
-    )
-
-    const toParam = uniqueToRecipients.join(',')
-    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}`
-  }
 
   return (
     <Card className={`overflow-hidden hover:shadow-2xl transition-all duration-300 glass-card border-white/30 hover:border-white/40 ${isPastEvent ? 'opacity-40' : ''}`} style={{ borderRadius: SIZES.BORDER_RADIUS }}>
@@ -182,7 +131,9 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
                   color: 'rgb(36, 139, 204)',
                   border: 'none'
                 }}
-                onClick={handleNotifyCancellation}
+                onClick={() => setNotificationOpen(true)}
+                disabled={!currentUser}
+                title={!currentUser ? 'Sign in to draft a notification signed with your name' : undefined}
               >
                 <Envelope className="mr-1.5" size={SIZES.ICON_SIZE_MINI} weight="bold" />
                 <span className="hidden sm:inline">Notify Site Contact</span>
@@ -417,6 +368,18 @@ export default function EventCard({ event, teams, fields, sites }: EventCardProp
         eventDate={event.date}
         eventTime={event.startTime}
       />
+      {notificationOpen && currentUser && <EventUpdateShareDialog
+        key={`${event.id}-${currentUser.id}`}
+        isOpen={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        event={event}
+        originalEvent={null}
+        teams={teams}
+        fields={fields}
+        sites={sites}
+        updateType="cancel"
+        currentUser={currentUser}
+      />}
     </Card>
   )
 }

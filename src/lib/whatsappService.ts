@@ -1,7 +1,7 @@
 import type { Event } from './types'
 import { Team, Field, Site } from './types'
-import { formatEventTimeRange } from './utils'
-import { formatSharedFieldBookings } from './fieldSharing'
+import { eventMessageDraft, type MessageAuthor } from './eventMessages'
+import { requestMessageSignature, type MessageLanguage } from './facilityWorkflow'
 
 export interface ShareConfig {
   groupPhone?: string  // Legacy: for fallback wa.me link
@@ -12,64 +12,11 @@ export interface ShareConfig {
 // Keep old name for backwards compatibility
 export type WhatsAppConfig = ShareConfig
 
-function formatEventMessage(
-  event: Event,
-  teams: Team[],
-  fields: Field[],
-  sites: Site[]
-): string {
-  const statusEmoji = event.status === 'Cancelled' ? '❌' : 
-                      event.status === 'Confirmed' ? '✅' : 
-                      event.status === 'Completed' ? '🏁' : '📋'
-  
-  const typeEmoji = event.eventType === 'Game' ? '🏈' : 
-                    event.eventType === 'Practice' ? '🏃' : 
-                    event.eventType === 'Meeting' ? '💼' : '📌'
-
-  const teamNames = event.teamIds
-    .map(id => teams.find(t => t.id === id)?.name || 'Unknown')
-    .join(', ')
-
-  // Support multiple fields
-  const eventFieldIds = event.fieldIds || []
-  const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
-  const primaryField = eventFields[0]
-  const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
-  const fieldNames = eventFields.map(f => f?.name).join(', ')
-  const location = site && fieldNames ? `${site.name} - ${fieldNames}` : fieldNames || 'TBD'
-
-  const date = new Date(event.date).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric'
-  })
-
-  // Calculate duration if both times are available
-  let duration = 90 // default
-  if (event.startTime && event.endTime) {
-    const start = Date.parse(`${event.date}T${event.startTime}:00Z`)
-    const end = Date.parse(`${event.endDate || event.date}T${event.endTime}:00Z`)
-    duration = (end - start) / 60000
-  }
-
-  return (
-    `${statusEmoji} ${typeEmoji} *${event.title || event.eventType}*\n\n` +
-    `🕐 ${formatEventTimeRange(event)} (${duration} scheduled min)\n` +
-    `📅 ${date}\n` +
-    `👥 ${teamNames || 'No teams assigned'}\n` +
-    `📍 ${location}\n` +
-    (event.sharedFieldBookings?.length
-      ? `Shared field - full field not exclusively available.\n${formatSharedFieldBookings(event.sharedFieldBookings, fields, sites, teams)}\n`
-      : '') +
-    (event.notes ? `\n📝 ${event.notes}` : '')
-  )
-}
-
 /**
  * Share a message using the native share sheet (works with WhatsApp groups, SMS, email, etc.)
  * Falls back to WhatsApp direct link or clipboard if native share is unavailable
  */
-async function shareMessage(message: string, title: string, config?: ShareConfig): Promise<boolean> {
+export async function shareMessage(message: string, title: string, config?: ShareConfig): Promise<boolean> {
   // Try native share first (works with WhatsApp groups!)
   if (navigator.share && config?.preferNativeShare !== false) {
     try {
@@ -116,10 +63,12 @@ export function notifyEventCreated(
   teams: Team[],
   fields: Field[],
   sites: Site[],
+  currentUser: MessageAuthor,
+  language: MessageLanguage = 'en',
   config?: ShareConfig
 ): void {
-  const message = `🆕 *New Event Created*\n\n${formatEventMessage(event, teams, fields, sites)}`
-  shareMessage(message, 'New Event Created', config)
+  const draft = eventMessageDraft(event, null, 'create', teams, fields, sites, currentUser, language)
+  shareMessage(draft.message, draft.subject, config)
 }
 
 export function notifyEventUpdated(
@@ -127,10 +76,12 @@ export function notifyEventUpdated(
   teams: Team[],
   fields: Field[],
   sites: Site[],
+  currentUser: MessageAuthor,
+  language: MessageLanguage = 'en',
   config?: ShareConfig
 ): void {
-  const message = `✏️ *Event Updated*\n\n${formatEventMessage(event, teams, fields, sites)}`
-  shareMessage(message, 'Event Updated', config)
+  const draft = eventMessageDraft(event, null, 'update', teams, fields, sites, currentUser, language)
+  shareMessage(draft.message, draft.subject, config)
 }
 
 export function notifyEventCancelled(
@@ -138,10 +89,12 @@ export function notifyEventCancelled(
   teams: Team[],
   fields: Field[],
   sites: Site[],
+  currentUser: MessageAuthor,
+  language: MessageLanguage = 'en',
   config?: ShareConfig
 ): void {
-  const message = `❌ *Event Cancelled*\n\n${formatEventMessage(event, teams, fields, sites)}`
-  shareMessage(message, 'Event Cancelled', config)
+  const draft = eventMessageDraft({ ...event, status: 'Cancelled' }, null, 'cancel', teams, fields, sites, currentUser, language)
+  shareMessage(draft.message, draft.subject, config)
 }
 
 /**
@@ -152,10 +105,12 @@ export async function shareEvent(
   event: Event,
   teams: Team[],
   fields: Field[],
-  sites: Site[]
+  sites: Site[],
+  currentUser: MessageAuthor,
+  language: MessageLanguage = 'en',
 ): Promise<boolean> {
-  const message = formatEventMessage(event, teams, fields, sites)
-  return shareMessage(message, event.title || event.eventType)
+  const draft = eventMessageDraft(event, null, 'share', teams, fields, sites, currentUser, language)
+  return shareMessage(draft.message, draft.subject)
 }
 
 export function notifyWeeklySummary(
@@ -163,18 +118,22 @@ export function notifyWeeklySummary(
   teams: Team[],
   fields: Field[],
   sites: Site[],
+  currentUser: MessageAuthor,
+  language: MessageLanguage = 'en',
   config?: ShareConfig
 ): void {
   if (!config) return
 
-  const summary = `📊 *Weekly Schedule Summary*\n\n`
+  const summary = language === 'de' ? '📊 *Wochenübersicht*\n\n' : '📊 *Weekly Schedule Summary*\n\n'
   const eventsList = events.map(e => {
-    const date = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    const date = new Date(`${e.date}T00:00:00Z`).toLocaleDateString(language === 'de' ? 'de-CH' : 'en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+    })
     return `• ${date} ${e.startTime} - ${e.title}`
   }).join('\n')
 
-  const message = summary + eventsList + `\n\n📅 Total events: ${events.length}`
-  shareMessage(message, 'Weekly Schedule', config)
+  const message = summary + eventsList + `\n\n📅 ${language === 'de' ? 'Veranstaltungen insgesamt' : 'Total events'}: ${events.length}\n\n${requestMessageSignature(currentUser)}`
+  shareMessage(message, language === 'de' ? 'Wochenplan' : 'Weekly Schedule', config)
 }
 
 /**

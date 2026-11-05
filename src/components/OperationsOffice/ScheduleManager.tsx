@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useData } from '@/contexts/DataContext'
 import { Event, EventType, EventStatus, GameLocation, Team, Field, User } from '@/lib/types'
-import { api, apiRequest, ApiError } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { OperationsCardGrid, OperationsCardHeader, OperationsCardSection } from './OperationsCards'
@@ -27,7 +27,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Plus, PencilSimple, CalendarBlank, Trash, FunnelSimple, MagicWand, ShareNetwork, Envelope, FileXls, House, MapPin, Bus, CloudArrowUp } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { COLORS } from '@/lib/constants'
-import { shareEvent } from '@/lib/whatsappService'
+import type { EventMessageAction } from '@/lib/eventMessages'
 import { getToken } from '@/lib/api'
 import NaturalLanguageEventCreator from '@/components/NaturalLanguageEventCreator'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
@@ -50,7 +50,7 @@ const WEEKDAYS = [
 ]
 
 interface ScheduleManagerProps {
-  currentUser: User | null
+  currentUser: User
 }
 
 function formatBookingInterval(start: string, end: string) {
@@ -58,21 +58,6 @@ function formatBookingInterval(start: string, end: string) {
     date: start.slice(0, 10), endDate: end.slice(0, 10),
     startTime: start.slice(11, 16), endTime: end.slice(11, 16),
   })}`
-}
-
-// Generates a draft only; the operator's mail client sends it.
-async function sendTransportRequest(eventId: string | number): Promise<void> {
-  try {
-    const result = await apiRequest<{ email: { to: string; cc: string[]; subject: string; body: string } }>(`/events/${eventId}/transport-request`, {
-      method: 'POST',
-    })
-    const { to, cc, subject, body } = result.email
-    const ccParam = cc.length > 0 ? `&cc=${encodeURIComponent(cc.join(','))}` : ''
-    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}${ccParam}&body=${encodeURIComponent(body)}`
-  } catch (error) {
-    console.error('[ScheduleManager] Error sending transport request:', error)
-    toast.error('The event was saved, but its transport draft could not be generated. Do not create the event again.')
-  }
 }
 
 export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
@@ -92,7 +77,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [shareDialogEvent, setShareDialogEvent] = useState<Event | null>(null)
   const [shareDialogOriginalEvent, setShareDialogOriginalEvent] = useState<Event | null>(null)
-  const [shareDialogUpdateType, setShareDialogUpdateType] = useState<'update' | 'cancel' | 'create'>('update')
+  const [shareDialogUpdateType, setShareDialogUpdateType] = useState<EventMessageAction>('update')
 
   // AI Creator toggle
   const [showAICreator, setShowAICreator] = useState(false)
@@ -281,75 +266,15 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
     setShowDialog(true)
   }
 
-  const handleShare = async (event: Event) => {
-    try {
-      const success = await shareEvent(event, teams, fields, sites)
-      if (success) {
-        toast.success('Event shared!')
-      }
-    } catch (error) {
-      console.error('Error sharing event:', error)
-      toast.error('Failed to share event')
-    }
+  const openMessageDraft = (event: Event, action: EventMessageAction) => {
+    setShareDialogEvent(action === 'cancel' ? { ...event, status: 'Cancelled' } : event)
+    setShareDialogOriginalEvent(null)
+    setShareDialogUpdateType(action)
+    setShowShareDialog(true)
   }
 
   const handleNotifyCancellation = (event: Event) => {
-    const eventFieldIds = event.fieldIds || []
-    const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
-    const primaryField = eventFields[0]
-    const site = primaryField ? sites.find(s => s.id === primaryField.siteId) : null
-    const eventTeams = event.teamIds ? teams.filter(t => event.teamIds?.includes(t.id)) : []
-    const formattedDate = new Date(event.date).toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
-    })
-    const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    const fieldNames = eventFields.map(f => f?.name).join(', ')
-    const locationName = site && fieldNames ? `${site.name} - ${fieldNames}` : fieldNames || site?.name || 'TBD'
-
-    // Collect TO recipients: site manager, team coach, team manager
-    const toRecipients: string[] = []
-    
-    // Add site contact email to TO
-    if (site?.contactEmail) {
-      toRecipients.push(site.contactEmail)
-    }
-    
-    // Add team coaches and managers to TO
-    eventTeams.forEach(team => {
-      if (team.headCoach?.email) {
-        toRecipients.push(team.headCoach.email)
-      }
-      if (team.teamManager?.email) {
-        toRecipients.push(team.teamManager.email)
-      }
-    })
-    
-    // Remove duplicates
-    const uniqueToRecipients = [...new Set(toRecipients)]
-    
-    const subject = encodeURIComponent(
-      `CANCELLED: ${event.eventType} on ${formattedDate} at ${event.startTime} - ${locationName} (${teamNames})`
-    )
-
-    const body = encodeURIComponent(
-      `The following event has been cancelled:\n\n` +
-      `Event: ${event.title}\n` +
-      `Type: ${event.eventType}\n` +
-      `Date: ${formattedDate}\n` +
-      `Time: ${formatEventTimeRange(event)}\n` +
-      `Location: ${locationName}\n` +
-      (site ? `Address: ${site.address}, ${site.zipCode} ${site.city}\n` : '') +
-      `Team(s): ${teamNames}\n\n` +
-      `We apologize for any inconvenience this may cause.\n\n` +
-      `Please let us know if you have any questions or if there is anything we need to arrange regarding this cancellation.\n\n` +
-      `Club operations`
-    )
-
-    const toParam = uniqueToRecipients.join(',')
-    window.location.href = `mailto:${toParam}?subject=${subject}&body=${body}`
+    openMessageDraft(event, 'cancel')
   }
 
   const handleDeleteClick = (event: Event) => {
@@ -564,13 +489,8 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           // Show share dialog for newly created event (includes Spond push option)
           setShareDialogOriginalEvent(null)
           setShareDialogEvent(result)
-          setShareDialogUpdateType('create')
+          setShareDialogUpdateType(capabilities?.transport && formData.transportRequested && formData.gameLocation === 'away' ? 'transport' : 'create')
           setShowShareDialog(true)
-          
-          // Send transport request for away games
-          if (capabilities?.transport && formData.transportRequested && formData.gameLocation === 'away') {
-            await sendTransportRequest(result.id)
-          }
         }
       }
       
@@ -820,7 +740,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                   })()}
                   {capabilities?.transport && event.eventType === 'Game' && event.gameLocation === 'away' && event.status !== 'Cancelled' && (
                     <Button variant="ghost" size="icon" className="h-8 w-8"
-                      onClick={() => void sendTransportRequest(event.id)}
+                      onClick={() => openMessageDraft(event, 'transport')}
                       title="Open transport email draft" aria-label="Open transport email draft">
                       <Bus size={18} weight="bold" />
                     </Button>
@@ -829,7 +749,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-600/10"
-                    onClick={() => handleShare(event)}
+                    onClick={() => openMessageDraft(event, 'share')}
                     title="Share event"
                   >
                     <ShareNetwork size={18} weight="bold" />
@@ -1387,6 +1307,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
       {/* Event Update Share Dialog */}
       {shareDialogEvent && (
         <EventUpdateShareDialog
+          key={`${shareDialogEvent.id}-${shareDialogUpdateType}-${currentUser.id}`}
           isOpen={showShareDialog}
           onClose={() => {
             setShowShareDialog(false)
@@ -1399,6 +1320,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
           fields={fields}
           sites={sites}
           updateType={shareDialogUpdateType}
+          currentUser={currentUser}
         />
       )}
 

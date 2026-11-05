@@ -4,13 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { WhatsappLogo, Envelope, X, ArrowRight, CloudArrowUp, CheckCircle, Warning, ArrowsClockwise } from '@phosphor-icons/react'
-import { Event, Team, Field, Site } from '@/lib/types'
-import { shareEvent } from '@/lib/whatsappService'
+import { Event, Team, Field, Site, User } from '@/lib/types'
+import { shareMessage } from '@/lib/whatsappService'
 import { toast } from 'sonner'
-import { getToken } from '@/lib/api'
+import { apiRequest, getToken } from '@/lib/api'
 import { useCapabilities } from '@/hooks/useCapabilities'
 import { formatEventTimeRange } from '@/lib/utils'
-import { formatSharedFieldBookings } from '@/lib/fieldSharing'
+import { eventMessageDraft, type EventMessageAction } from '@/lib/eventMessages'
+import { useMessageDraft } from '@/hooks/useMessageDraft'
+import MessageLanguageSwitch from './OperationsOffice/MessageLanguageSwitch'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import SharedFieldNotice from './SharedFieldNotice'
 
 interface EventChange {
@@ -28,7 +32,8 @@ interface EventUpdateShareDialogProps {
   teams: Team[]
   fields: Field[]
   sites: Site[]
-  updateType: 'update' | 'cancel' | 'create'
+  updateType: EventMessageAction
+  currentUser: User
 }
 
 export default function EventUpdateShareDialog({
@@ -39,12 +44,15 @@ export default function EventUpdateShareDialog({
   teams,
   fields,
   sites,
-  updateType
+  updateType,
+  currentUser,
 }: EventUpdateShareDialogProps) {
   const [sharing, setSharing] = useState(false)
   const { capabilities } = useCapabilities()
   const [pushingToSpond, setPushingToSpond] = useState(false)
   const [spondPushResult, setSpondPushResult] = useState<'success' | 'error' | 'already' | null>(null)
+  const { language, setLanguage, draft, setDraft } = useMessageDraft(language =>
+    eventMessageDraft(event, originalEvent, updateType, teams, fields, sites, currentUser, language))
 
   // Get related teams
   const eventTeams = event.teamIds 
@@ -137,7 +145,7 @@ export default function EventUpdateShareDialog({
   }
 
   // Collect recipients for email
-  const getEmailRecipients = () => {
+  const getEmailRecipients = (): { to: string[]; cc: string[] } => {
     // TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
     
@@ -166,8 +174,9 @@ export default function EventUpdateShareDialog({
   // A team must be assigned and the team should be linked to a Spond group (we check backend-side)
   const hasTeams = eventTeams.length > 0
   const isAlreadyInSpond = Boolean(event.spondId)
-  const canPushToSpond = capabilities?.spond && hasTeams && updateType !== 'cancel'
-  const canUpdateInSpond = capabilities?.spond && isAlreadyInSpond && updateType !== 'create'
+  const notification = ['create', 'update', 'cancel'].includes(updateType)
+  const canPushToSpond = capabilities?.spond && notification && hasTeams && updateType !== 'cancel'
+  const canUpdateInSpond = capabilities?.spond && notification && isAlreadyInSpond && updateType !== 'create'
 
   const handlePushToSpond = async () => {
     setPushingToSpond(true)
@@ -232,10 +241,9 @@ export default function EventUpdateShareDialog({
   const handleWhatsAppShare = async () => {
     setSharing(true)
     try {
-      // Use existing share function but we could enhance it
-      const success = await shareEvent(event, teams, fields, sites)
+      const success = await shareMessage(draft.message, draft.subject)
       if (success) {
-        toast.success('Event shared via WhatsApp!')
+        toast.success('Draft shared or copied; sending is still manual.')
       }
     } catch (error) {
       console.error('Error sharing via WhatsApp:', error)
@@ -245,72 +253,23 @@ export default function EventUpdateShareDialog({
     }
   }
 
-  const handleEmailShare = () => {
-    const recipients = getEmailRecipients()
-    
-    const formattedDate = formatDate(event.date)
-    const teamNames = eventTeams.map(t => t.name).join(', ') || 'N/A'
-    
-    // Build subject
-    const subjectPrefix = updateType === 'cancel' ? 'CANCELLED' : updateType === 'create' ? 'NEW' : 'UPDATE'
-    const eventTitle = event.title || `${event.eventType} - ${teamNames}`
-    const subject = encodeURIComponent(`${subjectPrefix}: ${eventTitle}`)
-    
-    // Build body with before/after summary
-    let body = ''
-    
-    if (updateType === 'cancel') {
-      body = `The following event has been CANCELLED:\n\n` +
-        `📅 Event: ${eventTitle}\n` +
-        `📆 Date: ${formattedDate}\n` +
-        `⏰ Time: ${formatEventTimeRange(event)}\n` +
-        `📍 Location: ${locationName}\n` +
-        `👥 Team(s): ${teamNames}\n\n` +
-        `We apologize for any inconvenience.\n\n`
-    } else if (changes.length > 0) {
-      body = `The following event has been UPDATED:\n\n` +
-        `📅 Event: ${eventTitle}\n\n` +
-        `CHANGES:\n` +
-        `${'─'.repeat(30)}\n`
-      
-      changes.forEach(change => {
-        body += `${change.label}:\n`
-        body += `  Before: ${change.before}\n`
-        body += `  After:  ${change.after}\n\n`
-      })
-      
-      body += `${'─'.repeat(30)}\n\n` +
-        `CURRENT DETAILS:\n` +
-        `📆 Date: ${formattedDate}\n` +
-        `⏰ Time: ${formatEventTimeRange(event)}\n` +
-        `📍 Location: ${locationName}\n` +
-        `👥 Team(s): ${teamNames}\n` +
-        `📋 Status: ${event.status}\n\n`
-    } else {
-      body = `Event details for your reference:\n\n` +
-        `📅 Event: ${eventTitle}\n` +
-        `📆 Date: ${formattedDate}\n` +
-        `⏰ Time: ${formatEventTimeRange(event)}\n` +
-        `📍 Location: ${locationName}\n` +
-        `👥 Team(s): ${teamNames}\n` +
-        `📋 Status: ${event.status}\n\n`
+  const handleEmailShare = async () => {
+    setSharing(true)
+    try {
+      let recipients = getEmailRecipients()
+      if (updateType === 'transport') {
+        const result = await apiRequest<{ email: { to: string; cc: string[] } }>(`/events/${event.id}/transport-request`, { method: 'POST' })
+        recipients = { to: [result.email.to], cc: result.email.cc }
+      }
+      const ccParam = recipients.cc.length ? `&cc=${encodeURIComponent(recipients.cc.join(','))}` : ''
+      window.location.href = `mailto:${recipients.to.join(',')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.message)}${ccParam}`
+      toast.success('Email draft opened; sending is still manual.')
+    } catch (error) {
+      console.error('Error opening event email draft:', error)
+      toast.error('The event is already saved, but its email draft could not be opened. Do not create the event again.')
+    } finally {
+      setSharing(false)
     }
-    
-    if (event.sharedFieldBookings?.length) {
-      body += `Shared field - full field not exclusively available.\n${formatSharedFieldBookings(event.sharedFieldBookings, fields, sites, teams)}\n\n`
-    }
-    body += `Please let us know if you have any questions.\n\n` +
-      `Club operations`
-    
-    // Build mailto URL
-    const toParam = recipients.to.join(',')
-    const ccParam = recipients.cc.length > 0 ? `&cc=${recipients.cc.join(',')}` : ''
-    
-    // Add importance header (note: mailto doesn't support importance, but we include it in subject)
-    const mailtoUrl = `mailto:${toParam}?subject=${subject}&body=${encodeURIComponent(body)}${ccParam}`
-    
-    window.location.href = mailtoUrl
-    toast.success('Email client opened')
   }
 
   const handleSkip = () => {
@@ -319,19 +278,22 @@ export default function EventUpdateShareDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="operations-dialog max-h-[85dvh] overflow-y-auto text-foreground sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {updateType === 'cancel' ? (
               <Badge variant="destructive">Event Cancelled</Badge>
             ) : updateType === 'create' ? (
               <Badge className="bg-green-600">Event Created</Badge>
-            ) : (
+            ) : updateType === 'update' ? (
               <Badge variant="default">Event Updated</Badge>
+            ) : (
+              <Badge variant="default">{updateType === 'transport' ? 'Transport Request' : 'Share Event'}</Badge>
             )}
           </DialogTitle>
           <DialogDescription>
-            {updateType === 'create'
+            {updateType === 'transport' ? 'Review the transport draft before opening your email client. No message is sent automatically.' :
+              updateType === 'share' ? 'Review the message before sharing. No message is sent automatically.' : updateType === 'create'
               ? 'Would you like to notify stakeholders or push this event to Spond?'
               : `Would you like to notify team managers and coaches about this ${updateType === 'cancel' ? 'cancellation' : 'update'}?`}
           </DialogDescription>
@@ -375,9 +337,19 @@ export default function EventUpdateShareDialog({
           <Separator />
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Opens an email draft addressed only to the site's and teams' recorded contacts.
+              {updateType === 'transport' ? 'The configured transport contact and recorded team contacts are selected when you open the email draft.' :
+                "Opens an email draft addressed only to the site's and teams' recorded contacts."}
             </p>
           </div>
+          <fieldset disabled={sharing} className="space-y-3">
+            <MessageLanguageSwitch language={language} onChange={setLanguage} />
+            <label className="block space-y-1">Subject
+              <Input lang={language} value={draft.subject} onChange={event => setDraft({ ...draft, subject: event.target.value })} />
+            </label>
+            <label className="block space-y-1">Message draft
+              <Textarea lang={language} rows={10} value={draft.message} onChange={event => setDraft({ ...draft, message: event.target.value })} />
+            </label>
+          </fieldset>
         </div>
         
         <DialogFooter className="flex-col gap-2 sm:flex-col">
@@ -386,18 +358,19 @@ export default function EventUpdateShareDialog({
               variant="default"
               className="flex-1"
               onClick={handleEmailShare}
+              disabled={sharing || !draft.subject.trim() || !draft.message.trim()}
             >
               <Envelope className="mr-2" size={18} weight="duotone" />
-              Send Email
+              Open email draft
             </Button>
             <Button
               variant="outline"
               className="flex-1"
               onClick={handleWhatsAppShare}
-              disabled={sharing}
+              disabled={sharing || !draft.message.trim()}
             >
               <WhatsappLogo className="mr-2" size={18} weight="duotone" />
-              WhatsApp
+              Share / WhatsApp
             </Button>
           </div>
           {/* Spond push/update button */}

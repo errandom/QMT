@@ -19,8 +19,10 @@ import { COLORS } from '@/lib/constants'
 import EventUpdateShareDialog from '@/components/EventUpdateShareDialog'
 import FacilityRequestCard from './FacilityRequestCard'
 import RequestDeleteButton from './RequestDeleteButton'
-import { facilityLocations, needsFacilityAttention } from '@/lib/facilityWorkflow'
+import { facilityLocations, needsFacilityAttention, requestRejectionMessage } from '@/lib/facilityWorkflow'
 import { operationsApi, requestedDates, type RequestPreview } from '@/lib/operations'
+import { useMessageDraft } from '@/hooks/useMessageDraft'
+import MessageLanguageSwitch from './MessageLanguageSwitch'
 
 interface RequestsManagerProps {
   currentUser: User
@@ -74,42 +76,14 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const [rejectionRequest, setRejectionRequest] = useState<FacilityRequest | EquipmentRequest | CancellationRequest | null>(null)
   const [rejectionRequestType, setRejectionRequestType] = useState<'facility' | 'equipment' | 'cancellation'>('facility')
   const [sendWhatsAppNotification, setSendWhatsAppNotification] = useState(true)
-  const [rejectionMessage, setRejectionMessage] = useState('')
+  const {
+    language: rejectionLanguage, setLanguage: setRejectionLanguage,
+    draft: rejectionMessage, setDraft: setRejectionMessage, reset: resetRejectionDraft,
+  } = useMessageDraft(() => '')
 
   const locationOptions = useMemo(() =>
     approvalRequest ? facilityLocations(approvalRequest, fields, sites) : [],
   [approvalRequest, fields, sites])
-
-  // Generate standard rejection message
-  const generateRejectionMessage = (request: FacilityRequest | EquipmentRequest | CancellationRequest, type: string) => {
-    let message = `Hi ${request.requestorName},\n\n`
-    message += `Your ${type} request has been reviewed and unfortunately cannot be approved at this time.\n\n`
-    
-    if ('eventType' in request) {
-      // FacilityRequest
-      message += `📋 Request Details:\n`
-      message += `• Type: ${request.eventType}\n`
-      message += `• Date: ${request.date}\n`
-      message += `• Time: ${request.startTime} (${request.duration} min)\n`
-      if (request.purpose) message += `• Purpose: ${request.purpose}\n`
-    } else if ('equipmentDescription' in request) {
-      // EquipmentRequest
-      message += `📋 Request Details:\n`
-      message += `• Equipment: ${request.equipmentDescription}\n`
-      message += `• Date Needed: ${request.date}\n`
-    } else if ('eventTitle' in request) {
-      // CancellationRequest
-      message += `📋 Request Details:\n`
-      message += `• Event: ${request.eventTitle}\n`
-      message += `• Date: ${request.eventDate}\n`
-      message += `• Time: ${request.eventTime}\n`
-    }
-    
-    message += `\nPlease contact us if you have any questions.\n\n`
-    message += `Club operations`
-    
-    return message
-  }
 
   // Open approval dialog for facility request
   const handleOpenApprovalDialog = (request: FacilityRequest) => {
@@ -130,7 +104,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     setRejectionRequestType(type)
     setSendWhatsAppNotification(type !== 'facility')
     setDecisionNote('')
-    setRejectionMessage(generateRejectionMessage(request, type))
+    resetRejectionDraft(language => requestRejectionMessage(request, type, currentUser, language))
     setShowRejectionDialog(true)
   }
 
@@ -401,7 +375,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
               </div>
             ) : (
               <OperationsCardGrid columns={1}>
-                {pendingFacility.map(request => <FacilityRequestCard key={request.id} request={request}
+                {pendingFacility.map(request => <FacilityRequestCard key={request.id} request={request} currentUser={currentUser}
                   onApprove={handleOpenApprovalDialog} onReject={request => handleOpenRejectionDialog(request, 'facility')} />)}
               </OperationsCardGrid>
             )}
@@ -417,7 +391,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
                   <OperationsCardGrid columns={1}>
-                    {resolvedFacility.map(request => <FacilityRequestCard key={request.id} request={request}
+                    {resolvedFacility.map(request => <FacilityRequestCard key={request.id} request={request} currentUser={currentUser}
                       onApprove={handleOpenApprovalDialog} onReject={request => handleOpenRejectionDialog(request, 'facility')} />)}
                   </OperationsCardGrid>
                 </CollapsibleContent>
@@ -549,6 +523,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
       {/* Event Update Share Dialog for Cancellations and Approvals */}
       {shareDialogEvent && (
         <EventUpdateShareDialog
+          key={`${shareDialogEvent.id}-${shareDialogUpdateType}-${currentUser.id}`}
           isOpen={showShareDialog}
           onClose={() => {
             setShowShareDialog(false)
@@ -561,6 +536,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
           fields={fields}
           sites={sites}
           updateType={shareDialogUpdateType}
+          currentUser={currentUser}
         />
       )}
 
@@ -730,9 +706,11 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
               {/* Message Editor (only shown when WhatsApp is enabled) */}
               {sendWhatsAppNotification && (
                 <div className="space-y-2">
+                  <MessageLanguageSwitch language={rejectionLanguage} onChange={setRejectionLanguage} />
                   <Label htmlFor="rejection-message">Message</Label>
                   <Textarea
                     id="rejection-message"
+                    lang={rejectionLanguage}
                     value={rejectionMessage}
                     onChange={(e) => setRejectionMessage(e.target.value)}
                     rows={8}

@@ -3,8 +3,9 @@ import { ClipboardText } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
 import { api } from '@/lib/api'
-import { facilityMessage, facilityRoutingDefaults, facilityStage } from '@/lib/facilityWorkflow'
-import type { CommunicationChannel, FacilityRequest, FacilityRouting, FacilityWorkflowAction } from '@/lib/types'
+import { facilityMessage, facilityMessageSubject, facilityRoutingDefaults, facilityStage, type MessageLanguage } from '@/lib/facilityWorkflow'
+import { useMessageDraft } from '@/hooks/useMessageDraft'
+import type { CommunicationChannel, FacilityRequest, FacilityRouting, FacilityWorkflowAction, User } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,6 +17,7 @@ import { OperationsCardHeader, OperationsCardSection } from './OperationsCards'
 import CommunicationsPanel from './CommunicationsPanel'
 import RequestDeleteButton from './RequestDeleteButton'
 import MeetingRoomWorkbookPanel from './MeetingRoomWorkbookPanel'
+import MessageLanguageSwitch from './MessageLanguageSwitch'
 
 const actionLabels = {
   configure: 'Routing saved', assign: 'Responsibility saved', acknowledge: 'Receipt acknowledged', evaluate: 'Evaluation started',
@@ -43,11 +45,12 @@ function routingFor(request: FacilityRequest): FacilityRouting {
 
 interface FacilityRequestCardProps {
   request: FacilityRequest
+  currentUser: User
   onApprove: (request: FacilityRequest) => void
   onReject: (request: FacilityRequest) => void
 }
 
-export default function FacilityRequestCard({ request, onApprove, onReject }: FacilityRequestCardProps) {
+export default function FacilityRequestCard({ request, currentUser, onApprove, onReject }: FacilityRequestCardProps) {
   const { teams, fields, sites } = useData()
   const [open, setOpen] = useState(false)
   const stage = facilityStage(request)
@@ -89,19 +92,20 @@ export default function FacilityRequestCard({ request, onApprove, onReject }: Fa
             <DialogTitle>Facility request #{request.id}</DialogTitle>
             <DialogDescription className="pr-5 [overflow-wrap:anywhere]">{request.requestorName} · {request.eventType} · {request.date} at {request.startTime} ({request.duration} min)</DialogDescription>
           </DialogHeader>
-          {open && <FacilityWorkflowPanel request={request} teams={teams} fields={fields} sites={sites}
+          {open && <FacilityWorkflowPanel request={request} currentUser={currentUser} teams={teams} fields={fields} sites={sites}
             onReload={() => setOpen(false)}
             onApprove={() => { setOpen(false); onApprove(request) }}
             onReject={() => { setOpen(false); onReject(request) }} />}
-          {open && <CommunicationsPanel key={`${request.id}-${request.workflow?.version || 0}`} request={request} />}
+          {open && <CommunicationsPanel key={`${request.id}-${request.workflow?.version || 0}`} request={request} currentUser={currentUser} />}
         </DialogContent>
       </Dialog>
     </Card>
   )
 }
 
-function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onReject, onReload }: {
+function FacilityWorkflowPanel({ request, currentUser, teams, fields, sites, onApprove, onReject, onReload }: {
   request: FacilityRequest
+  currentUser: User
   teams: ReturnType<typeof useData>['teams']
   fields: ReturnType<typeof useData>['fields']
   sites: ReturnType<typeof useData>['sites']
@@ -252,7 +256,7 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
           <CommunicationForm
           key={`${communication}-${workflow?.locationType}-${workflow?.route}-${workflow?.department}-${workflow?.contactEmail}-${workflow?.reference}`}
           action={communication} request={request} initialChannel={initialChannel}
-          initialMessage={facilityMessage(request, communication, teams, fields, sites)}
+          createMessage={language => facilityMessage(request, communication, teams, fields, sites, currentUser, language)}
           onRecord={(channel, message) => update({ action: communication, channel, message })} />
         </fieldset>}
         {stage === 'Awaiting response' && <div className="space-y-2 rounded-md border p-3">
@@ -314,18 +318,18 @@ function FacilityWorkflowPanel({ request, teams, fields, sites, onApprove, onRej
   )
 }
 
-function CommunicationForm({ action, request, initialChannel, initialMessage, onRecord }: {
+function CommunicationForm({ action, request, initialChannel, createMessage, onRecord }: {
   action: 'acknowledge' | 'send' | 'notify'
   request: FacilityRequest
   initialChannel: CommunicationChannel
-  initialMessage: string
+  createMessage: (language: MessageLanguage) => string
   onRecord: (channel: CommunicationChannel, message: string) => Promise<unknown>
 }) {
-  const [message, setMessage] = useState(initialMessage)
+  const { language, setLanguage, draft: message, setDraft: setMessage } = useMessageDraft(createMessage)
   const [channel, setChannel] = useState(initialChannel)
   const recipient = action === 'send' ? request.workflow?.contactEmail : request.requestorEmail
   const phone = request.requestorPhone.replace(/\D/g, '')
-  const mailto = `mailto:${recipient || ''}?subject=${encodeURIComponent(`Facility request #${request.id} - ${request.eventType}, ${request.date}`)}&body=${encodeURIComponent(message)}`
+  const mailto = `mailto:${recipient || ''}?subject=${encodeURIComponent(facilityMessageSubject(request, language))}&body=${encodeURIComponent(message)}`
   const copy = async () => {
     try { await navigator.clipboard.writeText(message); toast.success('Draft copied; sending is still manual') }
     catch { toast.error('Could not copy the draft. Select and copy the message manually.') }
@@ -337,6 +341,7 @@ function CommunicationForm({ action, request, initialChannel, initialMessage, on
     }}>
       <h4 className="font-semibold">{action === 'acknowledge' ? 'Acknowledge receipt' : action === 'send' ? 'Engage the responsible department' : 'Notify requester of the outcome'}</h4>
       <p className="text-xs text-muted-foreground">Sending is manual. Opening or copying a draft does not mark it sent. Send it through your chosen channel, then record it below.</p>
+      <MessageLanguageSwitch language={language} onChange={setLanguage} />
       <div className="space-y-1">
         <Label htmlFor={`channel-${request.id}`}>Communication channel</Label>
         <select id={`channel-${request.id}`} className={selectClass} value={channel}
@@ -346,7 +351,7 @@ function CommunicationForm({ action, request, initialChannel, initialMessage, on
       </div>
       <div className="space-y-1">
         <Label htmlFor={`message-${request.id}`}>{channel === 'Phone' ? 'Conversation summary *' : 'Message draft / message sent *'}</Label>
-        <Textarea id={`message-${request.id}`} value={message} onChange={event => setMessage(event.target.value)} required maxLength={16000} rows={7} />
+        <Textarea id={`message-${request.id}`} lang={language} value={message} onChange={event => setMessage(event.target.value)} required maxLength={16000} rows={7} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" onClick={copy}>Copy draft</Button>
