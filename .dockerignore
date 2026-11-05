@@ -10,4 +10,5 @@ test
 plan
 docs
 infra
+android
 **/qmt-legacy-cache-*.json

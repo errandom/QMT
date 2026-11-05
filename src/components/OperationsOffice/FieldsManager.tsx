@@ -177,7 +177,7 @@ export default function FieldsManager({ currentUser }: FieldsManagerProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Fields & Meeting Rooms</h2>
         <Button onClick={handleCreate} disabled={!hasAvailableSites}>
           <Plus className="mr-2" size={16} />
