@@ -234,7 +234,7 @@ export default function SitesManager({ currentUser }: SitesManagerProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Sites Management</h2>
         <Button onClick={handleCreate}>
           <Plus className="mr-2" size={16} />

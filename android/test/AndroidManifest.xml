@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.errandom.qmt.test">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
+    <application android:label="QMT synthetic tests" android:allowBackup="false" />
+    <instrumentation android:name="com.errandom.qmt.AndroidTests" android:targetPackage="com.errandom.qmt" />
+    <instrumentation android:name="com.errandom.qmt.UiTests" android:targetPackage="com.errandom.qmt" />
+</manifest>

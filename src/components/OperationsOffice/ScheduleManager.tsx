@@ -581,9 +581,9 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Schedule Management</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline"
             onClick={() => setShowExportDialog(true)}
@@ -809,7 +809,7 @@ export default function ScheduleManager({ currentUser }: ScheduleManagerProps) {
         }
       }}>
         <DialogContent 
-          className="w-[95vw] max-w-3xl max-h-[95vh] overflow-y-auto operations-dialog p-4 sm:p-6"
+          className="w-[95vw] max-w-3xl max-h-[85dvh] overflow-y-auto operations-dialog p-4 sm:p-6"
           style={{
             background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
             border: `3px solid ${COLORS.NAVY}`,
