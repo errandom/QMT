@@ -1,4 +1,5 @@
 import type { Event, Field, SharedFieldBooking, Site, Team } from './types'
+import type { MessageLanguage } from './facilityWorkflow'
 
 export function withFieldSharing(events: Event[]): Event[] {
   const sharing = new Map<string, SharedFieldBooking[]>()
@@ -40,15 +41,16 @@ export function withFieldSharing(events: Event[]): Event[] {
 
 export function formatSharedFieldBookings(
   bookings: SharedFieldBooking[], fields: Field[], sites: Site[], teams: Team[],
+  language: MessageLanguage = 'en',
 ): string {
   return bookings.map(booking => {
     const field = fields.find(field => field.id === booking.fieldId)
     const site = sites.find(site => site.id === field?.siteId)
-    const location = [site?.name, field?.name || `Field ${booking.fieldId}`].filter(Boolean).join(' / ')
+    const location = [site?.name, field?.name || `${language === 'de' ? 'Spielfeld' : 'Field'} ${booking.fieldId}`].filter(Boolean).join(' / ')
     const others = booking.teamIds.map(id => teams.find(team => team.id === id)?.name)
-      .filter(Boolean).join(', ') || booking.title || 'another booking'
+      .filter(Boolean).join(', ') || booking.title || (language === 'de' ? 'einer anderen Buchung' : 'another booking')
     const start = `${booking.date} ${booking.startTime}`
     const end = booking.endDate === booking.date ? booking.endTime : `${booking.endDate} ${booking.endTime}`
-    return `${location}: ${start} - ${end}, shared with ${others}`
+    return `${location}: ${start} - ${end}, ${language === 'de' ? 'gemeinsam mit' : 'shared with'} ${others}`
   }).join('; ')
 }

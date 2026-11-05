@@ -427,7 +427,7 @@ export default function Dashboard({ currentUser, onLogin, onNavigateToOffice, sc
           <h2 className="text-xl font-semibold mb-4 drop-shadow-lg" style={{ color: COLORS.NAVY }}>Upcoming Events</h2>
           {scheduleWindow}
           {viewMode === 'list' ? (
-            <EventList sportFilter={sportFilter} teamFilter={teamFilter} />
+            <EventList sportFilter={sportFilter} teamFilter={teamFilter} currentUser={currentUser} />
           ) : (
             <ScheduleView sportFilter={sportFilter} teamFilter={teamFilter} />
           )}

@@ -6,7 +6,7 @@
       oklch(0.98 0.003 210) 35%,
       oklch(0.985 0.002 200) 65%,
       oklch(0.975 0.004 210) 100%);
-    min-height: 100vh;
+    min-height: 100dvh;
     position: relative;
   }
   
@@ -24,6 +24,27 @@
   #root {
     position: relative;
     z-index: 1;
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 640px) {
+  [data-slot="dialog-content"] {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+  }
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  button, [role="button"], input:not([type="checkbox"]):not([type="radio"]), select {
+    min-height: 44px;
+  }
+  button, [role="button"] {
+    min-width: 44px;
   }
 }
 

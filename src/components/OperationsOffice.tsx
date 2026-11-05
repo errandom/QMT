@@ -60,7 +60,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
   return (
     <div className="space-y-1">
       <div className="space-y-0.5">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-[oklch(0.28_0.08_240)] drop-shadow-lg">Operations Office</h1>
           <button 
             onClick={onNavigateToDashboard}
@@ -70,17 +70,17 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
             Return to Dashboard
           </button>
         </div>
-        <p className="text-white/70">Manage schedules, requests, teams, and facilities</p>
+        <p className="text-muted-foreground">Manage schedules, requests, teams, and facilities</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="relative w-full h-10 backdrop-blur-sm" style={{
+        <div className="relative w-full h-16 overflow-x-auto backdrop-blur-sm sm:h-12" style={{
           borderRadius: SIZES.BORDER_RADIUS,
           background: COLORS.NAVY,
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
           padding: '2px 4px'
         }}>
-          <div className="relative w-full h-full flex gap-1">
+          <div className="relative flex h-full w-full min-w-[40rem] gap-1 sm:min-w-0">
             <div 
               className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
               style={{
@@ -110,14 +110,14 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
                   }`}
                   style={{ color: COLORS.WHITE, borderRadius: SIZES.BORDER_RADIUS }}
                 >
-                  <div className="flex items-center gap-2 group-hover:scale-110 transition-transform duration-200">
+                  <div className="flex flex-col items-center gap-1 group-hover:scale-110 transition-transform duration-200 sm:flex-row sm:gap-2">
                     <div className="relative">
                       <Icon size={SIZES.ICON_SIZE} weight="duotone" />
                       {hasNotification && (
                         <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border shadow-lg" style={{ borderColor: COLORS.NAVY }} />
                       )}
                     </div>
-                    <span className="hidden sm:inline font-bold text-sm">{option.label}</span>
+                    <span className="font-bold text-xs sm:text-sm">{option.label}</span>
                   </div>
                 </button>
               )

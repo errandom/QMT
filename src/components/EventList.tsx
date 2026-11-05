@@ -1,5 +1,5 @@
 import { useData } from '@/contexts/DataContext'
-import { Event, SportType, Team, Field, Site } from '@/lib/types'
+import { Event, SportType, Team, Field, Site, User } from '@/lib/types'
 import EventCard from './EventCard'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CalendarBlank } from '@phosphor-icons/react'
@@ -7,9 +7,10 @@ import { CalendarBlank } from '@phosphor-icons/react'
 interface EventListProps {
   sportFilter: 'All Sports' | SportType
   teamFilter: string
+  currentUser: User | null
 }
 
-export default function EventList({ sportFilter, teamFilter }: EventListProps) {
+export default function EventList({ sportFilter, teamFilter, currentUser }: EventListProps) {
   const { events, teams, fields, sites, isLoading, error } = useData()
 
   const now = new Date()
@@ -60,6 +61,7 @@ export default function EventList({ sportFilter, teamFilter }: EventListProps) {
           teams={teams}
           fields={fields}
           sites={sites}
+          currentUser={currentUser}
         />
       ))}
     </div>
