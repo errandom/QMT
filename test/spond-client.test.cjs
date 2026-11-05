@@ -7,10 +7,11 @@ test('Spond transport preserves login, member queries and explicit single event 
   const calls = [];
   const client = createSpondClient({ fetchImpl: async (url, options) => {
     calls.push({ url: new URL(url), options });
-    return json(url.endsWith('/login') ? { loginToken: 'synthetic-token' } : []);
+    return json(url.endsWith('/auth2/login') ? { accessToken: { token: 'synthetic-token' } } : []);
   } });
   const token = await client.login(' synthetic@example.invalid ', 'synthetic-password');
   assert.equal(token, 'synthetic-token');
+  assert.equal(calls[0].url.pathname, '/core/v1/auth2/login');
   assert.deepEqual(JSON.parse(calls[0].options.body), { email: 'synthetic@example.invalid', password: 'synthetic-password' });
   assert.equal(calls[0].options.headers.Authorization, undefined);
   await client.get(token, 'groups', { extra: 'a&b' });
@@ -30,9 +31,15 @@ test('Spond transport preserves login, member queries and explicit single event 
 test('Spond errors never disclose raw provider bodies, credentials, network errors or partial login tokens', async () => {
   for (const response of [
     () => new Response('private-provider-detail', { status: 401 }),
+    () => new Response('private-provider-detail', { status: 426 }),
     () => new Response('private-provider-detail', { status: 429 }),
     () => new Response('private-provider-detail', { status: 500 }),
-    () => json({ loginToken: null, private: 'private-provider-detail' }),
+    () => json(null),
+    () => json({ accessToken: null, private: 'private-provider-detail' }),
+    () => json({ accessToken: { token: ' ' }, private: 'private-provider-detail' }),
+    () => json({ accessToken: { token: null }, private: 'private-provider-detail' }),
+    () => json({ accessToken: 'private-provider-detail' }),
+    () => json({ loginToken: 'private-legacy-token' }),
     () => new Response('private-provider-detail'),
   ]) {
     let calls = 0;

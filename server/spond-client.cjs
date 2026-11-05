@@ -20,7 +20,7 @@ function createSpondClient({ fetchImpl = fetch, timeoutMs = 10000, maxBytes = 2 
         || url.username || url.password || url.hash) {
       throw new SpondError('Invalid Spond endpoint', 'INVALID_INPUT');
     }
-    if (url.pathname !== '/core/v1/login' && (typeof token !== 'string' || !token.trim())) {
+    if (url.pathname !== '/core/v1/auth2/login' && (typeof token !== 'string' || !token.trim())) {
       throw new SpondError('Spond authentication token is missing', 'INVALID_INPUT');
     }
     if (active >= maxConcurrent) throw new SpondError('Spond is busy; retry later', 'BUSY');
@@ -87,11 +87,12 @@ function createSpondClient({ fetchImpl = fetch, timeoutMs = 10000, maxBytes = 2 
           || typeof password !== 'string' || !password || password.length > 4096) {
         throw new SpondError('A Spond email and password are required', 'INVALID_INPUT');
       }
-      const data = await request('login', { method: 'POST', body: { email: username.trim(), password } });
-      if (!data || typeof data.loginToken !== 'string' || !data.loginToken.trim()) {
+      const data = await request('auth2/login', { method: 'POST', body: { email: username.trim(), password } });
+      const token = data?.accessToken?.token;
+      if (typeof token !== 'string' || !token.trim()) {
         throw new SpondError('Spond login did not return a token; additional authentication may be required', 'INVALID_RESPONSE');
       }
-      return data.loginToken;
+      return token;
     },
     get(token, endpoint, params) { return request(endpoint, { token, params }); },
     post(token, endpoint, body) { return request(endpoint, { token, method: 'POST', body }); },
