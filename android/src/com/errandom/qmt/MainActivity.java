@@ -3,11 +3,18 @@ package com.errandom.qmt;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
@@ -15,6 +22,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.Gravity;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.*;
@@ -31,6 +39,13 @@ public final class MainActivity extends Activity {
     private TextView errorText;
     private ProgressBar progress;
     private SessionStore store;
+    private LinearLayout controls;
+    private Button alerts;
+    private AlertDialog alertDialog;
+    private Switch alertToggle;
+    private TextView alertStatus;
+    private int navy, accent, charcoal, surface;
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChanged = (prefs, key) -> refreshAlerts();
     private ValueCallback<Uri[]> fileCallback;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int navigation;
@@ -45,45 +60,66 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         store = new SessionStore(this);
+        navy = getColor(R.color.qmt_navy);
+        accent = getColor(R.color.qmt_accent);
+        charcoal = getColor(R.color.qmt_charcoal);
+        surface = getColor(R.color.qmt_surface);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        getWindow().setStatusBarColor(navy);
+        getWindow().setNavigationBarColor(navy);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.WHITE);
+        root.setBackgroundColor(navy);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                 android.graphics.Insets keyboard = insets.getInsets(WindowInsets.Type.ime());
                 view.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, keyboard.bottom));
+                controls.setVisibility(insets.isVisible(WindowInsets.Type.ime()) ? View.GONE : View.VISIBLE);
+                return WindowInsets.CONSUMED;
             } else {
                 view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+                WindowInsets consumed = insets.consumeSystemWindowInsets().consumeStableInsets();
+                return Build.VERSION.SDK_INT >= 28 ? consumed.consumeDisplayCutout() : consumed;
             }
-            return WindowInsets.CONSUMED;
         });
-        LinearLayout toolbar = new LinearLayout(this);
-        TextView title = new TextView(this); title.setText("  QMT"); title.setTextSize(20); title.setTextColor(Color.rgb(23,107,66));
-        toolbar.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1));
-        Button reload = new Button(this); reload.setText("Reload"); reload.setOnClickListener(v -> web.reload());
-        toolbar.addView(reload);
-        Button settings = new Button(this); settings.setText("Alerts"); settings.setOnClickListener(v -> settings());
-        toolbar.addView(settings);
-        root.addView(toolbar);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progress.setProgressTintList(ColorStateList.valueOf(accent));
+        progress.setProgressBackgroundTintList(ColorStateList.valueOf(navy));
         root.addView(progress, new LinearLayout.LayoutParams(-1, dp(3)));
-        error = new LinearLayout(this); error.setOrientation(LinearLayout.VERTICAL); error.setPadding(dp(16), dp(24), dp(16), dp(24));
-        errorText = new TextView(this); errorText.setTextSize(18); error.addView(errorText);
-        Button retry = new Button(this); retry.setText("Retry secure connection");
-        retry.setOnClickListener(v -> web.loadUrl(retryUrl)); error.addView(retry); error.setVisibility(View.GONE);
-        root.addView(error);
+        error = new LinearLayout(this); error.setOrientation(LinearLayout.VERTICAL);
+        error.setGravity(Gravity.CENTER); error.setBackgroundColor(surface); error.setPadding(dp(24), dp(24), dp(24), dp(24));
+        errorText = text("", 18, charcoal); errorText.setGravity(Gravity.CENTER); error.addView(errorText);
+        Button retry = action("Retry secure connection", R.drawable.action_refresh, Color.WHITE, accent);
+        retry.setOnClickListener(v -> web.loadUrl(retryUrl));
+        LinearLayout.LayoutParams retryLayout = new LinearLayout.LayoutParams(-2, -2); retryLayout.topMargin = dp(20);
+        error.addView(retry, retryLayout); error.setVisibility(View.GONE);
+        root.addView(error, new LinearLayout.LayoutParams(-1, 0, 1));
         web = new WebView(this);
         root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
+        controls = new LinearLayout(this); controls.setOrientation(LinearLayout.VERTICAL);
+        controls.setBackgroundColor(navy); controls.setElevation(dp(6));
+        View divider = new View(this); divider.setBackgroundColor(Color.argb(35, 245, 245, 245));
+        controls.addView(divider, new LinearLayout.LayoutParams(-1, dp(1)));
+        LinearLayout actions = new LinearLayout(this); actions.setGravity(Gravity.CENTER_VERTICAL);
+        actions.setPadding(dp(12), dp(6), dp(12), dp(6));
+        Button refresh = action("Refresh", R.drawable.action_refresh, Color.WHITE, Color.TRANSPARENT);
+        refresh.setContentDescription("Refresh QMT"); refresh.setTooltipText("Reload the current QMT page");
+        refresh.setOnClickListener(v -> web.reload());
+        actions.addView(refresh, new LinearLayout.LayoutParams(0, -2, 1));
+        alerts = action("Alerts off", R.drawable.action_alerts, Color.WHITE, Color.TRANSPARENT);
+        alerts.setOnClickListener(v -> settings());
+        actions.addView(alerts, new LinearLayout.LayoutParams(0, -2, 1));
+        controls.addView(actions); root.addView(controls);
         setContentView(root);
         if (Build.VERSION.SDK_INT >= 30 && getWindow().getInsetsController() != null) {
             getWindow().getInsetsController().setSystemBarsAppearance(
-                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                0,
                 android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
         } else {
-            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+            root.setSystemUiVisibility(root.getSystemUiVisibility() &
+                ~(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR));
         }
         WebView.setWebContentsDebuggingEnabled(false);
         WebSettings config = web.getSettings();
@@ -158,20 +194,46 @@ public final class MainActivity extends Activity {
         });
         web.setDownloadListener((url, agent, disposition, mime, length) -> download(url, mime, disposition));
         PollJob.configure(this);
+        store.prefs.registerOnSharedPreferenceChangeListener(preferenceChanged);
+        refreshAlerts();
         if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(0, this::back);
         if (saved == null || web.restoreState(saved) == null) web.loadUrl(Policy.ORIGIN);
     }
 
     private int dp(int value) { return (int) (getResources().getDisplayMetrics().density * value); }
+    private GradientDrawable rounded(int color) {
+        GradientDrawable shape = new GradientDrawable(); shape.setColor(color); shape.setCornerRadius(dp(12)); return shape;
+    }
+    private TextView text(String value, int size, int color) {
+        TextView label = new TextView(this); label.setText(value); label.setTextSize(size); label.setTextColor(color);
+        label.setLineSpacing(dp(3), 1); return label;
+    }
+    private Button action(String title, int icon, int color, int background) {
+        Button button = new Button(this);
+        button.setText(title); button.setAllCaps(false); button.setTextSize(14);
+        button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        button.setTextColor(color); button.setMinWidth(0); button.setMinimumWidth(0);
+        button.setMinHeight(dp(48)); button.setMinimumHeight(dp(48));
+        button.setMaxLines(2); button.setPadding(dp(12), dp(10), dp(12), dp(10));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.argb(45, 36, 139, 204)), rounded(background), null));
+        if (icon != 0) {
+            Drawable drawable = getDrawable(icon).mutate(); drawable.setTint(color);
+            button.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null);
+            button.setCompoundDrawablePadding(dp(8));
+        }
+        return button;
+    }
     private void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_LONG).show(); }
     private void showError(String text) { loaded = false; errorText.setText(text); error.setVisibility(View.VISIBLE); web.setVisibility(View.GONE); progress.setVisibility(View.GONE); }
     private void back() { if (web.canGoBack()) web.goBack(); else finish(); }
     @Override public void onBackPressed() { back(); }
-    @Override protected void onResume() { super.onResume(); if (store != null) { PollJob.configure(this); handler.post(sessionWatch); } }
+    @Override protected void onResume() { super.onResume(); if (store != null) { PollJob.configure(this); refreshAlerts(); handler.post(sessionWatch); } }
     @Override protected void onPause() { captureSession(); handler.removeCallbacks(sessionWatch); super.onPause(); }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
     @Override protected void onDestroy() {
         handler.removeCallbacks(sessionWatch);
+        store.prefs.unregisterOnSharedPreferenceChangeListener(preferenceChanged);
+        if (alertDialog != null) alertDialog.dismiss();
         if (fileCallback != null) fileCallback.onReceiveValue(null);
         web.destroy(); super.onDestroy();
     }
@@ -192,32 +254,86 @@ public final class MainActivity extends Activity {
         });
     }
 
+    private boolean notificationsAvailable() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        NotificationChannel channel = manager.getNotificationChannel(PollJob.CHANNEL);
+        return manager.areNotificationsEnabled() && (channel == null || channel.getImportance() != NotificationManager.IMPORTANCE_NONE);
+    }
+
+    private void refreshAlerts() {
+        if (alerts == null) return;
+        boolean enabled = store.enabled(), available = notificationsAvailable();
+        String state = !enabled ? "off" : available ? "on" : "paused";
+        alerts.setText("Alerts " + state);
+        alerts.setContentDescription("Notification settings, alerts " + state);
+        alerts.setTooltipText(enabled && !available ? "Notifications are blocked in Android settings" : "Manage QMT notifications");
+        alerts.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.argb(45, 245, 245, 245)),
+            rounded(enabled && available ? accent : Color.TRANSPARENT), null));
+        if (alertToggle != null) alertToggle.setChecked(enabled);
+        if (alertStatus != null) {
+            String heading = !enabled ? "Alerts are off" : available ? "Alerts are enabled" : "Paused in Android";
+            String permission = enabled && !available ? "\nAllow QMT notifications in Android settings to receive alerts." : "";
+            alertStatus.setText(heading + permission + "\n\n" +
+                store.prefs.getString("status", enabled ? "Waiting for a fresh baseline." : "No background session is stored."));
+        }
+    }
+
+    private void setAlertsEnabled(boolean enabled, String status) {
+        synchronized (SessionStore.LOCK) {
+            store.prefs.edit().putBoolean("enabled", enabled).commit();
+            store.clear(status);
+        }
+        getSystemService(NotificationManager.class).cancel(4107);
+        if (enabled && Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 301);
+        captureSession(); PollJob.configure(this); refreshAlerts();
+    }
+
     private void settings() {
-        LinearLayout layout = new LinearLayout(this); layout.setOrientation(LinearLayout.VERTICAL); layout.setPadding(dp(20), dp(8), dp(20), dp(8));
-        TextView detail = new TextView(this);
-        detail.setText("Opt-in local alerts check the next two weeks of schedule and new pending admin/management requests approximately every 15 minutes. This is not real-time push; Android battery limits may delay checks.\n\n"
-            + store.prefs.getString("status", "Alerts are off. No background session is stored."));
-        layout.addView(detail);
-        Switch toggle = new Switch(this); toggle.setText("Enable periodic notifications"); toggle.setChecked(store.enabled()); layout.addView(toggle);
-        toggle.setOnCheckedChangeListener((button, checked) -> {
-            synchronized (SessionStore.LOCK) {
-                store.prefs.edit().putBoolean("enabled", checked).commit();
-                store.clear(checked ? "Waiting for a fresh baseline." : "Alerts off; background session erased.");
-            }
-            getSystemService(NotificationManager.class).cancel(4107);
-            if (checked && Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 301);
-            captureSession(); PollJob.configure(this);
+        if (alertDialog != null) return;
+        LinearLayout layout = new LinearLayout(this); layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(20), dp(20), dp(20), dp(12));
+        TextView title = text("Notifications", 22, navy); title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        layout.addView(title);
+        TextView detail = text("Stay up to date with schedule changes and new pending admin/management requests.", 14, charcoal);
+        detail.setPadding(0, dp(8), 0, dp(12)); layout.addView(detail);
+        alertToggle = new Switch(this); alertToggle.setText("Enable alerts"); alertToggle.setTextSize(16);
+        alertToggle.setTextColor(navy); alertToggle.setMinHeight(dp(56)); alertToggle.setMaxLines(2);
+        alertToggle.setThumbTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+            new int[]{accent, charcoal}));
+        alertToggle.setTrackTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+            new int[]{Color.argb(90, 36, 139, 204), Color.argb(45, 62, 67, 71)}));
+        alertToggle.setChecked(store.enabled()); layout.addView(alertToggle);
+        alertToggle.setOnCheckedChangeListener((button, checked) -> {
+            if (checked != store.enabled())
+                setAlertsEnabled(checked, checked ? "Waiting for a fresh baseline." : "Alerts off; background session erased.");
         });
-        Button system = new Button(this); system.setText("Android notification settings");
-        system.setOnClickListener(v -> startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())));
-        layout.addView(system);
-        Button clear = new Button(this); clear.setText("Forget background session");
-        clear.setOnClickListener(v -> {
-            store.prefs.edit().putBoolean("enabled", false).commit();
-            store.clear("Background session forgotten; web sign-in unchanged."); toggle.setChecked(false); PollJob.configure(this);
-        }); layout.addView(clear);
-        new AlertDialog.Builder(this).setTitle("QMT notifications").setView(layout).setPositiveButton("Done", null).show();
+        alertStatus = text("", 14, navy); alertStatus.setPadding(dp(14), dp(14), dp(14), dp(14));
+        alertStatus.setBackground(rounded(Color.WHITE));
+        LinearLayout.LayoutParams statusLayout = new LinearLayout.LayoutParams(-1, -2); statusLayout.topMargin = dp(8);
+        layout.addView(alertStatus, statusLayout);
+        TextView cadence = text("Checks cover the next two weeks and run approximately every 15 minutes. They are not instant push notifications; Android battery limits may delay them.", 13, charcoal);
+        cadence.setPadding(0, dp(12), 0, dp(12)); layout.addView(cadence);
+        Button system = action("Android notification settings", 0, navy, Color.WHITE);
+        system.setOnClickListener(v -> {
+            try { startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())); }
+            catch (ActivityNotFoundException e) { toast("Android notification settings are unavailable on this device."); }
+        });
+        layout.addView(system, new LinearLayout.LayoutParams(-1, -2));
+        Button clear = action("Forget background session", 0, charcoal, Color.TRANSPARENT);
+        clear.setOnClickListener(v -> setAlertsEnabled(false, "Background session forgotten; web sign-in unchanged."));
+        layout.addView(clear, new LinearLayout.LayoutParams(-1, -2));
+        TextView privacy = text("Turning alerts off or forgetting the saved background session leaves your web sign-in unchanged.", 12, charcoal);
+        layout.addView(privacy);
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.addView(layout);
+        alertDialog = new AlertDialog.Builder(this).setView(scroll).setPositiveButton("Done", null).create();
+        alertDialog.setOnDismissListener(dialog -> { alertDialog = null; alertToggle = null; alertStatus = null; });
+        alertDialog.show();
+        alertDialog.getWindow().setBackgroundDrawable(rounded(surface));
+        alertDialog.getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(480)), -2);
+        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(accent);
+        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false);
+        refreshAlerts();
     }
 
     @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
@@ -226,7 +342,7 @@ public final class MainActivity extends Activity {
             if (results.length == 0 || results[0] != PackageManager.PERMISSION_GRANTED) {
                 store.prefs.edit().putBoolean("enabled", false).commit(); store.clear("Notification permission declined; alerts are off.");
             }
-            captureSession(); PollJob.configure(this);
+            captureSession(); PollJob.configure(this); refreshAlerts();
         }
     }
 
