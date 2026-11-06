@@ -1,6 +1,54 @@
 # QMT controlled relaunch
 
-## Current phone-ready web and Android release: November 5, 2026
+## Current QMT icon release: November 6, 2026
+
+The approved blue-and-white QMT mark is deployed as the web favicon and packaged
+as the Android launcher icon. Production was verified at **09:44:18 Zurich
+(08:44:18 UTC)**. PR #22 merged as
+`2a398d1e983de03e2c95c9118c5ebdd08bf885ca`, the exact runtime source.
+PR validation `42188521258`, main validation `42188934684` and exact-main
+validation/publication `42188951275` succeeded. Later documentation-only merges
+do not change the runtime source and do not require another publication.
+
+Current runtime image:
+`ghcr.io/errandom/qmt@sha256:31fb679337e92f317e26df04c16b5100477e8589e5c641033bbfbbd4a853d5ec`.
+Immediate image rollback:
+`ghcr.io/errandom/qmt@sha256:855fb2b29036023a160ba53ffd3d3db2f7d694b00b76f6e66acdf4dcd12af9d6`.
+Independent anonymous registry reads verified the digest, exact source label
+and non-root runtime. All 16 live static assets matched the published image;
+PNG/ICO responses had the correct image content types.
+
+Both HTML entry points register the multi-size favicon and Apple touch icon.
+The artwork was extracted from the approved design, not redrawn. Android uses
+the same mark over brand navy with an adaptive foreground inside the safe
+circle, circular-launcher support and a themed silhouette. The separate
+monochrome notification status icon and native notification behavior are unchanged.
+
+Only `config/web.properties.linuxFxVersion` was patched through ARM.
+App settings, the complete non-image web configuration and resource inventory
+fingerprints matched exactly before/after, including the already-retained
+inactive debugger metadata described below. All five public collection
+fingerprints matched: 10 teams, 9 sites, 19 fields, no equipment and 210 events
+in the October 1, 2026 to October 1, 2027 window. Health passed.
+Spond review remains enabled; actual Spond sync, AI, weather and transport remain
+disabled. No migration, grant, provider call, mapping, workbook edit or message ran.
+
+Signed **QMT Android 1.0.1 (2)** replaces 1.0 with the same package and signing
+identity, permitting an in-place update. Both local APK copies were verified.
+APK SHA256:
+`ff3ccfeaa2bb47ebe8eadaa394d7a88dd80a21707c306bdde6994be26a3f9567`.
+Certificate SHA256 remains
+`923d24f52f718e7d2bd6773cb05b106e06212a3fe10734c3e60c5fcea82fca31`.
+Java/API36 compilation, all 18 policy checks, packaged foreground pixels and
+v2/v3 signing passed. Circle/rounded icon previews were inspected; this version
+has not been tested on a physical phone. APK: `android\build\QMT-Android.apk`.
+See `android\README.md` for install/update and opt-in notification instructions.
+
+**Next owner step:** refresh the browser tab and install the new APK over the
+existing app. Physical-device icon and real-account notification acceptance,
+including battery/reboot scheduling, remain unfinished. No release blocker remains.
+
+## Previous phone-ready web and Android release: November 5, 2026
 
 The owner-requested web deployment was verified at **23:43:34 Zurich
 (22:43:34 UTC)**. PR #19 merged as
