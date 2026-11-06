@@ -1,11 +1,16 @@
 # QMT Android sideload app
 
 Native Java WebView shell for `https://qmt.errandom.com`, application ID
-`com.errandom.qmt`, version 1.0 (1). Android 8.0/API 26 minimum; compile and target
+`com.errandom.qmt`, version 1.0.1 (2). Android 8.0/API 26 minimum; compile and target
 API 36. No Play Store, Capacitor, Firebase, FCM, provider registration or added
 external service. The installed device WebView must be kept up to date.
 The hosted web application remains authoritative and supplies its phone layout.
 This shell does not inject viewport/CSS overrides or replace the web deployment.
+
+The launcher uses the approved blue-and-white QMT artwork on brand navy,
+matching the web favicon. Its adaptive foreground has padding for circular and
+rounded masks; themed icons use the same silhouette. The monochrome notification
+status icon remains separate and unchanged.
 
 ## Install and use
 
@@ -131,7 +136,17 @@ Optional output destination:
 All build products are under ignored `android\build`. No existing web manifests,
 workflows, deployment documents, branches or commits are changed by these scripts.
 
-## Tests and verified evidence — November 5, 2026
+## Icon update — November 6, 2026
+
+Version 1.0.1 (2) replaces the placeholder launcher icon with the approved QMT
+mark, shared with the web favicon. The 432px transparent adaptive foreground
+keeps the artwork inside the central 66dp safe circle on a 108dp layer.
+Circle and rounded-mask previews were inspected. The packaged adaptive layers
+and signing certificate were verified; the original update-compatible signing
+identity and permissions are unchanged. Java/API36 compilation and all 18
+policy checks passed again. This icon release was not tested on a physical phone.
+
+## Earlier runtime tests — November 5, 2026
 
 * Java 21 compilation against API 36 succeeded; d8 release conversion succeeded.
 * **18 policy checks** pass: strict origin boundaries, baseline suppression,
@@ -178,7 +193,8 @@ Keep emulator networking disabled for both instrumentation entrypoints.
 
 * `.gitignore`, `AndroidManifest.xml`, `README.md`
 * `build.ps1`, `create-signing-key.ps1`
-* `res\drawable\qmt_icon.xml`, `res\drawable\notification.xml`
+* `res\mipmap-anydpi-v26\qmt_icon.xml`, `res\drawable-nodpi\qmt_foreground.png`
+* `res\values\colors.xml`, `res\drawable\notification.xml`
 * `src\com\errandom\qmt\MainActivity.java`
 * `src\com\errandom\qmt\SessionStore.java`
 * `src\com\errandom\qmt\Policy.java`
@@ -191,7 +207,7 @@ Final signed artifact:
 `C:\Users\kennethf\.copilot\session-state\7e165fa3-1c6f-47af-b08a-60c33b7d24c7\files\QMT-Android.apk`
 
 APK SHA-256:
-`221B95FFC64D3C1B2AF1C524EAF2291F3028E1EEB3EB24D34BE3F09E7A247587`
+`FF3CCFEAA2BB47EBE8EADAA394D7A88DD80A21707C306BDDE6994BE26A3F9567`
 
 Signing certificate SHA-256:
 `923d24f52f718e7d2bd6773cb05b106e06212a3fe10734c3e60c5fcea82fca31`
