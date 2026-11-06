@@ -1,7 +1,7 @@
 # QMT Android sideload app
 
 Native Java WebView shell for `https://qmt.errandom.com`, application ID
-`com.errandom.qmt`, version 1.0.1 (2). Android 8.0/API 26 minimum; compile and target
+`com.errandom.qmt`, version 1.0.2 (3). Android 8.0/API 26 minimum; compile and target
 API 36. No Play Store, Capacitor, Firebase, FCM, provider registration or added
 external service. The installed device WebView must be kept up to date.
 The hosted web application remains authoritative and supplies its phone layout.
@@ -22,9 +22,14 @@ permission after installation. Alternatively, with an already configured device:
 & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r .\build\QMT-Android.apk
 ```
 
-Sign in normally inside QMT. Native **Reload** reloads the page, **Alerts** opens
-notification settings. Back navigates WebView history, then closes the activity.
-Insets protect the system bars/cutout and resize content above the keyboard.
+Sign in normally inside QMT. The navy bottom dock replaces the duplicate native
+header: **Refresh** reloads the current page; **Alerts off/on/paused** opens a
+QMT-styled, scrollable notification panel with live status and Android settings.
+Actions have outline icons and minimum 48dp touch targets. Back navigates WebView
+history, then closes the activity. Insets protect the system bars/cutout and resize
+content above the keyboard. On Android 11/API 30+, the dock hides while the keyboard
+is visible and returns when it closes; on older Android it remains above the
+resized keyboard area.
 Only HTTPS QMT same-origin pages navigate internally; user-activated external
 HTTPS, email, phone, SMS and WhatsApp links open appropriate installed apps.
 Unrecognized schemes and cleartext links are blocked. TLS errors are cancelled,
@@ -44,6 +49,8 @@ bridges are deliberately absent.
 Alerts default **off**. Enable them in **Alerts** and grant Android 13+ notification
 permission when prompted. The `QMT updates` notification channel can also be
 disabled through Android settings. Denying permission turns the opt-in off.
+The dock shows **paused** when opted-in alerts are blocked by Android permission
+or channel settings; this presentation does not change the periodic scheduler.
 Disabling alerts or **Forget background session** erases the native captured
 token/baselines and cancels the periodic job/notification; it does not sign out
 the web application.
@@ -136,7 +143,28 @@ Optional output destination:
 All build products are under ignored `android\build`. No existing web manifests,
 workflows, deployment documents, branches or commits are changed by these scripts.
 
-## Icon update — November 6, 2026
+## Integrated app controls - November 6, 2026
+
+Version 1.0.2 (3) integrates Refresh/Alerts with QMT navy, blue accents and outline
+icons, removes the duplicate native header, and adds a branded notification
+panel. Changes are native-only: the hosted web application, session isolation,
+notification checks, provider capabilities, permissions and signing identity are
+unchanged. The approved launcher and notification artwork are retained.
+Inset consumption uses API-compatible methods below Android 11.
+
+The signed app passed Java/API36 compilation and all 18 policy checks; all 26
+offline runtime checks passed again on a dedicated Android 15/API35 emulator.
+Installing 1.0.2 over the owner-signed 1.0.1 succeeded. Updated offline UI fixtures
+passed normal phone configuration and 360 x 640dp with 200% font scaling, including
+real touch/reload, live opt-in/status, permission denial, forgetting the native
+session without web navigation, blocked-channel presentation, visible settings
+actions, offline dock anchoring, keyboard hiding and dock recovery. Fixture page
+readiness is awaited instead of assuming a fixed load delay. Screenshots were
+inspected. Networking stayed disabled and no real accounts were used.
+Physical-device/API26/API36 runtime, real-account notification delivery and
+battery/reboot behavior remain owner acceptance checks.
+
+## Previous icon update — November 6, 2026
 
 Version 1.0.1 (2) replaces the placeholder launcher icon with the approved QMT
 mark, shared with the web favicon. The 432px transparent adaptive foreground
@@ -184,10 +212,14 @@ Build fixture tests after building the app:
 Install the app and `build\instrumentation\QMT-tests.apk` only on an isolated test
 device. Grant its notification permission for fixture testing; disable networking
 before invoking `com.errandom.qmt.test/com.errandom.qmt.AndroidTests`. This test
-clears the test device's QMT preferences/notification state, so never run it over
-a real signed-in installation. `UiTests` is a separate offline native-shell
-fixture: it opens a local test form and focuses an empty field, never submits it.
-Keep emulator networking disabled for both instrumentation entrypoints.
+clears the test device's QMT preferences/notification state. `UiTests` is a separate
+offline native-shell fixture covering dock, settings and keyboard interactions;
+it opens a local form and focuses an empty field, never submits it. It also resets
+QMT preferences and blocks the fixture notification channel. Never run either
+entrypoint over a real signed-in installation. Clear only the isolated fixture
+app's data and regrant notification permission before rerunning UI checks, so a
+previous blocked channel does not contaminate the initial state. Keep emulator
+networking disabled and explicitly select the isolated device for all adb commands.
 
 ## Source inventory
 
@@ -195,6 +227,7 @@ Keep emulator networking disabled for both instrumentation entrypoints.
 * `build.ps1`, `create-signing-key.ps1`
 * `res\mipmap-anydpi-v26\qmt_icon.xml`, `res\drawable-nodpi\qmt_foreground.png`
 * `res\values\colors.xml`, `res\drawable\notification.xml`
+* `res\drawable\action_refresh.xml`, `res\drawable\action_alerts.xml`
 * `src\com\errandom\qmt\MainActivity.java`
 * `src\com\errandom\qmt\SessionStore.java`
 * `src\com\errandom\qmt\Policy.java`
@@ -207,7 +240,7 @@ Final signed artifact:
 `C:\Users\kennethf\.copilot\session-state\7e165fa3-1c6f-47af-b08a-60c33b7d24c7\files\QMT-Android.apk`
 
 APK SHA-256:
-`FF3CCFEAA2BB47EBE8EADAA394D7A88DD80A21707C306BDDE6994BE26A3F9567`
+`C3D6391A1BB1A155BFEA3A59D21A68E69FC4386B034B3A9C7EA60947F51898CC`
 
 Signing certificate SHA-256:
 `923d24f52f718e7d2bd6773cb05b106e06212a3fe10734c3e60c5fcea82fca31`
@@ -217,3 +250,5 @@ are INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS and RECEIVE_BOOT_COMPLETE
 The application is not debuggable, disallows cleartext and disables backups.
 An identical, discoverable copy is retained at
 `C:\Users\kennethf\OneDrive\errandom\QMT\android\build\QMT-Android.apk`.
+Versioned copies are retained as `build\QMT-Android-1.0.2.apk` and
+`build\QMT-Android-1.0.1.apk`; the unversioned artifact is the latest 1.0.2.

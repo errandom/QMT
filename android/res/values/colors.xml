@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="qmt_navy">#001f3f</color>
+    <color name="qmt_accent">#248bcc</color>
+    <color name="qmt_charcoal">#3e4347</color>
+    <color name="qmt_surface">#f5f5f5</color>
 </resources>
