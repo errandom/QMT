@@ -1,6 +1,53 @@
 # QMT controlled relaunch
 
-## Current QMT icon release: November 6, 2026
+## Current one-to-many Spond mapping release: November 8, 2026
+
+The administrator can select one Spond group/subgroup and explicitly review
+multiple QMT team links before saving the grouped confirmation. Individual
+editing and per-team read-only previews remain available. Unreviewed or
+deselected teams preserve their saved links; discovery never saves automatically.
+Existing and user-created Spond events remain untouched. No migration was needed.
+
+Production was verified at **18:30:25 Zurich (17:30:25 UTC)**.
+PR #25 merged normally as `d01f4cd195651574781d4278e12f51ec9e5a00bc`,
+the exact deployed runtime source. PR validation `42504202275`, main validation
+`42504498779` and exact-main validation/publication `42504517755` passed.
+Later documentation-only merges do not change this runtime source or require
+image republication.
+
+Current runtime image:
+`ghcr.io/errandom/qmt@sha256:70efdcd79929f7471e8818e717a3ed143f6f0c491ece494f44dddb61d7e42773`.
+Immediate image rollback:
+`ghcr.io/errandom/qmt@sha256:31fb679337e92f317e26df04c16b5100477e8589e5c641033bbfbbd4a853d5ec`.
+Independent anonymous registry checks verified immutable digests, the exact
+source label and non-root `node` runtime. All 16 live static assets matched
+the image bytes, including correct PNG/ICO content types. The served lazy-loaded
+Office chunk contains the new shared-group selector and multiple-team controls.
+
+Only `config/web.properties.linuxFxVersion` was patched through ARM.
+App settings, the entire non-image web configuration and resource inventory
+fingerprints matched exactly before/after. All five public collection
+fingerprints matched: 10 teams, 9 sites, 19 fields, no equipment and 210 events
+in the October 1, 2026 to October 1, 2027 window. Health passed.
+`spondReview:true`; actual Spond sync, AI, weather and transport remain false.
+No grant, provider login/call, live mapping save, workbook edit, operational
+write or message was performed during this release.
+
+The signed **Android 1.0.2 (3)** app loads the updated website; no APK rebuild
+or signing change was needed. All three latest delivery copies were verified
+with SHA256 `c3d6391a1bb1a155bfea3a59d21a68e69fc4386b034b3a9c7ea60947f51898cc`.
+The approved icon and integrated Refresh/Alerts dock are retained.
+APK: `android\build\QMT-Android.apk`; native release and acceptance details
+remain in `android\README.md`.
+
+**Next owner step:** refresh QMT in the browser or existing Android app,
+then rerun discovery and manually confirm the desired shared team links.
+Provider sessions are in-memory and expire on restart or after 15 minutes.
+Actual event synchronization is still disabled and unimplemented.
+Physical-device and real-account Android notification/battery/reboot acceptance
+remain unfinished; no release blocker remains.
+
+## Previous QMT icon release: November 6, 2026
 
 The approved blue-and-white QMT mark is deployed as the web favicon and packaged
 as the Android launcher icon. Production was verified at **09:44:18 Zurich
