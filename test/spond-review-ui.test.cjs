@@ -21,7 +21,7 @@ function text(node) {
 }
 const flush = async () => { for (let index = 0; index < 12; index++) await Promise.resolve(); };
 
-test('discovery suggestions require per-team and final human confirmation; previews never sync and edits invalidate review', async () => {
+function panelFixture() {
   const filename = path.join(__dirname, '..', 'src', 'components', 'OperationsOffice', 'SpondReviewPanel.tsx');
   const code = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
@@ -65,7 +65,7 @@ test('discovery suggestions require per-team and final human confirmation; previ
             ],
           };
         }
-        if (endpoint === '/spond/mappings/confirm') return { confirmedTeamIds: [1] };
+        if (endpoint === '/spond/mappings/confirm') return { confirmedTeamIds: body.mappings.map(mapping => mapping.teamId) };
         if (endpoint === '/spond/reconciliation') return {
           warning: 'Read-only preview', timezone: 'Europe/Zurich', scope: 'Mapped group',
           rows: [{ classification: 'coexisting', reason: 'Do not duplicate', qmt: {
@@ -84,6 +84,12 @@ test('discovery suggestions require per-team and final human confirmation; previ
   const set = (id, value) => get(node => node.props?.id === id).props.onChange({ target: { value } });
   const check = (name, checked) => get(node => node.props?.name === name).props.onChange({ target: { checked } });
   const button = label => get(node => node.type === 'Button' && node.props.children === label);
+  return { render, get, set, check, button, calls, groupId, parentGroupId,
+    failDiscovery() { rejectDiscovery = true; } };
+}
+
+test('discovery suggestions require per-team and final human confirmation; previews never sync and edits invalidate review', async () => {
+  const { render, get, set, check, button, calls, groupId, parentGroupId, failDiscovery } = panelFixture();
   render();
   assert.equal(calls.length, 0);
   set('spond-review-email', 'synthetic@example.invalid');
@@ -112,7 +118,7 @@ test('discovery suggestions require per-team and final human confirmation; previ
   assert.equal(button('Save reviewed team links').props.disabled, true, 'final checkbox alone is insufficient');
   check('review-team-2', true);
   assert.match(text(get(node => node.props?.['aria-label'] === 'Reviewed team links to save')),
-    /QMT Combined youth -> Spond Club youth \(entire group\)/);
+    /Spond Club youth \(entire group\) -> QMT Combined youth/);
   set('spond-team-2', '');
   assert.equal(get(node => node.props?.name === 'review-team-2').props.checked, false);
   assert.equal(get(node => node.props?.name === 'review-team-2').props.disabled, true);
@@ -121,7 +127,7 @@ test('discovery suggestions require per-team and final human confirmation; previ
   check('review-team-1', true);
   assert.equal(get(node => node.props?.name === 'confirm-mappings').props.checked, false);
   assert.equal(text(get(node => node.props?.['aria-label'] === 'Reviewed team links to save')),
-    'Team links to save (1)QMT U19 -> Spond Club youth / U19 (subgroup)');
+    'Team links to save (1)Spond Club youth / U19 (subgroup) -> QMT U19');
   check('confirm-mappings', true);
   assert.equal(button('Save reviewed team links').props.disabled, false);
   await button('Save reviewed team links').props.onClick();
@@ -150,11 +156,97 @@ test('discovery suggestions require per-team and final human confirmation; previ
   assert.equal(get(node => node.props?.id === 'spond-preview-team'), undefined);
   assert.equal(get(node => node.props?.['aria-label'] === 'Event coexistence preview'), undefined);
   assert.equal(button('Save reviewed team links').props.disabled, true);
-  rejectDiscovery = true;
+  failDiscovery();
   set('spond-review-password', 'synthetic-not-a-credential');
   get(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
   await flush();
   assert.equal(get(node => node.props?.role === 'alert').props.children, 'Synthetic discovery failure');
   assert.equal(get(node => node.props?.id === 'spond-review-password').props.value, '');
   assert.equal(get(node => node.props?.id === 'spond-team-1'), undefined);
+});
+
+for (const subgroup of [false, true]) {
+  test(`one Spond ${subgroup ? 'subgroup' : 'entire group'} is explicitly reviewed for multiple QMT teams and saved only after final confirmation`, async () => {
+    const { get, set, check, button, calls, groupId, parentGroupId } = panelFixture();
+    set('spond-review-email', 'synthetic@example.invalid');
+    set('spond-review-password', 'synthetic-not-a-credential');
+    get(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+    await flush();
+    const target = subgroup ? groupId : parentGroupId;
+    assert.equal(get(node => node.props?.name === 'share-team-1').props.checked, false, 'suggestions are not shared-link confirmation');
+    assert.equal(get(node => node.props?.id === 'spond-shared-teams').props.disabled, true);
+    set('spond-shared-group', target);
+    assert.equal(get(node => node.props?.id === 'spond-shared-teams').props.disabled, false);
+    for (const id of [1, 2]) {
+      check(`share-team-${id}`, true);
+      assert.equal(get(node => node.props?.id === `spond-team-${id}`).props.value, target);
+      assert.equal(get(node => node.props?.name === `review-team-${id}`).props.checked, true);
+    }
+    assert.equal(calls.length, 1, 'choosing the shared target and teams must not save');
+    assert.equal(get(node => node.props?.name === 'share-team-3').props.checked, false);
+    assert.equal(get(node => node.props?.id === 'spond-team-3').props.value, '', 'unselected teams keep their saved links');
+    assert.equal(text(get(node => node.props?.id === 'spond-team-saved-2')), 'Saved Spond link: Club youth (entire group)');
+    const groupLabel = subgroup ? 'Club youth / U19 (subgroup)' : 'Club youth (entire group)';
+    assert.equal(text(get(node => node.props?.['aria-label'] === 'Reviewed team links to save')),
+      `Team links to save (2)Spond ${groupLabel} -> QMT U19, Combined youth`);
+    assert.equal(button('Save reviewed team links').props.disabled, true);
+    check('confirm-mappings', true);
+    assert.equal(button('Save reviewed team links').props.disabled, false);
+    await button('Save reviewed team links').props.onClick();
+    await flush();
+    assert.deepEqual(calls[1].body.mappings, [{ teamId: 1, groupId: target }, { teamId: 2, groupId: target }]);
+    for (const id of [1, 2]) {
+      assert.equal(text(get(node => node.props?.id === `spond-team-saved-${id}`)), `Saved Spond link: ${groupLabel}`);
+      assert.equal(get(node => node.props?.name === `share-team-${id}`).props.checked, false);
+    }
+    const previewSelect = get(node => node.props?.id === 'spond-preview-team');
+    assert.deepEqual(React.Children.toArray(previewSelect.props.children).map(option => option.props.value), [1, 2]);
+    set('spond-preview-from', '2026-11-04');
+    set('spond-preview-to', '2026-11-05');
+    for (const id of [1, 2]) {
+      set('spond-preview-team', String(id));
+      get(node => node.type === 'form' && find(node, child => child.props?.id === 'spond-preview-team'))
+        .props.onSubmit({ preventDefault() {} });
+      await flush();
+      assert.equal(calls.at(-1).endpoint, '/spond/reconciliation');
+      assert.equal(calls.at(-1).body.teamId, id);
+    }
+    assert.equal(calls.length, 4, 'shared mapping creates no event write or sync request');
+    set('spond-review-password', 'synthetic-not-a-credential');
+    get(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+    await flush();
+    assert.equal(get(node => node.props?.id === 'spond-shared-group').props.value, '', 'new discovery clears the shared target');
+    assert.equal(get(node => node.props?.name === 'share-team-1').props.checked, false);
+    assert.equal(get(node => node.props?.id === 'spond-preview-team'), undefined);
+  });
+}
+
+test('moving or deselecting a shared-group team invalidates final confirmation without changing other reviewed or saved links', async () => {
+  const { get, set, check, button, calls, groupId, parentGroupId } = panelFixture();
+  set('spond-review-email', 'synthetic@example.invalid');
+  set('spond-review-password', 'synthetic-not-a-credential');
+  get(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  await flush();
+  set('spond-shared-group', groupId);
+  check('share-team-1', true);
+  check('share-team-2', true);
+  check('confirm-mappings', true);
+  set('spond-shared-group', parentGroupId);
+  assert.equal(get(node => node.props?.name === 'confirm-mappings').props.checked, false);
+  assert.equal(get(node => node.props?.name === 'share-team-1').props.checked, false);
+  assert.match(text(get(node => node.props?.id === 'spond-shared-team-2')), /Reviewed for: Club youth \/ U19/);
+  check('share-team-1', true);
+  assert.equal(get(node => node.props?.id === 'spond-team-1').props.value, parentGroupId);
+  assert.equal(get(node => node.props?.id === 'spond-team-2').props.value, groupId);
+  assert.match(text(get(node => node.props?.['aria-label'] === 'Reviewed team links to save')),
+    /Spond Club youth \/ U19 \(subgroup\) -> QMT Combined youth.*Spond Club youth \(entire group\) -> QMT U19/);
+  check('confirm-mappings', true);
+  check('share-team-1', false);
+  assert.equal(get(node => node.props?.name === 'confirm-mappings').props.checked, false);
+  assert.equal(get(node => node.props?.name === 'review-team-1').props.checked, false);
+  assert.equal(get(node => node.props?.id === 'spond-team-1').props.value, '');
+  assert.equal(get(node => node.props?.name === 'review-team-2').props.checked, true);
+  assert.equal(text(get(node => node.props?.id === 'spond-team-saved-2')), 'Saved Spond link: Club youth (entire group)');
+  assert.equal(button('Save reviewed team links').props.disabled, true);
+  assert.equal(calls.length, 1);
 });
