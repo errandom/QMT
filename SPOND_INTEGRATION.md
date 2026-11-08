@@ -17,9 +17,13 @@ under **Review or edit individual QMT team links**.
 The existing atomic confirmation endpoint and mapping columns already support
 shared groups; this UX change requires no migration or new backend endpoint.
 Read-only previews remain per confirmed QMT team. Event synchronization,
-publication, attendance imports and notifications remain disabled.
-This source change is not a production rollout; see `DEPLOYMENT.md` for the
-last verified deployment.
+publication, attendance imports and Spond-generated notifications remain disabled.
+This experience is deployed: verified November 8 at **18:30:25 Zurich
+(17:30:25 UTC)** from PR #25, runtime source
+`d01f4cd195651574781d4278e12f51ec9e5a00bc`. See `DEPLOYMENT.md` for the
+immutable image, rollback and unchanged production invariants. Refresh the web
+or existing Android app and rerun discovery after the runtime restart; saved
+SQL mappings are preserved.
 
 ## Controlled review increment: November 4, 2026
 
