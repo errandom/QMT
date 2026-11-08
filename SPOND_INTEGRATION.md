@@ -1,5 +1,26 @@
 # Spond Integration Guide
 
+## One Spond group to multiple QMT teams: November 8, 2026
+
+After discovery, choose a Spond group or subgroup once, then check all QMT teams
+that should share it. Checking a team explicitly reviews that proposed link;
+the grouped summary shows **Spond group -> QMT team A, team B, ...**. Repeat
+for other groups if needed. No mapping is saved until the administrator checks
+the final confirmation and selects **Save reviewed team links**.
+
+Each QMT team still has one Spond link; the same Spond group or subgroup can be
+shared by multiple QMT teams. Existing saved links and unreviewed suggestions
+are shown separately from reviewed changes. Deselecting a team removes its
+proposed change, not its saved link. Individual team editing remains available
+under **Review or edit individual QMT team links**.
+
+The existing atomic confirmation endpoint and mapping columns already support
+shared groups; this UX change requires no migration or new backend endpoint.
+Read-only previews remain per confirmed QMT team. Event synchronization,
+publication, attendance imports and notifications remain disabled.
+This source change is not a production rollout; see `DEPLOYMENT.md` for the
+last verified deployment.
+
 ## Controlled review increment: November 4, 2026
 
 The current feature-branch implementation replaces the legacy setup entry point

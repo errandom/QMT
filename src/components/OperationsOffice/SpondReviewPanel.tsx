@@ -60,6 +60,7 @@ export default function SpondReviewPanel() {
   const [password, setPassword] = useState('')
   const [discovery, setDiscovery] = useState<Discovery | null>(null)
   const [mappings, setMappings] = useState<Record<number, string>>({})
+  const [sharedGroupId, setSharedGroupId] = useState('')
   const [reviewed, setReviewed] = useState<Record<number, boolean>>({})
   const [confirmation, setConfirmation] = useState(false)
   const [confirmedTeamIds, setConfirmedTeamIds] = useState<number[]>([])
@@ -101,6 +102,7 @@ export default function SpondReviewPanel() {
     const credentials = { username, password }
     setPassword('')
     setDiscovery(null)
+    setSharedGroupId('')
     setTeamId('')
     setReviewed({})
     invalidateReview()
@@ -113,6 +115,9 @@ export default function SpondReviewPanel() {
     })
   }
   const selected = discovery?.teams.filter(team => reviewed[team.id] && mappings[team.id]) || []
+  const selectedGroups = discovery?.groups.map(group => ({
+    group, teams: selected.filter(team => mappings[team.id] === group.id),
+  })).filter(entry => entry.teams.length > 0) || []
   const discoveredGroupText = (id: string) => {
     const group = discovery?.groups.find(candidate => candidate.id === id)
     return group ? groupText(group) : 'Group unavailable in this discovery'
@@ -186,7 +191,7 @@ export default function SpondReviewPanel() {
           <fieldset disabled={busy} className="space-y-3">
             <legend className="font-medium">2. Link QMT teams to Spond groups</legend>
             <p className="text-sm">
-              For each QMT team, choose the Spond group or subgroup for the same squad.
+              Choose one Spond group or subgroup, then select all QMT teams that belong to it.
               You are linking teams, not matching individual events. Saving these links does not copy events or activate sync.
             </p>
             <p className="text-sm">Connection expires {new Date(discovery.expiresAt).toLocaleTimeString()}.
@@ -197,54 +202,112 @@ export default function SpondReviewPanel() {
               Event previews currently inspect the whole parent group for duplicate safety, even when you select a subgroup.
             </p>
             {discovery.teams.length === 0 && <p>No active QMT teams were found.</p>}
-            <div className="space-y-4">
-              {discovery.teams.map(team => (
-                <div key={team.id} className="space-y-2 rounded border p-3">
-                  <p className="text-sm">QMT team</p>
-                  <h3 className="text-base font-semibold">{team.name}</h3>
-                  <p id={`spond-team-saved-${team.id}`} className="text-sm">
-                    <strong>Saved Spond link: </strong>
-                    {team.existingGroupId ? discoveredGroupText(team.existingGroupId) : 'No link saved yet'}
-                  </p>
-                  <Label className="text-inherit" htmlFor={`spond-team-${team.id}`}>
-                    Spond group or subgroup for {team.name}
-                  </Label>
-                  <p id={`spond-team-reason-${team.id}`} className="text-sm">{team.reason}</p>
-                  <select id={`spond-team-${team.id}`}
-                    aria-describedby={`spond-team-saved-${team.id} spond-team-reason-${team.id} spond-group-scope spond-team-selection-${team.id}`}
-                    className="w-full rounded border bg-background p-2" value={mappings[team.id] || ''}
-                    onChange={event => {
-                      setMappings(previous => ({ ...previous, [team.id]: event.target.value }))
-                      setReviewed(previous => ({ ...previous, [team.id]: false }))
-                      invalidateReview()
-                    }}>
-                    <option value="">Leave saved link unchanged (do not save this team)</option>
-                    {discovery.groups.map(group => <option key={group.id} value={group.id}>
-                      {groupText(group)}
-                    </option>)}
-                  </select>
-                  <p id={`spond-team-selection-${team.id}`} className="text-sm">
-                    <strong>After saving: </strong>
-                    {selectionText(team)}
-                  </p>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" name={`review-team-${team.id}`} checked={!!reviewed[team.id]}
-                      disabled={!mappings[team.id]} onChange={event => {
-                        setReviewed(previous => ({ ...previous, [team.id]: event.target.checked }))
-                        invalidateReview()
-                      }} />
-                    I reviewed the Spond link for QMT team {team.name}
-                  </label>
+            <section aria-label="One Spond group to multiple QMT teams" className="space-y-3 rounded border p-3">
+              <h3 className="font-medium">One Spond group, multiple QMT teams (1:n)</h3>
+              <p className="text-sm">
+                A Spond group can be shared by several QMT teams. Each QMT team keeps one Spond link.
+                Repeat this selection for other Spond groups, or edit individual team links below.
+              </p>
+              <Label className="text-inherit" htmlFor="spond-shared-group">Spond group or subgroup to share</Label>
+              <select id="spond-shared-group" name="shared-group"
+                aria-describedby="spond-group-scope spond-shared-help"
+                className="w-full rounded border bg-background p-2" value={sharedGroupId}
+                onChange={event => { setSharedGroupId(event.target.value); invalidateReview() }}>
+                <option value="">Choose one Spond group or subgroup</option>
+                {discovery.groups.map(group => <option key={group.id} value={group.id}>
+                  {groupText(group)}
+                </option>)}
+              </select>
+              <p id="spond-shared-help" className="text-sm">
+                Checking a team explicitly reviews its link to the selected Spond group.
+                Nothing is saved until you confirm the complete list below.
+                Unchecking a team removes it from that list; its saved link stays unchanged.
+              </p>
+              <fieldset id="spond-shared-teams" disabled={!sharedGroupId} className="space-y-2">
+                <legend className="font-medium">
+                  {sharedGroupId ? `Select and review QMT teams for ${discoveredGroupText(sharedGroupId)}` : 'Choose QMT teams'}
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {discovery.teams.map(team => (
+                    <label key={team.id} id={`spond-shared-team-${team.id}`}
+                      className="flex min-h-11 cursor-pointer items-start gap-2 rounded border p-3">
+                      <input type="checkbox" name={`share-team-${team.id}`} value={team.id}
+                        aria-describedby="spond-shared-help" className="mt-1 shrink-0 accent-primary"
+                        checked={!!sharedGroupId && !!reviewed[team.id] && mappings[team.id] === sharedGroupId}
+                        onChange={event => {
+                          const checked = event.target.checked
+                          setMappings(previous => ({ ...previous, [team.id]: checked ? sharedGroupId : '' }))
+                          setReviewed(previous => ({ ...previous, [team.id]: checked }))
+                          invalidateReview()
+                        }} />
+                      <span className="min-w-0 break-words">
+                        <span className="font-medium">{team.name}</span>
+                        <span className="block text-sm">
+                          Saved: {team.existingGroupId ? discoveredGroupText(team.existingGroupId) : 'No link saved yet'}
+                        </span>
+                        {!team.existingGroupId && team.suggestedGroupId && !reviewed[team.id] && <span className="block text-sm">
+                          Suggested: {discoveredGroupText(team.suggestedGroupId)} (not reviewed)
+                        </span>}
+                        {reviewed[team.id] && mappings[team.id] && <span className="block text-sm">
+                          Reviewed for: {discoveredGroupText(mappings[team.id])} (awaiting final confirmation)
+                        </span>}
+                      </span>
+                    </label>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </fieldset>
+            </section>
+            <details className="space-y-3">
+              <summary className="cursor-pointer font-medium">Review or edit individual QMT team links</summary>
+              <div className="space-y-4">
+                {discovery.teams.map(team => (
+                  <div key={team.id} className="space-y-2 rounded border p-3">
+                    <p className="text-sm">QMT team</p>
+                    <h3 className="text-base font-semibold">{team.name}</h3>
+                    <p id={`spond-team-saved-${team.id}`} className="text-sm">
+                      <strong>Saved Spond link: </strong>
+                      {team.existingGroupId ? discoveredGroupText(team.existingGroupId) : 'No link saved yet'}
+                    </p>
+                    <Label className="text-inherit" htmlFor={`spond-team-${team.id}`}>
+                      Spond group or subgroup for {team.name}
+                    </Label>
+                    <p id={`spond-team-reason-${team.id}`} className="text-sm">{team.reason}</p>
+                    <select id={`spond-team-${team.id}`}
+                      aria-describedby={`spond-team-saved-${team.id} spond-team-reason-${team.id} spond-group-scope spond-team-selection-${team.id}`}
+                      className="w-full rounded border bg-background p-2" value={mappings[team.id] || ''}
+                      onChange={event => {
+                        setMappings(previous => ({ ...previous, [team.id]: event.target.value }))
+                        setReviewed(previous => ({ ...previous, [team.id]: false }))
+                        invalidateReview()
+                      }}>
+                      <option value="">Leave saved link unchanged (do not save this team)</option>
+                      {discovery.groups.map(group => <option key={group.id} value={group.id}>
+                        {groupText(group)}
+                      </option>)}
+                    </select>
+                    <p id={`spond-team-selection-${team.id}`} className="text-sm">
+                      <strong>After saving: </strong>
+                      {selectionText(team)}
+                    </p>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" name={`review-team-${team.id}`} checked={!!reviewed[team.id]}
+                        disabled={!mappings[team.id]} onChange={event => {
+                          setReviewed(previous => ({ ...previous, [team.id]: event.target.checked }))
+                          invalidateReview()
+                        }} />
+                      I reviewed the Spond link for QMT team {team.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </details>
             <section aria-label="Reviewed team links to save" className="space-y-2 rounded border p-3">
               <h3 className="font-medium">Team links to save ({selected.length})</h3>
               {selected.length === 0
                 ? <p className="text-sm">No links reviewed yet. Choose a Spond group and check each team's review box.</p>
                 : <ul className="list-inside list-disc text-sm">
-                  {selected.map(team => <li key={team.id}>
-                    QMT {team.name} {'->'} Spond {discoveredGroupText(mappings[team.id])}
+                  {selectedGroups.map(({ group, teams }) => <li key={group.id}>
+                    Spond {groupText(group)} {'->'} QMT {teams.map(team => team.name).join(', ')}
                   </li>)}
                 </ul>}
             </section>

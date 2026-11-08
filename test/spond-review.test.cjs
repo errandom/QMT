@@ -144,7 +144,7 @@ function fixture() {
   let time = Date.parse('2026-11-04T15:00:00Z');
   let teams = [{ id: 1, name: 'U19', active: true, spond_group_id: null, spond_parent_group_id: null,
     spond_mapping_reviewed_at: null, spond_mapping_reviewed_by: null, updated_at: 'before' }];
-  const calls = [], queries = [], logs = [];
+  const calls = [], queries = [], logs = [], eventReads = [];
   let rollback = 0, committed = 0, snapshots;
   const quotaReservations = [];
   let quotaError, quotaDenied = false;
@@ -157,7 +157,10 @@ function fixture() {
         if (quotaError) throw quotaError;
         return { recordset: [{ allowed: !quotaDenied, retryAfter: quotaDenied ? 900 : 0 }] };
       }
-      if (query.includes('FROM dbo.events')) return { recordset: [local()] };
+      if (query.includes('FROM dbo.events')) {
+        eventReads.push(inputs);
+        return { recordset: [local()] };
+      }
       if (query.startsWith('UPDATE dbo.teams')) {
         Object.assign(teams.find(team => team.id === inputs.team), { spond_group_id: inputs.group,
           spond_parent_group_id: inputs.parent, spond_mapping_reviewed_by: inputs.reviewer,
@@ -205,7 +208,7 @@ function fixture() {
   });
   registerSpondReviewRoutes(app, { getPool: async () => pool, client, timezone: 'Europe/Zurich', now: () => time,
     logger: { error(...args) { logs.push(args); }, log(...args) { logs.push(args); } } });
-  return { app, pool, calls, queries, logs, quotaReservations,
+  return { app, pool, calls, queries, logs, quotaReservations, eventReads,
     failQuota(error) { quotaError = error; }, denyQuota() { quotaDenied = true; },
     get teams() { return teams; }, advance() { time += 16 * 60000; },
     transactions: () => ({ rollback, committed }) };
@@ -247,6 +250,48 @@ test('admin discovery, explicit atomic mapping confirmation and conservative pre
     assert.ok(!JSON.stringify(f.logs).includes('synthetic-not-a-credential'));
   });
 });
+
+for (const target of [groupId, subgroupId]) {
+  test(`a shared ${target === groupId ? 'parent group' : 'subgroup'} persists for multiple QMT teams with independent read-only previews`, async () => {
+    const f = fixture();
+    f.teams.push({ ...f.teams[0], id: 2, name: 'U16' });
+    f.teams.push({ ...f.teams[0], id: 3, name: 'Unselected', spond_group_id: otherId });
+    const untouched = structuredClone(f.teams[2]);
+    await serve(f.app, async base => {
+      const discovery = await discover(base);
+      const response = await send(base, 'mappings/confirm', {
+        discoveryId: discovery.discoveryId, confirmed: true,
+        mappings: [{ teamId: 1, groupId: target }, { teamId: 2, groupId: target }],
+      });
+      assert.equal(response.status, 200);
+      const saved = await response.json();
+      assert.deepEqual(saved.confirmedTeamIds, [1, 2]);
+      assert.equal(saved.writesEnabled, false);
+      for (const team of f.teams.slice(0, 2)) {
+        assert.equal(team.spond_group_id, target);
+        assert.equal(team.spond_parent_group_id, target === subgroupId ? groupId : null);
+        assert.equal(team.spond_mapping_reviewed_by, 'synthetic-admin');
+      }
+      assert.deepEqual(f.teams[2], untouched, 'unselected teams must not be remapped or unlinked');
+      assert.deepEqual(f.transactions(), { rollback: 0, committed: 1 });
+      for (const teamId of [1, 2]) {
+        const preview = await send(base, 'reconciliation', {
+          discoveryId: discovery.discoveryId, teamId, from: '2026-11-04', to: '2026-11-05',
+        });
+        assert.equal(preview.status, 200);
+        const result = await preview.json();
+        assert.equal(result.teamId, teamId);
+        assert.equal(result.writesEnabled, false);
+        assert.equal(result.rows[0].classification, 'coexisting');
+        assert.equal(f.calls.at(-1).params.groupId, groupId);
+      }
+      assert.deepEqual(f.eventReads.map(inputs => inputs.team), [1, 2]);
+      assert.ok(f.queries.filter(query => query.startsWith('UPDATE')).every(query => query.startsWith('UPDATE dbo.teams')));
+      const rediscovered = await discover(base);
+      assert.ok(rediscovered.teams.slice(0, 2).every(team => team.existingGroupId === target && team.suggestedGroupId === target));
+    });
+  });
+}
 
 test('confirmation rejects stale, duplicate, inaccessible and cross-admin mappings and rolls back atomically', async () => {
   const f = fixture();
