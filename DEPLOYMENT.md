@@ -1,5 +1,54 @@
 # QMT controlled relaunch
 
+## Prepared friendly message templates: November 9, 2026 (not deployed)
+
+New English/German drafts use a friendly, direct tone, including `Hoi`, informal
+German and `Danke & Gruss`. Facility details have readable calendar dates,
+start/end times, hours/minutes, named recurrence weekdays and separate team/date
+lists. The same QMT-generated note and personalized signature apply to facility
+inquiries, follow-ups, decisions/rejections, event/transport messages and weekly
+summaries. The note identifies generation, not automatic sending or human review.
+
+Existing language-specific edits, recorded communications, recipient routing,
+explicit send approval and booking/permit/shared-field safeguards are preserved.
+No messages were sent or operational records changed. This is local source work,
+alongside the prepared card enhancement below; it has not been committed,
+published or deployed and does not require an Android wrapper rebuild.
+
+## Prepared card forecasts and attendance: November 9, 2026 (not deployed)
+
+The local event-card enhancement adds a daily venue forecast at the upper right,
+confirmed | unanswered | declined beside teams, combined event totals, and team
+response totals for the currently displayed events. These are response totals,
+not unique roster headcounts. Missing, invalid and ambiguous counts remain
+unavailable; real zero counts are preserved. Cancelled events are excluded from
+team totals. Duplicate QMT/provider event IDs count only once, and a shared
+provider event cannot be attributed to different teams merely by filtering.
+
+The event API mapper now preserves stored attendance fields. Anonymous public
+event DTOs still omit attendance; no participant identities are exposed. This
+does not implement or enable a fresh attendance import or legacy Spond sync.
+Multi-team combined counts still require a separately sourced per-team breakdown.
+
+Weather is explicitly opt-in: `QMT_WEATHER_ENABLED=true` enables the read-only
+`GET /api/weather` endpoint and capability; the default remains false. The service
+uses only active, configured site coordinates, never user/team/event data, and
+one batched Open-Meteo request for up to 50 locations and 16 forecast days.
+Requests have an eight-second timeout, a 256 KiB response bound, schema checks,
+30-minute caching/in-flight deduplication and a one-minute failure cooldown.
+Provider errors are logged and surfaced without fabricated/stale-success weather.
+The UI identifies daily (not match-time) forecasts, venue, Celsius range,
+precipitation chance, retrieval time and source attribution. Away games without
+verified destination coordinates and dates outside the returned horizon remain
+unavailable rather than showing home/current weather.
+
+Before enabling weather in a release, confirm the free provider's non-commercial
+eligibility and usage terms: `https://open-meteo.com/en/terms`; API contract:
+`https://open-meteo.com/en/docs`. The fixed free endpoint is not a paid-provider
+integration. No production flag, image, mapping, operational data or APK has
+been changed for this source-only enhancement; no provider forecast call was
+used for development verification.
+
 ## Current one-to-many Spond mapping release: November 8, 2026
 
 The administrator can select one Spond group/subgroup and explicitly review

@@ -266,6 +266,11 @@ function transformEvent(event: any): any {
     // Spond integration fields
     spondId: event.spondId || event.spond_id || undefined,
     spondGroupId: event.spondGroupId || event.spond_group_id || undefined,
+    attendanceAccepted: event.attendanceAccepted ?? event.attendance_accepted ?? undefined,
+    attendanceUnanswered: event.attendanceUnanswered ?? event.attendance_unanswered ?? undefined,
+    attendanceDeclined: event.attendanceDeclined ?? event.attendance_declined ?? undefined,
+    attendanceWaiting: event.attendanceWaiting ?? event.attendance_waiting ?? undefined,
+    attendanceLastSync: event.attendanceLastSync ?? event.attendance_last_sync ?? undefined,
   };
   
   return transformed;

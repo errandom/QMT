@@ -25,7 +25,7 @@ export default function CommunicationsPanel({ request, currentUser }: { request:
   const workbookInquiry = action === 'send' && request.workflow?.route === 'IGACR'
   const [recipient, setRecipient] = useState(action === 'send' || stage === 'Awaiting response' ? request.workflow?.contactEmail || '' : request.requestorEmail || '')
   const { language, setLanguage, draft, setDraft } = useMessageDraft(language => ({
-    subject: language === 'en' ? `${request.eventType} request ${request.date}` : facilityMessageSubject(request, language),
+    subject: facilityMessageSubject(request, language),
     message: facilityMessage(request, action, teams, fields, sites, currentUser, language),
   }))
   const { subject, message } = draft

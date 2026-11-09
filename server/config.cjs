@@ -51,6 +51,7 @@ function readConfig(env = process.env) {
     aiEnabled,
     spondEnabled,
     spondReviewEnabled,
+    weatherEnabled: flag(env, 'QMT_WEATHER_ENABLED'),
     embedAncestors: "'self' " + (embedOrigins.length ? [...new Set(embedOrigins.map(origin => new URL(origin).origin))].join(' ') : 'https:'),
     port: integer(env, 'PORT', 3000, 0, 65535),
     poolMax: integer(env, 'SQL_POOL_MAX', 5, 1, 5),

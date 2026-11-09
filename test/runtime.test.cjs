@@ -20,6 +20,7 @@ test('boot, probes, retired endpoints and disabled providers never connect to SQ
   await withApp(async base => {
     for (const [url, method, status] of [
       ['/api/health', 'GET', 200], ['/api/capabilities', 'GET', 200],
+      ['/api/weather', 'GET', 503],
       ['/api/warmup', 'GET', 404], ['/api/llm/complete', 'POST', 410],
       ['/api/events/create-from-natural-language', 'POST', 410], ['/api/spond/config', 'GET', 503],
       ['/_spark/kv/private', 'GET', 410], ['/api/events', 'POST', 401],

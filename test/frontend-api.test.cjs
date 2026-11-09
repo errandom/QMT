@@ -24,6 +24,25 @@ test('browser API contracts', async t => {
   const json = (body, status = 200) => new Response(JSON.stringify(body), {
     status, headers: { 'Content-Type': 'application/json' },
   });
+  await t.test('attendance fields survive event reads without turning missing values into zero', async () => {
+    const mock = t.mock.method(globalThis, 'fetch', async () => json([
+      { id: 1, start_time: '2026-11-09T18:00:00Z', end_time: '2026-11-09T20:00:00Z',
+        attendance_accepted: 0, attendance_unanswered: 12, attendance_declined: 3,
+        attendance_waiting: 2, attendance_last_sync: '2026-11-09T12:00:00Z' },
+      { id: 2, start_time: '2026-11-09T18:00:00Z', end_time: '2026-11-09T20:00:00Z',
+        attendance_accepted: null },
+    ]));
+    try {
+      const [known, missing] = await api.getEvents();
+      assert.equal(known.attendanceAccepted, 0);
+      assert.equal(known.attendanceUnanswered, 12);
+      assert.equal(known.attendanceDeclined, 3);
+      assert.equal(known.attendanceWaiting, 2);
+      assert.equal(known.attendanceLastSync, '2026-11-09T12:00:00Z');
+      assert.equal(missing.attendanceAccepted, undefined);
+      assert.equal(missing.attendanceUnanswered, undefined);
+    } finally { mock.mock.restore(); }
+  });
   await t.test('public weekly transport never reads or clears storage and sends no credentials', async () => {
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() {
