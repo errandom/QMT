@@ -5,6 +5,7 @@ export interface Capabilities {
   ai: boolean
   spond: boolean
   spondReview?: boolean
+  spondPublish?: boolean
   weather: boolean
   clubName: string
   timezone: string

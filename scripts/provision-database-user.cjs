@@ -3,7 +3,7 @@ const { connectionConfig } = require('./migrate.cjs');
 
 const operationalTables = Object.freeze([
   'users', 'teams', 'sites', 'fields', 'events', 'equipment', 'requests', 'user_settings',
-  'event_operations', 'external_allocations', 'request_communications', 'spond_review_quotas',
+  'event_operations', 'external_allocations', 'request_communications', 'spond_review_quotas', 'spond_publications',
 ]);
 
 function applicationCredentials(env) {
@@ -37,7 +37,7 @@ async function provisionApplicationUser(pool, { username, password }) {
           + N', DEFAULT_SCHEMA = [dbo];';
         EXEC sys.sp_executesql @statement;
         ${operationalTables.map(table => `
-          SET @statement = N'GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::[dbo].[${table}] TO '
+          SET @statement = N'GRANT SELECT, INSERT, UPDATE${table === 'spond_publications' ? '' : ', DELETE'} ON OBJECT::[dbo].[${table}] TO '
             + QUOTENAME(@username) + N';';
           EXEC sys.sp_executesql @statement;`).join('\n')}
         COMMIT;

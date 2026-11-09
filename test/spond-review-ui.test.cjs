@@ -21,7 +21,7 @@ function text(node) {
 }
 const flush = async () => { for (let index = 0; index < 12; index++) await Promise.resolve(); };
 
-function panelFixture() {
+function panelFixture({ publishingEnabled = false } = {}) {
   const filename = path.join(__dirname, '..', 'src', 'components', 'OperationsOffice', 'SpondReviewPanel.tsx');
   const code = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
@@ -67,11 +67,14 @@ function panelFixture() {
         }
         if (endpoint === '/spond/mappings/confirm') return { confirmedTeamIds: body.mappings.map(mapping => mapping.teamId) };
         if (endpoint === '/spond/reconciliation') return {
+          ...(publishingEnabled ? { writesEnabled: true, planId: '00000000-0000-4000-8000-000000000002',
+            expiresAt: '2026-11-04T17:50:00Z', destination: 'Club youth / U19', audienceCount: 12 } : {}),
           warning: 'Read-only preview', timezone: 'Europe/Zurich', scope: 'Mapped group',
-          rows: [{ classification: 'coexisting', reason: 'Do not duplicate', qmt: {
+          rows: [{ classification: publishingEnabled ? 'qmt-only' : 'coexisting', publishable: publishingEnabled, reason: 'Do not duplicate', qmt: {
             id: 1, title: 'Training', start: '2026-11-04T18:00:00Z', end: '2026-11-04T19:00:00Z',
           }, spond: [] }],
         };
+        if (endpoint === '/spond/publications') return { message: 'Selected booking published and linked.' };
         assert.fail('Unexpected endpoint ' + endpoint);
       } };
       if (id.startsWith('@/components/ui/')) return new Proxy({}, { get: (_target, key) => key });
@@ -79,7 +82,7 @@ function panelFixture() {
     },
   };
   vm.runInNewContext(code, context, { filename });
-  const render = () => { cursor = 0; return context.exports.default(); };
+  const render = () => { cursor = 0; return context.exports.default({ publishingEnabled }); };
   const get = predicate => find(render(), predicate);
   const set = (id, value) => get(node => node.props?.id === id).props.onChange({ target: { value } });
   const check = (name, checked) => get(node => node.props?.name === name).props.onChange({ target: { checked } });
@@ -87,6 +90,50 @@ function panelFixture() {
   return { render, get, set, check, button, calls, groupId, parentGroupId,
     failDiscovery() { rejectDiscovery = true; } };
 }
+
+test('publication needs a selected booking and explicit notification approval; preview edits invalidate that approval and double clicks do not replay', async () => {
+  const { get, set, check, button, calls } = panelFixture({ publishingEnabled: true });
+  set('spond-review-email', 'synthetic@example.invalid');
+  set('spond-review-password', 'synthetic-not-a-credential');
+  get(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  await flush();
+  check('review-team-1', true);
+  check('confirm-mappings', true);
+  await button('Save reviewed team links').props.onClick();
+  await flush();
+  set('spond-preview-from', '2026-11-04');
+  set('spond-preview-to', '2026-11-05');
+  const preview = async () => {
+    get(node => node.type === 'form' && find(node, child => child.props?.id === 'spond-preview-team'))
+      .props.onSubmit({ preventDefault() {} });
+    await flush();
+  };
+  await preview();
+  assert.equal(button('Publish selected booking to Spond').props.disabled, true);
+  assert.equal(get(node => node.props?.name === 'confirm-publication').props.disabled, true);
+  get(node => node.props?.name === 'spond-publication-event').props.onChange();
+  assert.equal(button('Publish selected booking to Spond').props.disabled, true);
+  check('confirm-publication', true);
+  assert.equal(button('Publish selected booking to Spond').props.disabled, false);
+  set('spond-preview-to', '2026-11-06');
+  assert.equal(button('Publish selected booking to Spond'), undefined);
+  await preview();
+  assert.equal(get(node => node.props?.name === 'confirm-publication').props.checked, false);
+  get(node => node.props?.name === 'spond-publication-event').props.onChange();
+  check('confirm-publication', true);
+  const publish = button('Publish selected booking to Spond').props.onClick;
+  publish();
+  publish();
+  await flush();
+  const publications = calls.filter(call => call.endpoint === '/spond/publications');
+  assert.equal(publications.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(publications[0].body)), {
+    discoveryId: '00000000-0000-4000-8000-000000000001',
+    planId: '00000000-0000-4000-8000-000000000002', eventId: 1, confirmed: true,
+  });
+  assert.equal(button('Publish selected booking to Spond'), undefined);
+  assert.ok(get(node => node.props?.role === 'status' && text(node).includes('published and linked')));
+});
 
 test('discovery suggestions require per-team and final human confirmation; previews never sync and edits invalidate review', async () => {
   const { render, get, set, check, button, calls, groupId, parentGroupId, failDiscovery } = panelFixture();

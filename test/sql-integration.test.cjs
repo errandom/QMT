@@ -101,7 +101,7 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
           const rows = await pool.request().input('object', sql.NVarChar(255), `dbo.${table}`)
             .input('permission', sql.NVarChar(50), permission)
             .query("SELECT HAS_PERMS_BY_NAME(@object, 'OBJECT', @permission) AS allowed");
-          assert.equal(rows.recordset[0].allowed, 1);
+          assert.equal(rows.recordset[0].allowed, table === 'spond_publications' && permission === 'DELETE' ? 0 : 1);
         }
       }
       await assert.rejects(pool.request().query('SELECT * FROM dbo.qmt_migrations'));
@@ -167,6 +167,102 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
         assert.equal((await pool.request().query('SELECT COUNT(*) AS count FROM dbo.events')).recordset[0].count, 0);
       } finally {
         await new Promise(resolve => { reviewServer.close(resolve); reviewServer.closeAllConnections(); });
+      }
+    });
+    await t.test('reviewed Spond publication uses the restricted SQL principal and persists uncertain reservations without replay', async () => {
+      await checkSpondReview(pool, { publishingEnabled: true });
+      await pool.request().query('DELETE FROM dbo.spond_review_quotas');
+      const secret = 'synthetic-reviewed-publication-sql-test-secret-only';
+      const parent = 'A'.repeat(32), subgroup = 'B'.repeat(32), owner = 'C'.repeat(32), member = 'D'.repeat(32);
+      let writes = 0, saved, timeoutAfterCreate = false;
+      const start = new Date(Date.now() + 10 * 86400000);
+      start.setUTCHours(18, 0, 0, 0);
+      const end = new Date(+start + 3600000);
+      const date = start.toISOString().slice(0, 10), to = new Date(+start + 86400000).toISOString().slice(0, 10);
+      const inserted = await pool.request().input('team', sql.Int, fixture.team).input('field', sql.Int, fixture.field)
+        .input('start', sql.DateTime2, start).input('end', sql.DateTime2, end)
+        .query(`INSERT INTO dbo.events (team_id, team_ids, field_id, field_ids, event_type, start_time, end_time, status, description)
+          OUTPUT INSERTED.id VALUES (@team, CONVERT(nvarchar(20), @team), @field, CONVERT(nvarchar(20), @field),
+          'Practice', @start, @end, 'Confirmed', 'Synthetic reviewed training')`);
+      const eventId = inserted.recordset[0].id;
+      const publishApp = createApp({
+        env: { JWT_SECRET: secret, NODE_ENV: 'production', QMT_SPOND_REVIEW_ENABLED: 'true',
+          QMT_SPOND_REVIEW_APPROVED: 'true', QMT_SPOND_PUBLISH_ENABLED: 'true' }, connect: async () => pool,
+        spondReviewClient: {
+          async login() { return 'synthetic-token'; },
+          async get(_token, endpoint) {
+            if (endpoint === 'groups') return [{ id: parent, name: 'Synthetic club', subGroups: [{ id: subgroup, name: 'Synthetic squad' }] }];
+            if (endpoint === 'profile') return { id: owner };
+            if (endpoint === `group/${parent}`) return { id: parent, subGroups: [{ id: subgroup }],
+              roles: [{ id: 'manager', permissions: ['events'] }], members: [
+                { id: owner, profileId: owner, roles: ['manager'], respondent: false, subGroups: [] },
+                { id: member, profileId: member, roles: [], respondent: true, subGroups: [subgroup] },
+              ] };
+            if (endpoint === 'sponds') return saved ? [saved] : [];
+            if (endpoint.startsWith('sponds/')) return saved;
+            assert.fail('Unexpected provider endpoint');
+          },
+          async post(_token, endpoint, payload) {
+            assert.equal(endpoint, 'sponds');
+            writes++;
+            saved = { id: (writes === 1 ? 'E' : 'F').repeat(32), ...structuredClone(payload) };
+            if (timeoutAfterCreate) throw new Error('Synthetic timeout after accepted create');
+            return { id: saved.id };
+          },
+        },
+      });
+      const listener = publishApp.listen(0, '127.0.0.1');
+      await new Promise(resolve => listener.once('listening', resolve));
+      try {
+        const base = `http://127.0.0.1:${listener.address().port}/api`;
+        const headers = { Authorization: `Bearer ${jwt.sign({ id: fixture.admin, role: 'admin' }, secret)}`, 'Content-Type': 'application/json' };
+        const post = (route, body) => fetch(`${base}/spond/${route}`, { method: 'POST', headers, body: JSON.stringify(body) });
+        const capabilities = await (await fetch(`${base}/capabilities`)).json();
+        assert.equal(capabilities.spond, false);
+        assert.equal(capabilities.spondPublish, true);
+        const discovery = await (await post('discovery', { username: 'synthetic@example.invalid', password: 'synthetic-only' })).json();
+        const confirmed = await post('mappings/confirm', { discoveryId: discovery.discoveryId, confirmed: true,
+          mappings: [{ teamId: fixture.team, groupId: subgroup }] });
+        assert.equal(confirmed.status, 200);
+        const scope = { discoveryId: discovery.discoveryId, teamId: fixture.team, from: date, to };
+        const previewResponse = await post('reconciliation', scope);
+        assert.equal(previewResponse.status, 200, await previewResponse.clone().text());
+        const plan = await previewResponse.json();
+        assert.equal(plan.rows[0].publishable, true);
+        assert.equal((await post('publications', { discoveryId: discovery.discoveryId, planId: plan.planId, eventId, confirmed: false })).status, 400);
+        const input = { discoveryId: discovery.discoveryId, planId: plan.planId, eventId, confirmed: true };
+        const published = await post('publications', input);
+        assert.equal(published.status, 200, await published.clone().text());
+        assert.equal((await post('publications', input)).status, 409);
+        const linked = (await pool.request().input('event', sql.Int, eventId)
+          .query('SELECT e.spond_id, p.state, p.provider_id FROM dbo.events e JOIN dbo.spond_publications p ON p.event_id = e.id WHERE e.id = @event')).recordset[0];
+        assert.deepEqual(linked, { spond_id: 'E'.repeat(32), state: 'published', provider_id: 'E'.repeat(32) });
+        assert.equal(writes, 1);
+        await assert.rejects(pool.request().query('DELETE FROM dbo.spond_publications'));
+        const nextStart = new Date(+start + 86400000), nextEnd = new Date(+end + 86400000);
+        const next = await pool.request().input('team', sql.Int, fixture.team).input('field', sql.Int, fixture.field)
+          .input('start', sql.DateTime2, nextStart).input('end', sql.DateTime2, nextEnd)
+          .query(`INSERT INTO dbo.events (team_id, team_ids, field_id, field_ids, event_type, start_time, end_time, status)
+            OUTPUT INSERTED.id VALUES (@team, CONVERT(nvarchar(20), @team), @field, CONVERT(nvarchar(20), @field), 'Practice', @start, @end, 'Confirmed')`);
+        const nextId = next.recordset[0].id;
+        saved = undefined;
+        const nextScope = { ...scope, from: to, to: new Date(+nextStart + 86400000).toISOString().slice(0, 10) };
+        const nextPlan = await (await post('reconciliation', nextScope)).json();
+        assert.ok(nextPlan.rows.find(row => row.qmt?.id === nextId)?.publishable);
+        timeoutAfterCreate = true;
+        const failed = await post('publications', { discoveryId: discovery.discoveryId, planId: nextPlan.planId, eventId: nextId, confirmed: true });
+        assert.equal(failed.status, 409);
+        const journal = (await pool.request().input('event', sql.Int, nextId)
+          .query('SELECT state, provider_id FROM dbo.spond_publications WHERE event_id = @event')).recordset[0];
+        assert.deepEqual(journal, { state: 'uncertain', provider_id: null });
+        saved = undefined;
+        const held = await (await post('reconciliation', nextScope)).json();
+        assert.equal(held.rows.find(row => row.qmt?.id === nextId).classification, 'held');
+        assert.equal(writes, 2);
+      } finally {
+        await new Promise(resolve => { listener.close(resolve); listener.closeAllConnections(); });
+        await operatorPool.request().query('DELETE FROM dbo.spond_publications');
+        await pool.request().query('DELETE FROM dbo.events');
       }
     });
     await t.test('durable Spond quotas serialize concurrent reservations, survive new workers and reset expired windows', async () => {

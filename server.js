@@ -85,6 +85,7 @@ app.use('/api', (req, res, next) => {
 
 app.get('/api/capabilities', (_req, res) => res.json({
   ai: config.aiEnabled, spond: false, spondReview: config.spondReviewEnabled, weather: config.weatherEnabled,
+  ...(config.spondPublishEnabled ? { spondPublish: true } : {}),
   clubName: config.clubName, timezone: config.timezone,
   transport: Boolean(config.transportEmail),
 }));
@@ -149,7 +150,8 @@ registerWeatherRoutes(app, {
   getPool, logger: console, timezone: config.timezone, enabled: config.weatherEnabled, fetchImpl: weatherFetch,
 });
 // The controlled review owns this prefix; retained legacy sync handlers below are unreachable.
-registerSpondReviewRoutes(app, { getPool, logger: console, timezone: config.timezone, client: spondReviewClient });
+registerSpondReviewRoutes(app, { getPool, logger: console, timezone: config.timezone,
+  client: spondReviewClient, publishingEnabled: config.spondPublishEnabled });
 
 // ------------------------------
 // Diagnostic routes

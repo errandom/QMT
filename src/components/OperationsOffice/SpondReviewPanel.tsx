@@ -34,11 +34,17 @@ interface Reconciliation {
   warning: string
   scope: string
   timezone: string
+  writesEnabled?: boolean
+  planId?: string
+  expiresAt?: string
+  audienceCount?: number
+  destination?: string
   rows: {
     classification: 'linked' | 'coexisting' | 'review' | 'qmt-only' | 'spond-only' | 'held'
     reason: string
     qmt: PreviewEvent | null
     spond: PreviewEvent[]
+    publishable?: boolean
   }[]
 }
 const labels = {
@@ -55,7 +61,7 @@ const groupText = (group: Group) => group.parentGroup
   ? `${group.parentGroup} / ${group.name} (subgroup)`
   : `${group.name} (entire group)`
 
-export default function SpondReviewPanel() {
+export default function SpondReviewPanel({ publishingEnabled = false }: { publishingEnabled?: boolean } = {}) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [discovery, setDiscovery] = useState<Discovery | null>(null)
@@ -68,6 +74,8 @@ export default function SpondReviewPanel() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [preview, setPreview] = useState<Reconciliation | null>(null)
+  const [publishEventId, setPublishEventId] = useState<number | null>(null)
+  const [publishConfirmed, setPublishConfirmed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState('')
@@ -81,7 +89,7 @@ export default function SpondReviewPanel() {
     setBusy(true)
     setError(null)
     setMessage('')
-    try { await action(AbortSignal.any([request.signal, AbortSignal.timeout(45000)])) }
+    try { await action(AbortSignal.any([request.signal, AbortSignal.timeout(90000)])) }
     catch (failure) {
       if (!request.signal.aborted) setError(failure instanceof Error ? failure.message : 'Spond review failed; retry discovery.')
     } finally {
@@ -91,10 +99,15 @@ export default function SpondReviewPanel() {
   }
   const post = <T,>(path: string, body: object, signal: AbortSignal) =>
     apiRequest<T>(`/spond/${path}`, { method: 'POST', body: JSON.stringify(body), signal })
+  const clearPreview = () => {
+    setPreview(null)
+    setPublishEventId(null)
+    setPublishConfirmed(false)
+  }
   const invalidateReview = () => {
     setConfirmation(false)
     setConfirmedTeamIds([])
-    setPreview(null)
+    clearPreview()
     setMessage('')
   }
   const discover = (event: FormEvent) => {
@@ -115,6 +128,7 @@ export default function SpondReviewPanel() {
     })
   }
   const selected = discovery?.teams.filter(team => reviewed[team.id] && mappings[team.id]) || []
+  const selectedPublication = preview?.rows.find(row => row.qmt?.id === publishEventId)?.qmt
   const selectedGroups = discovery?.groups.map(group => ({
     group, teams: selected.filter(team => mappings[team.id] === group.id),
   })).filter(entry => entry.teams.length > 0) || []
@@ -133,7 +147,7 @@ export default function SpondReviewPanel() {
   }
   const confirmMappings = () => void run(async signal => {
     if (!discovery) return
-    setPreview(null)
+    clearPreview()
     const result = await post<{ confirmedTeamIds: number[] }>('mappings/confirm', {
       discoveryId: discovery.discoveryId, confirmed: confirmation,
       mappings: selected.map(team => ({ teamId: team.id, groupId: mappings[team.id] })),
@@ -153,7 +167,7 @@ export default function SpondReviewPanel() {
   })
   const reconcile = (event: FormEvent) => {
     event.preventDefault()
-    setPreview(null)
+    clearPreview()
     void run(async signal => {
       if (!discovery) return
       const result = await post<Reconciliation>('reconciliation', {
@@ -162,14 +176,30 @@ export default function SpondReviewPanel() {
       if (!signal.aborted) setPreview(result)
     })
   }
+  const publish = () => {
+    if (!publishingEnabled || !preview?.writesEnabled || !preview.planId || !discovery ||
+        !publishConfirmed || publishEventId === null ||
+        !preview.rows.some(row => row.publishable && row.qmt?.id === publishEventId)) return
+    const body = { discoveryId: discovery.discoveryId, planId: preview.planId, eventId: publishEventId, confirmed: true }
+    clearPreview()
+    void run(async signal => {
+      try {
+        const result = await post<{ message: string }>('publications', body, signal)
+        if (!signal.aborted) setMessage(result.message)
+      } catch (failure) {
+        throw new Error(`${failure instanceof Error ? failure.message : 'Publication response unavailable.'} Check Spond before trying again; the event may already exist.`)
+      }
+    })
+  }
   return (
     <Card>
       <CardHeader><CardTitle>Spond discovery and human review</CardTitle></CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground">
           QMT remains authoritative for facility bookings. Existing and user-created Spond events are preserved.
-          This flow only discovers groups, saves explicitly reviewed mappings, and previews coexistence.
-          Publishing, booking imports, attendance imports, and participant notifications are disabled.
+          {publishingEnabled
+            ? 'Discover groups, confirm team links, then preview and explicitly approve one eligible future booking at a time. Publication invites the reviewed audience and may notify participants. No background sync, provider updates/deletes, booking imports, or attendance imports.'
+            : 'This flow only discovers groups, saves explicitly reviewed mappings, and previews coexistence. Publishing, booking imports, attendance imports, and participant notifications are disabled.'}
         </p>
         <p role="status" aria-live="polite">{busy ? 'Working on Spond review...' : message}</p>
         {error && <p role="alert" className="text-red-700">{error}</p>}
@@ -327,16 +357,16 @@ export default function SpondReviewPanel() {
               <legend className="font-medium">3. Preview event coexistence (read-only)</legend>
               <Label className="text-inherit" htmlFor="spond-preview-team">Reviewed team</Label>
               <select id="spond-preview-team" className="w-full rounded border bg-background p-2" value={teamId}
-                onChange={event => { setTeamId(event.target.value); setPreview(null) }} required>
+                onChange={event => { setTeamId(event.target.value); clearPreview() }} required>
                 {discovery?.teams.filter(team => confirmedTeamIds.includes(team.id)).map(team =>
                   <option key={team.id} value={team.id}>{team.name}</option>)}
               </select>
               <Label className="text-inherit" htmlFor="spond-preview-from">Start date (club timezone)</Label>
               <Input id="spond-preview-from" type="date" required value={from}
-                onChange={event => { setFrom(event.target.value); setPreview(null) }} />
+                onChange={event => { setFrom(event.target.value); clearPreview() }} />
               <Label className="text-inherit" htmlFor="spond-preview-to">Exclusive end date (maximum 31 days)</Label>
               <Input id="spond-preview-to" type="date" required value={to}
-                onChange={event => { setTo(event.target.value); setPreview(null) }} />
+                onChange={event => { setTo(event.target.value); clearPreview() }} />
               <Button type="submit">Preview without syncing</Button>
             </fieldset>
           </form>
@@ -350,7 +380,34 @@ export default function SpondReviewPanel() {
             <p className="text-sm">{row.reason}</p>
             {row.qmt && <p className="text-sm">QMT: {eventText(row.qmt)}</p>}
             {row.spond.map(event => <p key={event.id} className="text-sm">Spond: {eventText(event)}</p>)}
+            {publishingEnabled && preview.writesEnabled && row.publishable && row.qmt && typeof row.qmt.id === 'number' && (
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input type="radio" name="spond-publication-event" disabled={busy}
+                  checked={publishEventId === row.qmt.id}
+                  onChange={() => { setPublishEventId(Number(row.qmt?.id)); setPublishConfirmed(false) }} />
+                Select {row.qmt.title} for separate publication approval
+              </label>
+            )}
           </div>)}
+          {publishingEnabled && preview.writesEnabled && preview.planId && (
+            <fieldset disabled={busy} className="space-y-3 rounded border border-primary/30 bg-muted/40 p-3">
+              <legend className="font-medium">4. Approve one booking for Spond</legend>
+              <p className="text-sm">Destination: {preview.destination}. Audience: {preview.audienceCount} respondent members.
+                Preview expires {preview.expiresAt ? new Date(preview.expiresAt).toLocaleTimeString() : 'soon'}.
+                Guardians may also receive notifications through Spond. Other Spond events stay unchanged.</p>
+              {selectedPublication && <p className="text-sm font-medium">
+                Selected: {eventText(selectedPublication)}
+              </p>}
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" name="confirm-publication" checked={publishConfirmed} disabled={publishEventId === null}
+                  onChange={event => setPublishConfirmed(event.target.checked)} />
+                I checked the booking, destination and audience, and approve creating this Spond event and any participant notifications.
+              </label>
+              <Button type="button" disabled={publishEventId === null || !publishConfirmed} onClick={publish}>
+                Publish selected booking to Spond
+              </Button>
+            </fieldset>
+          )}
         </section>}
       </CardContent>
     </Card>

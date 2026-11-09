@@ -1,6 +1,82 @@
 # QMT controlled relaunch
 
-## Current friendly messages and event-card release: November 9, 2026
+## Live integration activation: November 9, 2026
+
+Weather was enabled on the existing production App Service and verified at
+**23:01:00 Zurich (22:01:00 UTC)**. `QMT_WEATHER_ENABLED=true` is the only
+executed setting change. `/api/weather` returned 16 forecast dates,
+November 9-24 inclusive, for all nine active venues. The runtime image,
+unrelated settings, non-image configuration, resource inventory and all five
+public-data fingerprints were unchanged. No paid weather service, new Azure
+resource or APK release was needed. Current eligibility assumption is internal
+non-commercial club use without advertising/subscriptions; reassess provider
+terms if that use changes.
+
+Durable before/after, executed-action, forecast and verification evidence:
+the QMT skill's `references\releases\2026-11-09-live-integrations`.
+Its weather rollback file is **prepared, not executed**.
+
+**Spond publication is not live yet.** The separately gated implementation
+uses `QMT_SPOND_PUBLISH_ENABLED=true`, alongside the existing approved review
+flags. It does not enable retired `QMT_SPOND_ENABLED` routes; capability
+`spond` stays false and `spondPublish` identifies the new reviewed publisher.
+Each event requires fresh discovery, explicitly confirmed mappings, a five-minute
+preview and separate approval of event/destination/audience/notifications.
+Only future, confirmed, unmatched QMT bookings are eligible. All participating
+teams in a shared booking must be reviewed for the same destination; publication
+is once per booking, not once per mapped team. Parent-group coexistence checks
+include both normal and scheduled listings and refuse full/truncated pages.
+Provider visibility is not proof of absolute completeness. QMT remains
+authoritative for facilities; no provider updates/deletes, background writes,
+booking imports, attendance imports or automatic retries are enabled.
+
+### Remaining database and release prerequisite
+
+The local read-only connection to the production SQL server is firewall-denied.
+No SQL firewall, administrator, runtime permissions or production schema was
+changed. Do not initialize a fresh database, recreate the runtime principal,
+retrieve historical credentials, or broaden access to work around this.
+
+Using an already authorized operator path, and only after the established
+backup/restore and migration approval, run the existing migration command:
+`QMT_MIGRATION_APPROVED=true` plus `node scripts/migrate.cjs --apply`.
+New migration `006-spond-publications.sql` creates the durable journal.
+An authorized SQL operator must separately approve/grant only
+`SELECT, INSERT, UPDATE ON OBJECT::dbo.spond_publications` to the **existing**
+runtime principal. Existing event UPDATE and venue SELECT permissions must
+also be present. No journal DELETE, schema/database/server role or new
+principal is required. Fresh disposable installations get these narrow
+journal permissions through the existing principal-provisioning helper.
+
+With the intended publication/review flags and runtime credentials, run
+`npm run spond:check`. This checks schema and permissions without provider
+calls or data writes. Then use normal PR validation, exact-reviewed-main
+image publication, immutable image verification and controlled App Service
+rollout. Keep weather enabled and preserve unrelated configuration/data.
+Do not set the publication flag until migration, permissions and release
+verification succeed. An actual first publication remains a separately
+approved owner action; deployment must not silently create an event.
+
+### Uncertain publication handling
+
+The journal reservation is committed before the provider POST. A club booking
+lock, fresh mapping/booking/audience validation and another provider check
+precede creation. The provider response is read back before the event link and
+published journal state are committed together. A failure/crash after reservation
+leaves `reserved` or `uncertain`, preventing replay even after restart. A failed
+uncertainty update is explicitly logged, not treated as success. The booking lock
+can be held through bounded provider requests; other booking operations may
+report a lock timeout during this short window.
+
+Never delete/reset a journal row merely to retry. Check the publication UUID in
+Spond's generated description, provider event details, approved audience and
+current QMT booking. An authorized operator must resolve/link an uncertain
+record through a separately reviewed repair; there is deliberately no automatic
+retry/reset endpoint. If an event has been deleted in QMT, its journal still
+survives. External Spond administrators can race a final read; no distributed
+atomicity guarantee is claimed.
+
+## Previous friendly messages and event-card release: November 9, 2026
 
 The friendly bilingual templates and event-card attendance/forecast UI are
 merged, published and verified live at **20:19:41 Zurich (19:19:41 UTC)**.
