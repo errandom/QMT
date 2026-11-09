@@ -278,7 +278,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
       </div>
 
       {/* Spond Integration */}
-      {capabilities?.spondReview && currentUser.role === 'admin' ? <SpondReviewPanel /> : <p className="text-sm text-muted-foreground">{capabilitiesError || 'Spond review is restricted to administrators and remains disabled for the production pilot.'}</p>}
+      {capabilities?.spondReview && currentUser.role === 'admin' ? <SpondReviewPanel publishingEnabled={capabilities.spondPublish} /> : <p className="text-sm text-muted-foreground">{capabilitiesError || 'Spond review is restricted to administrators and remains disabled for the production pilot.'}</p>}
 
       <Card>
         <CardHeader>

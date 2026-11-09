@@ -22,6 +22,7 @@ function readConfig(env = process.env) {
   const spondEnabled = flag(env, 'QMT_SPOND_ENABLED');
   const spondReviewEnabled = flag(env, 'QMT_SPOND_REVIEW_ENABLED') || spondEnabled;
   const spondReviewApproved = flag(env, 'QMT_SPOND_REVIEW_APPROVED');
+  const spondPublishEnabled = flag(env, 'QMT_SPOND_PUBLISH_ENABLED');
   if (aiEnabled) {
     throw new Error('Legacy AI is retired; use the synthetic-only AI benchmark. Production AI requires durable quotas and provider approval');
   }
@@ -30,6 +31,9 @@ function readConfig(env = process.env) {
   }
   if (env.NODE_ENV === 'production' && spondReviewEnabled && !spondReviewApproved) {
     throw new Error('Production Spond review requires explicit provider-access pilot approval via QMT_SPOND_REVIEW_APPROVED');
+  }
+  if (spondPublishEnabled && (!spondReviewEnabled || !spondReviewApproved)) {
+    throw new Error('Reviewed Spond publication requires enabled, explicitly approved Spond review');
   }
   const transportEmail = env.QMT_TRANSPORT_EMAIL?.trim() || '';
   const timezone = env.QMT_TIMEZONE || 'Europe/Zurich';
@@ -51,6 +55,7 @@ function readConfig(env = process.env) {
     aiEnabled,
     spondEnabled,
     spondReviewEnabled,
+    spondPublishEnabled,
     weatherEnabled: flag(env, 'QMT_WEATHER_ENABLED'),
     embedAncestors: "'self' " + (embedOrigins.length ? [...new Set(embedOrigins.map(origin => new URL(origin).origin))].join(' ') : 'https:'),
     port: integer(env, 'PORT', 3000, 0, 65535),

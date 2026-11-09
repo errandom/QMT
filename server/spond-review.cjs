@@ -4,6 +4,7 @@ const { z } = require('zod');
 const { createLimiter } = require('./limits.cjs');
 const { createSpondClient, SpondError } = require('./spond-client.cjs');
 const { consumeReviewQuota } = require('./spond-review-quota.cjs');
+const { createPublicationService } = require('./spond-publication.cjs');
 const { ReviewError, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents } = require('./spond-review-domain.cjs');
 
 const credentialsSchema = z.object({
@@ -17,6 +18,10 @@ const previewSchema = z.object({
   discoveryId: z.string().uuid(), teamId: z.number().int().positive(),
   from: z.string(), to: z.string(),
 }).strict();
+const publishSchema = z.object({
+  discoveryId: z.string().uuid(), planId: z.string().uuid(), eventId: z.number().int().positive(),
+  confirmed: z.literal(true),
+}).strict();
 const teamColumns = 'id, name, active, spond_group_id, spond_parent_group_id, spond_mapping_reviewed_by, spond_mapping_reviewed_at, updated_at';
 async function readTeams(pool, locked = false) {
   const result = await pool.request().query(`SELECT TOP (201) ${teamColumns} FROM dbo.teams ${locked ? 'WITH (UPDLOCK, HOLDLOCK)' : ''} ORDER BY id`);
@@ -24,8 +29,9 @@ async function readTeams(pool, locked = false) {
   return result.recordset;
 }
 
-function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = createSpondClient(), now = Date.now }) {
+function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = createSpondClient(), now = Date.now, publishingEnabled = false }) {
   const sessions = new Map(), pending = new Set();
+  const publications = createPublicationService({ getPool, readTeams, client, timezone, logger, now });
   const limit = createLimiter({ limit: 10, windowMs: 15 * 60000, key: req => req.user.id, now });
   const discoveryLimit = createLimiter({ limit: 3, windowMs: 15 * 60000, key: req => req.user.id, now });
   const prune = () => {
@@ -60,7 +66,8 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
   });
   app.get('/api/spond/status', (_req, res) => {
     prune();
-    res.json({ mode: 'review', writesEnabled: false, credentialStorage: 'none', sessionMinutes: 15, quotas: 'durable' });
+    res.json({ mode: publishingEnabled ? 'reviewed-publication' : 'review', writesEnabled: publishingEnabled,
+      credentialStorage: 'none', sessionMinutes: 15, quotas: 'durable' });
   });
   app.post('/api/spond/discovery', discoveryLimit, handle(async (req, res) => {
     const credentials = credentialsSchema.parse(req.body);
@@ -90,6 +97,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
     const ids = new Set(input.mappings.map(mapping => mapping.teamId));
     if (ids.size !== input.mappings.length) throw new ReviewError('Review each team only once');
     session.busy = true;
+    session.publicationPlan = undefined;
     let transaction, begun = false;
     try {
       await consumeReviewQuota(await getPool(), req.user.id, 'review');
@@ -129,6 +137,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
     if (!session.confirmedTeamIds.has(input.teamId)) throw new ReviewError('Explicitly confirm this team mapping before previewing', 409);
     if (session.busy) throw new ReviewError('Another review action is running', 409);
     session.busy = true;
+    session.publicationPlan = undefined;
     try {
       const pool = await getPool();
       const teams = await readTeams(pool);
@@ -137,6 +146,10 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
       const group = session.groups.find(group => group.id === team?.spond_group_id);
       if (!group) throw new ReviewError('Confirmed mapping is no longer available', 409);
       await consumeReviewQuota(pool, req.user.id, 'review');
+      if (publishingEnabled) {
+        const result = await publications.preview({ session, group, range, teamId: input.teamId });
+        return res.json({ ...result, teamId: input.teamId, from: input.from, to: input.to, timezone });
+      }
       const events = await pool.request().input('team', sql.Int, input.teamId)
         .input('from', sql.DateTime2, range.from).input('to', sql.DateTime2, range.to)
         .query(`SELECT TOP (501) id, description, event_type, start_time, end_time, status, spond_id
@@ -150,6 +163,17 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
       if (teamFingerprint(await readTeams(pool)) !== session.fingerprint) throw new ReviewError('Mapping changed during preview; repeat discovery', 409);
       res.json({ ...result, teamId: input.teamId, from: input.from, to: input.to, timezone,
         scope: group.parentGroupId ? 'Entire parent group inspected conservatively; subgroup recipient compatibility is unverified' : 'Mapped group' });
+    } finally { session.busy = false; }
+  }));
+  app.post('/api/spond/publications', limit, handle(async (req, res) => {
+    if (!publishingEnabled) throw new ReviewError('Reviewed Spond publication is not enabled', 409);
+    const input = publishSchema.parse(req.body);
+    const session = sessionFor(req, input.discoveryId);
+    if (session.busy) throw new ReviewError('Another review action is running', 409);
+    session.busy = true;
+    try {
+      await consumeReviewQuota(await getPool(), req.user.id, 'review');
+      res.json(await publications.publish({ session, planId: input.planId, eventId: input.eventId, reviewerId: req.user.id }));
     } finally { session.busy = false; }
   }));
   app.use('/api/spond', (_req, res) => res.status(409).json({
