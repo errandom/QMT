@@ -1,6 +1,50 @@
 # QMT controlled relaunch
 
-## Prepared friendly message templates: November 9, 2026 (not deployed)
+## Current friendly messages and event-card release: November 9, 2026
+
+The friendly bilingual templates and event-card attendance/forecast UI are
+merged, published and verified live at **20:19:41 Zurich (19:19:41 UTC)**.
+PR #27 merged normally as `09b83b9a1e4f450ee673cd92f42bf1dfff9e60e3`,
+the exact deployed runtime source. PR validation `42680063836`, main validation
+`42680719645` and exact-main validation/publication `42680976827` succeeded.
+The source suite passed 252 tests, with one gated SQL test skipped and no
+failures; the separate disposable-SQL suite passed all 18 tests. Required lint,
+build, cost/infrastructure checks and the non-root image smoke test passed.
+Later documentation-only merges do not change this runtime source or require
+image republication.
+
+Current runtime image:
+`ghcr.io/errandom/qmt@sha256:3194a217fe131000583a87410f3b3f05f2f10e674b3d4371966ff479742b436e`.
+Immediate image rollback:
+`ghcr.io/errandom/qmt@sha256:70efdcd79929f7471e8818e717a3ed143f6f0c491ece494f44dddb61d7e42773`.
+Independent anonymous registry reads verified the immutable image, exact source
+label and non-root `node` runtime. All 16 live static assets matched the image,
+including correct PNG/ICO content types.
+
+Only the existing App Service's `config/web.properties.linuxFxVersion` was
+patched through ARM. App settings, complete non-image web configuration and
+resource inventory fingerprints matched before/after. All five public
+collection fingerprints matched: 10 teams, 9 sites, 19 fields, no equipment,
+and 210 events in the October 1, 2026 to October 1, 2027 window. Health passed.
+`spondReview:true`; weather, actual Spond sync, AI and transport remain false.
+The disabled weather endpoint returned HTTP 503; no provider forecast call,
+provider login, live mapping save, workbook edit, operational write or message
+was performed. Rollback was prepared, not executed.
+
+Durable evidence is archived in the QMT skill's
+`references\releases\2026-11-09-friendly-cards` directory, including hashed
+before/after snapshots, image/assets verification, source validation provenance,
+the executed rollout record and the prepared patch/rollback bodies.
+
+The signed **Android 1.0.2 (3)** app loads the updated website. No APK rebuild
+or signing change was required. **Next owner step:** refresh the browser or
+existing Android app and review a newly generated draft and stored attendance
+counts. Existing manually edited/recorded messages are not overwritten.
+Weather activation remains separate, pending provider eligibility/terms review.
+Actual Spond sync and physical-device notification/battery/reboot acceptance
+remain unfinished; neither was enabled or claimed complete by this release.
+
+## Deployed friendly message templates: November 9, 2026
 
 New English/German drafts use a friendly, direct tone, including `Hoi`, informal
 German and `Danke & Gruss`. Facility details have readable calendar dates,
@@ -11,13 +55,13 @@ summaries. The note identifies generation, not automatic sending or human review
 
 Existing language-specific edits, recorded communications, recipient routing,
 explicit send approval and booking/permit/shared-field safeguards are preserved.
-No messages were sent or operational records changed. This is local source work,
-alongside the prepared card enhancement below; it has not been committed,
-published or deployed and does not require an Android wrapper rebuild.
+No messages were sent or operational records changed during the release.
+The templates are deployed with the card enhancement below and do not require
+an Android wrapper rebuild.
 
-## Prepared card forecasts and attendance: November 9, 2026 (not deployed)
+## Deployed card forecasts and attendance: November 9, 2026
 
-The local event-card enhancement adds a daily venue forecast at the upper right,
+The event-card enhancement supports a daily venue forecast at the upper right,
 confirmed | unanswered | declined beside teams, combined event totals, and team
 response totals for the currently displayed events. These are response totals,
 not unique roster headcounts. Missing, invalid and ambiguous counts remain
@@ -45,11 +89,11 @@ unavailable rather than showing home/current weather.
 Before enabling weather in a release, confirm the free provider's non-commercial
 eligibility and usage terms: `https://open-meteo.com/en/terms`; API contract:
 `https://open-meteo.com/en/docs`. The fixed free endpoint is not a paid-provider
-integration. No production flag, image, mapping, operational data or APK has
-been changed for this source-only enhancement; no provider forecast call was
-used for development verification.
+integration. Weather remains disabled in production after the image-only release
+above. No production flag, mapping, operational data or APK was changed, and no
+provider forecast call was used for development or deployment verification.
 
-## Current one-to-many Spond mapping release: November 8, 2026
+## Previous one-to-many Spond mapping release: November 8, 2026
 
 The administrator can select one Spond group/subgroup and explicitly review
 multiple QMT team links before saving the grouped confirmation. Individual
