@@ -16,6 +16,9 @@ test('configuration fails closed and providers are off by default', () => {
   assert.throws(() => readConfig({}), /JWT_SECRET/);
   assert.equal(readConfig(env).aiEnabled, false);
   assert.equal(readConfig(env).spondReviewEnabled, false);
+  assert.equal(readConfig(env).weatherEnabled, false);
+  assert.equal(readConfig({ ...env, QMT_WEATHER_ENABLED: 'true' }).weatherEnabled, true);
+  assert.throws(() => readConfig({ ...env, QMT_WEATHER_ENABLED: 'yes' }), /true or false/);
   assert.equal(readConfig(env).poolMax, 5);
   assert.throws(() => readConfig({ ...env, QMT_AI_ENABLED: 'yes' }), /true or false/);
   assert.throws(() => readConfig({ ...env, QMT_AI_ENABLED: 'true' }), /Legacy AI is retired/);

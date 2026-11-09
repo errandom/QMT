@@ -21,10 +21,6 @@ import {
   Strategy,
   CalendarCheck,
   Buildings,
-  UserCheck,
-  UserMinus,
-  Question,
-  Lightning,
   Envelope
 } from '@phosphor-icons/react'
 import { Event, Team, Field, Site, EventType, User } from '@/lib/types'
@@ -33,6 +29,10 @@ import EventUpdateShareDialog from './EventUpdateShareDialog'
 import { COLORS, SIZES } from '@/lib/constants'
 import { formatEventTimeRange } from '@/lib/utils'
 import SharedFieldNotice, { SharedFieldBadge } from './SharedFieldNotice'
+import AttendanceSummary from './AttendanceSummary'
+import EventForecast from './EventForecast'
+import { eventAttendance, teamAttendance } from '@/lib/attendance'
+import type { useWeatherForecast } from '@/hooks/useWeatherForecast'
 
 interface EventCardProps {
   event: Event
@@ -40,6 +40,8 @@ interface EventCardProps {
   fields: Field[]
   sites: Site[]
   currentUser: User | null
+  weather?: ReturnType<typeof useWeatherForecast>
+  attendanceEvents?: Event[]
 }
 
 const eventTypeColors = {
@@ -62,13 +64,11 @@ const statusColors = {
   'Cancelled': 'border-2 border-destructive text-destructive bg-transparent'
 }
 
-export default function EventCard({ event, teams, fields, sites, currentUser }: EventCardProps) {
+export default function EventCard({ event, teams, fields, sites, currentUser, weather, attendanceEvents }: EventCardProps) {
   const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   
-  // Support multiple fields - get first field for weather/location display
-  // Use type assertion for backward compatibility with old data that may have fieldId
-  const legacyFieldId = (event as any).fieldId
+  const legacyFieldId = 'fieldId' in event && typeof event.fieldId === 'string' ? event.fieldId : undefined
   const eventFieldIds = event.fieldIds || (legacyFieldId ? [legacyFieldId] : [])
   const eventFields = eventFieldIds.map(id => fields.find(f => f.id === id)).filter(Boolean)
   const primaryField = eventFields[0]
@@ -143,17 +143,18 @@ export default function EventCard({ event, teams, fields, sites, currentUser }: 
           </div>
           
           {/* Title and Weather row - aligned at top */}
-          <div className="flex items-start justify-between gap-4">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
             {/* Event title */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0">
               <div className="flex items-start gap-2 mb-0">
-                <div style={{ color: COLORS.NAVY }} className="flex-shrink-0 mt-0.5">
+                <div style={{ color: COLORS.NAVY }} className="hidden shrink-0 mt-0.5 sm:block">
                   {eventTypeIcons[event.eventType]}
                 </div>
-                <CardTitle className="text-xl font-semibold flex-1 break-words" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
+                <CardTitle className="min-w-0 flex-1 text-lg font-semibold [overflow-wrap:anywhere] sm:text-xl" style={{ color: COLORS.NAVY }}>{event.title}</CardTitle>
               </div>
             </div>
-            
+            <EventForecast event={event} site={site} forecast={weather?.data}
+              enabled={weather?.enabled} loading={weather?.loading} error={weather?.error} />
           </div>
           
           {/* Other participants */}
@@ -299,14 +300,20 @@ export default function EventCard({ event, teams, fields, sites, currentUser }: 
           <>
             <Separator className="bg-white/30" />
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-base font-medium" style={{ color: COLORS.NAVY }}>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-base font-medium" style={{ color: COLORS.NAVY }}>
+                <span className="flex items-center gap-2">
                 <Users style={{ color: COLORS.ACCENT }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
-                <span>Teams</span>
+                  <span>Teams total</span>
+                </span>
+                <AttendanceSummary counts={eventAttendance(event)} />
               </div>
               <div className="ml-6 space-y-1.5">
                 {eventTeams.map(team => (
                   <div key={team.id} className="text-base" style={{ color: COLORS.NAVY }}>
-                    <div className="font-medium">{team.name}</div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{team.name}</span>
+                      <AttendanceSummary counts={teamAttendance(event, team.id, attendanceEvents)} />
+                    </div>
                     {(event.eventType === 'Game' || event.eventType === 'Practice') && (
                       <div className="text-sm space-y-0.5" style={{ color: '#6b7280' }}>
                         {team.headCoach && (
@@ -320,44 +327,16 @@ export default function EventCard({ event, teams, fields, sites, currentUser }: 
                   </div>
                 ))}
               </div>
+              {eventTeams.some(team => !teamAttendance(event, team.id, attendanceEvents)) && eventAttendance(event) && <p className="ml-6 text-xs text-muted-foreground">
+                Combined event responses; a per-team breakdown is not available.
+              </p>}
+              {event.attendanceLastSync && <p className="ml-6 text-xs text-muted-foreground">
+                Last synced: {new Date(event.attendanceLastSync).toLocaleString()}
+              </p>}
             </div>
           </>
         )}
 
-        {/* Spond Attendance */}
-        {event.spondId && (event.attendanceAccepted !== undefined || event.attendanceDeclined !== undefined) && (
-          <>
-            <Separator className="bg-white/30" />
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-base font-medium" style={{ color: COLORS.NAVY }}>
-                <Lightning style={{ color: '#22c55e' }} size={SIZES.ICON_SIZE_MEDIUM} weight="duotone" />
-                <span>Spond Attendance</span>
-              </div>
-              <div className="ml-6 flex flex-wrap gap-3">
-                <div className="flex items-center gap-1 text-sm">
-                  <UserCheck size={16} weight="bold" className="text-green-600" />
-                  <span className="font-medium text-green-700">{event.attendanceAccepted || 0}</span>
-                  <span style={{ color: '#6b7280' }}>accepted</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm">
-                  <UserMinus size={16} weight="bold" className="text-red-500" />
-                  <span className="font-medium text-red-600">{event.attendanceDeclined || 0}</span>
-                  <span style={{ color: '#6b7280' }}>declined</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm">
-                  <Question size={16} weight="bold" className="text-amber-500" />
-                  <span className="font-medium text-amber-600">{event.attendanceUnanswered || 0}</span>
-                  <span style={{ color: '#6b7280' }}>pending</span>
-                </div>
-              </div>
-              {event.attendanceLastSync && (
-                <div className="ml-6 text-xs" style={{ color: '#9ca3af' }}>
-                  Last synced: {new Date(event.attendanceLastSync).toLocaleString()}
-                </div>
-              )}
-            </div>
-          </>
-        )}
       </CardContent>
       
       <CancellationRequestDialog

@@ -15,8 +15,9 @@ const { registerCommunicationRoutes } = require('./server/communications.cjs');
 const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./server/published-schedules.cjs');
 const { publicFields, publicRow, registerPublicScheduleRoutes } = require('./server/public-schedule.cjs');
 const { registerSpondReviewRoutes } = require('./server/spond-review.cjs');
+const { registerWeatherRoutes } = require('./server/weather.cjs');
 
-function createApp({ env = process.env, connect, spondReviewClient } = {}) {
+function createApp({ env = process.env, connect, spondReviewClient, weatherFetch } = {}) {
 const config = readConfig(env);
 const console = createLogger();
 const app = express();
@@ -83,7 +84,7 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/api/capabilities', (_req, res) => res.json({
-  ai: config.aiEnabled, spond: false, spondReview: config.spondReviewEnabled, weather: false,
+  ai: config.aiEnabled, spond: false, spondReview: config.spondReviewEnabled, weather: config.weatherEnabled,
   clubName: config.clubName, timezone: config.timezone,
   transport: Boolean(config.transportEmail),
 }));
@@ -108,7 +109,7 @@ app.use('/api', (req, res, next) => {
   if (req.path === '/auth/login') return loginLimit(req, res, next);
   if (req.method === 'POST' && req.path === '/requests') return submissionLimit(req, res, next);
   const publicRead = req.method === 'GET' &&
-    /^\/(health|teams(?:\/\d+)?|events(?:\/\d+)?|sites(?:\/\d+)?|fields(?:\/\d+)?|equipment(?:\/\d+)?)$/.test(req.path);
+    /^\/(health|weather|teams(?:\/\d+)?|events(?:\/\d+)?|sites(?:\/\d+)?|fields(?:\/\d+)?|equipment(?:\/\d+)?)$/.test(req.path);
   if (publicRead && !req.headers.authorization) return next();
   verifyToken(req, res, async () => {
     try {
@@ -144,6 +145,9 @@ registerRequestRoutes(app, { getPool, logger: console, workbookTargetUrl: env.QM
 registerOperationsRoutes(app, { getPool, logger: console });
 registerCommunicationRoutes(app, { getPool, logger: console });
 registerPublishedScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone });
+registerWeatherRoutes(app, {
+  getPool, logger: console, timezone: config.timezone, enabled: config.weatherEnabled, fetchImpl: weatherFetch,
+});
 // The controlled review owns this prefix; retained legacy sync handlers below are unreachable.
 registerSpondReviewRoutes(app, { getPool, logger: console, timezone: config.timezone, client: spondReviewClient });
 
