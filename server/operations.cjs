@@ -90,16 +90,18 @@ function registerOperationsRoutes(app, { getPool, logger }) {
     const result = await transaction(await getPool(), async tx => {
       const event = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT * FROM events WHERE id = @id')).recordset[0];
       if (!event) throw new HttpError(404, 'Event not found');
-      const prior = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT revision FROM event_operations WHERE event_id = @id')).recordset[0];
+      const prior = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT revision, payload FROM event_operations WHERE event_id = @id')).recordset[0];
       if ((prior?.revision || 0) !== body.expectedRevision) throw new HttpError(409, 'Event operations changed; reload before saving');
       if (body.allocations !== undefined) await saveBooking(tx, { ...bookingBody(event), allocations: body.allocations }, id);
       const revision = (prior?.revision || 0) + 1;
-      const payload = JSON.stringify(eventOperations.parse(body));
+      const stored = prior ? JSON.parse(prior.payload) : {};
+      const payload = JSON.stringify({ ...eventOperations.parse(body),
+        ...(stored.spondAttendance ? { spondAttendance: stored.spondAttendance } : {}) });
       await new sql.Request(tx).input('id', sql.Int, id).input('revision', sql.Int, revision)
         .input('payload', sql.NVarChar(sql.MAX), payload).query(prior
           ? 'UPDATE event_operations SET revision = @revision, payload = @payload, updated_at = SYSUTCDATETIME() WHERE event_id = @id'
           : 'INSERT INTO event_operations (event_id, revision, payload) VALUES (@id, @revision, @payload)');
-      return { eventId: String(id), revision, ...JSON.parse(payload) };
+      return { eventId: String(id), revision, ...eventOperations.parse(JSON.parse(payload)) };
     });
     res.json(result);
   }));

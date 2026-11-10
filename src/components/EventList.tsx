@@ -3,8 +3,6 @@ import type { SportType, User } from '@/lib/types'
 import EventCard from './EventCard'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CalendarBlank } from '@phosphor-icons/react'
-import AttendanceSummary from './AttendanceSummary'
-import { teamAttendanceTotal } from '@/lib/attendance'
 import { useWeatherForecast } from '@/hooks/useWeatherForecast'
 
 interface EventListProps {
@@ -58,21 +56,6 @@ export default function EventList({ sportFilter, teamFilter, currentUser }: Even
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border bg-white/70 p-4">
-        <h2 className="font-semibold">Team attendance totals</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Responses across the non-cancelled events shown, not unique players. Missing responses are not counted as zero.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {teams.filter(team => filteredEvents.some(event => event.teamIds.includes(team.id))).map(team => {
-            const total = teamAttendanceTotal(filteredEvents, team.id, events)
-            return <div key={team.id} className="min-w-0 rounded-lg border p-2">
-              <h3 className="text-sm font-medium">{team.name}</h3>
-              <AttendanceSummary counts={total.counts} />
-              <p className="text-xs text-muted-foreground">{total.covered}/{total.total} events with team counts
-                {total.covered < total.total && ' · Incomplete total'}</p>
-            </div>
-          })}
-        </div>
-      </section>
       {weather.error && <p role="status" className="text-sm text-muted-foreground">{weather.error}</p>}
       {weather.data && <p className="text-xs text-muted-foreground">Forecasts retrieved: {new Date(weather.data.fetchedAt).toLocaleString('en-GB', { timeZone: weather.data.timezone })} ({weather.data.timezone})</p>}
       <div className="grid gap-4 md:grid-cols-2">

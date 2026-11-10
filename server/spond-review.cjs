@@ -4,6 +4,7 @@ const { z } = require('zod');
 const { createLimiter } = require('./limits.cjs');
 const { createSpondClient, SpondError } = require('./spond-client.cjs');
 const { consumeReviewQuota } = require('./spond-review-quota.cjs');
+const { HttpError } = require('./bookings.cjs');
 const { ReviewError, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents } = require('./spond-review-domain.cjs');
 
 const credentialsSchema = z.object({
@@ -24,7 +25,7 @@ async function readTeams(pool, locked = false) {
   return result.recordset;
 }
 
-function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = createSpondClient(), now = Date.now }) {
+function registerSpondReviewRoutes(app, { getPool, logger, timezone, attendance, client = createSpondClient(), now = Date.now }) {
   const sessions = new Map(), pending = new Set();
   const limit = createLimiter({ limit: 10, windowMs: 15 * 60000, key: req => req.user.id, now });
   const discoveryLimit = createLimiter({ limit: 3, windowMs: 15 * 60000, key: req => req.user.id, now });
@@ -41,7 +42,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
     try { await action(req, res); }
     catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ error: 'Invalid Spond review input' });
-      if (error instanceof ReviewError) {
+      if (error instanceof ReviewError || error instanceof HttpError) {
         if (error.retryAfter) res.set('Retry-After', String(error.retryAfter));
         return res.status(error.status).json({ error: error.message });
       }
@@ -77,7 +78,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
       const token = await client.login(credentials.username, credentials.password);
       const groups = flattenGroups(await client.get(token, 'groups', { includeMembers: 'false' }));
       const session = { id: randomUUID(), token, groups, fingerprint: teamFingerprint(teams),
-        expiresAt: now() + 15 * 60000, confirmedTeamIds: new Set(), busy: false };
+        expiresAt: now() + 15 * 60000, confirmedTeamIds: new Set(), busy: false, preview: null };
       sessions.set(req.user.id, session);
       res.json({ discoveryId: session.id, expiresAt: new Date(session.expiresAt).toISOString(),
         teams: suggestMappings(teams.filter(team => team.active), groups), groups });
@@ -137,9 +138,10 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
       const group = session.groups.find(group => group.id === team?.spond_group_id);
       if (!group) throw new ReviewError('Confirmed mapping is no longer available', 409);
       await consumeReviewQuota(pool, req.user.id, 'review');
+      session.preview = null;
       const events = await pool.request().input('team', sql.Int, input.teamId)
         .input('from', sql.DateTime2, range.from).input('to', sql.DateTime2, range.to)
-        .query(`SELECT TOP (501) id, description, event_type, start_time, end_time, status, spond_id
+        .query(`SELECT TOP (501) id, description, event_type, start_time, end_time, status, spond_id, team_id, team_ids
           FROM dbo.events WHERE start_time < @to AND end_time > @from
           AND (team_id = @team OR CHARINDEX(',' + CONVERT(nvarchar(20), @team) + ',',
             ',' + REPLACE(COALESCE(team_ids, ''), ' ', '') + ',') > 0) ORDER BY start_time, id`);
@@ -148,10 +150,58 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, client = cr
       const remote = await client.get(session.token, 'sponds', providerEventQuery(group, range));
       const result = reconcileEvents(events.recordset, remote, { ...range, timezone });
       if (teamFingerprint(await readTeams(pool)) !== session.fingerprint) throw new ReviewError('Mapping changed during preview; repeat discovery', 409);
+      session.preview = { teamId: input.teamId, events: events.recordset, rows: result.rows };
       res.json({ ...result, teamId: input.teamId, from: input.from, to: input.to, timezone,
         scope: group.parentGroupId ? 'Entire parent group inspected conservatively; subgroup recipient compatibility is unverified' : 'Mapped group' });
     } finally { session.busy = false; }
   }));
+  if (attendance) {
+    const confirmedSession = async req => {
+      const input = z.object({ discoveryId: z.string().uuid(), confirmed: z.literal(true) }).parse(req.body);
+      const session = sessionFor(req, input.discoveryId);
+      if (session.busy || !session.confirmedTeamIds.size) throw new ReviewError('Confirm team mappings before enabling attendance', 409);
+      if (teamFingerprint(await readTeams(await getPool())) !== session.fingerprint) throw new ReviewError('Team mappings changed; repeat discovery', 409);
+      return session;
+    };
+    app.get('/api/spond/attendance/status', handle(async (_req, res) => res.json(await attendance.status())));
+    app.get('/api/spond/attendance/links', handle(async (_req, res) => res.json(await attendance.links())));
+    app.post('/api/spond/attendance/connect', limit, handle(async (req, res) => {
+      const session = await confirmedSession(req);
+      await consumeReviewQuota(await getPool(), req.user.id, 'review');
+      res.json(await attendance.connect(req.user.id, session.token));
+    }));
+    app.post('/api/spond/attendance/disconnect', limit, handle(async (req, res) => {
+      z.object({ confirmed: z.literal(true) }).strict().parse(req.body);
+      res.json(await attendance.disconnect());
+    }));
+    app.post('/api/spond/attendance/refresh', limit, handle(async (req, res) => {
+      z.object({ confirmed: z.literal(true) }).strict().parse(req.body);
+      res.status(202).json(await attendance.requestRefresh());
+    }));
+    app.post('/api/spond/attendance/links/confirm', limit, handle(async (req, res) => {
+      const input = z.object({ discoveryId: z.string().uuid(), confirmed: z.literal(true),
+        eventId: z.number().int().positive(), teamId: z.number().int().positive(),
+        providerId: z.string().regex(/^[A-F0-9]{32}$/) }).strict().parse(req.body);
+      const session = await confirmedSession(req);
+      const preview = session.preview;
+      const row = preview?.teamId === input.teamId && preview.rows.find(row => row.qmt?.id === input.eventId &&
+        row.spond.some(event => event.id === input.providerId));
+      if (!session.confirmedTeamIds.has(input.teamId) || !row) throw new ReviewError('Choose an event from the current reviewed preview', 409);
+      const team = (await readTeams(await getPool())).find(team => team.id === input.teamId);
+      const group = session.groups.find(group => group.id === team?.spond_group_id);
+      if (!group) throw new ReviewError('Reviewed group is no longer available', 409);
+      session.busy = true;
+      try {
+        await consumeReviewQuota(await getPool(), req.user.id, 'review');
+        res.json(await attendance.link({ ...input, token: session.token, group, reviewerId: req.user.id,
+          expected: preview.events.find(event => event.id === input.eventId) }));
+      } finally { session.busy = false; }
+    }));
+    app.post('/api/spond/attendance/links/remove', limit, handle(async (req, res) => {
+      const input = z.object({ confirmed: z.literal(true), eventId: z.number().int().positive() }).strict().parse(req.body);
+      res.json(await attendance.unlink(input.eventId));
+    }));
+  }
   app.use('/api/spond', (_req, res) => res.status(409).json({
     error: 'Legacy Spond sync and credential storage are disabled; use discovery, explicit mapping review, and read-only reconciliation',
   }));

@@ -116,7 +116,7 @@ function harness(t, initial = {}) {
       if (query.startsWith('SELECT TOP (5001) * FROM events')) return rows(store.events);
       if (query.startsWith('SELECT TOP (5001) * FROM external_allocations') || query.startsWith('SELECT * FROM external_allocations WHERE active')) return rows(store.external);
       if (query.startsWith('SELECT * FROM external_allocations')) return rows(store.external.filter(row => row.id === v.id));
-      if (query.startsWith('SELECT revision FROM event_operations')) return rows(store.metadata.filter(row => row.event_id === v.id));
+      if (query.startsWith('SELECT revision, payload FROM event_operations')) return rows(store.metadata.filter(row => row.event_id === v.id));
       if (query.startsWith('SELECT TOP (5001) event_id')) return rows(store.metadata);
       if (query.startsWith('INSERT INTO event_operations') || query.startsWith('UPDATE event_operations')) {
         const row = store.metadata.find(row => row.event_id === v.id);
@@ -181,6 +181,19 @@ test('operations saves are revision-checked, persist readiness independently and
   response = await h.call('put', '/api/operations/external/:id', { id }, { ...block, active: false });
   assert.equal(response.statusCode, 409);
   assert.ok(h.queries.filter(query => query.includes('sp_getapplock')).length >= 5);
+});
+
+test('Office saves preserve server-owned attendance and never accept a replacement from the client', async t => {
+  const attendance = { version: 1, sources: [{ id: 'synthetic-provider-only' }] };
+  const h = harness(t, { metadata: [{ event_id: 1, revision: 4,
+    payload: JSON.stringify({ owner: 'Before', checklist: [], spondAttendance: attendance }) }] });
+  registerOperationsRoutes(h.app, h.context);
+  const response = await h.call('put', '/api/operations/events/:id', { id: '1' },
+    { owner: 'After', checklist: [], expectedRevision: 4, spondAttendance: { forged: true } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(h.store.metadata[0].revision, 5);
+  assert.deepEqual(JSON.parse(h.store.metadata[0].payload), { owner: 'After', checklist: [], spondAttendance: attendance });
+  assert.equal(response.body.spondAttendance, undefined);
 });
 
 test('seasonal approval preview checks each date and returns compatible alternatives', async t => {

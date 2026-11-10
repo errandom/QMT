@@ -333,6 +333,9 @@ export default function EventCard({ event, teams, fields, sites, currentUser, we
               {event.attendanceLastSync && <p className="ml-6 text-xs text-muted-foreground">
                 Last synced: {new Date(event.attendanceLastSync).toLocaleString()}
               </p>}
+              {event.attendanceError && <p className="ml-6 text-xs text-amber-800" role="status">
+                {event.attendanceError} Any counts shown are from the last successful refresh.
+              </p>}
             </div>
           </>
         )}

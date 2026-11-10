@@ -13,6 +13,9 @@ const { operationalTables } = require('../scripts/provision-database-user.cjs');
 const { checkDatabase } = require('../scripts/check-database.cjs');
 const { checkSpondReview } = require('../scripts/check-spond-review.cjs');
 const { consumeReviewQuota } = require('../server/spond-review-quota.cjs');
+const { createAttendanceService } = require('../server/spond-attendance.cjs');
+const { attendanceStore } = require('../server/spond-attendance-store.cjs');
+const { settingKey } = require('../server/spond-attendance-domain.cjs');
 
 test('disposable SQL migration, concurrency, rollback and durable requests', {
   skip: process.env.QMT_TEST_DATABASE_APPROVED !== 'true', timeout: 120000,
@@ -192,6 +195,86 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       assert.equal(globalAttempts.find(result => result.status === 'rejected').reason.status, 429);
       assert.equal((await pool.request().query('SELECT consumed FROM dbo.spond_review_quotas WHERE subject_id = 0')).recordset[0].consumed, 30);
       assert.equal((await pool.request().query('SELECT COUNT(*) AS count FROM dbo.spond_review_quotas WHERE subject_id IN (1001, 1002)')).recordset[0].count, 1);
+    });
+    await t.test('attendance reuses restricted runtime metadata, encrypts the connection, preserves Office revisions and never changes bookings', async () => {
+      const start = new Date();
+      start.setUTCDate(start.getUTCDate() + 2); start.setUTCHours(18, 0, 0, 0);
+      const end = new Date(+start + 3600000);
+      const inserted = await pool.request().input('team', sql.Int, fixture.team).input('field', sql.Int, fixture.field)
+        .input('start', sql.DateTime2, start).input('end', sql.DateTime2, end)
+        .query(`INSERT INTO dbo.events (team_id, team_ids, field_id, field_ids, event_type, status, start_time, end_time, description)
+          OUTPUT INSERTED.id VALUES (@team, CONVERT(nvarchar(20), @team), @field, CONVERT(nvarchar(20), @field),
+          'Practice', 'Confirmed', @start, @end, 'Synthetic attendance fixture')`);
+      const eventId = inserted.recordset[0].id, sourceId = 'C'.repeat(32);
+      const secret = 'synthetic-attendance-sql-test-secret-not-a-credential';
+      const store = attendanceStore(async () => pool);
+      let reads = 0, incomplete = false;
+      const options = { enabled: true, getPool: async () => pool, secret, timezone: 'UTC', logger: { error() {} },
+        client: { async get(token, endpoint) {
+          assert.equal(token, 'synthetic-provider-token'); assert.equal(endpoint, `sponds/${sourceId}`); reads++;
+          return { id: sourceId, startTimestamp: start.toISOString(), endTimestamp: end.toISOString(),
+            recipients: { group: { id: 'A'.repeat(32), subGroups: [{ id: 'B'.repeat(32) }] } },
+            responses: incomplete ? {} : { acceptedIds: ['D'.repeat(32)], unansweredIds: [], declinedIds: [] } };
+        }, async post() { assert.fail('Unexpected provider write'); } } };
+      const worker = createAttendanceService(options), second = createAttendanceService(options);
+      const api = createApp({ env: { JWT_SECRET: secret }, connect: async () => pool });
+      const http = api.listen(0, '127.0.0.1');
+      await new Promise(resolve => http.once('listening', resolve));
+      const base = `http://127.0.0.1:${http.address().port}/api`;
+      const headers = { Authorization: `Bearer ${jwt.sign({ id: fixture.admin, role: 'admin' }, secret)}`, 'Content-Type': 'application/json' };
+      try {
+        const before = await store.event(null, eventId);
+        await worker.link({ eventId, providerId: sourceId, teamId: fixture.team, reviewerId: fixture.admin,
+          group: { id: 'B'.repeat(32), parentGroupId: 'A'.repeat(32) }, expected: before, token: 'synthetic-provider-token' });
+        await worker.connect(fixture.admin, 'synthetic-provider-token');
+        const ciphertext = (await pool.request().input('key', sql.NVarChar, settingKey)
+          .query('SELECT setting_value FROM dbo.user_settings WHERE setting_key = @key')).recordset[0].setting_value;
+        assert.ok(!ciphertext.includes('synthetic-provider-token'));
+        const settings = await (await fetch(base + '/settings', { headers })).json();
+        assert.equal(settings[settingKey], undefined);
+        for (const [method, status] of [['GET', 404], ['PUT', 403], ['DELETE', 403]]) {
+          const response = await fetch(base + '/settings/' + settingKey, {
+            method, headers, ...(method === 'PUT' ? { body: JSON.stringify({ forged: true }) } : {}),
+          });
+          assert.equal(response.status, status);
+        }
+        await Promise.all([worker.tick(), second.tick()]);
+        assert.equal(reads, 2, 'one link-validation read plus one refresh, despite two workers');
+        const updated = await (await fetch(`${base}/events/${eventId}`, { headers })).json();
+        assert.equal(updated.attendance_accepted, 1);
+        assert.equal(updated.attendance_unanswered, 0);
+        assert.equal(updated.attendance_by_team[fixture.team].confirmed, 1);
+        assert.equal(updated.attendance_payload, undefined);
+        const anonymous = await (await fetch(`${base}/events/${eventId}`)).json();
+        assert.equal(anonymous.attendance_accepted, undefined);
+        assert.equal(anonymous.attendance_source_ids, undefined);
+        const metadata = await store.event(null, eventId);
+        const operations = await fetch(`${base}/operations/events/${eventId}`, { method: 'PUT', headers,
+          body: JSON.stringify({ owner: 'Synthetic manager', checklist: [], expectedRevision: metadata.attendance_revision,
+            spondAttendance: { forged: true } }) });
+        assert.equal(operations.status, 200);
+        const preserved = store.metadata(await store.event(null, eventId));
+        assert.equal(preserved.owner, 'Synthetic manager');
+        assert.equal(preserved.spondAttendance.snapshot.counts.confirmed, 1);
+        incomplete = true;
+        await pool.request().input('key', sql.NVarChar, settingKey).query(`UPDATE dbo.user_settings SET
+          setting_value = JSON_MODIFY(setting_value, '$.nextRunAt', '2000-01-01T00:00:00.000Z') WHERE setting_key = @key`);
+        await second.tick();
+        const stale = store.metadata(await store.event(null, eventId)).spondAttendance;
+        assert.equal(stale.snapshot.counts.confirmed, 1);
+        assert.match(stale.error, /missing or incomplete/);
+        const unchanged = await store.event(null, eventId);
+        assert.equal(unchanged.start_time.toISOString(), before.start_time.toISOString());
+        assert.equal(unchanged.updated_at.toISOString(), before.updated_at.toISOString());
+        await worker.disconnect();
+        await worker.unlink(eventId);
+        assert.equal(store.metadata(await store.event(null, eventId)).spondAttendance, undefined);
+      } finally {
+        await worker.close(); await second.close();
+        await new Promise(resolve => { http.close(resolve); http.closeAllConnections(); });
+        await pool.request().input('id', sql.Int, eventId).query('DELETE FROM dbo.event_operations WHERE event_id = @id; DELETE FROM dbo.events WHERE id = @id');
+        await pool.request().input('key', sql.NVarChar, settingKey).query('DELETE FROM dbo.user_settings WHERE setting_key = @key');
+      }
     });
     const booking = (date, start = '18:00', end = '19:00') => ({
       event_type: 'Practice', start_time: `${date}T${start}:00Z`, end_time: `${date}T${end}:00Z`,
