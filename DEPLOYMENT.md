@@ -1,5 +1,54 @@
 # QMT controlled relaunch
 
+## Attendance-only release preparation: November 10, 2026
+
+The attendance-only implementation is isolated from draft publisher PR #29.
+`QMT_SPOND_ATTENDANCE_ENABLED=true` exposes the new administrator controls and
+starts a one-minute scheduler check; leave legacy `QMT_SPOND_ENABLED` and
+outbound publication disabled. Existing reviewed-access approval is required.
+Deployment alone does not connect a Spond account or approve any event link.
+
+In Office > Settings > Spond, run discovery, confirm team mappings, preview
+events and explicitly confirm each existing QMT/Spond event pair. For a combined
+QMT event, review sources from every participating team's preview. Several
+QMT teams may share one Spond group; duplicate provider events and identical
+response IDs are counted once, not multiplied by the number of team mappings.
+Per-team counts require an exclusive, matching source audience and unambiguous
+response attribution. Totals are responses, not guaranteed unique people across
+different Spond group memberships. Team aggregates are under Office > Statistics,
+not the front page.
+
+An administrator must separately approve retaining an encrypted Spond access
+token for scheduled reads. Passwords remain transient and are never stored.
+The token is authenticated-encrypted with AES-256-GCM using an attendance-specific
+HKDF key derived from the existing signing secret. Signing-secret rotation,
+provider token expiry/revocation, or an inactive/non-admin connection owner
+requires explicit reconnection. Stop controls remove the stored token without
+removing bookings or previous attendance snapshots.
+
+Reads run every 15 minutes while QMT is awake, for confirmed linked events from
+yesterday through the next 30 days. Each cycle permits at most 50 unique source
+reads and ten minutes of work, oldest attempts first; larger queues need more
+than one cycle. The durable SQL lease and next-run time prevent overlapping
+workers/restarts from bypassing the cadence. Keep the existing App Service's
+Always On setting enabled for unattended cadence. There are no provider writes,
+notifications, automatic event links, booking imports, schema migrations, new
+resources or elevated database grants in this release.
+
+Reviewed links and snapshots use existing `event_operations.payload`; an Office
+save preserves the server-owned attendance block and uses the same revision and
+transaction lock. The encrypted connection uses a reserved `user_settings` key,
+hidden and write-protected in generic settings routes. The existing operational
+DML grants cover both tables. Incomplete/malformed responses, changed bookings,
+stale mappings and provider errors never become zero attendance. Previous
+successful counts are retained with their last-sync time and an explicit error;
+changed booking times hide the old snapshot. Anonymous schedule responses still
+exclude attendance and provider IDs.
+
+Release verification and the executed image/configuration changes are recorded
+in the dated durable QMT skill handoff; the procedures above do not themselves
+claim a deployed image or a connected production Spond account.
+
 ## Current friendly messages and event-card release: November 9, 2026
 
 The friendly bilingual templates and event-card attendance/forecast UI are

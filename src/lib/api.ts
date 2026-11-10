@@ -271,6 +271,9 @@ function transformEvent(event: any): any {
     attendanceDeclined: event.attendanceDeclined ?? event.attendance_declined ?? undefined,
     attendanceWaiting: event.attendanceWaiting ?? event.attendance_waiting ?? undefined,
     attendanceLastSync: event.attendanceLastSync ?? event.attendance_last_sync ?? undefined,
+    attendanceSourceIds: event.attendance_source_ids ?? undefined,
+    attendanceByTeam: event.attendance_by_team ?? undefined,
+    attendanceError: event.attendance_error ?? undefined,
   };
   
   return transformed;

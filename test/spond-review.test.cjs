@@ -140,7 +140,7 @@ async function serve(app, action) {
   finally { await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }); }
 }
 
-function fixture() {
+function fixture(attendance) {
   let time = Date.parse('2026-11-04T15:00:00Z');
   let teams = [{ id: 1, name: 'U19', active: true, spond_group_id: null, spond_parent_group_id: null,
     spond_mapping_reviewed_at: null, spond_mapping_reviewed_by: null, updated_at: 'before' }];
@@ -206,7 +206,7 @@ function fixture() {
     req.user = { id: Number(req.headers['x-test-user'] || 1), role: req.headers['x-test-role'] || 'admin', username: 'synthetic-admin' };
     next();
   });
-  registerSpondReviewRoutes(app, { getPool: async () => pool, client, timezone: 'Europe/Zurich', now: () => time,
+  registerSpondReviewRoutes(app, { getPool: async () => pool, client, attendance, timezone: 'Europe/Zurich', now: () => time,
     logger: { error(...args) { logs.push(args); }, log(...args) { logs.push(args); } } });
   return { app, pool, calls, queries, logs, quotaReservations, eventReads,
     failQuota(error) { quotaError = error; }, denyQuota() { quotaDenied = true; },
@@ -373,6 +373,40 @@ test('canonical runtime keeps production disabled and separates review capabilit
       assert.equal(sqlCalls, 3);
     });
   } finally { await app.locals.close(); }
+});
+
+test('scheduled attendance requires explicit token retention, reviewed event previews and current administrator access', async () => {
+  const actions = [];
+  const attendance = {
+    async status() { return { enabled: true, connected: false }; },
+    async links() { return []; },
+    async connect(owner, token) { actions.push({ action: 'connect', owner, token }); return { connected: true }; },
+    async link(input) { actions.push({ action: 'link', input }); return { linked: true }; },
+    async disconnect() { actions.push({ action: 'disconnect' }); return {}; },
+  };
+  const f = fixture(attendance);
+  await serve(f.app, async base => {
+    assert.equal((await fetch(base + '/api/spond/attendance/status', { headers: { 'x-test-role': 'mgmt' } })).status, 403);
+    const discovery = await discover(base);
+    const approval = { discoveryId: discovery.discoveryId, confirmed: true };
+    assert.equal((await send(base, 'attendance/connect', approval)).status, 409);
+    await send(base, 'mappings/confirm', { ...approval, mappings: [{ teamId: 1, groupId: subgroupId }] });
+    assert.equal((await send(base, 'attendance/connect', { ...approval, confirmed: false })).status, 400);
+    assert.equal(actions.length, 0);
+    assert.equal((await send(base, 'attendance/connect', approval)).status, 200);
+    assert.equal(actions[0].token, 'synthetic-token');
+    const input = { ...approval, teamId: 1, eventId: 1, providerId: eventId };
+    assert.equal((await send(base, 'attendance/links/confirm', input)).status, 409);
+    await send(base, 'reconciliation', { discoveryId: discovery.discoveryId, teamId: 1, from: '2026-11-04', to: '2026-11-05' });
+    assert.equal((await send(base, 'attendance/links/confirm', { ...input, providerId: otherId })).status, 409);
+    assert.equal((await send(base, 'attendance/links/confirm', input)).status, 200);
+    assert.equal(actions[1].input.expected.id, 1);
+    assert.equal(actions[1].input.group.id, subgroupId);
+    assert.ok(!JSON.stringify(actions).includes('synthetic-not-a-credential'));
+    f.advance();
+    assert.equal((await send(base, 'attendance/links/confirm', input)).status, 409);
+    assert.equal((await send(base, 'attendance/disconnect', { confirmed: true })).status, 200);
+  });
 });
 
 test('durable quota reservations precede provider calls and fail closed on exhaustion or SQL failure', async () => {

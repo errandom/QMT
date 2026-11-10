@@ -173,4 +173,4 @@ function reconcileEvents(local, remote, { from, to, timezone }) {
     warning: 'Read-only preview. Provider completeness and compatibility are not verified; no row is approved for sync.' };
 }
 
-module.exports = { ReviewError, spondId, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents };
+module.exports = { ReviewError, spondId, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents, providerTime };

@@ -158,6 +158,9 @@ export interface Event {
   attendanceUnanswered?: number
   attendanceWaiting?: number
   attendanceLastSync?: string
+  attendanceSourceIds?: string[]
+  attendanceByTeam?: Record<string, { confirmed: number; unanswered: number; declined: number }>
+  attendanceError?: string
 }
 
 export type FacilityWorkflowStage = 'Received' | 'Acknowledged' | 'In evaluation' | 'Awaiting response' | 'Response received' | 'Approved' | 'Rejected'

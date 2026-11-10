@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CalendarBlank, ClipboardText, Users, Cube, MapPin, GridFour, Gear, ArrowLeft } from '@phosphor-icons/react'
+import { CalendarBlank, ChartBar, ClipboardText, Users, Cube, MapPin, GridFour, Gear, ArrowLeft } from '@phosphor-icons/react'
 import { User, FacilityRequest, EquipmentRequest, CancellationRequest } from '@/lib/types'
 import { hasAccess } from '@/lib/auth'
 import { useData } from '@/contexts/DataContext'
@@ -17,6 +17,7 @@ import FieldsManager from './OperationsOffice/FieldsManager'
 import SitesManager from './OperationsOffice/SitesManager'
 import SettingsManager from './OperationsOffice/SettingsManager'
 import OperationsWorkbench from './OperationsOffice/OperationsWorkbench'
+import StatisticsManager from './OperationsOffice/StatisticsManager'
 
 interface OperationsOfficeProps {
   currentUser: User | null
@@ -40,6 +41,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
     { value: 'equipment', icon: Cube, label: 'Equipment' },
     { value: 'fields', icon: GridFour, label: 'Fields' },
     { value: 'sites', icon: MapPin, label: 'Sites' },
+    { value: 'statistics', icon: ChartBar, label: 'Statistics' },
     { value: 'settings', icon: Gear, label: 'Settings' }
   ]
 
@@ -80,7 +82,7 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
           padding: '2px 4px'
         }}>
-          <div className="relative flex h-full w-full min-w-[40rem] gap-1 sm:min-w-0">
+          <div className="relative flex h-full w-full min-w-[45rem] gap-1 sm:min-w-[60rem]">
             <div 
               className="absolute shadow-xl shadow-black/30 transition-all duration-300 ease-out"
               style={{
@@ -161,6 +163,10 @@ export default function OperationsOffice({ currentUser, onNavigateToDashboard }:
 
         <TabsContent value="settings">
           <SettingsManager currentUser={currentUser} />
+        </TabsContent>
+
+        <TabsContent value="statistics">
+          <StatisticsManager />
         </TabsContent>
       </Tabs>
     </div>

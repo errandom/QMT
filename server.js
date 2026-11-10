@@ -16,6 +16,8 @@ const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./serve
 const { publicFields, publicRow, registerPublicScheduleRoutes } = require('./server/public-schedule.cjs');
 const { registerSpondReviewRoutes } = require('./server/spond-review.cjs');
 const { registerWeatherRoutes } = require('./server/weather.cjs');
+const { createAttendanceService } = require('./server/spond-attendance.cjs');
+const { attendanceRow, reservedSetting } = require('./server/spond-attendance-domain.cjs');
 
 function createApp({ env = process.env, connect, spondReviewClient, weatherFetch } = {}) {
 const config = readConfig(env);
@@ -62,7 +64,10 @@ const database = createLazyPool(connect || (async () => {
   catch (error) { await pool.close(); throw error; }
 }), console.error);
 const getPool = database.getPool;
-app.locals.close = database.close;
+const attendance = createAttendanceService({ getPool, secret: config.jwtSecret, timezone: config.timezone,
+  logger: console, enabled: config.spondAttendanceEnabled, client: spondReviewClient });
+attendance.start();
+app.locals.close = async () => { await attendance.close(); await database.close(); };
 
 app.use('/api', (req, res, next) => {
   res.set('Cache-Control', 'no-store');
@@ -84,7 +89,8 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/api/capabilities', (_req, res) => res.json({
-  ai: config.aiEnabled, spond: false, spondReview: config.spondReviewEnabled, weather: config.weatherEnabled,
+  ai: config.aiEnabled, spond: false, spondReview: config.spondReviewEnabled,
+  spondAttendance: config.spondAttendanceEnabled, weather: config.weatherEnabled,
   clubName: config.clubName, timezone: config.timezone,
   transport: Boolean(config.transportEmail),
 }));
@@ -149,7 +155,7 @@ registerWeatherRoutes(app, {
   getPool, logger: console, timezone: config.timezone, enabled: config.weatherEnabled, fetchImpl: weatherFetch,
 });
 // The controlled review owns this prefix; retained legacy sync handlers below are unreachable.
-registerSpondReviewRoutes(app, { getPool, logger: console, timezone: config.timezone, client: spondReviewClient });
+registerSpondReviewRoutes(app, { getPool, logger: console, timezone: config.timezone, client: spondReviewClient, attendance });
 
 // ------------------------------
 // Diagnostic routes
@@ -706,6 +712,7 @@ app.get('/api/events', async (req, res) => {
       .query(`
       SELECT TOP (@limit)
         e.*,
+        attendance_metadata.payload AS attendance_payload,
         f.name as field_name,
         s.name as site_name,
         s.address as site_address,
@@ -715,6 +722,7 @@ app.get('/api/events', async (req, res) => {
               ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0
           FOR JSON PATH) AS external_allocations
       FROM events e
+      LEFT JOIN event_operations attendance_metadata ON attendance_metadata.event_id = e.id
       OUTER APPLY (
         SELECT TOP 1 f.id, f.name, f.site_id
         FROM fields f
@@ -725,8 +733,7 @@ app.get('/api/events', async (req, res) => {
       ORDER BY e.id ASC
     `);
     console.log('[GET /api/events] ✓ Query executed, recordset length:', result.recordset?.length);
-    console.log('[GET /api/events] ✓ Returning data:', result.recordset);
-    res.json(result.recordset);
+    res.json(result.recordset.map(attendanceRow));
   } catch (err) {
     console.error('[GET /api/events] ❌ Error:', {
       message: err.message,
@@ -745,6 +752,7 @@ app.get('/api/events/:id', async (req, res) => {
       .query(`
         SELECT 
           e.*,
+          attendance_metadata.payload AS attendance_payload,
           f.name as field_name,
           s.name as site_name,
           s.address as site_address,
@@ -754,6 +762,7 @@ app.get('/api/events/:id', async (req, res) => {
                 ',' + COALESCE(NULLIF(e.field_ids, ''), CONVERT(nvarchar(20), e.field_id), '') + ',') > 0
             FOR JSON PATH) AS external_allocations
         FROM events e
+        LEFT JOIN event_operations attendance_metadata ON attendance_metadata.event_id = e.id
         OUTER APPLY (
           SELECT TOP 1 f.id, f.name, f.site_id
           FROM fields f
@@ -766,7 +775,7 @@ app.get('/api/events/:id', async (req, res) => {
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
-    res.json(result.recordset[0]);
+    res.json(attendanceRow(result.recordset[0]));
   } catch (err) {
     console.error('Error fetching event:', err);
     res.status(500).json({ error: 'Failed to fetch event' });
@@ -1433,6 +1442,7 @@ app.get('/api/settings', verifyToken, async (req, res) => {
     // Convert to object
     const settings = {};
     for (const row of result.recordset) {
+      if (reservedSetting(row.setting_key)) continue;
       try {
         settings[row.setting_key] = JSON.parse(row.setting_value);
       } catch (e) {
@@ -1449,6 +1459,7 @@ app.get('/api/settings', verifyToken, async (req, res) => {
 
 // Get specific setting
 app.get('/api/settings/:key', verifyToken, async (req, res) => {
+  if (reservedSetting(req.params.key)) return res.status(404).json({ error: 'Setting not found' });
   try {
     const pool = await getPool();
     const result = await pool.request()
@@ -1473,6 +1484,7 @@ app.get('/api/settings/:key', verifyToken, async (req, res) => {
 
 // Save/update a setting (upsert)
 app.put('/api/settings/:key', verifyToken, async (req, res) => {
+  if (reservedSetting(req.params.key)) return res.status(403).json({ error: 'Server-managed setting' });
   try {
     const settingKey = req.params.key;
     const settingValue = JSON.stringify(req.body);
@@ -1507,6 +1519,7 @@ app.put('/api/settings/:key', verifyToken, async (req, res) => {
 
 // Delete a setting
 app.delete('/api/settings/:key', verifyToken, async (req, res) => {
+  if (reservedSetting(req.params.key)) return res.status(403).json({ error: 'Server-managed setting' });
   try {
     const pool = await getPool();
     await pool.request()

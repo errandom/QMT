@@ -26,7 +26,7 @@ function load(relative, data = {}, weather = {}) {
       return new Proxy({}, { get: () => ({ children }) => React.createElement('div', null, children) });
     }
     if (id.startsWith('@/lib/')) return load(`lib/${id.slice(6)}.ts`, data, weather);
-    if (id.startsWith('./')) {
+    if (id.startsWith('./') || id.startsWith('../')) {
       const target = path.relative(path.join(__dirname, '..', 'src'), path.join(path.dirname(filename), id));
       return load(target + (relative.endsWith('.tsx') ? '.tsx' : '.ts'), data, weather);
     }
@@ -87,6 +87,25 @@ test('event cards show counts next to teams, overall totals and explicit unknown
   assert.match(render({ attendanceUnanswered: undefined }), /\(unavailable\)/);
 });
 
+test('reviewed per-team snapshots support combined cards without double-counting shared or partially overlapping sources', () => {
+  const first = event({ teamIds: ['1', '2'], attendanceSourceIds: ['A', 'B'],
+    attendanceByTeam: { 1: { confirmed: 5, unanswered: 2, declined: 1 }, 2: { confirmed: 7, unanswered: 2, declined: 1 } } });
+  assert.deepEqual(attendance.teamAttendance(first, '1'), { confirmed: 5, unanswered: 2, declined: 1 });
+  assert.equal(attendance.teamAttendance({ ...first, attendanceError: 'Refresh failed' }, '1'), undefined);
+  assert.deepEqual(attendance.teamAttendanceTotal([first, { ...first, id: '2' }], '1'),
+    { counts: { confirmed: 5, unanswered: 2, declined: 1 }, covered: 1, total: 1 });
+  const partial = { ...first, id: '3', attendanceSourceIds: ['B', 'C'] };
+  assert.equal(attendance.teamAttendance(first, '1', [first, partial]), undefined);
+  assert.equal(attendance.teamAttendanceTotal([first], '1', [first, partial]).covered, 0);
+  const Component = load('components/EventCard.tsx').default;
+  const html = renderToStaticMarkup(React.createElement(Component, {
+    event: first, teams, fields, sites, currentUser: null,
+  }));
+  assert.match(html, /<strong>5<\/strong> confirmed/);
+  assert.match(html, /<strong>7<\/strong> confirmed/);
+  assert.ok(!html.includes('per-team breakdown is not available'));
+});
+
 test('forecast badge shows event-day conditions, units and attribution without using home weather for away games', () => {
   const Component = load('components/EventForecast.tsx').default;
   const forecast = {
@@ -109,16 +128,53 @@ test('forecast badge shows event-day conditions, units and attribution without u
   assert.match(render({ forecast: undefined, error: 'Synthetic outage' }), /Forecast unavailable/);
 });
 
-test('team totals follow the visible event/team filters and disclose incomplete coverage', () => {
+test('front-page list keeps filtered event-card attendance without the team totals section', () => {
   const data = { events: [event(), event({ id: '2', attendanceAccepted: undefined }),
     event({ id: '3', teamIds: ['2'] })], teams, fields, sites, isLoading: false, error: null };
   const Component = load('components/EventList.tsx', data).default;
   const html = renderToStaticMarkup(React.createElement(Component, {
     sportFilter: 'All Sports', teamFilter: '1', currentUser: null,
   }));
+  assert.ok(!html.includes('Team attendance totals'));
+  assert.ok(!html.includes('events with team counts'));
+  assert.match(html, /<strong>12<\/strong> confirmed/);
+  assert.ok(!html.includes('Seniors'));
+});
+
+test('office statistics show window-scoped team totals and disclose missing coverage without cancelled events', () => {
+  const first = event({ spondId: 'provider-event' });
+  const data = { events: [first, { ...first, id: '2' },
+    event({ id: '3', attendanceAccepted: undefined }),
+    event({ id: '4', attendanceAccepted: 99, status: 'Cancelled' }),
+    event({ id: '5', teamIds: ['2'], attendanceAccepted: 0 })],
+    teams, eventWindow: { from: '2099-11-01T00:00:00Z', to: '2099-12-01T00:00:00Z' },
+    isLoading: false, error: null };
+  const Component = load('components/OperationsOffice/StatisticsManager.tsx', data).default;
+  const html = renderToStaticMarkup(React.createElement(Component));
   assert.match(html, /Team attendance totals/);
+  assert.match(html, /2099-11-01<!-- --> to <!-- -->2099-12-01|2099-11-01 to 2099-12-01/);
   assert.match(html, /1\/2 events with team counts/);
   assert.match(html, /Incomplete total/);
-  assert.ok(!html.includes('Seniors'));
+  assert.equal(html.match(/<strong>12<\/strong> confirmed/g).length, 1);
+  assert.match(html, /<strong>0<\/strong> confirmed/);
+  assert.ok(!html.includes('<strong>99</strong>'));
+  assert.match(html, /Seniors/);
   assert.match(html, /not unique players/);
+  assert.match(html, /not counted as zero/);
+});
+
+test('office statistics distinguish loading, failed refresh and an empty loaded window', () => {
+  const base = { events: [event()], teams,
+    eventWindow: { from: '2099-11-01', to: '2099-12-01' }, isLoading: false, error: null };
+  const render = changes => {
+    const Component = load('components/OperationsOffice/StatisticsManager.tsx', { ...base, ...changes }).default;
+    return renderToStaticMarkup(React.createElement(Component));
+  };
+  assert.match(render({ events: [] }), /No team attendance statistics available/);
+  const loading = render({ isLoading: true });
+  assert.match(loading, /role="status">Loading attendance statistics/);
+  assert.ok(!loading.includes('<strong>12</strong>'));
+  const failed = render({ error: 'Synthetic refresh failure' });
+  assert.match(failed, /role="alert">Attendance statistics are unavailable/);
+  assert.ok(!failed.includes('<strong>12</strong>'));
 });
