@@ -23,6 +23,7 @@ interface Discovery {
   expiresAt: string
   teams: Team[]
   groups: Group[]
+  confirmedTeamIds: number[]
 }
 interface PreviewEvent {
   id: number | string
@@ -77,6 +78,10 @@ const eventText = (event: PreviewEvent) =>
 const groupText = (group: Group) => group.parentGroup
   ? `${group.parentGroup} / ${group.name} (subgroup)`
   : `${group.name} (entire group)`
+const previewDate = (offset: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' })
+  .format(new Date(Date.now() + offset * 86400000))
+const matchingEvents = (row: Reconciliation['rows'][number]) => row.classification === 'held' ? []
+  : row.spond.filter(event => event.start === row.qmt?.start && event.end === row.qmt?.end)
 
 export default function SpondReviewPanel({ attendanceEnabled = false }: { attendanceEnabled?: boolean } = {}) {
   const [username, setUsername] = useState('')
@@ -88,8 +93,8 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
   const [confirmation, setConfirmation] = useState(false)
   const [confirmedTeamIds, setConfirmedTeamIds] = useState<number[]>([])
   const [teamId, setTeamId] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [from, setFrom] = useState(() => previewDate(-1))
+  const [to, setTo] = useState(() => previewDate(30))
   const [preview, setPreview] = useState<Reconciliation | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -99,7 +104,10 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
   const [retainToken, setRetainToken] = useState(false)
   const [linkSelections, setLinkSelections] = useState<Record<number, string>>({})
   const [linkConfirmations, setLinkConfirmations] = useState<Record<number, boolean>>({})
+  const [linkErrors, setLinkErrors] = useState<Record<number, string>>({})
+  const [savedLinks, setSavedLinks] = useState<Record<number, boolean>>({})
   const controller = useRef<AbortController | null>(null)
+  const resumed = useRef(false)
   useEffect(() => () => { controller.current?.abort() }, [])
   useEffect(() => {
     if (!attendanceEnabled) return
@@ -118,15 +126,38 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
     const timer = setInterval(update, 30000)
     return () => { request.abort(); clearInterval(timer) }
   }, [attendanceEnabled])
+  useEffect(() => {
+    if (!attendanceEnabled || !attendanceStatus?.connected || !attendanceStatus.authorized ||
+        attendanceStatus.blocked || resumed.current) return
+    resumed.current = true
+    const request = new AbortController()
+    controller.current = request
+    setBusy(true)
+    void apiRequest<Discovery>('/spond/attendance/resume', {
+      method: 'POST', body: '{}', signal: AbortSignal.any([request.signal, AbortSignal.timeout(45000)]),
+    }).then(result => {
+      if (request.signal.aborted) return
+      setDiscovery(result)
+      setMappings(Object.fromEntries(result.teams.map(team => [team.id, team.suggestedGroupId || ''])))
+      setConfirmedTeamIds(result.confirmedTeamIds)
+      setTeamId(String(result.confirmedTeamIds[0] || ''))
+    }).catch(failure => {
+      if (!request.signal.aborted) setError(failure instanceof Error ? failure.message : 'Could not load saved Spond access')
+    }).finally(() => {
+      if (!request.signal.aborted) setBusy(false)
+      if (controller.current === request) controller.current = null
+    })
+    return () => { request.abort() }
+  }, [attendanceEnabled, attendanceStatus?.connected, attendanceStatus?.authorized, attendanceStatus?.blocked])
 
-  const run = async (action: (signal: AbortSignal) => Promise<void>) => {
+  const run = async (action: (signal: AbortSignal) => Promise<void>, timeout = 45000) => {
     if (controller.current && !controller.current.signal.aborted) return
     const request = new AbortController()
     controller.current = request
     setBusy(true)
     setError(null)
     setMessage('')
-    try { await action(AbortSignal.any([request.signal, AbortSignal.timeout(45000)])) }
+    try { await action(AbortSignal.any([request.signal, AbortSignal.timeout(timeout)])) }
     catch (failure) {
       if (!request.signal.aborted) setError(failure instanceof Error ? failure.message : 'Spond review failed; retry discovery.')
     } finally {
@@ -142,11 +173,15 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
     setPreview(null)
     setLinkSelections({})
     setLinkConfirmations({})
+    setLinkErrors({})
+    setSavedLinks({})
     setMessage('')
   }
   const discover = (event: FormEvent) => {
     event.preventDefault()
     const credentials = { username, password }
+    const keepConnected = retainToken
+    resumed.current = true
     setPassword('')
     setDiscovery(null)
     setSharedGroupId('')
@@ -159,7 +194,13 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
       if (signal.aborted) return
       setDiscovery(result)
       setMappings(Object.fromEntries(result.teams.map(team => [team.id, team.suggestedGroupId || ''])))
-      setMessage('Discovery complete. Suggestions have not been saved; review and select each mapping explicitly.')
+      setConfirmedTeamIds(result.confirmedTeamIds)
+      setTeamId(String(result.confirmedTeamIds[0] || ''))
+      if (attendanceEnabled && keepConnected) {
+        await post('attendance/connect', { discoveryId: result.discoveryId, confirmed: true }, signal)
+        await refreshAttendance(signal)
+      }
+      if (!signal.aborted) setMessage(keepConnected ? 'Connected. Saved team links are ready to use.' : 'Groups loaded. Review new team links below.')
     })
   }
   const selected = discovery?.teams.filter(team => reviewed[team.id] && mappings[team.id]) || []
@@ -177,7 +218,7 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
     if (groupId !== team.existingGroupId) return `${link}. Not saved until you review and confirm below.`
     return confirmedTeamIds.includes(team.id)
       ? `${link}. Already saved; ready for read-only event preview below.`
-      : `${link}. Already saved; review and confirm to preview this team's events.`
+      : `${link}. Already saved.`
   }
   const confirmMappings = () => void run(async signal => {
     if (!discovery) return
@@ -189,7 +230,7 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
     if (signal.aborted) return
     setDiscovery(previous => previous && ({
       ...previous,
-      teams: previous.teams.map(team => result.confirmedTeamIds.includes(team.id)
+      teams: previous.teams.map(team => selected.some(item => item.id === team.id)
         ? { ...team, existingGroupId: mappings[team.id], reason: 'Link saved in this session' }
         : team),
     }))
@@ -197,19 +238,37 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
     setConfirmation(false)
     setConfirmedTeamIds(result.confirmedTeamIds)
     setTeamId(String(result.confirmedTeamIds[0]))
-    setMessage('Reviewed team links saved. No events, attendance, or sync settings were changed.')
+    setMessage('Team links saved. Ready to review events.')
   })
   const reconcile = (event: FormEvent) => {
     event.preventDefault()
     setPreview(null)
     setLinkSelections({})
     setLinkConfirmations({})
+    setLinkErrors({})
+    setSavedLinks({})
     void run(async signal => {
       if (!discovery) return
+      let current = discovery
+      if (attendanceStatus?.connected && Date.parse(current.expiresAt) <= Date.now()) {
+        current = await post<Discovery>('attendance/resume', {}, signal)
+        if (signal.aborted) return
+        setDiscovery(current)
+        setMappings(Object.fromEntries(current.teams.map(team => [team.id, team.suggestedGroupId || ''])))
+        setConfirmedTeamIds(current.confirmedTeamIds)
+        if (!current.confirmedTeamIds.includes(Number(teamId))) {
+          setTeamId(String(current.confirmedTeamIds[0] || ''))
+          throw new Error('This team link changed. Review the saved teams before finding events again.')
+        }
+      }
       const result = await post<Reconciliation>('reconciliation', {
-        discoveryId: discovery.discoveryId, teamId: Number(teamId), from, to,
+        discoveryId: current.discoveryId, teamId: Number(teamId), from, to,
       }, signal)
-      if (!signal.aborted) setPreview(result)
+      if (!signal.aborted) {
+        setPreview(result)
+        setLinkSelections(Object.fromEntries(result.rows.filter(row => row.qmt && matchingEvents(row).length === 1)
+          .map(row => [Number(row.qmt!.id), String(matchingEvents(row)[0].id)])))
+      }
     })
   }
   const refreshAttendance = async (signal: AbortSignal) => {
@@ -219,78 +278,118 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
     ])
     if (!signal.aborted) { setAttendanceStatus(status); setAttendanceLinks(links) }
   }
-  const attendanceAction = (action: 'connect' | 'disconnect' | 'refresh') => void run(async signal => {
-    await post(`attendance/${action}`, {
-      confirmed: action === 'connect' ? retainToken : true,
-      ...(action === 'connect' && discovery ? { discoveryId: discovery.discoveryId } : {}),
-    }, signal)
+  const attendanceAction = (action: 'disconnect' | 'refresh') => void run(async signal => {
+    await post(`attendance/${action}`, { confirmed: true }, signal)
     await refreshAttendance(signal)
     if (!signal.aborted) {
       setRetainToken(false)
-      setMessage(action === 'connect' ? 'Scheduled attendance connected. No password was stored and no Spond events were changed.'
-        : action === 'disconnect' ? 'Scheduled reads stopped; existing attendance and bookings are preserved.'
+      setMessage(action === 'disconnect' ? 'Scheduled reads stopped; existing attendance and bookings are preserved.'
           : 'Attendance refresh queued. Status updates automatically.')
     }
   })
-  const confirmAttendanceLink = (eventId: number) => void run(async signal => {
+  const confirmAttendanceLinks = () => void run(async signal => {
     if (!discovery) return
-    await post('attendance/links/confirm', {
-      discoveryId: discovery.discoveryId, confirmed: linkConfirmations[eventId] === true,
-      eventId, teamId: Number(teamId), providerId: linkSelections[eventId],
+    const links = selectedEventIds.slice(0, 50).map(eventId => ({ eventId, providerId: linkSelections[eventId] }))
+    const result = await post<{ results: { eventId: number; linked: boolean; error?: string }[] }>('attendance/links/confirm-bulk', {
+      discoveryId: discovery.discoveryId, confirmed: true, teamId: Number(teamId), links,
     }, signal)
-    await refreshAttendance(signal)
     if (!signal.aborted) {
-      setLinkConfirmations(previous => ({ ...previous, [eventId]: false }))
-      setMessage('Attendance-only event link saved. Add any other team sources for this event before refreshing.')
+      const saved = result.results.filter(item => item.linked)
+      const failed = result.results.filter(item => !item.linked)
+      setSavedLinks(previous => ({ ...previous, ...Object.fromEntries(saved.map(item => [item.eventId, true])) }))
+      setLinkConfirmations(previous => ({ ...previous, ...Object.fromEntries(saved.map(item => [item.eventId, false])) }))
+      setLinkErrors(Object.fromEntries(failed.map(item => [item.eventId, item.error || 'Link could not be saved'])))
+      setMessage(`${saved.length} event link(s) saved.${failed.length ? ` ${failed.length} failed; review the errors and retry.` : ''}`)
+      await refreshAttendance(signal)
     }
-  })
+  }, 600000)
+  const eligibleRows = preview?.rows.filter(row => row.qmt && matchingEvents(row).length > 0) || []
+  const selectableIds = eligibleRows.filter(row => linkSelections[Number(row.qmt!.id)] && !savedLinks[Number(row.qmt!.id)])
+    .map(row => Number(row.qmt!.id))
+  const selectedEventIds = selectableIds.filter(id => linkConfirmations[id])
+  const clearPreview = () => { setPreview(null); setLinkSelections({}); setLinkConfirmations({}); setLinkErrors({}); setSavedLinks({}) }
   return (
     <Card>
-      <CardHeader><CardTitle>Spond discovery and human review</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Spond attendance</CardTitle></CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground">
-          QMT remains authoritative for facility bookings. Existing and user-created Spond events are preserved.
-          This flow only discovers groups, saves explicitly reviewed mappings, and previews coexistence.
-          {attendanceEnabled ? ' Reviewed attendance links can enable scheduled reads below. Publishing, booking imports, and participant notifications stay disabled.'
-            : ' Publishing, booking imports, attendance imports, and participant notifications are disabled.'}
+          Connect once, link your teams, then confirm events together. Bookings and Spond events stay unchanged.
         </p>
         <p role="status" aria-live="polite">{busy ? 'Working on Spond review...' : message}</p>
         {error && <p role="alert" className="text-red-700">{error}</p>}
-        <form onSubmit={discover}>
+        {attendanceEnabled && <section aria-label="Scheduled Spond attendance" className="space-y-3 rounded border p-3">
+          {!attendanceStatus ? <p role="status">Loading connection...</p> : <>
+            <p role="status" className="font-medium">{!attendanceStatus.connected ? 'Not connected'
+              : !attendanceStatus.authorized || attendanceStatus.blocked ? 'Reconnect to resume attendance updates'
+                : attendanceStatus.running ? 'Connected - updating attendance'
+                  : `Connected - updates every ${attendanceStatus.intervalMinutes} minutes`}</p>
+            <p className="text-sm">{attendanceLinks.length} linked event(s).
+              {' '}Last update: {attendanceStatus.lastSuccessAt ? new Date(attendanceStatus.lastSuccessAt).toLocaleString() : 'Not yet'}.</p>
+            {attendanceStatus.error && <p role="alert">{attendanceStatus.error}</p>}
+            {attendanceStatus.connected && <div className="flex flex-wrap gap-2">
+              <Button type="button" disabled={busy || attendanceStatus.running || attendanceStatus.blocked || !attendanceStatus.authorized}
+                onClick={() => attendanceAction('refresh')}>Refresh attendance</Button>
+              <Button type="button" variant="outline" disabled={busy} onClick={() => void run(async signal => {
+                const result = await post<Discovery>('attendance/resume', {}, signal)
+                if (signal.aborted) return
+                setDiscovery(result)
+                setMappings(Object.fromEntries(result.teams.map(team => [team.id, team.suggestedGroupId || ''])))
+                setConfirmedTeamIds(result.confirmedTeamIds)
+                setTeamId(String(result.confirmedTeamIds[0] || ''))
+                setReviewed({})
+                setConfirmation(false)
+                clearPreview()
+                setMessage('Saved connection and team links loaded.')
+              })}>Reload teams</Button>
+            </div>}
+            <details className="text-sm">
+              <summary className="cursor-pointer">Connection details</summary>
+              <div className="mt-2 space-y-2">
+                <p>QMT stores an encrypted access token, not your password. Access survives restarts; reconnect only if it expires or is revoked.</p>
+                <p>{attendanceStatus.window}</p>
+                <p>Last attempt: {attendanceStatus.lastAttemptAt ? new Date(attendanceStatus.lastAttemptAt).toLocaleString() : 'Not yet'}.
+                  {' '}Next run: {attendanceStatus.nextRunAt ? new Date(attendanceStatus.nextRunAt).toLocaleString() : 'Not scheduled'}.</p>
+                <p>{attendanceStatus.processed} updated, {attendanceStatus.failed} failed, {attendanceStatus.queued} remaining.</p>
+                {attendanceStatus.connected && <Button type="button" variant="outline" disabled={busy}
+                  onClick={() => attendanceAction('disconnect')}>Disconnect Spond</Button>}
+              </div>
+            </details>
+          </>}
+        </section>}
+        <details open={!attendanceStatus?.connected && !discovery} className="space-y-3">
+          <summary className="cursor-pointer font-medium">{attendanceStatus?.connected ? 'Reconnect or change account' : 'Connect Spond'}</summary>
+          <form onSubmit={discover}>
           <fieldset disabled={busy} className="space-y-3">
-            <legend className="font-medium">1. Run discovery</legend>
-            <p className="text-sm">Your password is used only to sign in and is never stored in SQL or browser storage.
-              The administrator-scoped connection expires after 15 minutes or a server restart.</p>
+            <legend className="sr-only">Spond sign-in</legend>
             <Label className="text-inherit" htmlFor="spond-review-email">Spond email</Label>
             <Input id="spond-review-email" name="username" type="email" autoComplete="username"
               required value={username} onChange={event => setUsername(event.target.value)} />
             <Label className="text-inherit" htmlFor="spond-review-password">Spond password</Label>
-            <Input id="spond-review-password" name="password" type="password" autoComplete="off"
+            <Input id="spond-review-password" name="password" type="password" autoComplete="current-password"
               required value={password} onChange={event => setPassword(event.target.value)} />
-            <Button type="submit">Discover groups and suggest mappings</Button>
+            {attendanceEnabled && <label className="flex min-h-12 items-center gap-2 text-sm">
+              <input type="checkbox" name="retain-attendance-token" checked={retainToken} required
+                onChange={event => setRetainToken(event.target.checked)} />
+              Keep connected for automatic attendance updates (encrypted token only, never your password).
+            </label>}
+            <Button type="submit" disabled={attendanceEnabled && !retainToken}>{attendanceEnabled ? 'Connect Spond' : 'Discover groups'}</Button>
           </fieldset>
-        </form>
+          </form>
+        </details>
         {discovery && (
+          <details open={confirmedTeamIds.length === 0} className="space-y-3">
+            <summary className="cursor-pointer font-medium">Team links ({confirmedTeamIds.length} saved)</summary>
           <fieldset disabled={busy} className="space-y-3">
-            <legend className="font-medium">2. Link QMT teams to Spond groups</legend>
+            <legend className="sr-only">Link QMT teams to Spond groups</legend>
             <p className="text-sm">
-              Choose one Spond group or subgroup, then select all QMT teams that belong to it.
-              You are linking teams, not matching individual events. Saving these links does not copy events or activate sync.
+              Saved links are ready to use. Only review teams you want to add or change.
             </p>
-            <p className="text-sm">Connection expires {new Date(discovery.expiresAt).toLocaleTimeString()}.
-              Teams you leave unchanged or do not review keep their saved links.
-              Shared groups are allowed only through your explicit selections.</p>
             <p id="spond-group-scope" className="text-sm">
-              Choose a subgroup for a specific squad, or an entire group for the broader group.
-              Event previews currently inspect the whole parent group for duplicate safety, even when you select a subgroup.
+              Choose a subgroup for a squad, or an entire group for a shared audience.
             </p>
             {discovery.teams.length === 0 && <p>No active QMT teams were found.</p>}
-            <section aria-label="One Spond group to multiple QMT teams" className="space-y-3 rounded border p-3">
-              <h3 className="font-medium">One Spond group, multiple QMT teams (1:n)</h3>
-              <p className="text-sm">
-                A Spond group can be shared by several QMT teams. Each QMT team keeps one Spond link.
-                Repeat this selection for other Spond groups, or edit individual team links below.
-              </p>
+            <details aria-label="One Spond group to multiple QMT teams" className="space-y-3 rounded border p-3">
+              <summary className="cursor-pointer font-medium">Link several teams to one group</summary>
               <Label className="text-inherit" htmlFor="spond-shared-group">Spond group or subgroup to share</Label>
               <select id="spond-shared-group" name="shared-group"
                 aria-describedby="spond-group-scope spond-shared-help"
@@ -302,9 +401,7 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
                 </option>)}
               </select>
               <p id="spond-shared-help" className="text-sm">
-                Checking a team explicitly reviews its link to the selected Spond group.
-                Nothing is saved until you confirm the complete list below.
-                Unchecking a team removes it from that list; its saved link stays unchanged.
+                Select teams, then save the reviewed links below. Unselected teams stay unchanged.
               </p>
               <fieldset id="spond-shared-teams" disabled={!sharedGroupId} className="space-y-2">
                 <legend className="font-medium">
@@ -339,13 +436,12 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
                   ))}
                 </div>
               </fieldset>
-            </section>
-            <details className="space-y-3">
+            </details>
+            <details open={confirmedTeamIds.length === 0} className="space-y-3">
               <summary className="cursor-pointer font-medium">Review or edit individual QMT team links</summary>
               <div className="space-y-4">
                 {discovery.teams.map(team => (
                   <div key={team.id} className="space-y-2 rounded border p-3">
-                    <p className="text-sm">QMT team</p>
                     <h3 className="text-base font-semibold">{team.name}</h3>
                     <p id={`spond-team-saved-${team.id}`} className="text-sm">
                       <strong>Saved Spond link: </strong>
@@ -354,7 +450,7 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
                     <Label className="text-inherit" htmlFor={`spond-team-${team.id}`}>
                       Spond group or subgroup for {team.name}
                     </Label>
-                    <p id={`spond-team-reason-${team.id}`} className="text-sm">{team.reason}</p>
+                    <p id={`spond-team-reason-${team.id}`} className="sr-only">{team.reason}</p>
                     <select id={`spond-team-${team.id}`}
                       aria-describedby={`spond-team-saved-${team.id} spond-team-reason-${team.id} spond-group-scope spond-team-selection-${team.id}`}
                       className="w-full rounded border bg-background p-2" value={mappings[team.id] || ''}
@@ -368,7 +464,7 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
                         {groupText(group)}
                       </option>)}
                     </select>
-                    <p id={`spond-team-selection-${team.id}`} className="text-sm">
+                    <p id={`spond-team-selection-${team.id}`} className="sr-only">
                       <strong>After saving: </strong>
                       {selectionText(team)}
                     </p>
@@ -397,105 +493,107 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
             <label className="flex items-center gap-2">
               <input type="checkbox" name="confirm-mappings" checked={confirmation}
                 onChange={event => setConfirmation(event.target.checked)} />
-              Save only the {selected.length} team links listed above; do not activate sync
+              Save these {selected.length} team links
             </label>
             <Button type="button" disabled={!confirmation || selected.length === 0} onClick={confirmMappings}>
               Save reviewed team links
             </Button>
           </fieldset>
+          </details>
         )}
         {confirmedTeamIds.length > 0 && (
           <form onSubmit={reconcile}>
             <fieldset disabled={busy} className="space-y-3">
-              <legend className="font-medium">3. Preview event coexistence (read-only)</legend>
+              <legend className="font-medium">Review events</legend>
               <Label className="text-inherit" htmlFor="spond-preview-team">Reviewed team</Label>
               <select id="spond-preview-team" className="w-full rounded border bg-background p-2" value={teamId}
-                onChange={event => { setTeamId(event.target.value); setPreview(null) }} required>
+                onChange={event => { setTeamId(event.target.value); clearPreview() }} required>
                 {discovery?.teams.filter(team => confirmedTeamIds.includes(team.id)).map(team =>
                   <option key={team.id} value={team.id}>{team.name}</option>)}
               </select>
+              <p className="text-sm">Spond audience: {discoveredGroupText(discovery?.teams.find(team => team.id === Number(teamId))?.existingGroupId || '')}</p>
               <Label className="text-inherit" htmlFor="spond-preview-from">Start date (club timezone)</Label>
               <Input id="spond-preview-from" type="date" required value={from}
-                onChange={event => { setFrom(event.target.value); setPreview(null) }} />
+                onChange={event => { setFrom(event.target.value); clearPreview() }} />
               <Label className="text-inherit" htmlFor="spond-preview-to">Exclusive end date (maximum 31 days)</Label>
               <Input id="spond-preview-to" type="date" required value={to}
-                onChange={event => { setTo(event.target.value); setPreview(null) }} />
-              <Button type="submit">Preview without syncing</Button>
+                onChange={event => { setTo(event.target.value); clearPreview() }} />
+              <Button type="submit">Find matching events</Button>
             </fieldset>
           </form>
         )}
         {preview && <section aria-label="Event coexistence preview" className="space-y-3">
-          <p role="status">{preview.warning}</p>
-          <p className="text-sm">{preview.scope}. Times are club wall-clock times ({preview.timezone}), not UTC.</p>
+          <p className="text-sm">Review the event pairs and audiences below. Attendance only; no events are changed. Times: {preview.timezone}.</p>
+          {attendanceEnabled && eligibleRows.length > 0 && <fieldset disabled={busy} className="space-y-3">
+            <legend className="sr-only">Bulk attendance event confirmation</legend>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded border bg-muted/30 p-3">
+              <label className="flex min-h-12 items-center gap-2">
+                <input type="checkbox" name="select-all-attendance"
+                  checked={selectableIds.length > 0 && selectedEventIds.length === selectableIds.length}
+                  disabled={selectableIds.length === 0}
+                  onChange={event => {
+                    setLinkConfirmations(Object.fromEntries(selectableIds.map(id => [id, event.target.checked])))
+                  }} />
+                Select all matching events ({selectableIds.length})
+              </label>
+              <Button type="button" disabled={selectedEventIds.length === 0} onClick={confirmAttendanceLinks}>
+                {`Confirm selected (${Math.min(selectedEventIds.length, 50)})`}
+              </Button>
+            </div>
+            {selectedEventIds.length > 50 && <p className="text-sm">50 events are saved at a time. Remaining selections stay ready for the next batch.</p>}
+            <p className="text-sm">Confirming approves attendance reads for the selected events and audiences. For combined bookings, review each participating team's sources.</p>
+            <div className="divide-y rounded border">
+              {eligibleRows.map(row => {
+                const eventId = Number(row.qmt!.id)
+                const candidates = matchingEvents(row)
+                return <div key={eventId} className="space-y-2 p-3 sm:grid sm:grid-cols-[auto_1fr_1fr] sm:items-center sm:gap-4 sm:space-y-0">
+                  <label className="flex min-h-12 items-center gap-2">
+                    <input type="checkbox" name={`confirm-attendance-${eventId}`}
+                      aria-label={`Select ${eventText(row.qmt!)}`}
+                      disabled={!linkSelections[eventId] || savedLinks[eventId]}
+                      checked={linkConfirmations[eventId] || false}
+                      onChange={event => setLinkConfirmations(previous => ({ ...previous, [eventId]: event.target.checked }))} />
+                    <span className="sm:sr-only">Select event</span>
+                  </label>
+                  <div className="min-w-0 break-words text-sm">
+                    <p className="font-medium">{row.qmt!.title}</p>
+                    <p>{row.qmt!.start.slice(0, 16).replace('T', ' ')} - {row.qmt!.end.slice(11, 16)}</p>
+                    {savedLinks[eventId] && <p role="status">Link saved</p>}
+                    {linkErrors[eventId] && <p role="alert" className="text-red-700">{linkErrors[eventId]}</p>}
+                  </div>
+                  <div className="min-w-0">
+                    <label className="sr-only" htmlFor={`attendance-source-${eventId}`}>Spond event for {row.qmt!.title}</label>
+                    <select id={`attendance-source-${eventId}`} name={`attendance-source-${eventId}`}
+                      className="min-h-12 w-full rounded border bg-background p-2 text-sm"
+                      disabled={savedLinks[eventId]} value={linkSelections[eventId] || ''}
+                      onChange={event => {
+                        setLinkSelections(previous => ({ ...previous, [eventId]: event.target.value }))
+                        setLinkConfirmations(previous => ({ ...previous, [eventId]: false }))
+                      }}>
+                      <option value="">Choose matching Spond event</option>
+                      {candidates.map(event => <option key={event.id} value={String(event.id)}>{eventText(event)}</option>)}
+                    </select>
+                    {candidates.length > 1 && <p className="text-sm">Multiple matches - choose one before selecting.</p>}
+                  </div>
+                </div>
+              })}
+            </div>
+          </fieldset>}
           {preview.rows.length === 0 && <p>No events observed in this preview interval.</p>}
-          {preview.rows.map((row, index) => <div key={`${row.qmt?.id || 'spond'}-${index}`} className="rounded border p-3">
+          {attendanceEnabled && preview.rows.length > 0 && eligibleRows.length === 0 && <p>No exact-time matches. Review other events below.</p>}
+          <details>
+            <summary className="cursor-pointer text-sm">Other events and matching details</summary>
+            <p className="text-sm">{preview.warning} {preview.scope}.</p>
+          {preview.rows.filter(row => !attendanceEnabled || !row.qmt || matchingEvents(row).length === 0).map((row, index) => <div key={`${row.qmt?.id || 'spond'}-${index}`} className="rounded border p-3">
             <p className="font-medium">{labels[row.classification]}</p>
             <p className="text-sm">{row.reason}</p>
             {row.qmt && <p className="text-sm">QMT: {eventText(row.qmt)}</p>}
             {row.spond.map(event => <p key={event.id} className="text-sm">Spond: {eventText(event)}</p>)}
-            {attendanceEnabled && row.qmt && row.classification !== 'held' &&
-              row.spond.some(event => event.start === row.qmt?.start && event.end === row.qmt?.end) && (
-              <form onSubmit={event => { event.preventDefault(); confirmAttendanceLink(Number(row.qmt!.id)) }}>
-                <fieldset disabled={busy} className="mt-3 space-y-2">
-                  <legend className="font-medium">Review attendance source for this QMT event</legend>
-                  <label className="block" htmlFor={`attendance-source-${row.qmt.id}`}>Existing Spond event</label>
-                  <select id={`attendance-source-${row.qmt.id}`} name="attendance-source" required
-                    className="w-full rounded border bg-background p-2" value={linkSelections[Number(row.qmt.id)] || ''}
-                    onChange={event => {
-                      setLinkSelections(previous => ({ ...previous, [Number(row.qmt!.id)]: event.target.value }))
-                      setLinkConfirmations(previous => ({ ...previous, [Number(row.qmt!.id)]: false }))
-                    }}>
-                    <option value="">Choose the matching event explicitly</option>
-                    {row.spond.filter(event => event.start === row.qmt?.start && event.end === row.qmt?.end).map(event =>
-                      <option key={event.id} value={String(event.id)}>{eventText(event)}</option>)}
-                  </select>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" name={`confirm-attendance-${row.qmt.id}`} required
-                      checked={linkConfirmations[Number(row.qmt.id)] || false}
-                      onChange={event => setLinkConfirmations(previous => ({ ...previous, [Number(row.qmt!.id)]: event.target.checked }))} />
-                    I reviewed this event and audience. Import attendance only; do not create or modify any booking or Spond event.
-                  </label>
-                  <Button type="submit">Confirm attendance-only event link</Button>
-                </fieldset>
-              </form>
-            )}
           </div>)}
+          </details>
         </section>}
-        {attendanceEnabled && <section aria-label="Scheduled Spond attendance" className="space-y-3 rounded border p-3">
-          <h3 className="font-medium">4. Scheduled attendance (read-only in Spond)</h3>
-          <p className="text-sm">Team mappings do not automatically link events. Confirm each existing event pair above.
-            For a combined QMT event, review sources from each participating team's preview.
-            The same Spond event and identical response IDs count once. Shared audiences are not invented as per-team totals.</p>
-          <p className="text-sm">With your confirmation, QMT retains an encrypted access token, not your password.
-            Reads continue after discovery expires or QMT restarts. If Spond revokes or expires the token, reconnect here.
-            Rotating QMT's signing secret also requires reconnection. This replaces any existing club attendance connection.</p>
-          {!attendanceStatus ? <p role="status">Loading attendance connection...</p> : <>
-            <p role="status">{!attendanceStatus.connected ? 'Not connected - no scheduled imports are running.'
-              : !attendanceStatus.authorized ? 'Connection owner is no longer an active administrator; reconnect.'
-                : attendanceStatus.blocked ? 'Reconnection required; scheduled imports are paused.'
-                  : attendanceStatus.running ? 'Attendance refresh is running.' : 'Connected - scheduled reads every 15 minutes.'}</p>
-            <p className="text-sm">{attendanceStatus.window}</p>
-            <p className="text-sm">Last attempt: {attendanceStatus.lastAttemptAt ? new Date(attendanceStatus.lastAttemptAt).toLocaleString() : 'Not yet'}.
-              {' '}Last successful update: {attendanceStatus.lastSuccessAt ? new Date(attendanceStatus.lastSuccessAt).toLocaleString() : 'Not yet'}.
-              {' '}Next run: {attendanceStatus.nextRunAt ? new Date(attendanceStatus.nextRunAt).toLocaleString() : 'Not scheduled'}.</p>
-            <p className="text-sm">Last run: {attendanceStatus.processed} updated, {attendanceStatus.failed} failed, {attendanceStatus.queued} remaining.</p>
-            {attendanceStatus.error && <p role="alert">{attendanceStatus.error}</p>}
-          </>}
-          <fieldset disabled={busy} className="space-y-2">
-            {discovery && confirmedTeamIds.length > 0 && <>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="retain-attendance-token" checked={retainToken}
-                  onChange={event => setRetainToken(event.target.checked)} />
-                Store this connection's encrypted access token and enable scheduled attendance-only reads.
-              </label>
-              <Button type="button" disabled={!retainToken} onClick={() => attendanceAction('connect')}>Enable or reconnect scheduled attendance</Button>
-            </>}
-            {attendanceStatus?.connected && <div className="flex flex-wrap gap-2">
-              <Button type="button" disabled={attendanceStatus.running || attendanceStatus.blocked} onClick={() => attendanceAction('refresh')}>Refresh reviewed attendance now</Button>
-              <Button type="button" variant="outline" onClick={() => attendanceAction('disconnect')}>Stop scheduled reads and remove stored token</Button>
-            </div>}
-          </fieldset>
-          {attendanceLinks.length === 0 && <p>No reviewed event links in the refresh window yet.</p>}
+        {attendanceEnabled && attendanceLinks.length > 0 && <details className="space-y-3">
+          <summary className="cursor-pointer font-medium">Linked events ({attendanceLinks.length})</summary>
           {attendanceLinks.map(link => <div key={link.eventId} className="rounded border p-2 text-sm">
             <p>{link.title} - {link.start.slice(0, 16).replace('T', ' ')}: {link.sourceCount} reviewed source(s).
               {' '}Last updated: {link.lastSync ? new Date(link.lastSync).toLocaleString() : 'Not yet'}.</p>
@@ -509,7 +607,7 @@ export default function SpondReviewPanel({ attendanceEnabled = false }: { attend
               })}>Confirm removal of attendance links only</Button>
             </details>
           </div>)}
-        </section>}
+        </details>}
       </CardContent>
     </Card>
   )

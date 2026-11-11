@@ -1,5 +1,28 @@
 # QMT controlled relaunch
 
+## Persistent setup and bulk review: November 11, 2026 (local preparation)
+
+The revised Spond settings use one explicit sign-in/token-retention confirmation.
+The encrypted club connection can reopen short-lived administrator review
+sessions without another password. Already-reviewed active team mappings are
+reused only when their exact group/parent pair remains accessible. New or
+changed mappings still require review; opening Settings never approves events.
+Expired event-preview sessions can renew through the retained connection.
+
+Connection details, account changes, team-link editing and linked-event
+maintenance are collapsed. Event review offers a compact list, selection of all
+single exact-time matches, and one attendance-only confirmation for up to 50
+selected event pairs. Multiple candidates require an explicit choice first.
+Each pair still passes the existing booking, audience, mapping and response
+validation before it is saved. Partial results identify saved links and retain
+failed selections for review/retry; this is not an all-or-nothing transaction.
+The daily review quota reserves one unit per selected provider read, while
+the administrator action limit counts the batch once.
+
+This preparation adds no migration, deployment flag or infrastructure.
+It does not activate a live connection, approve live links, merge PR #29,
+or claim that the revised settings are deployed.
+
 ## Attendance-only release preparation: November 10, 2026
 
 The attendance-only implementation is isolated from draft publisher PR #29.

@@ -144,7 +144,7 @@ function fixture(attendance) {
   let time = Date.parse('2026-11-04T15:00:00Z');
   let teams = [{ id: 1, name: 'U19', active: true, spond_group_id: null, spond_parent_group_id: null,
     spond_mapping_reviewed_at: null, spond_mapping_reviewed_by: null, updated_at: 'before' }];
-  const calls = [], queries = [], logs = [], eventReads = [];
+  const calls = [], queries = [], logs = [], eventReads = [], events = [local()];
   let rollback = 0, committed = 0, snapshots;
   const quotaReservations = [];
   let quotaError, quotaDenied = false;
@@ -159,7 +159,7 @@ function fixture(attendance) {
       }
       if (query.includes('FROM dbo.events')) {
         eventReads.push(inputs);
-        return { recordset: [local()] };
+        return { recordset: structuredClone(events) };
       }
       if (query.startsWith('UPDATE dbo.teams')) {
         Object.assign(teams.find(team => team.id === inputs.team), { spond_group_id: inputs.group,
@@ -208,7 +208,7 @@ function fixture(attendance) {
   });
   registerSpondReviewRoutes(app, { getPool: async () => pool, client, attendance, timezone: 'Europe/Zurich', now: () => time,
     logger: { error(...args) { logs.push(args); }, log(...args) { logs.push(args); } } });
-  return { app, pool, calls, queries, logs, quotaReservations, eventReads,
+  return { app, pool, calls, queries, logs, quotaReservations, eventReads, events,
     failQuota(error) { quotaError = error; }, denyQuota() { quotaDenied = true; },
     get teams() { return teams; }, advance() { time += 16 * 60000; },
     transactions: () => ({ rollback, committed }) };
@@ -375,7 +375,7 @@ test('canonical runtime keeps production disabled and separates review capabilit
   } finally { await app.locals.close(); }
 });
 
-test('scheduled attendance requires explicit token retention, reviewed event previews and current administrator access', async () => {
+test('scheduled attendance retains access independently of mappings but event links require reviewed previews and administrator access', async () => {
   const actions = [];
   const attendance = {
     async status() { return { enabled: true, connected: false }; },
@@ -389,10 +389,12 @@ test('scheduled attendance requires explicit token retention, reviewed event pre
     assert.equal((await fetch(base + '/api/spond/attendance/status', { headers: { 'x-test-role': 'mgmt' } })).status, 403);
     const discovery = await discover(base);
     const approval = { discoveryId: discovery.discoveryId, confirmed: true };
-    assert.equal((await send(base, 'attendance/connect', approval)).status, 409);
+    assert.equal((await send(base, 'attendance/connect', approval)).status, 200);
+    assert.equal(actions[0].token, 'synthetic-token');
+    assert.equal(actions.length, 1, 'connection does not approve any team or event link');
     await send(base, 'mappings/confirm', { ...approval, mappings: [{ teamId: 1, groupId: subgroupId }] });
     assert.equal((await send(base, 'attendance/connect', { ...approval, confirmed: false })).status, 400);
-    assert.equal(actions.length, 0);
+    assert.equal(actions.length, 1);
     assert.equal((await send(base, 'attendance/connect', approval)).status, 200);
     assert.equal(actions[0].token, 'synthetic-token');
     const input = { ...approval, teamId: 1, eventId: 1, providerId: eventId };
@@ -400,12 +402,72 @@ test('scheduled attendance requires explicit token retention, reviewed event pre
     await send(base, 'reconciliation', { discoveryId: discovery.discoveryId, teamId: 1, from: '2026-11-04', to: '2026-11-05' });
     assert.equal((await send(base, 'attendance/links/confirm', { ...input, providerId: otherId })).status, 409);
     assert.equal((await send(base, 'attendance/links/confirm', input)).status, 200);
-    assert.equal(actions[1].input.expected.id, 1);
-    assert.equal(actions[1].input.group.id, subgroupId);
+    assert.equal(actions[2].input.expected.id, 1);
+    assert.equal(actions[2].input.group.id, subgroupId);
     assert.ok(!JSON.stringify(actions).includes('synthetic-not-a-credential'));
     f.advance();
     assert.equal((await send(base, 'attendance/links/confirm', input)).status, 409);
     assert.equal((await send(base, 'attendance/disconnect', { confirmed: true })).status, 200);
+  });
+});
+
+test('saved attendance access resumes reviewed accessible mappings without a password, SQL writes or reapproval', async () => {
+  const f = fixture({ async reviewToken() { return 'synthetic-token'; } });
+  Object.assign(f.teams[0], { spond_group_id: subgroupId, spond_parent_group_id: groupId,
+    spond_mapping_reviewed_at: 'reviewed', spond_mapping_reviewed_by: 'previous-admin' });
+  f.teams.push({ ...f.teams[0], id: 2, spond_mapping_reviewed_at: null });
+  f.teams.push({ ...f.teams[0], id: 3, spond_group_id: otherId });
+  f.teams.push({ ...f.teams[0], id: 4, spond_parent_group_id: null });
+  await serve(f.app, async base => {
+    assert.equal((await send(base, 'attendance/resume', {}, { 'x-test-role': 'mgmt' })).status, 403);
+    const response = await send(base, 'attendance/resume', {});
+    assert.equal(response.status, 200);
+    const resumed = await response.json();
+    assert.deepEqual(resumed.confirmedTeamIds, [1]);
+    assert.ok(!JSON.stringify(resumed).includes('synthetic-token'));
+    assert.equal(f.calls.filter(call => call.operation === 'login').length, 0);
+    assert.equal(f.queries.filter(query => query.startsWith('UPDATE')).length, 0);
+    assert.equal((await send(base, 'reconciliation', { discoveryId: resumed.discoveryId, teamId: 1,
+      from: '2026-11-04', to: '2026-11-05' })).status, 200);
+    assert.equal((await send(base, 'reconciliation', { discoveryId: resumed.discoveryId, teamId: 2,
+      from: '2026-11-04', to: '2026-11-05' })).status, 409);
+    f.teams[0].spond_group_id = groupId;
+    assert.equal((await send(base, 'reconciliation', { discoveryId: resumed.discoveryId, teamId: 1,
+      from: '2026-11-04', to: '2026-11-05' })).status, 409);
+  });
+});
+
+test('bulk attendance rejects unreviewed, forged and duplicate pairs, and reports per-event validation failures', async () => {
+  const actions = [];
+  const f = fixture({ async link(input) {
+    actions.push(input);
+    if (input.eventId === 2) throw new (require('../server/bookings.cjs').HttpError)(409, 'Booking changed since preview');
+    return { linked: true };
+  } });
+  f.events.push(local({ id: 2 }));
+  await serve(f.app, async base => {
+    const discovery = await discover(base);
+    const approval = { discoveryId: discovery.discoveryId, confirmed: true };
+    const input = { ...approval, teamId: 1, links: [{ eventId: 1, providerId: eventId }, { eventId: 2, providerId: eventId }] };
+    assert.equal((await send(base, 'attendance/links/confirm-bulk', input)).status, 409);
+    await send(base, 'mappings/confirm', { ...approval, mappings: [{ teamId: 1, groupId: subgroupId }] });
+    await send(base, 'reconciliation', { discoveryId: discovery.discoveryId, teamId: 1, from: '2026-11-04', to: '2026-11-05' });
+    assert.equal((await send(base, 'attendance/links/confirm-bulk', { ...input, confirmed: false })).status, 400);
+    assert.equal((await send(base, 'attendance/links/confirm-bulk', { ...input, links: [input.links[0], input.links[0]] })).status, 400);
+    assert.equal((await send(base, 'attendance/links/confirm-bulk', { ...input, links: [{ eventId: 1, providerId: otherId }] })).status, 409);
+    assert.equal((await send(base, 'attendance/links/confirm-bulk', { ...input, links: Array(51).fill(input.links[0]) })).status, 400);
+    assert.equal(actions.length, 0, 'validate the whole selection before saving any link');
+    const response = await send(base, 'attendance/links/confirm-bulk', input);
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).results, [
+      { eventId: 1, linked: true }, { eventId: 2, linked: false, error: 'Booking changed since preview' },
+    ]);
+    assert.equal(actions[0].expected.id, 1);
+    assert.equal(actions[1].expected.id, 2);
+    assert.equal(actions[0].group.id, subgroupId);
+    assert.equal(actions[0].token, 'synthetic-token');
+    assert.equal(f.quotaReservations.at(-1).units, 2, 'reserve every provider read before processing the batch');
+    assert.ok(!JSON.stringify(f.logs).includes('synthetic-token'));
   });
 });
 
@@ -471,6 +533,14 @@ test('quota commits only valid reservations and rolls back denied or malformed r
     assert.equal(commits, fail ? 0 : 1);
     assert.equal(rollbacks, fail ? 1 : 0);
   }
+});
+
+test('bulk quota rejects invalid provider-read weights before opening a SQL transaction', async () => {
+  const pool = { transaction() { assert.fail('Invalid weights must not reach SQL'); } };
+  for (const units of [0, -1, 51, 1.5, '2']) {
+    await assert.rejects(consumeReviewQuota(pool, 1, 'review', units), /Invalid/);
+  }
+  await assert.rejects(consumeReviewQuota(pool, 1, 'discovery', 2), /Invalid/);
 });
 
 test('read-only review readiness rejects missing schema and incomplete runtime permissions', async () => {

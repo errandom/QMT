@@ -42,6 +42,15 @@ function createAttendanceService({ getPool, secret, timezone, logger, enabled,
     await store.locked(source => store.removeConnection(source));
     return status();
   };
+  const reviewToken = async () => {
+    requireEnabled();
+    const connection = await store.connection();
+    if (!connection?.authorized || connection.blocked) {
+      throw new HttpError(409, 'Reconnect Spond to manage attendance links');
+    }
+    try { return vault.open(connection.encryptedToken); }
+    catch { throw new HttpError(409, 'Reconnect Spond after signing-key rotation'); }
+  };
   const link = async ({ eventId, providerId, teamId, group, expected, token, reviewerId }) => {
     requireEnabled();
     const before = await store.event(null, eventId), teams = await store.teams();
@@ -210,7 +219,7 @@ function createAttendanceService({ getPool, secret, timezone, logger, enabled,
     return { eventId: event.id, title: event.description || event.event_type, start: new Date(event.start_time).toISOString(),
       sourceCount: attendance.sources.length, lastSync: attendance.snapshot?.syncedAt || null, error: attendance.error || null };
   });
-  return { status, connect, disconnect, link, unlink, links, tick, requestRefresh,
+  return { status, connect, disconnect, reviewToken, link, unlink, links, tick, requestRefresh,
     start() {
       if (!enabled || timer) return;
       timer = setInterval(() => { void tick().catch(() => logger.error('Attendance scheduler unavailable', { code: 'ATTENDANCE_UNAVAILABLE' })); }, 60000);
