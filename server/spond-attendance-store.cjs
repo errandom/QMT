@@ -55,7 +55,7 @@ function attendanceStore(getPool) {
     async linkedEvents() {
       const rows = (await request(await getPool()).query(`SELECT TOP (201) e.*, o.payload AS attendance_payload,
         o.revision AS attendance_revision FROM dbo.events e JOIN dbo.event_operations o ON o.event_id = e.id
-        WHERE JSON_QUERY(o.payload, '$.spondAttendance') IS NOT NULL AND e.status = 'Confirmed'
+        WHERE JSON_QUERY(o.payload, '$.spondAttendance') IS NOT NULL AND e.status IN ('Planned', 'Confirmed')
         AND e.end_time > DATEADD(day, -1, SYSUTCDATETIME()) AND e.start_time < DATEADD(day, 31, SYSUTCDATETIME())
         ORDER BY COALESCE(JSON_VALUE(o.payload, '$.spondAttendance.lastAttemptAt'), ''), e.id`)).recordset;
       if (rows.length > 200) throw new HttpError(409, 'More than 200 linked events in the attendance window; narrow the configured scope');

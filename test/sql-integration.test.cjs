@@ -217,15 +217,16 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       )).recordset;
       assert.deepEqual(counters, [{ subject_id: 0, consumed: 2 }, { subject_id: fixture.admin, consumed: 1 }]);
     });
-    await t.test('attendance reuses restricted runtime metadata, encrypts the connection, preserves Office revisions and never changes bookings', async () => {
+    for (const status of ['Planned', 'Confirmed']) await t.test(`attendance for ${status} events preserves restricted runtime metadata, encrypted access and booking state`, async () => {
       const start = new Date();
       start.setUTCDate(start.getUTCDate() + 2); start.setUTCHours(18, 0, 0, 0);
       const end = new Date(+start + 3600000);
       const inserted = await pool.request().input('team', sql.Int, fixture.team).input('field', sql.Int, fixture.field)
         .input('start', sql.DateTime2, start).input('end', sql.DateTime2, end)
+        .input('status', sql.NVarChar(20), status)
         .query(`INSERT INTO dbo.events (team_id, team_ids, field_id, field_ids, event_type, status, start_time, end_time, description)
           OUTPUT INSERTED.id VALUES (@team, CONVERT(nvarchar(20), @team), @field, CONVERT(nvarchar(20), @field),
-          'Practice', 'Confirmed', @start, @end, 'Synthetic attendance fixture')`);
+          'Practice', @status, @start, @end, 'Synthetic attendance fixture')`);
       const eventId = inserted.recordset[0].id, sourceId = 'C'.repeat(32);
       const secret = 'synthetic-attendance-sql-test-secret-not-a-credential';
       const store = attendanceStore(async () => pool);
@@ -285,6 +286,7 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
         assert.equal(stale.snapshot.counts.confirmed, 1);
         assert.match(stale.error, /missing or incomplete/);
         const unchanged = await store.event(null, eventId);
+        assert.equal(unchanged.status, status);
         assert.equal(unchanged.start_time.toISOString(), before.start_time.toISOString());
         assert.equal(unchanged.updated_at.toISOString(), before.updated_at.toISOString());
         await worker.disconnect();

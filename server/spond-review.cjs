@@ -5,6 +5,7 @@ const { createLimiter } = require('./limits.cjs');
 const { createSpondClient, SpondError } = require('./spond-client.cjs');
 const { consumeReviewQuota } = require('./spond-review-quota.cjs');
 const { HttpError } = require('./bookings.cjs');
+const { isAttendanceEvent } = require('./spond-attendance-domain.cjs');
 const { ReviewError, flattenGroups, suggestMappings, teamFingerprint, reviewRange, providerEventQuery, reconcileEvents } = require('./spond-review-domain.cjs');
 
 const credentialsSchema = z.object({
@@ -158,9 +159,11 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, attendance,
       // Inspect the entire parent group for subgroup mappings: unknown recipient semantics must not hide possible duplicates.
       const remote = await client.get(session.token, 'sponds', providerEventQuery(group, range));
       const result = reconcileEvents(events.recordset, remote, { ...range, timezone });
+      const rows = result.rows.map(row => ({ ...row,
+        attendanceEligible: Boolean(row.qmt && isAttendanceEvent(events.recordset.find(event => event.id === row.qmt.id))) }));
       if (teamFingerprint(await readTeams(pool)) !== session.fingerprint) throw new ReviewError('Mapping changed during preview; repeat discovery', 409);
-      session.preview = { teamId: input.teamId, events: events.recordset, rows: result.rows };
-      res.json({ ...result, teamId: input.teamId, from: input.from, to: input.to, timezone,
+      session.preview = { teamId: input.teamId, events: events.recordset, rows };
+      res.json({ ...result, rows, teamId: input.teamId, from: input.from, to: input.to, timezone,
         scope: group.parentGroupId ? 'Entire parent group inspected conservatively; subgroup recipient compatibility is unverified' : 'Mapped group' });
     } finally { session.busy = false; }
   }));
@@ -217,7 +220,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, attendance,
       session.busy = true;
       try {
         const preview = session.preview;
-        const row = preview?.teamId === input.teamId && preview.rows.find(row => row.qmt?.id === input.eventId &&
+        const row = preview?.teamId === input.teamId && preview.rows.find(row => row.attendanceEligible && row.qmt?.id === input.eventId &&
           row.spond.some(event => event.id === input.providerId));
         if (!session.confirmedTeamIds.has(input.teamId) || !row) throw new ReviewError('Choose an event from the current reviewed preview', 409);
         const team = (await readTeams(await getPool())).find(team => team.id === input.teamId);
@@ -242,7 +245,7 @@ function registerSpondReviewRoutes(app, { getPool, logger, timezone, attendance,
         }
         if (!session.confirmedTeamIds.has(input.teamId) || preview?.teamId !== input.teamId ||
             input.links.some(link => !preview.rows.some(row => row.qmt?.id === link.eventId &&
-              row.classification !== 'held' && row.spond.some(event => event.id === link.providerId &&
+              row.attendanceEligible && row.classification !== 'held' && row.spond.some(event => event.id === link.providerId &&
                 event.start === row.qmt.start && event.end === row.qmt.end)))) {
           throw new ReviewError('Choose matching events from the current preview', 409);
         }

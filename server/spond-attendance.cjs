@@ -2,7 +2,7 @@ const { randomUUID } = require('node:crypto');
 const { HttpError } = require('./bookings.cjs');
 const { createSpondClient, SpondError } = require('./spond-client.cjs');
 const { attendanceStore } = require('./spond-attendance-store.cjs');
-const { attendanceSchema, sourceMapping, bookingSignature, eventTeamIds, validateProviderEvent,
+const { attendanceSchema, sourceMapping, bookingSignature, eventTeamIds, isAttendanceEvent, validateProviderEvent,
   responseSets, consolidate, tokenVault } = require('./spond-attendance-domain.cjs');
 
 const intervalMs = 15 * 60000;
@@ -54,7 +54,8 @@ function createAttendanceService({ getPool, secret, timezone, logger, enabled,
   const link = async ({ eventId, providerId, teamId, group, expected, token, reviewerId }) => {
     requireEnabled();
     const before = await store.event(null, eventId), teams = await store.teams();
-    if (before.status !== 'Confirmed' || !eventTeamIds(before).includes(String(teamId)) ||
+    if (!isAttendanceEvent(before)) throw new HttpError(409, 'Attendance links require a planned or confirmed QMT event');
+    if (!eventTeamIds(before).includes(String(teamId)) ||
         bookingSignature(before) !== bookingSignature(expected)) {
       throw new HttpError(409, 'Booking changed since the preview; preview it again');
     }
@@ -67,7 +68,7 @@ function createAttendanceService({ getPool, secret, timezone, logger, enabled,
     responseSets(remote);
     await store.locked(async source => {
       const event = await store.event(source, eventId);
-      if (event.status !== 'Confirmed' || bookingSignature(event) !== bookingSignature(before) ||
+      if (!isAttendanceEvent(event) || bookingSignature(event) !== bookingSignature(before) ||
           sourceMapping(event, await store.teams(source), group.id, group.parentGroupId).mappingSignature !== candidate.mappingSignature) {
         throw new HttpError(409, 'Booking or team mapping changed while linking; preview again');
       }
@@ -121,7 +122,7 @@ function createAttendanceService({ getPool, secret, timezone, logger, enabled,
         budget -= unread.length;
         let updated;
         try {
-          if (attendance.bookingSignature !== bookingSignature(event)) throw new HttpError(409, 'Booking changed; review attendance links again');
+          if (!isAttendanceEvent(event) || attendance.bookingSignature !== bookingSignature(event)) throw new HttpError(409, 'Booking changed; review attendance links again');
           const teams = await store.teams(), results = [];
           for (const item of attendance.sources) {
             if (sourceMapping(event, teams, item.groupId, item.parentGroupId).mappingSignature !== item.mappingSignature) {
@@ -150,7 +151,7 @@ function createAttendanceService({ getPool, secret, timezone, logger, enabled,
           if (connection?.id !== lease.id || connection.leaseId !== lease.leaseId || !connection.authorized) return false;
           const current = await store.event(source, event.id);
           const currentAttendance = store.metadata(current).spondAttendance;
-          if (current.status !== 'Confirmed' || bookingSignature(current) !== bookingSignature(event) ||
+          if (!isAttendanceEvent(current) || bookingSignature(current) !== bookingSignature(event) ||
               !currentAttendance || JSON.stringify(attendanceSchema.parse(currentAttendance)) !== JSON.stringify(attendance)) return false;
           const currentTeams = await store.teams(source);
           let mappingsCurrent;

@@ -27,6 +27,7 @@ const attendanceSchema = z.object({
   lastAttemptAt: z.string().datetime().optional(), error: z.string().max(255).optional(),
 });
 const eventTeamIds = event => ids(event.team_ids || event.team_id).map(String).sort();
+const isAttendanceEvent = event => ['Planned', 'Confirmed'].includes(event?.status);
 const bookingSignature = event => hash([new Date(event.start_time).toISOString(),
   new Date(event.end_time).toISOString(), eventTeamIds(event)]);
 
@@ -140,4 +141,4 @@ function attendanceRow(row) {
 }
 
 module.exports = { settingKey, reservedSetting, attendanceSchema, sourceMapping, bookingSignature,
-  eventTeamIds, validateProviderEvent, responseSets, consolidate, tokenVault, attendanceRow };
+  eventTeamIds, isAttendanceEvent, validateProviderEvent, responseSets, consolidate, tokenVault, attendanceRow };

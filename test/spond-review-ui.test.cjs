@@ -72,12 +72,15 @@ function panelFixture(attendanceEnabled = false, options = {}) {
           };
         }
         if (endpoint === '/spond/mappings/confirm') return { confirmedTeamIds: body.mappings.map(mapping => mapping.teamId) };
-        if (endpoint === '/spond/reconciliation') return options.preview || {
-          warning: 'Read-only preview', timezone: 'Europe/Zurich', scope: 'Mapped group',
-          rows: [{ classification: 'coexisting', reason: 'Do not duplicate', qmt: {
-            id: 1, title: 'Training', start: '2026-11-04T18:00:00Z', end: '2026-11-04T19:00:00Z',
-          }, spond: [{ id: 'D'.repeat(32), title: 'Training', start: '2026-11-04T18:00:00Z', end: '2026-11-04T19:00:00Z' }] }],
-        };
+        if (endpoint === '/spond/reconciliation') {
+          const preview = options.preview || {
+            warning: 'Read-only preview', timezone: 'Europe/Zurich', scope: 'Mapped group',
+            rows: [{ classification: 'coexisting', reason: 'Do not duplicate', qmt: {
+              id: 1, title: 'Training', start: '2026-11-04T18:00:00Z', end: '2026-11-04T19:00:00Z',
+            }, spond: [{ id: 'D'.repeat(32), title: 'Training', start: '2026-11-04T18:00:00Z', end: '2026-11-04T19:00:00Z' }] }],
+          };
+          return { ...preview, rows: preview.rows.map(row => ({ attendanceEligible: true, ...row })) };
+        }
         if (endpoint === '/spond/attendance/status') return { connected: !!options.connected, authorized: !!options.connected,
           intervalMinutes: 15, processed: 0, failed: 0, queued: 0 };
         if (endpoint === '/spond/attendance/links') return [];
@@ -171,7 +174,8 @@ test('bulk selection skips ambiguous and held rows, retains failures, and clears
   const ambiguous = pair(3);
   ambiguous.spond.push({ ...ambiguous.spond[0], id: 'E'.repeat(32) });
   const f = panelFixture(true, { connected: true, savedTeams: [2], failedEvent: 2,
-    preview: { rows: [pair(1), pair(2), ambiguous, { ...pair(4), classification: 'held' }], timezone: 'Europe/Zurich' } });
+    preview: { rows: [pair(1), pair(2), ambiguous, { ...pair(4), classification: 'held' },
+      { ...pair(5), attendanceEligible: false }], timezone: 'Europe/Zurich' } });
   await f.runEffects(); await f.runEffects();
   f.get(node => node.type === 'form' && find(node, child => child.props?.id === 'spond-preview-team'))
     .props.onSubmit({ preventDefault() {} });
@@ -179,6 +183,7 @@ test('bulk selection skips ambiguous and held rows, retains failures, and clears
   assert.equal(f.get(node => node.props?.id === 'attendance-source-1').props.value, 'D'.repeat(32));
   assert.equal(f.get(node => node.props?.name === 'confirm-attendance-3').props.disabled, true);
   assert.equal(f.get(node => node.props?.name === 'confirm-attendance-4'), undefined);
+  assert.equal(f.get(node => node.props?.name === 'confirm-attendance-5'), undefined);
   assert.equal(f.button('Confirm selected (0)').props.disabled, true);
   f.check('select-all-attendance', true);
   await f.button('Confirm selected (2)').props.onClick(); await flush();

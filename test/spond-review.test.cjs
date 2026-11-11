@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { createApp } = require('../server.js');
 const { registerSpondReviewRoutes } = require('../server/spond-review.cjs');
 const { consumeReviewQuota } = require('../server/spond-review-quota.cjs');
+const { createAttendanceService } = require('../server/spond-attendance.cjs');
 const { checkSpondReview } = require('../scripts/check-spond-review.cjs');
 const { flattenGroups, suggestMappings, reviewRange, reconcileEvents } = require('../server/spond-review-domain.cjs');
 
@@ -434,6 +435,57 @@ test('saved attendance access resumes reviewed accessible mappings without a pas
     f.teams[0].spond_group_id = groupId;
     assert.equal((await send(base, 'reconciliation', { discoveryId: resumed.discoveryId, teamId: 1,
       from: '2026-11-04', to: '2026-11-05' })).status, 409);
+  });
+});
+
+test('attendance previews and confirmations accept planned schedules but exclude cancelled and completed events', async () => {
+  let f, reads = 0;
+  const savedAttendance = new Map();
+  const attendance = createAttendanceService({ enabled: true, timezone: 'Europe/Zurich',
+    secret: 'synthetic-attendance-review-regression-secret', logger: { error() {} },
+    store: {
+      async event(_source, id) { return structuredClone(f.events.find(event => event.id === id)); },
+      async teams() { return structuredClone(f.teams); },
+      async locked(work) { return work(null); },
+      metadata(event) { return savedAttendance.get(event.id) || {}; },
+      async saveAttendance(_source, event, saved) { savedAttendance.set(event.id, { spondAttendance: saved }); },
+    },
+    client: { async get() {
+      reads++;
+      return remote({ recipients: { group: { id: groupId, subGroups: [{ id: subgroupId }] } },
+        responses: { acceptedIds: ['E'.repeat(32)], unansweredIds: [], declinedIds: [] } });
+    } },
+  });
+  f = fixture(attendance);
+  const statuses = ['Planned', 'Confirmed', 'Cancelled', 'Completed'];
+  f.events.splice(0, f.events.length, ...statuses.map((status, index) => local({ id: index + 1, status, team_ids: '1' })));
+  await serve(f.app, async base => {
+    const discovery = await discover(base);
+    const approval = { discoveryId: discovery.discoveryId, confirmed: true };
+    await send(base, 'mappings/confirm', { ...approval, mappings: [{ teamId: 1, groupId: subgroupId }] });
+    const response = await send(base, 'reconciliation', {
+      discoveryId: discovery.discoveryId, teamId: 1, from: '2026-11-04', to: '2026-11-05',
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).rows.map(row => row.attendanceEligible), [true, true, false, false]);
+    for (const id of [3, 4]) {
+      assert.equal((await send(base, 'attendance/links/confirm', {
+        ...approval, teamId: 1, eventId: id, providerId: eventId,
+      })).status, 409);
+      assert.equal((await send(base, 'attendance/links/confirm-bulk', {
+        ...approval, teamId: 1, links: [{ eventId: 1, providerId: eventId }, { eventId: id, providerId: eventId }],
+      })).status, 409);
+    }
+    assert.equal(savedAttendance.size, 0, 'an inactive selection must reject the entire batch before linking');
+    assert.equal(reads, 0);
+    const saved = await send(base, 'attendance/links/confirm-bulk', {
+      ...approval, teamId: 1, links: [{ eventId: 1, providerId: eventId }, { eventId: 2, providerId: eventId }],
+    });
+    assert.equal(saved.status, 200);
+    assert.deepEqual((await saved.json()).results, [{ eventId: 1, linked: true }, { eventId: 2, linked: true }]);
+    assert.equal(savedAttendance.size, 2, 'the real attendance service saves both eligible preview selections');
+    assert.equal(reads, 2);
+    assert.deepEqual(f.events.map(event => event.status), statuses);
   });
 });
 

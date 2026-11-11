@@ -37,6 +37,7 @@ interface Reconciliation {
   timezone: string
   rows: {
     classification: 'linked' | 'coexisting' | 'review' | 'qmt-only' | 'spond-only' | 'held'
+    attendanceEligible: boolean
     reason: string
     qmt: PreviewEvent | null
     spond: PreviewEvent[]
@@ -80,7 +81,7 @@ const groupText = (group: Group) => group.parentGroup
   : `${group.name} (entire group)`
 const previewDate = (offset: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' })
   .format(new Date(Date.now() + offset * 86400000))
-const matchingEvents = (row: Reconciliation['rows'][number]) => row.classification === 'held' ? []
+const matchingEvents = (row: Reconciliation['rows'][number]) => !row.attendanceEligible || row.classification === 'held' ? []
   : row.spond.filter(event => event.start === row.qmt?.start && event.end === row.qmt?.end)
 
 export default function SpondReviewPanel({ attendanceEnabled = false }: { attendanceEnabled?: boolean } = {}) {
