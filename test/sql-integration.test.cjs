@@ -196,6 +196,27 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       assert.equal((await pool.request().query('SELECT consumed FROM dbo.spond_review_quotas WHERE subject_id = 0')).recordset[0].consumed, 30);
       assert.equal((await pool.request().query('SELECT COUNT(*) AS count FROM dbo.spond_review_quotas WHERE subject_id IN (1001, 1002)')).recordset[0].count, 1);
     });
+    await t.test('bulk review weights the shared daily budget while counting one administrator action', async () => {
+      await pool.request().query("DELETE FROM dbo.spond_review_quotas WHERE action = 'review'");
+      await consumeReviewQuota(pool, fixture.admin, 'review', 50);
+      let counters = (await pool.request().query(
+        "SELECT subject_id, consumed FROM dbo.spond_review_quotas WHERE action = 'review' ORDER BY subject_id",
+      )).recordset;
+      assert.deepEqual(counters, [{ subject_id: 0, consumed: 50 }, { subject_id: fixture.admin, consumed: 1 }]);
+      await consumeReviewQuota(pool, fixture.admin, 'review', 50);
+      await assert.rejects(consumeReviewQuota(pool, fixture.admin, 'review', 21), error => error.status === 429);
+      await consumeReviewQuota(pool, fixture.admin, 'review', 20);
+      counters = (await pool.request().query(
+        "SELECT subject_id, consumed FROM dbo.spond_review_quotas WHERE action = 'review' ORDER BY subject_id",
+      )).recordset;
+      assert.deepEqual(counters, [{ subject_id: 0, consumed: 120 }, { subject_id: fixture.admin, consumed: 3 }]);
+      await pool.request().query("UPDATE dbo.spond_review_quotas SET resets_at = DATEADD(second, -1, SYSUTCDATETIME()) WHERE action = 'review'");
+      await consumeReviewQuota(pool, fixture.admin, 'review', 2);
+      counters = (await pool.request().query(
+        "SELECT subject_id, consumed FROM dbo.spond_review_quotas WHERE action = 'review' ORDER BY subject_id",
+      )).recordset;
+      assert.deepEqual(counters, [{ subject_id: 0, consumed: 2 }, { subject_id: fixture.admin, consumed: 1 }]);
+    });
     await t.test('attendance reuses restricted runtime metadata, encrypts the connection, preserves Office revisions and never changes bookings', async () => {
       const start = new Date();
       start.setUTCDate(start.getUTCDate() + 2); start.setUTCHours(18, 0, 0, 0);

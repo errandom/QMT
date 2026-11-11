@@ -105,6 +105,24 @@ test('provider token is authenticated-encrypted, scoped to attendance and never 
   assert.ok(!JSON.stringify(f.connection).includes('synthetic-provider-token'));
 });
 
+test('review access reuses the retained token after restart and rejects revoked owners, blocked connections and key rotation', async () => {
+  const f = fixture();
+  await assert.rejects(f.main.reviewToken(), /Reconnect/);
+  await f.main.connect(1, 'synthetic-provider-token');
+  const restarted = f.service();
+  assert.equal(await restarted.reviewToken(), 'synthetic-provider-token');
+  f.teams[0].ownerActive = false;
+  await assert.rejects(restarted.reviewToken(), /Reconnect/);
+  f.teams[0].ownerActive = true;
+  const rotated = f.service({ secret: secret + '-rotated' });
+  await assert.rejects(rotated.reviewToken(), /signing-key rotation/);
+  await f.store.saveConnection(null, { ...f.connection, blocked: true });
+  await assert.rejects(restarted.reviewToken(), /Reconnect/);
+  await f.main.disconnect();
+  await assert.rejects(restarted.reviewToken(), /Reconnect/);
+  assert.equal(f.reads.length, 0, 'resuming does not reauthenticate or read events');
+});
+
 test('reviewed links survive worker restart, refresh only when due, and preserve Office metadata', async () => {
   const f = fixture();
   f.rows[0].attendance_payload = JSON.stringify({ owner: 'Facility manager', checklist: [{ title: 'Synthetic existing checklist' }] });
