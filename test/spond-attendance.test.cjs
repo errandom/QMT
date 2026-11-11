@@ -31,7 +31,7 @@ function fixture() {
     async teams() { return structuredClone(teams); },
     async event(_source, id) { return structuredClone(rows.find(row => row.id === id)); },
     async linkedEvents() {
-      return structuredClone(rows.filter(row => row.status === 'Confirmed' && row.attendance_payload)
+      return structuredClone(rows.filter(row => ['Planned', 'Confirmed'].includes(row.status) && row.attendance_payload)
         .sort((a, b) => (store.metadata(a).spondAttendance.lastAttemptAt || '').localeCompare(store.metadata(b).spondAttendance.lastAttemptAt || '')));
     },
     metadata(row) { return row.attendance_payload ? JSON.parse(row.attendance_payload) : { owner: '', checklist: [] }; },
@@ -142,6 +142,46 @@ test('reviewed links survive worker restart, refresh only when due, and preserve
   assert.equal(f.reads.length, reads);
   assert.equal((await worker.status()).processed, 1);
   await worker.close();
+});
+
+test('planned schedule events can link and refresh attendance without confirming the booking', async () => {
+  const f = fixture();
+  f.rows[0].status = 'Planned';
+  await f.link();
+  assert.equal(f.rows[0].status, 'Planned');
+  await f.main.connect(1, 'synthetic-provider-token');
+  await f.main.tick();
+  assert.equal(attendanceRow(f.rows[0]).attendance_accepted, 1);
+  assert.equal((await f.main.status()).processed, 1);
+  assert.equal(f.rows[0].status, 'Planned');
+  f.rows[0].status = 'Confirmed';
+  f.advance();
+  await f.main.tick();
+  assert.equal((await f.main.status()).processed, 1, 'facility confirmation does not invalidate the reviewed attendance source');
+});
+
+test('attendance rejects inactive booking states explicitly and still detects real changes since preview', async () => {
+  for (const status of ['Cancelled', 'Completed']) {
+    const f = fixture();
+    f.rows[0].status = status;
+    await assert.rejects(f.link(), /planned or confirmed/i);
+    assert.equal(f.reads.length, 0);
+    assert.equal(f.rows[0].attendance_payload, undefined);
+  }
+  for (const change of [{ start_time: '2026-11-11T18:30:00Z' }, { team_ids: '2' }]) {
+    const f = fixture();
+    const expected = structuredClone(f.rows[0]);
+    Object.assign(f.rows[0], change);
+    await assert.rejects(f.main.link({ eventId: 1, teamId: 1, providerId,
+      group: { id: group, parentGroupId: null }, expected, reviewerId: 1, token: 'synthetic-provider-token',
+    }), /Booking changed since the preview/);
+    assert.equal(f.reads.length, 0);
+  }
+  const f = fixture();
+  f.rows[0].status = 'Planned';
+  f.onGet(() => { f.rows[0].status = 'Cancelled'; });
+  await assert.rejects(f.link(), /changed while linking/);
+  assert.equal(f.rows[0].attendance_payload, undefined);
 });
 
 test('shared mappings consolidate at event level; separate team sources require complete coverage before totals appear', async () => {

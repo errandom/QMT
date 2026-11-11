@@ -1,5 +1,15 @@
 # QMT controlled relaunch
 
+## Planned-event attendance correction: November 11, 2026 (release preparation)
+
+Attendance reads and explicit event linking accept both Planned and Confirmed
+QMT schedules without changing their booking status or facility approval.
+Cancelled and Completed events cannot acquire new links or scheduled reads;
+the preview excludes them from attendance selection. Publication eligibility
+is unchanged. Genuine time, team, mapping and provider-audience changes still
+require review. Ineligible booking states now have a specific error instead
+of being reported as a booking change.
+
 ## Persistent setup and bulk review: November 11, 2026 (local preparation)
 
 The revised Spond settings use one explicit sign-in/token-retention confirmation.
