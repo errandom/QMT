@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { operationsApi, type Communication } from '@/lib/operations'
 import type { FacilityRequest, User } from '@/lib/types'
-import { facilityMessage, facilityMessageSubject, facilityStage } from '@/lib/facilityWorkflow'
+import { facilityMessage, facilityMessageSubject, facilityStage, facilityTemplateKey } from '@/lib/facilityWorkflow'
+import { templateRecipients } from '../../../server/message-template-domain.mjs'
 import { useMessageDraft } from '@/hooks/useMessageDraft'
 import { useData } from '@/contexts/DataContext'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import MessageLanguageSwitch from './MessageLanguageSwitch'
+import TemplateDraftStatus from './TemplateDraftStatus'
 
 export default function CommunicationsPanel({ request, currentUser }: { request: FacilityRequest; currentUser: User }) {
   const { teams, fields, sites, refreshRequests } = useData()
@@ -23,12 +25,13 @@ export default function CommunicationsPanel({ request, currentUser }: { request:
   const action = stage === 'Received' ? 'acknowledge' : stage === 'In evaluation' ? 'send' :
     request.status !== 'Pending' && !request.workflow?.outcomeNotifiedAt ? 'notify' : 'followup'
   const workbookInquiry = action === 'send' && request.workflow?.route === 'IGACR'
-  const [recipient, setRecipient] = useState(action === 'send' || stage === 'Awaiting response' ? request.workflow?.contactEmail || '' : request.requestorEmail || '')
-  const { language, setLanguage, draft, setDraft } = useMessageDraft(language => ({
-    subject: facilityMessageSubject(request, language),
-    message: facilityMessage(request, action, teams, fields, sites, currentUser, language),
-  }))
-  const { subject, message } = draft
+  const automaticRecipient = action === 'send' || stage === 'Awaiting response' ? request.workflow?.contactEmail || '' : request.requestorEmail || ''
+  const { language, setLanguage, draft, setDraft, templateError, templatesLoading, retryTemplates } = useMessageDraft((language, templates) => ({
+    subject: facilityMessageSubject(request, language, templates, action),
+    message: facilityMessage(request, action, teams, fields, sites, currentUser, language, templates),
+    recipient: templateRecipients(facilityTemplateKey(request, action), language, [automaticRecipient], templates).join(', '),
+  }), { subject: '', message: '', recipient: '' })
+  const { subject, message, recipient } = draft
   const [approved, setApproved] = useState(false)
   const sendId = useRef(crypto.randomUUID())
   const sentContent = useRef('')
@@ -53,6 +56,7 @@ export default function CommunicationsPanel({ request, currentUser }: { request:
     finally { setBusy(false) }
   }
   const send = async () => {
+    if (templatesLoading || templateError) throw new Error('Load the template library before sending')
     const content = JSON.stringify([recipient, subject, message, action, request.workflow?.version || 0])
     if (sentContent.current && sentContent.current !== content) throw new Error('Review the previous send in the thread before starting a new message')
     sentContent.current = content
@@ -84,16 +88,17 @@ export default function CommunicationsPanel({ request, currentUser }: { request:
     {error && <p role="alert" className="text-destructive whitespace-pre-wrap">{error}</p>}
     {workbookInquiry ? <p className="text-sm">Initial IGACR meeting-room submission uses the workbook panel above, not an email send. Ownership and follow-up tracking remain available here.</p> :
     <form className="space-y-3" onSubmit={event => { event.preventDefault(); void run(send) }}>
-      <fieldset disabled={busy || sendLocked} className="space-y-3">
+      <TemplateDraftStatus loading={templatesLoading} error={templateError} retry={retryTemplates} />
+      <fieldset disabled={busy || sendLocked || templatesLoading || Boolean(templateError)} className="space-y-3">
         <legend className="text-sm font-medium">Email: {action === 'followup' ? 'follow-up or booking change' : action}</legend>
         <MessageLanguageSwitch language={language} onChange={language => { setLanguage(language); setApproved(false) }} />
-        <label className="block space-y-1">Recipient<Input type="email" required maxLength={254} value={recipient} onChange={event => { setRecipient(event.target.value); setApproved(false) }} /></label>
+        <label className="block space-y-1">Recipient<Input type="email" required maxLength={254} value={recipient} onChange={event => { setDraft({ ...draft, recipient: event.target.value }); setApproved(false) }} /></label>
         <label className="block space-y-1">Subject<Input lang={language} required maxLength={220} value={subject} onChange={event => { setDraft({ ...draft, subject: event.target.value }); setApproved(false) }} /></label>
         <label className="block space-y-1">Message<Textarea lang={language} required rows={7} maxLength={16000} value={message} onChange={event => { setDraft({ ...draft, message: event.target.value }); setApproved(false) }} /></label>
         <label className="flex min-h-12 items-center gap-2"><input type="checkbox" required checked={approved} onChange={event => setApproved(event.target.checked)} />I approve sending this exact email to this recipient.</label>
       </fieldset>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={busy || sendLocked || !configured || !approved}>Approve and send email</Button>
+        <Button type="submit" disabled={busy || sendLocked || !configured || !approved || templatesLoading || Boolean(templateError)}>Approve and send email</Button>
         <Button type="button" variant="outline" disabled={busy || !configured} onClick={() => void run(async () => {
           const result = await operationsApi.sync(request.id)
           await load()

@@ -1,5 +1,43 @@
 # QMT controlled relaunch
 
+## Admin message templates and recipients: November 21, 2026 (release preparation)
+
+Office > Settings > Message templates loads 32 English/German variants of the
+existing facility, rejection, event, transport, weekly-summary and shared
+signature/closing wording. Defaults are shipped in
+`server/message-template-domain.mjs`; an empty overrides table returns those
+defaults without creating rows. Admin saves/reset actions persist overrides
+with revision conflict checks and the last editor/time. Reset retains its
+revision, so an old editor cannot overwrite a reset using a stale revision.
+Operations users can read templates; only active administrators can change them.
+
+Apply `006-message-templates.sql` only through the existing explicitly approved
+migration procedure, and grant the existing restricted runtime SQL principal
+SELECT/INSERT/UPDATE/DELETE on `dbo.message_templates` before deploying the
+new image. Fresh principal provisioning includes the new table; do not replace
+or recreate the existing production principal. The runtime image must include
+`server/*.mjs`. No migration, grant, publication or deployment is performed by
+this implementation. Real disposable SQL validation is required before release.
+
+New email and matching manual drafts use saved wording; both language drafts
+are retained independently. Loading templates never overwrites edited drafts;
+existing open drafts do not subscribe to Settings edits. Required generated
+blocks preserve request details, allocation decisions/conditions, event changes
+and signatures. Unknown placeholders and oversized rendered messages fail
+explicitly. Loading failures pause composing/sharing until retry succeeds;
+the library does not connect a mailbox, send messages, edit workbook rows,
+approve bookings or enable provider integrations. The legacy weekly-summary
+helper accepts template overrides but has no current UI call site.
+
+Facility templates allow one default To email address; event templates allow
+up to 20. Blank keeps existing requester/department/site/team/transport routing.
+Both language variants have independent settings. Each email draft exposes
+the recipient for review/editing, and changes clear linked-email approval.
+Transport CC contacts remain as recorded. Replies from recipients of accepted
+outbound messages are eligible for that request's thread sync; unrelated senders
+remain excluded. Signature/closing and WhatsApp-only templates have no email
+recipient setting. No recipient setting enables automatic sends.
+
 ## Planned-event attendance correction: November 11, 2026 (release preparation)
 
 Attendance reads and explicit event linking accept both Planned and Confirmed

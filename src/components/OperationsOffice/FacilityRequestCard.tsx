@@ -5,6 +5,9 @@ import { useData } from '@/contexts/DataContext'
 import { api } from '@/lib/api'
 import { facilityMessage, facilityMessageSubject, facilityRoutingDefaults, facilityStage, type MessageLanguage } from '@/lib/facilityWorkflow'
 import { useMessageDraft } from '@/hooks/useMessageDraft'
+import type { MessageTemplateContent } from '../../../server/message-template-domain.mjs'
+import { templateRecipients } from '../../../server/message-template-domain.mjs'
+import TemplateDraftStatus from './TemplateDraftStatus'
 import type { CommunicationChannel, FacilityRequest, FacilityRouting, FacilityWorkflowAction, User } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -256,7 +259,7 @@ function FacilityWorkflowPanel({ request, currentUser, teams, fields, sites, onA
           <CommunicationForm
           key={`${communication}-${workflow?.locationType}-${workflow?.route}-${workflow?.department}-${workflow?.contactEmail}-${workflow?.reference}`}
           action={communication} request={request} initialChannel={initialChannel}
-          createMessage={language => facilityMessage(request, communication, teams, fields, sites, currentUser, language)}
+          createMessage={(language, templates) => facilityMessage(request, communication, teams, fields, sites, currentUser, language, templates)}
           onRecord={(channel, message) => update({ action: communication, channel, message })} />
         </fieldset>}
         {stage === 'Awaiting response' && <div className="space-y-2 rounded-md border p-3">
@@ -322,14 +325,18 @@ function CommunicationForm({ action, request, initialChannel, createMessage, onR
   action: 'acknowledge' | 'send' | 'notify'
   request: FacilityRequest
   initialChannel: CommunicationChannel
-  createMessage: (language: MessageLanguage) => string
+  createMessage: (language: MessageLanguage, templates: readonly MessageTemplateContent[]) => string
   onRecord: (channel: CommunicationChannel, message: string) => Promise<unknown>
 }) {
-  const { language, setLanguage, draft: message, setDraft: setMessage } = useMessageDraft(createMessage)
+  const { language, setLanguage, draft: message, setDraft: setMessage, templates, templateError, templatesLoading, retryTemplates } = useMessageDraft(createMessage, '')
   const [channel, setChannel] = useState(initialChannel)
-  const recipient = action === 'send' ? request.workflow?.contactEmail : request.requestorEmail
+  const [recipientEdits, setRecipientEdits] = useState<{ en: string | null; de: string | null }>({ en: null, de: null })
+  const automaticRecipient = action === 'send' ? request.workflow?.contactEmail : request.requestorEmail
+  const key = `facility.${action === 'send' ? 'inquiry' : action === 'notify' ? request.status === 'Approved' ? 'approved' : 'rejected' : action}`
+  const recipient = recipientEdits[language] ?? (templateError ? '' : templateRecipients(key, language, [automaticRecipient || ''], templates).join(', '))
   const phone = request.requestorPhone.replace(/\D/g, '')
-  const mailto = `mailto:${recipient || ''}?subject=${encodeURIComponent(facilityMessageSubject(request, language))}&body=${encodeURIComponent(message)}`
+  const subject = templateError ? '' : facilityMessageSubject(request, language, templates, action)
+  const mailto = `mailto:${recipient || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`
   const copy = async () => {
     try { await navigator.clipboard.writeText(message); toast.success('Draft copied; sending is still manual') }
     catch { toast.error('Could not copy the draft. Select and copy the message manually.') }
@@ -337,10 +344,14 @@ function CommunicationForm({ action, request, initialChannel, createMessage, onR
   return (
     <form className="space-y-3 rounded-md border p-3" onSubmit={event => {
       event.preventDefault()
+      if (templatesLoading || templateError) return
       void onRecord(channel, message)
     }}>
       <h4 className="font-semibold">{action === 'acknowledge' ? 'Acknowledge receipt' : action === 'send' ? 'Engage the responsible department' : 'Notify requester of the outcome'}</h4>
       <p className="text-xs text-muted-foreground">Sending is manual. Opening or copying a draft does not mark it sent. Send it through your chosen channel, then record it below.</p>
+      <TemplateDraftStatus loading={templatesLoading} error={templateError} retry={retryTemplates} />
+      <fieldset disabled={templatesLoading || Boolean(templateError)} className="min-w-0 space-y-3">
+      <legend className="sr-only">Communication draft</legend>
       <MessageLanguageSwitch language={language} onChange={setLanguage} />
       <div className="space-y-1">
         <Label htmlFor={`channel-${request.id}`}>Communication channel</Label>
@@ -350,6 +361,8 @@ function CommunicationForm({ action, request, initialChannel, createMessage, onR
         </select>
       </div>
       <div className="space-y-1">
+        {channel === 'Email' && <><Label htmlFor={`recipient-${request.id}`}>Email recipient (review before sending)</Label>
+          <Input id={`recipient-${request.id}`} type="email" maxLength={254} value={recipient} onChange={event => setRecipientEdits(current => ({ ...current, [language]: event.target.value }))} /></>}
         <Label htmlFor={`message-${request.id}`}>{channel === 'Phone' ? 'Conversation summary *' : 'Message draft / message sent *'}</Label>
         <Textarea id={`message-${request.id}`} lang={language} value={message} onChange={event => setMessage(event.target.value)} required maxLength={16000} rows={7} />
       </div>
@@ -362,6 +375,7 @@ function CommunicationForm({ action, request, initialChannel, createMessage, onR
       </div>
       {action === 'send' && <p className="text-xs text-muted-foreground">Recipient: {request.workflow?.department}{recipient ? ` / ${recipient}` : ' — email not recorded; choose the recipient manually.'}</p>}
       <Button type="submit">{action === 'acknowledge' ? 'Record acknowledgment sent' : action === 'send' ? 'Record external inquiry sent' : 'Record outcome notification sent'}</Button>
+      </fieldset>
     </form>
   )
 }

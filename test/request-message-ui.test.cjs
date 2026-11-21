@@ -24,7 +24,7 @@ function find(node, predicate) {
 function mount(data = {}) {
   const modules = new Map(), stores = new Map(), calls = [];
   const browser = { location: { href: '' } };
-  let state, cursor = 0, ids = 0;
+  let state, cursor = 0, ids = 0, effects = [];
   const react = {
     ...React,
     useState(initial) {
@@ -35,7 +35,12 @@ function mount(data = {}) {
     useRef(initial) { return react.useState(() => ({ current: initial }))[0]; },
     useId() { return react.useState(() => `language-${++ids}`)[0]; },
     useMemo: create => create(),
-    useEffect() {},
+    useEffect(effect, deps) {
+      const store = react.useState(() => ({ deps: null }))[0];
+      if (!store.deps || deps.some((value, index) => value !== store.deps[index])) {
+        store.deps = deps; effects.push(effect);
+      }
+    },
   };
   const values = {
     teams: [], fields: [], sites: [], events: [], facilityRequests: [], equipmentRequests: [], cancellationRequests: [],
@@ -50,7 +55,8 @@ function mount(data = {}) {
   function load(filename) {
     if (modules.has(filename)) return modules.get(filename);
     const context = {
-      exports: {}, crypto: { randomUUID: () => 'synthetic-send-id' },
+      exports: {}, Error, crypto: { randomUUID: () => 'synthetic-send-id' },
+      requestAnimationFrame: callback => callback(),
       window: browser,
       navigator: {
         clipboard: { async writeText(text) { calls.push(['copy', text]); } },
@@ -58,6 +64,18 @@ function mount(data = {}) {
       },
       require(id) {
         if (id === 'react') return react;
+        if (id.endsWith('message-template-domain.mjs')) return require(path.resolve(path.dirname(filename), id));
+        if (id === '@/lib/messageTemplates') return { messageTemplatesApi: {
+          async save(template, subject, message, recipient) { calls.push(['saveTemplate', template.key, template.language, subject, message, recipient]); return { ...template, subject, message, recipient, revision: 1, customized: true }; },
+          async reset(template) { calls.push(['resetTemplate', template.key, template.language]); return { ...template, ...require('../server/message-template-domain.mjs').templateDefinition(template.key, template.language), revision: template.revision + 1, customized: false }; },
+          list: () => data.templatePromise || ({
+          then(callback) {
+            let failure;
+            try { callback(data.templateLibrary || require('../server/message-template-domain.mjs').templateCatalog.map(item => ({ ...item, revision: 0, customized: false, updatedBy: null, updatedAt: null }))); }
+            catch (error) { failure = error; }
+            return { catch(onError) { if (failure) onError(failure); return { finally(callback) { callback(); } }; } };
+          },
+        }) } };
         if (id === '@/contexts/DataContext') return { useData: () => values };
         if (id === '@/hooks/useCapabilities') return { useCapabilities: () => ({ capabilities: { spond: false, transport: false } }) };
         if (id === '@/lib/api') return {
@@ -70,7 +88,7 @@ function mount(data = {}) {
           },
         };
         if (id === '@/lib/operations') return {
-          requestedDates: () => [], operationsApi: { send: async (...args) => calls.push(['send', ...args]) },
+          requestedDates: () => [], operationsApi: { messages: async () => ({ messages: [], configured: false }), send: async (...args) => calls.push(['send', ...args]) },
         };
         if (id === '@/lib/constants') return { COLORS: {} };
         if (id === 'sonner') return { toast: { success() {}, error() {} } };
@@ -93,6 +111,11 @@ function mount(data = {}) {
   }
   const render = (component, props) => {
     if (!stores.has(component)) stores.set(component, []);
+    state = stores.get(component); cursor = 0;
+    const result = component(props);
+    if (!effects.length) return result;
+    const pending = effects; effects = [];
+    pending.forEach(effect => effect());
     state = stores.get(component); cursor = 0;
     return component(props);
   };
@@ -197,6 +220,88 @@ test('linked email language changes preserve subject/body drafts and require ren
   assert.equal(ui.calls.length, 0);
 });
 
+test('saved bilingual templates and shared signatures feed new drafts without sending anything', () => {
+  const library = require('../server/message-template-domain.mjs').templateCatalog.map(item => ({
+    ...item, revision: 0, customized: false,
+    ...(item.key === 'facility.acknowledge' ? { subject: 'Receipt: {{requester_name}}', message: item.message.replace(/^Hi |^Hoi /, item.language === 'en' ? 'Greetings ' : 'Grüezi ') } : {}),
+    ...(item.key === 'shared.signature' ? { message: 'Example club office\n{{sender_name}}' } : {}),
+  }));
+  const ui = mount({ templateLibrary: library }), Panel = ui.load('CommunicationsPanel');
+  const render = () => ui.render(Panel, { request, currentUser: user });
+  assert.equal(find(render(), node => node.type === 'Input' && node.props.maxLength === 220).props.value, 'Receipt: Synthetic requester');
+  assert.match(find(render(), node => node.type === 'Textarea').props.value, /^Greetings Synthetic requester,/);
+  ui.language(render(), 'de');
+  const message = find(render(), node => node.type === 'Textarea').props.value;
+  assert.match(message, /^Grüezi Synthetic requester,/);
+  assert.ok(message.endsWith('Example club office\nKenny'));
+  assert.match(message, /keine Buchungsbestätigung/);
+  assert.equal(ui.calls.length, 0);
+});
+
+test('late template loading preserves edited drafts and failed loads block email sends', async () => {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  const ui = mount({ templatePromise: promise }), Panel = ui.load('CommunicationsPanel');
+  const render = () => ui.render(Panel, { request, currentUser: user });
+  find(render(), node => node.type === 'Textarea').props.onChange({ target: { value: 'An already edited draft' } });
+  const library = require('../server/message-template-domain.mjs').templateCatalog.map(item => ({ ...item,
+    ...(item.key === 'facility.acknowledge' ? { message: item.message.replace(/^Hi |^Hoi /, 'Custom greeting ') } : {}),
+  }));
+  resolve(library);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(find(render(), node => node.type === 'Textarea').props.value, 'An already edited draft');
+  ui.language(render(), 'de');
+  assert.match(find(render(), node => node.type === 'Textarea').props.value, /^Custom greeting/);
+  let reject;
+  const broken = new Promise((_resolve, fail) => { reject = fail; });
+  const failed = mount({ templatePromise: broken }), FailedPanel = failed.load('CommunicationsPanel');
+  const renderFailed = () => failed.render(FailedPanel, { request, currentUser: user });
+  renderFailed(); reject(new Error('Synthetic template outage'));
+  await new Promise(resolve => setImmediate(resolve));
+  const button = find(renderFailed(), node => node.type === 'Button' && node.props.children === 'Approve and send email');
+  assert.equal(button.props.disabled, true);
+  const form = find(renderFailed(), node => node.type === 'form' && node.props.className === 'space-y-3');
+  form.props.onSubmit({ preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(failed.calls.length, 0);
+});
+
+test('Settings preloads existing wording, previews safely and saves or resets only after explicit actions', async () => {
+  const ui = mount(), Settings = ui.load('MessageTemplateSettings');
+  const render = () => ui.render(Settings, { currentUser: user });
+  const textarea = () => find(render(), node => node.type === 'Textarea');
+  assert.match(textarea().props.value, /^Hi \{\{requester_name\}\},/);
+  assert.equal(ui.calls.length, 0);
+  textarea().props.onChange({ target: { value: 'Missing generated blocks' } });
+  find(render(), node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  assert.equal(ui.calls.length, 0);
+  assert.match(find(render(), node => node.type === 'p' && node.props.role === 'alert').props.children, /Keep/);
+  const defaultContent = require('../server/message-template-domain.mjs').templateDefinition('facility.acknowledge', 'en');
+  const custom = defaultContent.message.replace('Hi ', 'Greetings ');
+  textarea().props.onChange({ target: { value: custom } });
+  find(render(), node => node.type === 'Button' && node.props.children === 'Preview with sample data').props.onClick();
+  const preview = find(render(), node => node.type === 'section' && node.props['aria-label'] === 'Sample message preview');
+  assert.match(find(preview, node => node.type === 'p' && node.props.className.includes('whitespace-pre-wrap')).props.children, /^Greetings Example requester,/);
+  assert.equal(ui.calls.length, 0);
+  find(render(), node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(ui.calls[0], ['saveTemplate', 'facility.acknowledge', 'en', defaultContent.subject, custom, '']);
+  find(render(), node => node.type === 'Button' && node.props.children === 'Reset to original').props.onClick();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(ui.calls[1], ['resetTemplate', 'facility.acknowledge', 'en']);
+  assert.equal(textarea().props.value, defaultContent.message);
+});
+
+test('oversized generated event subjects surface a recoverable error rather than crashing the draft dialog', () => {
+  const ui = mount(), Dialog = ui.load('../EventUpdateShareDialog');
+  const event = { id: '1', title: 'x'.repeat(221), eventType: 'Practice', status: 'Planned', date: '2027-04-26', startTime: '18:00', endTime: '19:00', fieldIds: [], teamIds: [] };
+  const tree = ui.render(Dialog, { isOpen: true, onClose() {}, event, originalEvent: null, teams: [], fields: [], sites: [], updateType: 'create', currentUser: user });
+  const status = find(tree, node => node.props?.error?.includes('Generated subject'));
+  assert.ok(status, 'Invalid rendered content must expose a template error');
+  assert.equal(find(tree, node => node.type === 'Input').props.value, '');
+  assert.equal(ui.calls.length, 0);
+});
+
 test('request rejection drafts offer German, retain edits and reset to English when reopened', () => {
   const ui = mount({ equipmentRequests: [{
     id: 8, type: 'equipment', status: 'Pending', date: request.date, createdAt: request.createdAt,
@@ -255,7 +360,7 @@ test('event sharing and email use the exact edited language-specific draft and r
   const ui = mount(), Dialog = ui.load('../EventUpdateShareDialog');
   const render = () => ui.render(Dialog, eventProps);
   const message = () => find(render(), node => node.type === 'Textarea');
-  const subject = () => find(render(), node => node.type === 'Input');
+  const subject = () => find(render(), node => node.type === 'Input' && node.props.type !== 'email');
   assert.match(message().props.value, /Event details for your reference/);
   message().props.onChange({ target: { value: 'Edited English message' } });
   subject().props.onChange({ target: { value: 'Edited English subject' } });
@@ -286,6 +391,28 @@ test('event sharing and email use the exact edited language-specific draft and r
   assert.equal(mailto.searchParams.get('subject'), subject().props.value);
   assert.equal(mailto.searchParams.get('body'), edited);
   assert.equal(ui.calls.length, 1, 'Opening a normal email draft never calls a sending API');
+});
+
+test('custom template recipients feed email drafts, allow per-message edits and preserve transport CC', async () => {
+  const templateLibrary = require('../server/message-template-domain.mjs').templateCatalog.map(item => ({ ...item,
+    recipient: item.key === 'event.transport' || item.key === 'facility.acknowledge' ? 'custom@example.invalid' : '',
+  }));
+  const ui = mount({ templateLibrary }), Panel = ui.load('CommunicationsPanel');
+  const render = () => ui.render(Panel, { request, currentUser: user });
+  const recipient = () => find(render(), node => node.type === 'Input' && node.props.type === 'email');
+  assert.equal(recipient().props.value, 'custom@example.invalid');
+  const approval = () => find(render(), node => node.type === 'input' && node.props.type === 'checkbox');
+  approval().props.onChange({ target: { checked: true } });
+  recipient().props.onChange({ target: { value: 'reviewed@example.invalid' } });
+  assert.equal(approval().props.checked, false);
+  assert.equal(recipient().props.value, 'reviewed@example.invalid');
+  const eventUi = mount({ templateLibrary }), Dialog = eventUi.load('../EventUpdateShareDialog');
+  const renderEvent = () => eventUi.render(Dialog, { ...eventProps, updateType: 'transport' });
+  assert.equal(find(renderEvent(), node => node.type === 'Input' && node.props.type === 'email').props.value, 'custom@example.invalid');
+  await find(renderEvent(), node => node.type === 'Button' && React.Children.toArray(node.props.children).includes('Open email draft')).props.onClick();
+  const mailto = new URL(eventUi.mailto());
+  assert.equal(mailto.pathname, 'custom@example.invalid');
+  assert.equal(mailto.searchParams.get('cc'), 'coach@example.invalid');
 });
 
 test('create, update, cancellation and transport templates retain localized details and the actual signer', async () => {

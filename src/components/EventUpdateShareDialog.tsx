@@ -16,6 +16,8 @@ import MessageLanguageSwitch from './OperationsOffice/MessageLanguageSwitch'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import SharedFieldNotice from './SharedFieldNotice'
+import TemplateDraftStatus from './OperationsOffice/TemplateDraftStatus'
+import { templateRecipients, validateRecipient, templateDefinition } from '../../server/message-template-domain.mjs'
 
 interface EventChange {
   field: string
@@ -51,8 +53,10 @@ export default function EventUpdateShareDialog({
   const { capabilities } = useCapabilities()
   const [pushingToSpond, setPushingToSpond] = useState(false)
   const [spondPushResult, setSpondPushResult] = useState<'success' | 'error' | 'already' | null>(null)
-  const { language, setLanguage, draft, setDraft } = useMessageDraft(language =>
-    eventMessageDraft(event, originalEvent, updateType, teams, fields, sites, currentUser, language))
+  const { language, setLanguage, draft, setDraft, templateError, templatesLoading, retryTemplates } = useMessageDraft((language, templates) => ({
+    ...eventMessageDraft(event, originalEvent, updateType, teams, fields, sites, currentUser, language, templates),
+    recipient: templateRecipients(`event.${updateType}`, language, updateType === 'transport' ? [] : getEmailRecipients().to, templates).join(', '),
+  }), { subject: '', message: '', recipient: '' })
 
   // Get related teams
   const eventTeams = event.teamIds 
@@ -145,17 +149,19 @@ export default function EventUpdateShareDialog({
   }
 
   // Collect recipients for email
-  const getEmailRecipients = (): { to: string[]; cc: string[] } => {
+  function getEmailRecipients(): { to: string[]; cc: string[] } {
     // TO recipients: site manager, team coach, team manager
     const toRecipients: string[] = []
     
     // Add site contact email to TO
-    if (site?.contactEmail) {
-      toRecipients.push(site.contactEmail)
+    const selectedField = fields.find(field => (event.fieldIds || []).includes(field.id))
+    const selectedSite = sites.find(site => site.id === selectedField?.siteId)
+    if (selectedSite?.contactEmail) {
+      toRecipients.push(selectedSite.contactEmail)
     }
     
     // Add team coaches and managers to TO
-    eventTeams.forEach(team => {
+    teams.filter(team => event.teamIds?.includes(team.id)).forEach(team => {
       if (team.headCoach?.email) {
         toRecipients.push(team.headCoach.email)
       }
@@ -239,6 +245,7 @@ export default function EventUpdateShareDialog({
   }
 
   const handleWhatsAppShare = async () => {
+    if (templatesLoading || templateError) { toast.error('Load the template library before sharing'); return }
     setSharing(true)
     try {
       const success = await shareMessage(draft.message, draft.subject)
@@ -254,13 +261,16 @@ export default function EventUpdateShareDialog({
   }
 
   const handleEmailShare = async () => {
+    if (templatesLoading || templateError) { toast.error('Load the template library before sharing'); return }
     setSharing(true)
     try {
+      const reviewed = validateRecipient(templateDefinition(`event.${updateType}`, language), draft.recipient)
       let recipients = getEmailRecipients()
       if (updateType === 'transport') {
         const result = await apiRequest<{ email: { to: string; cc: string[] } }>(`/events/${event.id}/transport-request`, { method: 'POST' })
         recipients = { to: [result.email.to], cc: result.email.cc }
       }
+      if (reviewed.length) recipients.to = reviewed
       const ccParam = recipients.cc.length ? `&cc=${encodeURIComponent(recipients.cc.join(','))}` : ''
       window.location.href = `mailto:${recipients.to.join(',')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.message)}${ccParam}`
       toast.success('Email draft opened; sending is still manual.')
@@ -341,8 +351,14 @@ export default function EventUpdateShareDialog({
                 "Opens an email draft addressed only to the site's and teams' recorded contacts."}
             </p>
           </div>
-          <fieldset disabled={sharing} className="space-y-3">
+          <TemplateDraftStatus loading={templatesLoading} error={templateError} retry={retryTemplates} />
+          <fieldset disabled={sharing || templatesLoading || Boolean(templateError)} className="space-y-3">
+            <legend className="sr-only">Event communication draft</legend>
             <MessageLanguageSwitch language={language} onChange={setLanguage} />
+            <label className="block space-y-1">Email To (review before opening draft)
+              <Input type="email" multiple maxLength={5200} value={draft.recipient} onChange={event => setDraft({ ...draft, recipient: event.target.value })} />
+            </label>
+            <p className="text-xs text-muted-foreground">Comma-separated email addresses. {updateType === 'transport' ? 'Leave blank to use the configured transport contact. Recorded transport CC contacts are preserved.' : 'Leave blank to use the current site and team contacts.'} WhatsApp sharing is unchanged.</p>
             <label className="block space-y-1">Subject
               <Input lang={language} value={draft.subject} onChange={event => setDraft({ ...draft, subject: event.target.value })} />
             </label>

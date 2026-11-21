@@ -12,7 +12,8 @@ function load(name) {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   });
   const exports = {};
-  new Function('exports', 'require', outputText)(exports, id => id.startsWith('./') ? load(id.slice(2)) : require(id));
+  new Function('exports', 'require', outputText)(exports, id => id.endsWith('message-template-domain.mjs')
+    ? require(path.resolve(path.dirname(filename), id)) : id.startsWith('./') ? load(id.slice(2)) : require(id));
   modules.set(name, exports);
   return exports;
 }

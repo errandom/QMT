@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { COLORS } from '@/lib/constants'
 import SpondReviewPanel from './SpondReviewPanel'
+import MessageTemplateSettings from './MessageTemplateSettings'
 import { useCapabilities } from '@/hooks/useCapabilities'
 
 interface SettingsManagerProps {
@@ -278,6 +279,7 @@ export default function SettingsManager({ currentUser }: SettingsManagerProps) {
       </div>
 
       {/* Spond Integration */}
+      {isAdmin && <MessageTemplateSettings currentUser={currentUser} />}
       {capabilities?.spondReview && currentUser.role === 'admin' ? <SpondReviewPanel attendanceEnabled={capabilities.spondAttendance} /> : <p className="text-sm text-muted-foreground">{capabilitiesError || 'Spond review is restricted to administrators and remains disabled for the production pilot.'}</p>}
 
       <Card>

@@ -94,7 +94,11 @@ function registerCommunicationRoutes(app, { getPool, logger, mailbox = createMai
     const id = ids([req.params.id])[0];
     const pool = await getPool();
     const { dto } = await request(pool, id);
-    const contacts = [dto.requestorEmail, dto.workflow?.contactEmail].filter(Boolean).map(value => value.toLowerCase());
+    const outbound = (await pool.request().input('id', sql.Int, id).query(`SELECT TOP (1001) recipient
+      FROM request_communications WHERE request_id = @id AND direction = 'outbound' AND status = 'accepted'`)).recordset;
+    if (outbound.length > 1000) throw new HttpError(409, 'Thread limit reached; archive before syncing replies');
+    const contacts = [dto.requestorEmail, dto.workflow?.contactEmail, ...outbound.map(item => item.recipient)]
+      .filter(Boolean).map(value => value.toLowerCase());
     const messages = await mailbox.replies(id, dto.createdAt);
     let imported = 0;
     await transaction(pool, async tx => {
