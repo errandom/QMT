@@ -11,6 +11,11 @@ module.exports = [
     rules: { ...js.configs.recommended.rules, 'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none', varsIgnorePattern: '^_' }] },
   },
   {
+    files: ['server/*.mjs'],
+    ...js.configs.recommended,
+    languageOptions: { globals: globals.node, sourceType: 'module' },
+  },
+  {
     files: ['scripts/export-legacy-cache.js'],
     ...js.configs.recommended,
     languageOptions: { globals: globals.browser, sourceType: 'script' },

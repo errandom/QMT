@@ -2,6 +2,7 @@ import type { Event } from './types'
 import { Team, Field, Site } from './types'
 import { eventMessageDraft, type MessageAuthor } from './eventMessages'
 import { requestMessageClosing, type MessageLanguage } from './facilityWorkflow'
+import { renderTemplate, type MessageTemplateContent } from '../../server/message-template-domain.mjs'
 
 export interface ShareConfig {
   groupPhone?: string  // Legacy: for fallback wa.me link
@@ -120,11 +121,11 @@ export function notifyWeeklySummary(
   sites: Site[],
   currentUser: MessageAuthor,
   language: MessageLanguage = 'en',
-  config?: ShareConfig
+  config?: ShareConfig,
+  templates: readonly MessageTemplateContent[] = [],
 ): void {
   if (!config) return
 
-  const summary = language === 'de' ? 'Hoi zusammen,\n\n📊 *Wochenübersicht*\n\n' : 'Hi everyone,\n\n📊 *Weekly Schedule Summary*\n\n'
   const eventsList = events.map(e => {
     const date = new Date(`${e.date}T00:00:00Z`).toLocaleDateString(language === 'de' ? 'de-CH' : 'en-US', {
       weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
@@ -132,8 +133,10 @@ export function notifyWeeklySummary(
     return `• ${date} ${e.startTime} - ${e.title}`
   }).join('\n')
 
-  const message = summary + eventsList + `\n\n📅 ${language === 'de' ? 'Veranstaltungen insgesamt' : 'Total events'}: ${events.length}\n\n${requestMessageClosing(currentUser, language)}`
-  shareMessage(message, language === 'de' ? 'Wochenplan' : 'Weekly Schedule', config)
+  const draft = renderTemplate('weekly.summary', language, {
+    details: eventsList, event_count: String(events.length), closing: requestMessageClosing(currentUser, language, templates),
+  }, templates)
+  shareMessage(draft.message, draft.subject, config)
 }
 
 /**

@@ -12,6 +12,7 @@ const { registerBookingRoutes } = require('./server/bookings.cjs');
 const { registerRequestRoutes } = require('./server/requests.cjs');
 const { registerOperationsRoutes } = require('./server/operations.cjs');
 const { registerCommunicationRoutes } = require('./server/communications.cjs');
+const { registerMessageTemplateRoutes } = require('./server/message-templates.cjs');
 const { siteScheduleSchema, registerPublishedScheduleRoutes } = require('./server/published-schedules.cjs');
 const { publicFields, publicRow, registerPublicScheduleRoutes } = require('./server/public-schedule.cjs');
 const { registerSpondReviewRoutes } = require('./server/spond-review.cjs');
@@ -150,6 +151,7 @@ registerBookingRoutes(app, { getPool, logger: console });
 registerRequestRoutes(app, { getPool, logger: console, workbookTargetUrl: env.QMT_MEETING_ROOM_WORKBOOK_URL });
 registerOperationsRoutes(app, { getPool, logger: console });
 registerCommunicationRoutes(app, { getPool, logger: console });
+registerMessageTemplateRoutes(app, { getPool, logger: console });
 registerPublishedScheduleRoutes(app, { getPool, logger: console, timezone: config.timezone });
 registerWeatherRoutes(app, {
   getPool, logger: console, timezone: config.timezone, enabled: config.weatherEnabled, fetchImpl: weatherFetch,

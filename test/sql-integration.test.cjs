@@ -397,6 +397,33 @@ test('disposable SQL migration, concurrency, rollback and durable requests', {
       return version;
     };
     let requestId;
+    await t.test('admin template edits survive reloads, serialize concurrent writes and reset without an ABA revision', async () => {
+      const route = '/api/message-templates/facility.acknowledge/en';
+      const headers = { Authorization: `Bearer ${token}` };
+      assert.equal((await fetch(base + '/api/message-templates')).status, 401);
+      const initial = await (await fetch(base + '/api/message-templates', { headers })).json();
+      assert.equal(initial.length, 32);
+      const original = initial.find(item => item.key === 'facility.acknowledge' && item.language === 'en');
+      const body = { expectedRevision: 0, subject: 'Receipt: {{requester_name}}', message: original.message.replace('Hi ', 'Hello '), recipient: 'office@example.invalid' };
+      const writes = await Promise.all([put(route, body), put(route, body)]);
+      assert.deepEqual(writes.map(response => response.status).sort(), [200, 409]);
+      const stored = (await (await fetch(base + '/api/message-templates', { headers })).json())
+        .find(item => item.key === original.key && item.language === 'en');
+      assert.equal(stored.revision, 1);
+      assert.equal(stored.message, body.message);
+      assert.equal(stored.recipient, body.recipient);
+      assert.equal(stored.updatedBy, 'synthetic-test-admin');
+      const reset = await post(route + '/reset', { expectedRevision: 1 }, null, true);
+      assert.equal(reset.status, 200);
+      const restored = await reset.json();
+      assert.equal(restored.revision, 2);
+      assert.equal(restored.message, original.message);
+      assert.equal(restored.customized, false);
+      assert.equal(restored.recipient, '');
+      assert.equal((await put(route, body)).status, 409);
+      const invalid = await put(route, { ...body, expectedRevision: 2, message: '{{unknown}}' });
+      assert.equal(invalid.status, 400);
+    });
     await t.test('operational metadata and external allocations are private, durable and revision-checked', async () => {
       assert.equal((await fetch(base + '/api/operations')).status, 401);
       const north = await save({ ...booking('2027-07-07'), description: 'Synthetic north use',

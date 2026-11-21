@@ -22,6 +22,7 @@ import RequestDeleteButton from './RequestDeleteButton'
 import { facilityLocations, needsFacilityAttention, requestRejectionMessage } from '@/lib/facilityWorkflow'
 import { operationsApi, requestedDates, type RequestPreview } from '@/lib/operations'
 import { useMessageDraft } from '@/hooks/useMessageDraft'
+import TemplateDraftStatus from './TemplateDraftStatus'
 import MessageLanguageSwitch from './MessageLanguageSwitch'
 
 interface RequestsManagerProps {
@@ -79,7 +80,8 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
   const {
     language: rejectionLanguage, setLanguage: setRejectionLanguage,
     draft: rejectionMessage, setDraft: setRejectionMessage, reset: resetRejectionDraft,
-  } = useMessageDraft(() => '')
+    templateError: rejectionTemplateError, templatesLoading: rejectionTemplatesLoading, retryTemplates: retryRejectionTemplates,
+  } = useMessageDraft(() => '', '')
 
   const locationOptions = useMemo(() =>
     approvalRequest ? facilityLocations(approvalRequest, fields, sites) : [],
@@ -104,7 +106,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
     setRejectionRequestType(type)
     setSendWhatsAppNotification(type !== 'facility')
     setDecisionNote('')
-    resetRejectionDraft(language => requestRejectionMessage(request, type, currentUser, language))
+    resetRejectionDraft((language, templates) => requestRejectionMessage(request, type, currentUser, language, templates))
     setShowRejectionDialog(true)
   }
 
@@ -144,6 +146,9 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
 
   // Confirm rejection with optional WhatsApp notification
   const handleConfirmRejection = async () => {
+    if (sendWhatsAppNotification && (rejectionTemplatesLoading || rejectionTemplateError)) {
+      toast.error('Load the template library before sharing the rejection'); return
+    }
     if (!rejectionRequest || isReviewing) return
     if (rejectionRequestType === 'facility' && !decisionNote.trim()) {
       toast.error('Provide a reason for rejection')
@@ -706,6 +711,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
               {/* Message Editor (only shown when WhatsApp is enabled) */}
               {sendWhatsAppNotification && (
                 <div className="space-y-2">
+                  <TemplateDraftStatus loading={rejectionTemplatesLoading} error={rejectionTemplateError} retry={retryRejectionTemplates} />
                   <MessageLanguageSwitch language={rejectionLanguage} onChange={setRejectionLanguage} />
                   <Label htmlFor="rejection-message">Message</Label>
                   <Textarea
@@ -738,7 +744,7 @@ export default function RequestsManager({ currentUser }: RequestsManagerProps) {
             <Button
               variant="destructive"
               onClick={handleConfirmRejection}
-              disabled={isReviewing}
+              disabled={isReviewing || (sendWhatsAppNotification && (rejectionTemplatesLoading || Boolean(rejectionTemplateError)))}
             >
               <X size={16} className="mr-2" />
               Reject Request

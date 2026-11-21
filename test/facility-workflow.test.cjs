@@ -9,6 +9,8 @@ const { workflowActionSchema, applyWorkflowAction, reviewFacility } = require('.
 
 const filename = path.join(__dirname, '..', 'src', 'lib', 'facilityWorkflow.ts');
 const loaded = new Module(filename, module);
+loaded.filename = filename;
+loaded.paths = Module._nodeModulePaths(path.dirname(filename));
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, filename);

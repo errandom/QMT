@@ -13,6 +13,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node server.js ./
 COPY --chown=node:node server/*.cjs ./server/
+COPY --chown=node:node server/*.mjs ./server/
 COPY --chown=node:node scripts/budget-guard.cjs ./scripts/budget-guard.cjs
 USER node
 EXPOSE 3000
