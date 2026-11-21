@@ -51,7 +51,7 @@ function registerMessageTemplateRoutes(app, { getPool, logger }) {
       const result = await request().input('revision', sql.Int, body.expectedRevision + 1)
         .input('customized', sql.Bit, !reset).input('subject', sql.NVarChar(220), reset ? null : body.subject)
         .input('message', sql.NVarChar(sql.MAX), reset ? null : body.message)
-        .input('recipient', sql.NVarChar(5200), reset ? null : body.recipient.trim())
+        .input('recipient', sql.NVarChar(sql.MAX), reset ? null : body.recipient.trim())
         .input('actor', sql.NVarChar(255), req.user.username).query(prior ? `
           UPDATE dbo.message_templates SET subject = @subject, message = @message, recipient = @recipient, revision = @revision,
             customized = @customized, updated_by = @actor, updated_at = SYSUTCDATETIME()

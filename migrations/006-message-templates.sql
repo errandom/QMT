@@ -3,7 +3,7 @@ CREATE TABLE dbo.message_templates (
   language nvarchar(2) NOT NULL CHECK (language IN ('en', 'de')),
   subject nvarchar(220) NULL,
   message nvarchar(max) NULL,
-  recipient nvarchar(5200) NULL,
+  recipient nvarchar(max) NULL CHECK (LEN(recipient) <= 5200),
   revision int NOT NULL CHECK (revision > 0),
   customized bit NOT NULL,
   updated_by nvarchar(255) NOT NULL,
